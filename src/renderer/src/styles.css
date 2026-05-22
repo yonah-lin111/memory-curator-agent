@@ -16,6 +16,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #000000;
+  overflow: hidden; /* 在桌面应用中，通常使 body 不滚动，由子区域独立滚动 */
 }
 
 button,
@@ -23,4 +24,50 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/* 全局自定义精致滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2c2c2c;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+::-webkit-scrollbar-corner {
+  background: #000000;
+}
+
+/* 局部高阶滚动条样式（用于次级深色 #212121 容器） */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #212121;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #212121;
 }
