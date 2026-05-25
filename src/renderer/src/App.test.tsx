@@ -55,6 +55,32 @@ describe('App', () => {
     expect(screen.getByText('Today').closest('[aria-current="page"]')).toBeInTheDocument()
   })
 
+  it('支持从左侧栏切换到其他静态页面', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /Notes/ }))
+    expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
+    expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Journal/ }))
+    expect(screen.getByRole('heading', { name: '历史日记条目' })).toBeInTheDocument()
+    expect(screen.getByText('Journal').closest('[aria-current="page"]')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
+    expect(screen.getByRole('heading', { name: '周度策展复盘' })).toBeInTheDocument()
+    expect(screen.getByText('Weekly Review').closest('[aria-current="page"]')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Themes/ }))
+    expect(screen.getByRole('heading', { name: '长期主题追踪' })).toBeInTheDocument()
+    expect(screen.getByText('Themes').closest('[aria-current="page"]')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Memories/ }))
+    expect(screen.getByRole('heading', { name: '记忆片段关联墙' })).toBeInTheDocument()
+    expect(screen.getByText('Memories').closest('[aria-current="page"]')).toBeInTheDocument()
+  })
+
   it('长按拖拽右侧折叠按钮可在最小宽度与 35vw 之间调整右栏宽度', () => {
     vi.useFakeTimers()
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 })

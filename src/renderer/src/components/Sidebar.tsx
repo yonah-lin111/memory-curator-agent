@@ -19,9 +19,12 @@ import {
  * ========================================== */
 
 // 主导航项类型，描述左侧应用级入口。
+export type SidebarPageId = 'today' | 'notes' | 'journal' | 'weekly' | 'themes' | 'memories'
+
+// 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
   // 导航项唯一标识。
-  id: string
+  id: SidebarPageId
   // 导航项显示名称。
   label: string
   // 导航项辅助说明。
@@ -50,12 +53,16 @@ type WeekDateItem = {
   active: boolean
 }
 
-// Sidebar 组件属性类型，描述左侧栏折叠状态与切换入口。
+// Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
   // 当前左侧栏是否处于折叠状态。
   isCollapsed: boolean
+  // 当前选中的侧栏页面。
+  activePage: SidebarPageId
   // 左侧栏折叠状态改变回调。
   onCollapsedChange: (collapsed: boolean) => void
+  // 侧栏页面切换回调。
+  onPageChange: (pageId: SidebarPageId) => void
 }
 
 /* ==========================================
@@ -103,7 +110,12 @@ const WEEK_DATES: WeekDateItem[] = [
  * Sidebar 组件 - 负责左侧多维导航栏与周日期选择定位。
  * 仅提供侧栏折叠交互，其余导航信息保持静态展示。
  */
-export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React.JSX.Element => {
+export const Sidebar = ({
+  isCollapsed,
+  activePage,
+  onCollapsedChange,
+  onPageChange
+}: SidebarProps): React.JSX.Element => {
   return (
     <div className="relative flex h-auto lg:h-full flex-shrink-0">
       <aside
@@ -141,15 +153,18 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
                 <div className="flex flex-col gap-1">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const isActive = item.id === 'today'
+                    const isActive = item.id === activePage
 
                     return (
-                      <div
+                      <button
                         key={item.id}
+                        type="button"
                         aria-current={isActive ? 'page' : undefined}
-                        className={`flex w-full items-center rounded-[6px] transition-all duration-150 ${
+                        aria-label={isCollapsed ? item.label : undefined}
+                        onClick={() => onPageChange(item.id)}
+                        className={`flex w-full items-center rounded-[6px] transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                           isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
-                        } ${isActive ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
+                        } ${isActive ? 'bg-white text-black font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white/85'}`}
                       >
                         <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-black' : 'text-white/50'}`} />
                         {!isCollapsed && (
@@ -160,7 +175,7 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
                             </span>
                           </div>
                         )}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -247,6 +262,7 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
       <button
         type="button"
         aria-label={isCollapsed ? '展开左侧导航栏' : '折叠左侧导航栏'}
+        aria-expanded={!isCollapsed}
         onClick={() => onCollapsedChange(!isCollapsed)}
         className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
       >
