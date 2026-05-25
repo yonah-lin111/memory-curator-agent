@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState } from "react";
 import {
   CheckSquare,
   FileText,
@@ -9,6 +10,7 @@ import {
   ClipboardList,
   Square,
 } from "lucide-react";
+import { AddEntryModal, type AddEntryModalKind } from "./AddEntryModal";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -149,6 +151,9 @@ const JOURNAL_DATA: JournalEntry = {
  * 提供静态信息展示，保障小屏纵向流与大屏多栏的自适应响应。
  */
 export const TodayWorkspace = (): React.JSX.Element => {
+  // 当前打开的添加弹窗类型。
+  const [activeAddModal, setActiveAddModal] = useState<AddEntryModalKind | null>(null);
+
   return (
     <section
       aria-label="中间内容容器"
@@ -243,9 +248,19 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   每日待办计划
                 </span>
               </div>
-              <span className="font-mono text-[11px] text-white/40">
-                已完成 3/5
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[11px] text-white/40">
+                  已完成 3/5
+                </span>
+                <button
+                  type="button"
+                  aria-label="添加每日待办计划"
+                  className="group flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/65 transition-all duration-150 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  onClick={() => setActiveAddModal("todo")}
+                >
+                  <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
               {TODO_ITEMS.map((todo) => (
@@ -288,10 +303,20 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   自由随记卡片
                 </span>
               </div>
-              <span className="flex items-center gap-1 text-[11px] text-white/30 font-medium">
-                <Plus className="h-3 w-3" />
-                自动同步
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="hidden items-center gap-1 text-[11px] text-white/30 font-medium sm:flex">
+                  <Plus className="h-3 w-3" />
+                  自动同步
+                </span>
+                <button
+                  type="button"
+                  aria-label="添加自由随记卡片"
+                  className="group flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/65 transition-all duration-150 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  onClick={() => setActiveAddModal("note")}
+                >
+                  <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
               {NOTE_ITEMS.map((note) => (
@@ -356,6 +381,9 @@ export const TodayWorkspace = (): React.JSX.Element => {
           </div>
         </div>
       </div>
+      {activeAddModal ? (
+        <AddEntryModal kind={activeAddModal} onClose={() => setActiveAddModal(null)} />
+      ) : null}
     </section>
   );
 };

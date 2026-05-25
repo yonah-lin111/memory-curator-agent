@@ -68,4 +68,37 @@ describe('App', () => {
 
     expect(screen.getByLabelText('中间内容容器')).toHaveClass('px-1', 'lg:px-2')
   })
+
+  it('点击每日待办计划添加按钮后打开对应弹窗并可用 Escape 关闭', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+
+    expect(screen.getByRole('dialog', { name: '新建每日待办计划' })).toBeInTheDocument()
+    expect(screen.getByTestId('add-entry-modal-overlay')).toHaveClass('items-center', 'justify-center')
+    expect(screen.getByLabelText('待办内容')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择优先级高' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '选择计划时间 16:30' })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: '新建每日待办计划' })).not.toBeInTheDocument()
+  })
+
+  it('点击自由随记卡片添加按钮后打开对应弹窗', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加自由随记卡片' }))
+
+    expect(screen.getByRole('dialog', { name: '新建自由随记卡片' })).toBeInTheDocument()
+    expect(screen.getByLabelText('随记标题')).toBeInTheDocument()
+    expect(screen.getByLabelText('随记内容')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加随记标签 UX' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '添加随记标签 AI-Agent' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '选择优先级高' })).not.toBeInTheDocument()
+  })
 })

@@ -72,3 +72,45 @@ select {
 .custom-scrollbar::-webkit-scrollbar-corner {
   background: #212121;
 }
+
+/* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* 添加弹窗从视口中心弹入，减少对特定卡片位置的依赖。 */
+@keyframes card-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 弹窗遮罩动效类。 */
+.animate-modal-backdrop-in {
+  animation: modal-backdrop-in 160ms ease-out both;
+}
+
+/* 弹窗面板动效类。 */
+.animate-card-modal-in {
+  animation: card-modal-in 220ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-backdrop-in,
+  .animate-card-modal-in {
+    animation-duration: 1ms;
+  }
+}
