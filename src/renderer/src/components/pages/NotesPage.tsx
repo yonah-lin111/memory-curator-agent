@@ -312,7 +312,10 @@ const NoteMarkdownModal = ({
      * 处理点击外部区域时自动关闭下拉框。
      */
     const handleClickOutside = (event: MouseEvent): void => {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+      if (
+        selectRef.current &&
+        !selectRef.current.contains(event.target as Node)
+      ) {
         setIsSelectOpen(false);
       }
     };
@@ -337,7 +340,9 @@ const NoteMarkdownModal = ({
         <FileText className="h-3 w-3" />
       ),
     execute: () => {
-      setPreviewMode((currentMode) => (currentMode === "edit" ? "preview" : "edit"));
+      setPreviewMode((currentMode) =>
+        currentMode === "edit" ? "preview" : "edit",
+      );
     },
   };
 
@@ -374,9 +379,7 @@ const NoteMarkdownModal = ({
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-[2px] animate-modal-backdrop-in sm:p-6"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-[2px] animate-modal-backdrop-in sm:p-6">
       <section
         aria-labelledby="note-markdown-modal-title"
         aria-modal="true"
@@ -430,7 +433,10 @@ const NoteMarkdownModal = ({
                   }
                 />
               </label>
-              <div ref={selectRef} className="relative flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <div
+                ref={selectRef}
+                className="relative flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55"
+              >
                 来源
                 <button
                   type="button"
@@ -441,7 +447,9 @@ const NoteMarkdownModal = ({
                   onClick={() => setIsSelectOpen((prev) => !prev)}
                 >
                   <span>{draft.source}</span>
-                  <ChevronDown className={`h-3.5 w-3.5 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
                 {isSelectOpen && (
                   <div
@@ -457,7 +465,9 @@ const NoteMarkdownModal = ({
                           role="option"
                           aria-selected={isSelected}
                           className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white ${
-                            isSelected ? "bg-white/5 text-white" : "text-white/70"
+                            isSelected
+                              ? "bg-white/5 text-white"
+                              : "text-white/70"
                           }`}
                           onClick={() => {
                             handleDraftChange({ source });
@@ -465,7 +475,9 @@ const NoteMarkdownModal = ({
                           }}
                         >
                           <span>{source}</span>
-                          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 text-white" />
+                          )}
                         </button>
                       );
                     })}
@@ -681,7 +693,7 @@ export const NotesPage = (): React.JSX.Element => {
               </div>
 
               {/* 卡片标题 */}
-              <h3 className="text-xs font-bold text-white/85 leading-tight">
+              <h3 className="text-sm font-bold text-white/85 leading-tight">
                 {note.title}
               </h3>
 

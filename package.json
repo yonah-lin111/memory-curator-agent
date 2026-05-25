@@ -7,6 +7,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:vscode": "REACT_EDITOR=code electron-vite dev",
     "build": "pnpm typecheck && electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
@@ -48,6 +49,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.2.7",
+    "vite-plugin-react-inspector": "^0.3.3",
     "vitest": "^4.0.15"
   },
   "build": {

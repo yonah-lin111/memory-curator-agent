@@ -152,7 +152,8 @@ const JOURNAL_DATA: JournalEntry = {
  */
 export const TodayWorkspace = (): React.JSX.Element => {
   // 当前打开的添加弹窗类型。
-  const [activeAddModal, setActiveAddModal] = useState<AddEntryModalKind | null>(null);
+  const [activeAddModal, setActiveAddModal] =
+    useState<AddEntryModalKind | null>(null);
 
   return (
     <section
@@ -176,7 +177,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         {/* 1. 快速输入区 (静态展示，防止假输入提交) */}
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <span className="text-xs font-bold tracking-wide text-white/80">
+            <span className="text-ms font-bold tracking-wide text-white/80">
               快速输入与捕获
             </span>
             <div className="flex gap-1.5">
@@ -222,7 +223,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium text-white/40">
+                  <span className="text-sm font-medium text-white/40">
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
@@ -244,7 +245,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-white/60" />
-                <span className="text-xs font-bold tracking-wide text-white/80">
+                <span className="text-sm font-bold tracking-wide text-white/80">
                   每日待办计划
                 </span>
               </div>
@@ -277,7 +278,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   </div>
                   <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                     <span
-                      className={`text-xs leading-normal ${
+                      className={`text-sm leading-normal ${
                         todo.completed
                           ? "text-white/30 line-through"
                           : "text-white/80"
@@ -299,7 +300,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-white/60" />
-                <span className="text-xs font-bold tracking-wide text-white/80">
+                <span className="text-sm font-bold tracking-wide text-white/80">
                   自由随记卡片
                 </span>
               </div>
@@ -325,7 +326,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5"
                 >
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-white/80 truncate pr-2">
+                    <h4 className="text-sm font-bold text-white/80 truncate pr-2">
                       {note.title}
                     </h4>
                     <span className="text-xs font-mono text-white/30 flex-shrink-0">
@@ -357,7 +358,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-white/60" />
-              <span className="text-xs font-bold tracking-wide text-white/80">
+              <span className="text-sm font-bold tracking-wide text-white/80">
                 日记与主观表达
               </span>
             </div>
@@ -370,7 +371,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
             </div>
           </div>
           <div className="rounded-[6px] bg-[#000000] border border-white/5 p-3.5">
-            <p className="text-xs text-white/80 leading-relaxed font-sans whitespace-pre-wrap">
+            <p className="text-sm text-white/80 leading-relaxed font-sans whitespace-pre-wrap">
               {JOURNAL_DATA.content}
             </p>
           </div>
@@ -382,7 +383,10 @@ export const TodayWorkspace = (): React.JSX.Element => {
         </div>
       </div>
       {activeAddModal ? (
-        <AddEntryModal kind={activeAddModal} onClose={() => setActiveAddModal(null)} />
+        <AddEntryModal
+          kind={activeAddModal}
+          onClose={() => setActiveAddModal(null)}
+        />
       ) : null}
     </section>
   );
