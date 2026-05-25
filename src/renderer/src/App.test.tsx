@@ -20,6 +20,10 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByText('MEMORY CURATOR')).toBeInTheDocument()
+    expect(screen.getByText('DAILY')).toBeInTheDocument()
+    expect(screen.getByText('LIBRARY')).toBeInTheDocument()
+    expect(screen.getByText('CURATION')).toBeInTheDocument()
+    expect(screen.getByText('计划 / 随记 / 日记')).toBeInTheDocument()
     expect(screen.queryByText('建议、归类与记忆线索')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '展开右侧策展栏' }))
@@ -28,6 +32,9 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: '折叠左侧导航栏' }))
     expect(screen.queryByText('MEMORY CURATOR')).not.toBeInTheDocument()
+    expect(screen.queryByText('DAILY')).not.toBeInTheDocument()
+    expect(screen.queryByText('LIBRARY')).not.toBeInTheDocument()
+    expect(screen.queryByText('CURATION')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '展开左侧导航栏' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '折叠右侧策展栏' }))
@@ -40,6 +47,12 @@ describe('App', () => {
 
     expect(screen.getByRole('button', { name: '折叠左侧导航栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
     expect(screen.getByRole('button', { name: '展开右侧策展栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
+  })
+
+  it('默认将 Today 标记为当前侧栏页面', () => {
+    render(<App />)
+
+    expect(screen.getByText('Today').closest('[aria-current="page"]')).toBeInTheDocument()
   })
 
   it('长按拖拽右侧折叠按钮可在最小宽度与 35vw 之间调整右栏宽度', () => {

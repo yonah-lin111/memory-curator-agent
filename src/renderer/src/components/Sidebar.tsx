@@ -30,6 +30,16 @@ type NavigationItem = {
   icon: React.ComponentType<{ className?: string }>
 }
 
+// 导航分组类型，描述产品使用节奏下的入口集合。
+type NavigationGroup = {
+  // 分组唯一标识。
+  id: string
+  // 分组显示名称。
+  label: string
+  // 分组下的导航项。
+  items: NavigationItem[]
+}
+
 // 周日期项类型，描述 Today 页面中的日期定位入口。
 type WeekDateItem = {
   // 星期短名称。
@@ -52,15 +62,30 @@ type SidebarProps = {
  * 静态 Mock 数据 (Static Mock Data)
  * ========================================== */
 
-// 左侧主导航静态数据。
-const NAVIGATION_ITEMS: NavigationItem[] = [
-  { id: 'today', label: 'Today', description: '今日工作台', icon: Home },
-  { id: 'notes', label: 'Notes', description: '自由笔记', icon: FileText },
-  { id: 'journal', label: 'Journal', description: '日记时间线', icon: BookOpen },
-  { id: 'weekly', label: 'Weekly', description: '周度策展', icon: CalendarDays },
-  { id: 'themes', label: 'Themes', description: '长期主题', icon: Layers },
-  { id: 'memories', label: 'Memories', description: '记忆片段', icon: Sparkles },
-  { id: 'settings', label: 'Settings', description: '模型与隐私', icon: Settings }
+// 左侧主导航分组静态数据。
+const NAVIGATION_GROUPS: NavigationGroup[] = [
+  {
+    id: 'daily',
+    label: 'DAILY',
+    items: [{ id: 'today', label: 'Today', description: '计划 / 随记 / 日记', icon: Home }]
+  },
+  {
+    id: 'library',
+    label: 'LIBRARY',
+    items: [
+      { id: 'notes', label: 'Notes', description: '自由笔记列表', icon: FileText },
+      { id: 'journal', label: 'Journal', description: '日记条目回看', icon: BookOpen }
+    ]
+  },
+  {
+    id: 'curation',
+    label: 'CURATION',
+    items: [
+      { id: 'weekly', label: 'Weekly Review', description: '周度策展', icon: CalendarDays },
+      { id: 'themes', label: 'Themes', description: '长期主题追踪', icon: Layers },
+      { id: 'memories', label: 'Memories', description: '记忆片段关联', icon: Sparkles }
+    ]
+  }
 ]
 
 // 当前周日期静态数据（当前聚焦在 2026-05-25 周一）。
@@ -104,32 +129,43 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
             )}
           </div>
 
-          {/* 应用级主导航（已修正为静态项，避免假交互误导） */}
-          <nav className="flex flex-col gap-1 w-full" aria-label="侧边栏主导航">
-            {NAVIGATION_ITEMS.map((item) => {
-              const Icon = item.icon
-              const isActive = item.id === 'today' // 静态聚焦 Today
+          {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
+          <nav className="flex flex-col gap-3 w-full" aria-label="侧边栏主导航">
+            {NAVIGATION_GROUPS.map((group) => (
+              <section key={group.id} className="flex flex-col gap-1.5">
+                {!isCollapsed && (
+                  <h3 className="px-1 text-[9px] font-bold tracking-[0.18em] text-white/30">
+                    {group.label}
+                  </h3>
+                )}
+                <div className="flex flex-col gap-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = item.id === 'today'
 
-              return (
-                <div
-                  key={item.id}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={`flex w-full items-center rounded-[6px] transition-all duration-150 ${
-                    isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2'
-                  } ${isActive ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
-                >
-                  <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-black' : 'text-white/50'}`} />
-                  {!isCollapsed && (
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-xs font-bold leading-none">{item.label}</span>
-                      <span className={`text-[9px] mt-0.5 leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
-                        {item.description}
-                      </span>
-                    </div>
-                  )}
+                    return (
+                      <div
+                        key={item.id}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`flex w-full items-center rounded-[6px] transition-all duration-150 ${
+                          isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
+                        } ${isActive ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
+                      >
+                        <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-black' : 'text-white/50'}`} />
+                        {!isCollapsed && (
+                          <div className="flex min-w-0 flex-col items-start text-left">
+                            <span className="text-xs font-bold leading-none">{item.label}</span>
+                            <span className={`mt-1 text-[9px] leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
+                              {item.description}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
+              </section>
+            ))}
           </nav>
 
           {!isCollapsed && (
@@ -137,12 +173,15 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
               {/* 分割线 */}
               <div className="h-[1px] bg-white/5" />
 
-              {/* 周日期快捷导航（已修正为静态展示框，使用稳定日字段作为 key） */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-1">
-                  2026 MAY • WEEK 22
-                </span>
-                <div className="grid grid-cols-7 gap-1 bg-white/[0.01] border border-white/5 rounded-[6px] p-1.5">
+              {/* 周定位卡片保持静态，服务 Today 页面上下文。 */}
+              <div className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.02] p-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">
+                    2026 MAY
+                  </span>
+                  <span className="text-[9px] font-mono text-white/25">WEEK 22</span>
+                </div>
+                <div className="grid grid-cols-7 gap-1">
                   {WEEK_DATES.map((d) => (
                     <div
                       key={d.day}
@@ -153,7 +192,7 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
                       <span className={`text-[8px] uppercase font-bold ${d.active ? 'text-black/50' : 'text-white/20'}`}>
                         {d.weekday[0]}
                       </span>
-                      <span className="text-xs font-mono leading-none mt-1 font-bold">
+                      <span className="mt-1 text-xs font-mono font-bold leading-none">
                         {d.day}
                       </span>
                     </div>
@@ -162,33 +201,43 @@ export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React
               </div>
             </>
           )}
+          {isCollapsed && (
+            <div className="flex h-9 w-9 items-center justify-center rounded-[6px] border border-white/5 bg-white text-xs font-bold text-black">
+              25
+            </div>
+          )}
         </div>
 
         {/* 底部本地优先隐私引擎状态 */}
         <div className="mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full">
           {isCollapsed ? (
-            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5">
-              <Database className="h-3.5 w-3.5 text-emerald-400" />
+            <div className="flex flex-col gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5">
+                <Database className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
+                <Settings className="h-3.5 w-3.5" />
+              </div>
             </div>
           ) : (
             <>
               <div className="flex flex-col gap-2 rounded-[6px] bg-white/[0.02] border border-white/5 p-2.5">
                 <div className="flex items-center gap-2">
                   <Database className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-xs font-bold text-white/80">本地优先引擎</span>
+                  <span className="text-xs font-bold text-white/80">Local Vault</span>
                 </div>
                 <div className="flex flex-col gap-1 pl-5 text-[10px] text-white/40 font-mono">
                   <div className="flex items-center gap-1.5">
                     <Clock3 className="h-3 w-3 text-white/30" />
-                    <span>同步: 今天 21:45</span>
+                    <span>Last saved: Today 21:45</span>
                   </div>
-                  <span>引擎: 本地记录库</span>
-                  <span>算力: 策展建议占位</span>
+                  <span>Storage: Local-first</span>
+                  <span>Agent: Curation standby</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between px-1 text-[10px] text-white/30">
-                <span>存储状态: 本地存储</span>
-                <span>本地默认保存</span>
+              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-[10px] text-white/35">
+                <Settings className="h-3.5 w-3.5" />
+                <span>Settings</span>
               </div>
             </>
           )}
