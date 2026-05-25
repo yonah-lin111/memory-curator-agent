@@ -73,7 +73,10 @@ const createTodoDraft = (index: number): TodoDraft => ({
  * 通用添加弹窗。
  * 只负责展示与关闭交互，避免在静态工作台里伪造持久化行为。
  */
-export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.Element => {
+export const AddEntryModal = ({
+  kind,
+  onClose,
+}: AddEntryModalProps): React.JSX.Element => {
   const config = ADD_ENTRY_MODAL_CONFIG[kind];
   const Icon = config.icon;
   // 最新待办草稿锚点，用于新增后滚动到底部。
@@ -81,7 +84,9 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
   // 是否需要在下一次渲染后滚动到最新待办。
   const shouldScrollToLatestTodoDraftRef = useRef(false);
   // 待办草稿列表，每条保留独立优先级和时间。
-  const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>([createTodoDraft(1)]);
+  const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>([
+    createTodoDraft(1),
+  ]);
   // 下一条待办草稿序号，避免删除后再添加产生重复 key。
   const [nextTodoDraftIndex, setNextTodoDraftIndex] = useState(2);
   // 当前已选中的随记标签。
@@ -92,7 +97,10 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
    */
   const handleAddTodoDraft = (): void => {
     shouldScrollToLatestTodoDraftRef.current = true;
-    setTodoDrafts((currentDrafts) => [...currentDrafts, createTodoDraft(nextTodoDraftIndex)]);
+    setTodoDrafts((currentDrafts) => [
+      ...currentDrafts,
+      createTodoDraft(nextTodoDraftIndex),
+    ]);
     setNextTodoDraftIndex((currentIndex) => currentIndex + 1);
   };
 
@@ -100,22 +108,31 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
    * 删除指定待办草稿。
    */
   const handleDeleteTodoDraft = (id: string): void => {
-    setTodoDrafts((currentDrafts) => currentDrafts.filter((draft) => draft.id !== id));
+    setTodoDrafts((currentDrafts) =>
+      currentDrafts.filter((draft) => draft.id !== id),
+    );
   };
 
   /**
    * 更新指定待办草稿的局部字段。
    */
-  const handleTodoDraftChange = (id: string, patch: Partial<Omit<TodoDraft, "id">>): void => {
+  const handleTodoDraftChange = (
+    id: string,
+    patch: Partial<Omit<TodoDraft, "id">>,
+  ): void => {
     setTodoDrafts((currentDrafts) =>
-      currentDrafts.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)),
+      currentDrafts.map((draft) =>
+        draft.id === id ? { ...draft, ...patch } : draft,
+      ),
     );
   };
 
   /**
    * 打开原生时间选择器。
    */
-  const handleOpenTodoTimePicker = (event: React.MouseEvent<HTMLButtonElement>): void => {
+  const handleOpenTodoTimePicker = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ): void => {
     const input = event.currentTarget.previousElementSibling;
 
     if (!(input instanceof HTMLInputElement)) {
@@ -152,7 +169,10 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
 
     shouldScrollToLatestTodoDraftRef.current = false;
     if (typeof latestTodoDraftRef.current?.scrollIntoView === "function") {
-      latestTodoDraftRef.current.scrollIntoView({ block: "end", behavior: "smooth" });
+      latestTodoDraftRef.current.scrollIntoView({
+        block: "end",
+        behavior: "smooth",
+      });
     }
   }, [todoDrafts.length]);
 
@@ -170,7 +190,10 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
         <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2.5 px-4">
           <div className="flex items-center gap-2">
             <Icon className="h-3.5 w-3.5 text-white/60" />
-            <h2 id="add-entry-modal-title" className="text-xs font-bold text-white">
+            <h2
+              id="add-entry-modal-title"
+              className="text-sm font-bold text-white"
+            >
               {config.title}
             </h2>
           </div>
@@ -189,7 +212,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
             <>
               <div className="flex items-center justify-between rounded-[6px] border border-white/10 bg-black/40 p-2.5">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold tracking-wide text-white/65">
+                  <span className="text-sm font-semibold tracking-wide text-white/65">
                     批量待办录入
                   </span>
                   <span className="font-mono text-xs text-white/30">
@@ -211,7 +234,11 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   return (
                     <div
                       key={draft.id}
-                      ref={index === todoDrafts.length - 1 ? latestTodoDraftRef : undefined}
+                      ref={
+                        index === todoDrafts.length - 1
+                          ? latestTodoDraftRef
+                          : undefined
+                      }
                       className="rounded-[6px] border border-white/10 bg-black/30 p-3"
                     >
                       <div className="mb-2 flex items-center justify-between">
@@ -232,20 +259,22 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                           </button>
                         </div>
                       </div>
-                      <label className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
+                      <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
                         第 {itemNumber} 条待办内容
                         <textarea
                           aria-label={`第 ${itemNumber} 条待办内容`}
-                          className="min-h-16 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                          className="min-h-16 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-sm font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                           placeholder="写下一个明确行动..."
                           value={draft.text}
                           onChange={(event) =>
-                            handleTodoDraftChange(draft.id, { text: event.target.value })
+                            handleTodoDraftChange(draft.id, {
+                              text: event.target.value,
+                            })
                           }
                         />
                       </label>
                       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_112px]">
-                        <div className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
+                        <div className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
                           优先级
                           <div className="grid grid-cols-3 gap-1.5">
                             {TODO_PRIORITY_OPTIONS.map((priority) => (
@@ -258,14 +287,16 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                                     ? "border-white bg-white text-black"
                                     : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
                                 }`}
-                                onClick={() => handleTodoDraftChange(draft.id, { priority })}
+                                onClick={() =>
+                                  handleTodoDraftChange(draft.id, { priority })
+                                }
                               >
                                 {priority}
                               </button>
                             ))}
                           </div>
                         </div>
-                        <label className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
+                        <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
                           时间
                           <div className="relative">
                             <input
@@ -274,7 +305,9 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                               className="todo-time-picker w-full rounded-[6px] border border-white/10 bg-black px-2 py-1.5 pr-7 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
                               value={draft.time}
                               onChange={(event) =>
-                                handleTodoDraftChange(draft.id, { time: event.target.value })
+                                handleTodoDraftChange(draft.id, {
+                                  time: event.target.value,
+                                })
                               }
                             />
                             <button
@@ -299,28 +332,30 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
             </>
           ) : (
             <>
-              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
                 随记标题
                 <input
                   aria-label="随记标题"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="给这段想法一个临时标题"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
                 随记内容
                 <textarea
                   aria-label="随记内容"
-                  className="min-h-24 resize-none rounded-[6px] border border-white/10 bg-black p-2.5 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="min-h-24 resize-none rounded-[6px] border border-white/10 bg-black p-2.5 text-sm font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="保留原始表达，不急着归类..."
                 />
               </label>
               <div className="rounded-[6px] border border-white/10 bg-black/40 p-2.5">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-semibold tracking-wide text-white/55">
+                  <span className="text-sm font-semibold tracking-wide text-white/55">
                     灵感标签
                   </span>
-                  <span className="font-mono text-xs text-white/30">CAPTURE MODE</span>
+                  <span className="font-mono text-xs text-white/30">
+                    CAPTURE MODE
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {NOTE_TAG_OPTIONS.map((tag) => {
@@ -338,7 +373,9 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                         onClick={() => {
                           setSelectedTags((currentTags) =>
                             currentTags.includes(tag)
-                              ? currentTags.filter((currentTag) => currentTag !== tag)
+                              ? currentTags.filter(
+                                  (currentTag) => currentTag !== tag,
+                                )
                               : [...currentTags, tag],
                           );
                         }}
@@ -349,11 +386,11 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   })}
                 </div>
               </div>
-              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
                 额外标签
                 <input
                   aria-label="随记标签"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="补充新的标签，按逗号分隔"
                 />
               </label>
@@ -362,7 +399,9 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
-          <span className="font-mono text-xs text-white/30">ESC 关闭 / 本地草稿待接入</span>
+          <span className="font-mono text-xs text-white/30">
+            ESC 关闭 / 本地草稿待接入
+          </span>
           <button
             type="button"
             className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"

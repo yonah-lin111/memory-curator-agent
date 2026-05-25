@@ -10,12 +10,14 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  Edit2,
   Eye,
   FileText,
   HelpCircle,
   Plus,
   Sparkles,
   Tag,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -85,6 +87,8 @@ type NoteMarkdownModalProps = {
   onClose: () => void;
   // 保存 Markdown 笔记回调。
   onSave: (draft: NoteDraft) => void;
+  // 初始草稿（编辑时传入）。
+  initialDraft?: NoteDraft;
 };
 
 /* ==========================================
@@ -297,9 +301,12 @@ const parseTags = (tags: string): string[] =>
 const NoteMarkdownModal = ({
   onClose,
   onSave,
+  initialDraft,
 }: NoteMarkdownModalProps): React.JSX.Element => {
   // 当前 Markdown 草稿。
-  const [draft, setDraft] = useState<NoteDraft>(INITIAL_NOTE_DRAFT);
+  const [draft, setDraft] = useState<NoteDraft>(
+    initialDraft || INITIAL_NOTE_DRAFT,
+  );
   // 当前 Markdown 编辑器预览模式。
   const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>("edit");
   // 来源下拉框是否打开。
@@ -391,9 +398,9 @@ const NoteMarkdownModal = ({
             <FileText className="h-3.5 w-3.5 text-white/60" />
             <h2
               id="note-markdown-modal-title"
-              className="text-xs font-bold text-white"
+              className="text-sm font-bold text-white"
             >
-              编写 Markdown 笔记
+              {initialDraft ? "编辑 Markdown 笔记" : "编写 Markdown 笔记"}
             </h2>
           </div>
           <button
@@ -409,11 +416,11 @@ const NoteMarkdownModal = ({
         <div className="max-h-[82vh] overflow-y-auto p-3.5 custom-scrollbar">
           <div className="flex flex-col gap-2.5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.6fr_1fr_148px]">
-              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
                 笔记标题
                 <input
                   aria-label="Markdown 笔记标题"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="给这段 Markdown 一个临时标题"
                   value={draft.title}
                   onChange={(event) =>
@@ -421,11 +428,11 @@ const NoteMarkdownModal = ({
                   }
                 />
               </label>
-              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
                 标签
                 <input
                   aria-label="Markdown 笔记标签"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="用逗号分隔，例如 架构, 待整理"
                   value={draft.tags}
                   onChange={(event) =>
@@ -435,7 +442,7 @@ const NoteMarkdownModal = ({
               </label>
               <div
                 ref={selectRef}
-                className="relative flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55"
+                className="relative flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55"
               >
                 来源
                 <button
@@ -443,7 +450,7 @@ const NoteMarkdownModal = ({
                   aria-haspopup="listbox"
                   aria-expanded={isSelectOpen}
                   aria-label="Markdown 笔记来源"
-                  className="flex h-[30px] w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
+                  className="flex h-[30px] w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
                   onClick={() => setIsSelectOpen((prev) => !prev)}
                 >
                   <span>{draft.source}</span>
@@ -486,7 +493,7 @@ const NoteMarkdownModal = ({
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
+            <div className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
               Markdown 正文
               <MDEditor
                 className="notes-markdown-editor"
@@ -521,8 +528,12 @@ const NoteMarkdownModal = ({
             disabled={!draft.title.trim() || !draft.content.trim()}
             onClick={handleSave}
           >
-            <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
-            保存 Markdown 笔记
+            {initialDraft ? (
+              <Check className="h-3.5 w-3.5 text-black" />
+            ) : (
+              <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
+            )}
+            {initialDraft ? "更新 Markdown 笔记" : "保存 Markdown 笔记"}
           </button>
         </div>
       </section>
@@ -541,6 +552,8 @@ export const NotesPage = (): React.JSX.Element => {
   const [activeFilter, setActiveFilter] = useState<NotesFilter>("all");
   // Markdown 编辑弹窗是否打开。
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  // 正在编辑的笔记。若为 null 则表示非编辑状态。
+  const [editingNote, setEditingNote] = useState<NoteMaterialItem | null>(null);
 
   // 当前页面统计项。
   const statsItems = createStatsItems(notes);
@@ -555,17 +568,58 @@ export const NotesPage = (): React.JSX.Element => {
   };
 
   /**
+   * 编辑笔记，打开弹窗。
+   */
+  const handleEditNote = (note: NoteMaterialItem): void => {
+    setEditingNote(note);
+  };
+
+  /**
+   * 删除素材。
+   */
+  const handleDeleteNote = (id: string): void => {
+    setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+  };
+
+  /**
+   * 更新素材池中的笔记。
+   */
+  const handleUpdateNote = (id: string, draft: NoteDraft): void => {
+    setNotes((currentNotes) =>
+      currentNotes.map((note) =>
+        note.id === id
+          ? {
+              ...note,
+              title: draft.title.trim(),
+              content: draft.content.trim(),
+              source: draft.source,
+              tags: parseTags(draft.tags),
+            }
+          : note,
+      ),
+    );
+    setEditingNote(null);
+  };
+
+  /**
    * 保存 Markdown 笔记到当前页面素材池。
    */
   const handleSaveMarkdownNote = (draft: NoteDraft): void => {
-    const createdAt = new Date();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const date = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const timeStr = `${year}-${month}-${date} ${hours}:${minutes}`;
+
     const newNote: NoteMaterialItem = {
-      id: `n-${createdAt.getTime()}`,
+      id: `n-${now.getTime()}`,
       title: draft.title.trim(),
       content: draft.content.trim(),
       source: draft.source,
       tags: parseTags(draft.tags),
-      time: "2026-05-25 22:10",
+      time: timeStr,
       isCurated: false,
       clue: "可能关联主题「Markdown 新素材」",
     };
@@ -608,7 +662,7 @@ export const NotesPage = (): React.JSX.Element => {
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium text-white/40">
+                  <span className="text-sm font-medium text-white/40">
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
@@ -670,25 +724,40 @@ export const NotesPage = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* 自由随记卡片网格布局 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-1">
+        {/* 自由随记卡片瀑布流布局 */}
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-3 w-full mb-1">
           {visibleNotes.map((note) => (
             <div
               key={note.id}
-              className={`h-[258px] overflow-hidden rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
+              className={`group break-inside-avoid mb-3 rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
                 note.isCurated
                   ? "border-white/5 bg-[#212121]/40"
                   : "border-white/10 bg-[#212121]"
               }`}
             >
-              {/* 卡片头部：来源与时间 */}
+              {/* 卡片头部：时间与操作按钮（编辑/删除） */}
               <div className="flex items-center justify-between">
-                <span className="rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/45 font-medium">
-                  {note.source}
-                </span>
-                <div className="flex items-center gap-1 text-xs font-mono text-white/30">
+                <div className="flex items-center gap-1 text-[11px] font-mono text-white/30">
                   <Clock className="h-2.5 w-2.5" />
-                  <span>{note.time.split(" ")[1]}</span>
+                  <span>{note.time}</span>
+                </div>
+                <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded-[4px] text-white/40 hover:bg-white/10 hover:text-white transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                    onClick={() => handleEditNote(note)}
+                    title="编辑笔记"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded-[4px] text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                    onClick={() => handleDeleteNote(note.id)}
+                    title="删除笔记"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
 
@@ -702,8 +771,11 @@ export const NotesPage = (): React.JSX.Element => {
                 {note.content}
               </p>
 
-              {/* 关联标签 */}
-              <div className="flex flex-wrap gap-1">
+              {/* 来源分类与关联标签 */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded-[6px] bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60 font-medium">
+                  {note.source}
+                </span>
                 {note.tags.map((tag) => (
                   <span
                     key={tag}
@@ -717,7 +789,7 @@ export const NotesPage = (): React.JSX.Element => {
 
               {/* 智能线索分析提示 */}
               {note.clue && (
-                <div className="mt-auto pt-2 border-t border-white/5 flex items-start gap-1.5">
+                <div className="pt-2 border-t border-white/5 flex items-start gap-1.5 mt-1">
                   <Sparkles
                     className={`h-3 w-3 mt-0.5 flex-shrink-0 ${
                       note.isCurated ? "text-white/20" : "text-white/70"
@@ -739,10 +811,29 @@ export const NotesPage = (): React.JSX.Element => {
         </div>
       </div>
 
-      {isMarkdownModalOpen ? (
+      {isMarkdownModalOpen || editingNote ? (
         <NoteMarkdownModal
-          onClose={() => setIsMarkdownModalOpen(false)}
-          onSave={handleSaveMarkdownNote}
+          initialDraft={
+            editingNote
+              ? {
+                  title: editingNote.title,
+                  content: editingNote.content,
+                  source: editingNote.source,
+                  tags: editingNote.tags.join(", "),
+                }
+              : undefined
+          }
+          onClose={() => {
+            setIsMarkdownModalOpen(false);
+            setEditingNote(null);
+          }}
+          onSave={(draft) => {
+            if (editingNote) {
+              handleUpdateNote(editingNote.id, draft);
+            } else {
+              handleSaveMarkdownNote(draft);
+            }
+          }}
         />
       ) : null}
     </section>

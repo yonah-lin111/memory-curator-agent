@@ -193,7 +193,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
               >
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-white/40">
+                  <span className="text-sm font-medium text-white/40">
                     {metric.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white leading-none">
