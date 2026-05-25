@@ -1,12 +1,14 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import type { ICommand } from "@uiw/react-md-editor/commands";
 import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import "@uiw/react-md-editor/markdown-editor.css";
 import {
   Brain,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Clock,
   Eye,
   FileText,
@@ -300,6 +302,26 @@ const NoteMarkdownModal = ({
   const [draft, setDraft] = useState<NoteDraft>(INITIAL_NOTE_DRAFT);
   // 当前 Markdown 编辑器预览模式。
   const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>("edit");
+  // 来源下拉框是否打开。
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+  // 下拉框容器的 DOM 引用。
+  const selectRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    /**
+     * 处理点击外部区域时自动关闭下拉框。
+     */
+    const handleClickOutside = (event: MouseEvent): void => {
+      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+        setIsSelectOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Markdown 预览切换按钮命令。
   const previewToggleCommand: ICommand = {
@@ -408,25 +430,48 @@ const NoteMarkdownModal = ({
                   }
                 />
               </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <div ref={selectRef} className="relative flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
                 来源
-                <select
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSelectOpen}
                   aria-label="Markdown 笔记来源"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
-                  value={draft.source}
-                  onChange={(event) =>
-                    handleDraftChange({
-                      source: event.target.value as NoteMaterialItem["source"],
-                    })
-                  }
+                  className="flex h-[30px] w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
+                  onClick={() => setIsSelectOpen((prev) => !prev)}
                 >
-                  {NOTE_SOURCE_OPTIONS.map((source) => (
-                    <option key={source} value={source}>
-                      {source}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <span>{draft.source}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isSelectOpen && (
+                  <div
+                    role="listbox"
+                    className="absolute top-[100%] left-0 z-50 mt-1 w-full rounded-[6px] border border-white/10 bg-black p-1 shadow-lg"
+                  >
+                    {NOTE_SOURCE_OPTIONS.map((source) => {
+                      const isSelected = draft.source === source;
+                      return (
+                        <button
+                          key={source}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white ${
+                            isSelected ? "bg-white/5 text-white" : "text-white/70"
+                          }`}
+                          onClick={() => {
+                            handleDraftChange({ source });
+                            setIsSelectOpen(false);
+                          }}
+                        >
+                          <span>{source}</span>
+                          {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
