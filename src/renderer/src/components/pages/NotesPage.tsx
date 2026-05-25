@@ -164,11 +164,7 @@ export const NotesPage = (): React.JSX.Element => {
             return (
               <div
                 key={stat.id}
-                className={`rounded-[6px] border p-3 flex items-center justify-between transition-all duration-150 ${
-                  stat.highlight
-                    ? 'border-white/20 bg-white/[0.04]'
-                    : 'border-white/5 bg-[#212121]'
-                }`}
+                className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between transition-all duration-150"
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[11px] font-medium text-white/40">{stat.label}</span>
@@ -211,12 +207,12 @@ export const NotesPage = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* 自由随记卡片瀑布流布局 */}
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-3 space-y-3 mb-1">
+        {/* 自由随记卡片网格布局 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-1">
           {INITIAL_NOTES.map((note) => (
             <div
               key={note.id}
-              className={`break-inside-avoid rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
+              className={`h-[258px] overflow-hidden rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
                 note.isCurated
                   ? 'border-white/5 bg-[#212121]/40'
                   : 'border-white/10 bg-[#212121]'
@@ -237,7 +233,7 @@ export const NotesPage = (): React.JSX.Element => {
               <h3 className="text-xs font-bold text-white/85 leading-tight">{note.title}</h3>
 
               {/* 卡片正文 */}
-              <p className="text-xs text-white/50 leading-relaxed font-sans whitespace-pre-wrap">
+              <p className="text-xs text-white/50 leading-relaxed font-sans line-clamp-6">
                 {note.content}
               </p>
 
