@@ -155,10 +155,10 @@ export const MemoriesPage = (): React.JSX.Element => {
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[8.5px] text-white/40 font-mono">
+                    <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40 font-mono">
                       {memory.date}
                     </span>
-                    <span className="text-[9px] font-mono text-white/55">心境: {memory.mood}</span>
+                    <span className="text-xs font-mono text-white/55">心境: {memory.mood}</span>
                   </div>
                   <h3 className="text-xs font-bold text-white leading-normal font-sans">
                     {memory.name}
@@ -167,7 +167,7 @@ export const MemoriesPage = (): React.JSX.Element => {
                     {memory.reason}
                   </p>
                 </div>
-                <div className="border-t border-white/5 pt-2 flex items-center gap-1 text-[9.5px] text-white/30 font-mono">
+                <div className="border-t border-white/5 pt-2 flex items-center gap-1 text-xs text-white/30 font-mono">
                   <FileText className="h-3 w-3" />
                   <span>来源: {memory.source}</span>
                 </div>
@@ -194,7 +194,7 @@ export const MemoriesPage = (): React.JSX.Element => {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-white/85">关联桥梁: {relation.pivotTheme}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-white/40">
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-white/40">
                     <span className="truncate max-w-[130px] sm:max-w-none">{relation.sourceNodeName.replace(/[「」]/g, '')}</span>
                     <ArrowRight className="h-3 w-3 text-white/20" />
                     <span className="truncate max-w-[130px] sm:max-w-none">{relation.targetNodeName.replace(/[「」]/g, '')}</span>
@@ -239,7 +239,7 @@ export const MemoriesPage = (): React.JSX.Element => {
               <div className="flex items-start gap-2.5 px-1">
                 <HelpCircle className="h-4 w-4 text-white/30 mt-0.5 flex-shrink-0" />
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-bold text-white/70">Curator 处理指引:</span>
+                  <span className="text-xs font-bold text-white/70">Curator 处理指引:</span>
                   <p className="text-xs text-white/45 leading-relaxed font-sans">
                     {issue.actionSuggestion}
                   </p>

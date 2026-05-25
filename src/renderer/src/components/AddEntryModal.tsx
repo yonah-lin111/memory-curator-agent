@@ -189,16 +189,16 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
             <>
               <div className="flex items-center justify-between rounded-[6px] border border-white/10 bg-black/40 p-2.5">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-semibold tracking-wide text-white/65">
+                  <span className="text-xs font-semibold tracking-wide text-white/65">
                     批量待办录入
                   </span>
-                  <span className="font-mono text-[10px] text-white/30">
+                  <span className="font-mono text-xs text-white/30">
                     {todoDrafts.length} ITEMS / EACH HAS PRIORITY + TIME
                   </span>
                 </div>
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1.5 text-[11px] font-bold text-white/70 transition-all duration-150 hover:border-white/25 hover:text-white"
+                  className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1.5 text-xs font-bold text-white/70 transition-all duration-150 hover:border-white/25 hover:text-white"
                   onClick={handleAddTodoDraft}
                 >
                   <Plus className="h-3 w-3" />
@@ -215,11 +215,11 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                       className="rounded-[6px] border border-white/10 bg-black/30 p-3"
                     >
                       <div className="mb-2 flex items-center justify-between">
-                        <span className="font-mono text-[10px] text-white/35">
+                        <span className="font-mono text-xs text-white/35">
                           TODO #{String(itemNumber).padStart(2, "0")}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/35">
+                          <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/35">
                             {draft.priority} / {draft.time}
                           </span>
                           <button
@@ -232,7 +232,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                           </button>
                         </div>
                       </div>
-                      <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
                         第 {itemNumber} 条待办内容
                         <textarea
                           aria-label={`第 ${itemNumber} 条待办内容`}
@@ -245,7 +245,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                         />
                       </label>
                       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_112px]">
-                        <div className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                        <div className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
                           优先级
                           <div className="grid grid-cols-3 gap-1.5">
                             {TODO_PRIORITY_OPTIONS.map((priority) => (
@@ -253,7 +253,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                                 key={priority}
                                 type="button"
                                 aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
-                                className={`rounded-[6px] border px-2 py-1.5 text-[11px] font-bold transition-all duration-150 ${
+                                className={`rounded-[6px] border px-2 py-1.5 text-xs font-bold transition-all duration-150 ${
                                   draft.priority === priority
                                     ? "border-white bg-white text-black"
                                     : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
@@ -265,7 +265,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                             ))}
                           </div>
                         </div>
-                        <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                        <label className="flex flex-col gap-1.5 text-xs font-semibold tracking-wide text-white/55">
                           时间
                           <div className="relative">
                             <input
@@ -299,7 +299,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
             </>
           ) : (
             <>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 随记标题
                 <input
                   aria-label="随记标题"
@@ -307,7 +307,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   placeholder="给这段想法一个临时标题"
                 />
               </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 随记内容
                 <textarea
                   aria-label="随记内容"
@@ -317,10 +317,10 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
               </label>
               <div className="rounded-[6px] border border-white/10 bg-black/40 p-2.5">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold tracking-wide text-white/55">
+                  <span className="text-xs font-semibold tracking-wide text-white/55">
                     灵感标签
                   </span>
-                  <span className="font-mono text-[10px] text-white/30">CAPTURE MODE</span>
+                  <span className="font-mono text-xs text-white/30">CAPTURE MODE</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {NOTE_TAG_OPTIONS.map((tag) => {
@@ -330,7 +330,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                         key={tag}
                         type="button"
                         aria-label={`添加随记标签 ${tag}`}
-                        className={`rounded-[6px] border px-2 py-1 text-[11px] font-semibold transition-all duration-150 ${
+                        className={`rounded-[6px] border px-2 py-1 text-xs font-semibold transition-all duration-150 ${
                           isSelected
                             ? "border-white bg-white text-black"
                             : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
@@ -349,7 +349,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   })}
                 </div>
               </div>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 额外标签
                 <input
                   aria-label="随记标签"
@@ -362,7 +362,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
-          <span className="font-mono text-[10px] text-white/30">ESC 关闭 / 本地草稿待接入</span>
+          <span className="font-mono text-xs text-white/30">ESC 关闭 / 本地草稿待接入</span>
           <button
             type="button"
             className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"

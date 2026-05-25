@@ -180,13 +180,13 @@ export const TodayWorkspace = (): React.JSX.Element => {
               快速输入与捕获
             </span>
             <div className="flex gap-1.5">
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[11px] text-white/40">
+              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
                 文本输入
               </span>
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[11px] text-white/40">
+              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
                 聊天粘贴
               </span>
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[11px] text-white/40">
+              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
                 粘贴素材
               </span>
             </div>
@@ -222,7 +222,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-white/40">
+                  <span className="text-xs font-medium text-white/40">
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
@@ -249,7 +249,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[11px] text-white/40">
+                <span className="font-mono text-xs text-white/40">
                   已完成 3/5
                 </span>
                 <button
@@ -285,7 +285,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                     >
                       {todo.text}
                     </span>
-                    <span className="text-[10px] font-mono text-white/30">
+                    <span className="text-xs font-mono text-white/30">
                       {todo.time}
                     </span>
                   </div>
@@ -304,7 +304,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="hidden items-center gap-1 text-[11px] text-white/30 font-medium sm:flex">
+                <span className="hidden items-center gap-1 text-xs text-white/30 font-medium sm:flex">
                   <Plus className="h-3 w-3" />
                   自动同步
                 </span>
@@ -328,7 +328,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                     <h4 className="text-xs font-bold text-white/80 truncate pr-2">
                       {note.title}
                     </h4>
-                    <span className="text-[10px] font-mono text-white/30 flex-shrink-0">
+                    <span className="text-xs font-mono text-white/30 flex-shrink-0">
                       {note.time}
                     </span>
                   </div>
@@ -339,7 +339,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                     {note.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-[9px] text-white/40"
+                        className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/40"
                       >
                         <Tag className="h-2 w-2" />
                         {tag}
@@ -361,7 +361,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 日记与主观表达
               </span>
             </div>
-            <div className="flex items-center gap-3 text-[11px] font-mono text-white/40">
+            <div className="flex items-center gap-3 text-xs font-mono text-white/40">
               <span>记录时间: {JOURNAL_DATA.time}</span>
               <span>•</span>
               <span className="text-emerald-400">
@@ -375,7 +375,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
             </p>
           </div>
           <div className="flex items-center justify-end">
-            <span className="text-[11px] text-white/30">
+            <span className="text-xs text-white/30">
               * 保留完整表达，拒绝以摘要过滤真实情绪感受。
             </span>
           </div>

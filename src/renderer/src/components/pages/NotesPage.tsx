@@ -406,7 +406,7 @@ const NoteMarkdownModal = ({
         <div className="max-h-[82vh] overflow-y-auto p-3.5 custom-scrollbar">
           <div className="flex flex-col gap-2.5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.6fr_1fr_148px]">
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 笔记标题
                 <input
                   aria-label="Markdown 笔记标题"
@@ -418,7 +418,7 @@ const NoteMarkdownModal = ({
                   }
                 />
               </label>
-              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 标签
                 <input
                   aria-label="Markdown 笔记标签"
@@ -430,7 +430,7 @@ const NoteMarkdownModal = ({
                   }
                 />
               </label>
-              <div ref={selectRef} className="relative flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+              <div ref={selectRef} className="relative flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
                 来源
                 <button
                   type="button"
@@ -474,7 +474,7 @@ const NoteMarkdownModal = ({
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
+            <div className="flex flex-col gap-1 text-xs font-semibold tracking-wide text-white/55">
               Markdown 正文
               <MDEditor
                 className="notes-markdown-editor"
@@ -500,7 +500,7 @@ const NoteMarkdownModal = ({
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
-          <span className="font-mono text-[10px] text-white/30">
+          <span className="font-mono text-xs text-white/30">
             ESC 关闭 / 当前仅保存到本地页面状态
           </span>
           <button
@@ -596,7 +596,7 @@ export const NotesPage = (): React.JSX.Element => {
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-white/40">
+                  <span className="text-xs font-medium text-white/40">
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
@@ -644,7 +644,7 @@ export const NotesPage = (): React.JSX.Element => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-white/30 font-mono">
+            <span className="text-xs text-white/30 font-mono">
               本地剪贴板监听自动捕获已启用
             </span>
             <button
@@ -671,10 +671,10 @@ export const NotesPage = (): React.JSX.Element => {
             >
               {/* 卡片头部：来源与时间 */}
               <div className="flex items-center justify-between">
-                <span className="rounded-[6px] bg-white/5 px-1.5 py-0.5 text-[9px] text-white/45 font-medium">
+                <span className="rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/45 font-medium">
                   {note.source}
                 </span>
-                <div className="flex items-center gap-1 text-[9px] font-mono text-white/30">
+                <div className="flex items-center gap-1 text-xs font-mono text-white/30">
                   <Clock className="h-2.5 w-2.5" />
                   <span>{note.time.split(" ")[1]}</span>
                 </div>
@@ -695,7 +695,7 @@ export const NotesPage = (): React.JSX.Element => {
                 {note.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-[9px] text-white/40"
+                    className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/40"
                   >
                     <Tag className="h-2 w-2" />
                     {tag}
@@ -712,7 +712,7 @@ export const NotesPage = (): React.JSX.Element => {
                     }`}
                   />
                   <span
-                    className={`text-[10px] leading-relaxed ${
+                    className={`text-xs leading-relaxed ${
                       note.isCurated
                         ? "text-white/25 line-through"
                         : "text-white/65 font-medium"

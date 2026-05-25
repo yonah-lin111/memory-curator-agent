@@ -177,10 +177,10 @@ export const ThemesPage = (): React.JSX.Element => {
         {/* 左侧：长期主题列表 */}
         <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-2 overflow-y-auto custom-scrollbar lg:pr-1">
           <div className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between">
-            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">
+            <span className="text-xs font-bold tracking-widest text-white/40 uppercase">
               追踪主题列表
             </span>
-            <span className="text-[10px] font-mono text-white/70 font-bold bg-white/5 px-1.5 py-0.5 rounded-[6px]">
+            <span className="text-xs font-mono text-white/70 font-bold bg-white/5 px-1.5 py-0.5 rounded-[6px]">
               活跃中: 2
             </span>
           </div>
@@ -202,7 +202,7 @@ export const ThemesPage = (): React.JSX.Element => {
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold leading-none truncate pr-2">{theme.name}</span>
                     <span
-                      className={`rounded-[6px] px-1.5 py-0.5 text-[8.5px] font-bold leading-none ${
+                      className={`rounded-[6px] px-1.5 py-0.5 text-xs font-bold leading-none ${
                         isSelected
                           ? 'bg-black/10 text-black border border-black/10'
                           : isAlert
@@ -218,7 +218,7 @@ export const ThemesPage = (): React.JSX.Element => {
                     {theme.summary}
                   </p>
 
-                  <div className="flex items-center justify-between w-full text-[9px] font-mono">
+                  <div className="flex items-center justify-between w-full text-xs font-mono">
                     <span className={isSelected ? 'text-black/50' : 'text-white/30'}>
                       建档: {theme.startDate}
                     </span>

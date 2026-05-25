@@ -292,7 +292,7 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
             <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/10 text-white">
               <Sparkles className="h-4 w-4" />
             </div>
-            <div className="flex -rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-white/30">
+            <div className="flex -rotate-90 whitespace-nowrap text-xs font-mono tracking-widest text-white/30">
               AGENT CURATION
             </div>
             <div className="h-10 w-10" />
@@ -318,7 +318,7 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
             <span className="text-xs font-bold tracking-wide text-white/80">
               今日捕获片段归类建议
             </span>
-            <span className="text-[10px] text-white/30 mt-0.5 font-medium leading-normal">
+            <span className="text-xs text-white/30 mt-0.5 font-medium leading-normal">
               （依据本地预设规则占位匹配而成的辅助建议）
             </span>
           </div>
@@ -336,14 +336,14 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
               return (
                 <div key={cl.id} className="flex flex-col gap-1.5 rounded-[6px] bg-white/[0.01] border border-white/5 p-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-white/40 truncate max-w-[200px] font-mono">
+                    <span className="text-xs text-white/40 truncate max-w-[200px] font-mono">
                       "{cl.sourceText}"
                     </span>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="rounded-[6px] bg-white/5 px-1.5 py-0.5 text-[9px] text-white/40 font-mono">
+                      <span className="rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/40 font-mono">
                         {cl.confidence}
                       </span>
-                      <span className="flex items-center gap-1 rounded-[6px] bg-white/10 px-1.5 py-0.5 text-[10px] text-white font-medium">
+                      <span className="flex items-center gap-1 rounded-[6px] bg-white/10 px-1.5 py-0.5 text-xs text-white font-medium">
                         <TypeIcon className="h-2.5 w-2.5" />
                         {TypeLabel}
                       </span>
@@ -354,7 +354,7 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
                   </p>
                   {/* 已修正假交互：从 button 变更为静态提示 badge */}
                   <div className="flex justify-end mt-0.5">
-                    <span className="text-[9px] font-medium text-white/20 bg-white/5 rounded-[6px] px-2 py-0.5">
+                    <span className="text-xs font-medium text-white/20 bg-white/5 rounded-[6px] px-2 py-0.5">
                       静态参考占位
                     </span>
                   </div>
@@ -373,7 +373,7 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
                 关联记忆共鸣线索
               </span>
             </div>
-            <span className="text-[10px] text-white/30 font-mono">
+            <span className="text-xs text-white/30 font-mono">
               2条关联
             </span>
           </div>
@@ -384,11 +384,11 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
                   <h4 className="text-xs font-bold text-white/80 truncate">
                     {m.title}
                   </h4>
-                  <span className="text-[10px] font-mono text-emerald-400 flex-shrink-0">
+                  <span className="text-xs font-mono text-emerald-400 flex-shrink-0">
                     {m.similarity}% 关联
                   </span>
                 </div>
-                <div className="text-[10px] text-white/30 font-mono">
+                <div className="text-xs text-white/30 font-mono">
                   记录日期: {m.date}
                 </div>
                 <p className="text-xs text-white/50 leading-relaxed mt-1">
@@ -424,11 +424,11 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
                     <span className="text-xs font-bold text-white/80">
                       {theme.name}
                     </span>
-                    <span className={`rounded-[6px] px-1.5 py-0.5 text-[9px] font-mono ${statusColor}`}>
+                    <span className={`rounded-[6px] px-1.5 py-0.5 text-xs font-mono ${statusColor}`}>
                       {theme.status}
                     </span>
                   </div>
-                  <p className="text-[11px] text-white/50 leading-relaxed">
+                  <p className="text-xs text-white/50 leading-relaxed">
                     {theme.trigger}
                   </p>
                 </div>
@@ -445,7 +445,7 @@ export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps):
               本地安全与隐私边界
             </span>
           </div>
-          <p className="text-[11px] text-white/40 leading-relaxed">
+          <p className="text-xs text-white/40 leading-relaxed">
             AEON 当前处于<strong className="text-white/60">本地记录结构</strong>架构下运行。在进行未来外部分析前，计划展示需要核对的数据范围，由您确认后发送。
           </p>
         </div>

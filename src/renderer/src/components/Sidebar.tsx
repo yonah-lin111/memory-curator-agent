@@ -134,7 +134,7 @@ export const Sidebar = ({
                 <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
                   MEMORY CURATOR
                 </h2>
-                <span className="text-[9px] tracking-widest text-white/40 uppercase font-mono whitespace-nowrap">
+                <span className="text-xs tracking-widest text-white/40 uppercase font-mono whitespace-nowrap">
                   LOCAL FIRST DESKTOP
                 </span>
               </div>
@@ -146,7 +146,7 @@ export const Sidebar = ({
             {NAVIGATION_GROUPS.map((group) => (
               <section key={group.id} className="flex flex-col gap-1.5">
                 {!isCollapsed && (
-                  <h3 className="px-1 text-[9px] font-bold tracking-[0.18em] text-white/30">
+                  <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30">
                     {group.label}
                   </h3>
                 )}
@@ -170,7 +170,7 @@ export const Sidebar = ({
                         {!isCollapsed && (
                           <div className="flex min-w-0 flex-col items-start text-left">
                             <span className="text-xs font-bold leading-none">{item.label}</span>
-                            <span className={`mt-1 text-[9px] leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
+                            <span className={`mt-1 text-xs leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
                               {item.description}
                             </span>
                           </div>
@@ -191,10 +191,10 @@ export const Sidebar = ({
               {/* 周定位卡片保持静态，服务 Today 页面上下文。 */}
               <div className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.02] p-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">
+                  <span className="text-xs font-bold tracking-widest text-white/40 uppercase">
                     2026 MAY
                   </span>
-                  <span className="text-[9px] font-mono text-white/25">WEEK 22</span>
+                  <span className="text-xs font-mono text-white/25">WEEK 22</span>
                 </div>
                 <div className="grid grid-cols-7 gap-1">
                   {WEEK_DATES.map((d) => (
@@ -204,7 +204,7 @@ export const Sidebar = ({
                         d.active ? 'bg-white text-black font-bold' : 'text-white/40'
                       }`}
                     >
-                      <span className={`text-[8px] uppercase font-bold ${d.active ? 'text-black/50' : 'text-white/20'}`}>
+                      <span className={`text-xs uppercase font-bold ${d.active ? 'text-black/50' : 'text-white/20'}`}>
                         {d.weekday[0]}
                       </span>
                       <span className="mt-1 text-xs font-mono font-bold leading-none">
@@ -241,7 +241,7 @@ export const Sidebar = ({
                   <Database className="h-3.5 w-3.5 text-emerald-400" />
                   <span className="text-xs font-bold text-white/80">Local Vault</span>
                 </div>
-                <div className="flex flex-col gap-1 pl-5 text-[10px] text-white/40 font-mono">
+                <div className="flex flex-col gap-1 pl-5 text-xs text-white/40 font-mono">
                   <div className="flex items-center gap-1.5">
                     <Clock3 className="h-3 w-3 text-white/30" />
                     <span>Last saved: Today 21:45</span>
@@ -250,7 +250,7 @@ export const Sidebar = ({
                   <span>Agent: Curation standby</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-[10px] text-white/35">
+              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-xs text-white/35">
                 <Settings className="h-3.5 w-3.5" />
                 <span>Settings</span>
               </div>

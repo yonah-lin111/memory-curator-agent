@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
+@theme {
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 13px;
+}
+
 :root {
   color: #ffffff;
   background: #000000;
@@ -16,7 +22,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #000000;
-  font-size: 14px; /* 默认未加类名的原生文本设为 14px */
+  font-size: 13px; /* 默认未加类名的原生文本设为 13px */
   overflow: hidden; /* 在桌面应用中，通常使 body 不滚动，由子区域独立滚动 */
 }
 

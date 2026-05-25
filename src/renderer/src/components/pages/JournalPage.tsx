@@ -107,7 +107,7 @@ export const JournalPage = (): React.JSX.Element => {
         {/* 左侧：日期索引列表 */}
         <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-2 overflow-y-auto custom-scrollbar lg:pr-1">
           <div className="rounded-[6px] border border-white/5 bg-[#212121] p-3">
-            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">
+            <span className="text-xs font-bold tracking-widest text-white/40 uppercase">
               时间轴索引
             </span>
           </div>
@@ -128,11 +128,11 @@ export const JournalPage = (): React.JSX.Element => {
                     <div className="flex items-center gap-1.5 text-xs font-bold">
                       <CalendarDays className={`h-3.5 w-3.5 ${isSelected ? 'text-black' : 'text-white/40'}`} />
                       <span>{entry.date}</span>
-                      <span className={`text-[10px] ${isSelected ? 'text-black/50' : 'text-white/30'}`}>
+                      <span className={`text-xs ${isSelected ? 'text-black/50' : 'text-white/30'}`}>
                         ({entry.weekday})
                       </span>
                     </div>
-                    <span className={`text-[10px] font-mono ${isSelected ? 'text-black/50' : 'text-white/30'}`}>
+                    <span className={`text-xs font-mono ${isSelected ? 'text-black/50' : 'text-white/30'}`}>
                       {entry.time}
                     </span>
                   </div>
@@ -140,7 +140,7 @@ export const JournalPage = (): React.JSX.Element => {
                   {/* 情绪及卡片摘要 */}
                   <div className="flex flex-col gap-1">
                     <span
-                      className={`text-[10px] font-medium ${
+                      className={`text-xs font-medium ${
                         isSelected ? 'text-black/60' : 'text-white/65'
                       }`}
                     >
@@ -204,7 +204,7 @@ export const JournalPage = (): React.JSX.Element => {
                 {activeEntry.people.map((person) => (
                   <span
                     key={person}
-                    className="flex items-center gap-1 rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/50"
+                    className="flex items-center gap-1 rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/50"
                   >
                     <User className="h-2.5 w-2.5 text-white/30" />
                     {person}
@@ -213,7 +213,7 @@ export const JournalPage = (): React.JSX.Element => {
                 {activeEntry.themes.map((theme) => (
                   <span
                     key={theme}
-                    className="flex items-center gap-1 rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/50 border border-white/5"
+                    className="flex items-center gap-1 rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/50 border border-white/5"
                   >
                     <Tag className="h-2.5 w-2.5 text-white/30" />
                     主题: {theme}
@@ -229,11 +229,11 @@ export const JournalPage = (): React.JSX.Element => {
                 <h3 className="text-xs font-bold text-white/75">数字海马体神经元关联</h3>
               </div>
               {activeEntry.historicalConnection ? (
-                <p className="text-[10.5px] text-white/50 leading-relaxed font-sans">
+                <p className="text-xs text-white/50 leading-relaxed font-sans">
                   {activeEntry.historicalConnection}
                 </p>
               ) : (
-                <div className="flex items-center gap-1 text-[10px] text-white/30">
+                <div className="flex items-center gap-1 text-xs text-white/30">
                   <AlertCircle className="h-3.5 w-3.5" />
                   <span>暂未生成历史神经元连接分析，正在累积日记数据中。</span>
                 </div>

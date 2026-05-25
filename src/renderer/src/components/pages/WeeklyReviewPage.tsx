@@ -151,9 +151,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
               >
                 <div className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-white/40">{metric.label}</span>
+                  <span className="text-xs font-medium text-white/40">{metric.label}</span>
                   <span className="text-lg font-bold font-mono text-white leading-none">{metric.value}</span>
-                  <span className="text-[9px] text-white/30 truncate mt-0.5">{metric.changeText}</span>
+                  <span className="text-xs text-white/30 truncate mt-0.5">{metric.changeText}</span>
                 </div>
                 <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
                   <Icon className="h-4 w-4" />
@@ -176,9 +176,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 本周的前半段（05-19 至 05-21）处于比较明显的<span className="text-white font-bold">“焦虑 / 自省”</span>状态，高频的随记中出现多次对自己拖延的批判，思维呈现一定的内耗与无意义重构偏向。
               </p>
               <div className="flex items-center justify-center gap-2 py-1 bg-white/[0.01] rounded-[6px] border border-white/5">
-                <span className="text-[10px] text-white/40">前半周：焦虑与自省</span>
+                <span className="text-xs text-white/40">前半周：焦虑与自省</span>
                 <ArrowRight className="h-3 w-3 text-white/20" />
-                <span className="text-[10px] text-white/75 font-semibold">后半周：突破与充实</span>
+                <span className="text-xs text-white/75 font-semibold">后半周：突破与充实</span>
               </div>
               <p className="text-xs text-white/70 leading-relaxed">
                 随着 05-22 深夜用 Rust 硬核攻克多维图谱本地解密的性能难关，心境在周末显著好转，转入<span className="text-white font-bold">“精疲力竭 / 充实”</span>与周一落成工作台后的<span className="text-white font-bold">“平静 / 专注”</span>。
@@ -196,9 +196,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               <div className="flex flex-col gap-1.5 p-2.5 bg-white/[0.01] border border-white/5 rounded-[6px]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white/80">1. 本地优先安全架构</span>
-                  <span className="font-mono text-[10px] text-white/70">频次: 8次</span>
+                  <span className="font-mono text-xs text-white/70">频次: 8次</span>
                 </div>
-                <p className="text-[10.5px] text-white/40 leading-relaxed">
+                <p className="text-xs text-white/40 leading-relaxed">
                   多发生在开发讨论和技术随记中，核心内容围绕本地密钥安全存储、数据完全离线碎块化。已完全结晶为长期主题。
                 </p>
               </div>
@@ -206,9 +206,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               <div className="flex flex-col gap-1.5 p-2.5 bg-white/[0.01] border border-white/5 rounded-[6px]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white/80">2. 记忆的主动遗忘与策展机制</span>
-                  <span className="font-mono text-[10px] text-white/70">频次: 6次</span>
+                  <span className="font-mono text-xs text-white/70">频次: 6次</span>
                 </div>
-                <p className="text-[10.5px] text-white/40 leading-relaxed">
+                <p className="text-xs text-white/45 leading-relaxed">
                   灵感来自聊天记录中关于遗忘机制的讨论，它是打破数字化信息堆积、构建纯净数字脑区的必经道路。
                 </p>
               </div>
@@ -252,9 +252,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                         <span className="text-xs font-mono font-bold text-white/40">
                           {milestone.date} ({milestone.dayOfWeek})
                         </span>
-                        <span className="text-[9px] font-mono text-white/20">{milestone.time}</span>
+                        <span className="text-xs font-mono text-white/20">{milestone.time}</span>
                         <span
-                          className={`rounded-[6px] px-1.5 py-0.5 text-[8.5px] font-medium ${
+                          className={`rounded-[6px] px-1.5 py-0.5 text-xs font-medium ${
                             isBreakthrough
                               ? 'bg-white/10 text-white/80 border border-white/10'
                               : isAwakening
@@ -289,7 +289,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               <div key={curated.id} className="rounded-[6px] bg-[#000000] border border-white/5 p-3.5 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-white leading-tight">{curated.name}</h4>
-                  <span className="text-[9px] font-mono text-white/30">{curated.date}</span>
+                  <span className="text-xs font-mono text-white/30">{curated.date}</span>
                 </div>
                 <p className="text-xs text-white/50 leading-relaxed font-sans mt-0.5">
                   <span className="text-white/30 font-medium">沉淀理由：</span>
