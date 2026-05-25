@@ -1,5 +1,8 @@
 import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
+  ChevronLeft,
+  ChevronRight,
   Sparkles,
   ShieldCheck,
   History,
@@ -51,6 +54,33 @@ type ThemeClue = {
   trigger: string
   // 主题当前策展状态。
   status: '活跃中' | '有积累' | '待检视'
+}
+
+// AgentPanel 组件属性类型，描述右侧策展栏折叠状态与切换入口。
+type AgentPanelProps = {
+  // 当前右侧策展栏是否处于折叠状态。
+  isCollapsed: boolean
+  // 右侧策展栏折叠状态改变回调。
+  onCollapsedChange: (collapsed: boolean) => void
+}
+
+// 右侧策展栏最小宽度，对应当前默认宽度。
+const AGENT_PANEL_MIN_WIDTH = 360
+
+// 右侧策展栏最大宽度比例。
+const AGENT_PANEL_MAX_WIDTH_RATIO = 0.35
+
+// 长按进入拖拽调宽的延迟毫秒数。
+const RESIZE_LONG_PRESS_DELAY = 260
+
+// 右侧栏拖拽过程中的快照类型。
+type ResizeSnapshot = {
+  // 拖拽起点横坐标。
+  startX: number
+  // 拖拽开始时右侧栏宽度。
+  startWidth: number
+  // 是否已经越过长按阈值并进入调宽状态。
+  isResizing: boolean
 }
 
 /* ==========================================
@@ -123,25 +153,165 @@ const THEME_CLUES: ThemeClue[] = [
 ]
 
 /**
- * AgentPanel 组件 - 负责右侧 Agent 策展栏。
- * 承载无诊断性、极度克制的归类、历史关联与长期主题线索推荐（响应式、可访问性及去假交互优化）。
+ * 获取右侧策展栏最大宽度。
+ * 小视口下确保最大宽度不低于最小宽度，避免上下限倒挂。
  */
-export const AgentPanel = (): React.JSX.Element => {
-  return (
-    <aside className="w-full lg:w-[360px] h-auto lg:h-full flex flex-col gap-3 flex-shrink-0 overflow-hidden select-none">
-      {/* 顶部标题 */}
-      <header className="flex flex-col gap-1 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-white/40">
-          <Sparkles className="h-3.5 w-3.5 text-white/40" />
-          <span>AGENT CURATION</span>
-        </div>
-        <h2 className="text-lg font-bold tracking-tight text-white">
-          建议、归类与记忆线索
-        </h2>
-      </header>
+const getAgentPanelMaxWidth = (): number => {
+  return Math.max(AGENT_PANEL_MIN_WIDTH, Math.round(window.innerWidth * AGENT_PANEL_MAX_WIDTH_RATIO))
+}
 
-      {/* 滚动内容区（桌面端独立滚动，移动端顺序自流式排版） */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
+/**
+ * 将宽度限制在右侧策展栏允许范围内。
+ */
+const clampAgentPanelWidth = (width: number): number => {
+  return Math.min(Math.max(width, AGENT_PANEL_MIN_WIDTH), getAgentPanelMaxWidth())
+}
+
+/**
+ * AgentPanel 组件 - 负责右侧 Agent 策展栏。
+ * 仅提供侧栏折叠交互，其余归类、历史关联与长期主题线索保持静态展示。
+ */
+export const AgentPanel = ({ isCollapsed, onCollapsedChange }: AgentPanelProps): React.JSX.Element => {
+  // 右侧策展栏当前宽度，默认即最小宽度。
+  const [panelWidth, setPanelWidth] = useState<number>(AGENT_PANEL_MIN_WIDTH)
+  // 长按计时器引用。
+  const longPressTimerRef = useRef<number | null>(null)
+  // 拖拽调宽过程快照引用。
+  const resizeSnapshotRef = useRef<ResizeSnapshot | null>(null)
+  // 是否需要忽略拖拽结束后的合成点击。
+  const shouldIgnoreClickRef = useRef<boolean>(false)
+
+  /**
+   * 取消尚未触发的长按计时器。
+   */
+  const clearLongPressTimer = (): void => {
+    if (longPressTimerRef.current === null) {
+      return
+    }
+
+    window.clearTimeout(longPressTimerRef.current)
+    longPressTimerRef.current = null
+  }
+
+  /**
+   * 结束右侧栏拖拽调宽流程。
+   */
+  const stopPanelResize = (): void => {
+    clearLongPressTimer()
+
+    if (resizeSnapshotRef.current?.isResizing) {
+      shouldIgnoreClickRef.current = true
+    }
+
+    resizeSnapshotRef.current = null
+    document.body.style.cursor = ''
+  }
+
+  /**
+   * 根据指针位置更新右侧栏宽度。
+   */
+  const handlePanelResizeMove = (event: PointerEvent): void => {
+    const resizeSnapshot = resizeSnapshotRef.current
+
+    if (!resizeSnapshot?.isResizing) {
+      return
+    }
+
+    // 右侧栏左边缘向左拖动为扩大，向右拖动为缩小。
+    const nextWidth = resizeSnapshot.startWidth + resizeSnapshot.startX - event.clientX
+    setPanelWidth(clampAgentPanelWidth(nextWidth))
+  }
+
+  /**
+   * 监听全局指针移动与释放，确保拖出按钮后仍能调宽。
+   */
+  useEffect(() => {
+    window.addEventListener('pointermove', handlePanelResizeMove)
+    window.addEventListener('pointerup', stopPanelResize)
+    window.addEventListener('pointercancel', stopPanelResize)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePanelResizeMove)
+      window.removeEventListener('pointerup', stopPanelResize)
+      window.removeEventListener('pointercancel', stopPanelResize)
+      clearLongPressTimer()
+      document.body.style.cursor = ''
+    }
+  })
+
+  /**
+   * 处理右侧按钮按下：短按折叠，长按进入宽度拖拽。
+   */
+  const handleRightControlPointerDown = (event: React.PointerEvent<HTMLButtonElement>): void => {
+    if (isCollapsed) {
+      return
+    }
+
+    resizeSnapshotRef.current = {
+      startX: event.clientX,
+      startWidth: panelWidth,
+      isResizing: false
+    }
+    clearLongPressTimer()
+    longPressTimerRef.current = window.setTimeout(() => {
+      if (resizeSnapshotRef.current === null) {
+        return
+      }
+
+      resizeSnapshotRef.current = {
+        ...resizeSnapshotRef.current,
+        isResizing: true
+      }
+      document.body.style.cursor = 'ew-resize'
+    }, RESIZE_LONG_PRESS_DELAY)
+  }
+
+  /**
+   * 处理右侧按钮点击：普通点击折叠，被拖拽消费的点击则忽略。
+   */
+  const handleRightControlClick = (): void => {
+    if (shouldIgnoreClickRef.current) {
+      shouldIgnoreClickRef.current = false
+      return
+    }
+
+    onCollapsedChange(!isCollapsed)
+  }
+
+  return (
+    <div className="relative flex h-auto lg:h-full flex-shrink-0">
+      <aside
+        aria-label="右侧策展栏"
+        style={isCollapsed ? undefined : { width: `${panelWidth}px` }}
+        className={`w-full h-auto lg:h-full flex flex-col gap-3 flex-shrink-0 overflow-hidden select-none transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'lg:w-16 items-center' : ''
+        }`}
+      >
+        {isCollapsed ? (
+          <div className="flex h-full w-full flex-col items-center justify-between rounded-[6px] border border-white/5 bg-[#212121] p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/10 text-white">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div className="flex -rotate-90 whitespace-nowrap text-[10px] font-mono tracking-widest text-white/30">
+              AGENT CURATION
+            </div>
+            <div className="h-10 w-10" />
+          </div>
+        ) : (
+          <>
+            {/* 顶部标题 */}
+            <header className="flex flex-col gap-1 flex-shrink-0">
+              <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-white/40">
+                <Sparkles className="h-3.5 w-3.5 text-white/40" />
+                <span>AGENT CURATION</span>
+              </div>
+              <h2 className="text-lg font-bold tracking-tight text-white">
+                建议、归类与记忆线索
+              </h2>
+            </header>
+
+            {/* 滚动内容区（桌面端独立滚动，移动端顺序自流式排版） */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
         {/* 1. 输入归类建议（已移除 HelpCircle tooltip，直接增加可访问静态说明） */}
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0">
           <div className="flex flex-col border-b border-white/5 pb-2">
@@ -279,7 +449,20 @@ export const AgentPanel = (): React.JSX.Element => {
             AEON 当前处于<strong className="text-white/60">本地记录结构</strong>架构下运行。在进行未来外部分析前，计划展示需要核对的数据范围，由您确认后发送。
           </p>
         </div>
-      </div>
-    </aside>
+            </div>
+          </>
+        )}
+      </aside>
+
+      <button
+        type="button"
+        aria-label={isCollapsed ? '展开右侧策展栏' : '折叠右侧策展栏'}
+        onPointerDown={handleRightControlPointerDown}
+        onClick={handleRightControlClick}
+        className="absolute top-1/2 left-0 z-20 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 cursor-ew-resize focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+      >
+        {isCollapsed ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+    </div>
   )
 }

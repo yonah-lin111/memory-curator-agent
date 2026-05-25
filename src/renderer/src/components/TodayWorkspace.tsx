@@ -1,4 +1,4 @@
-import type React from 'react'
+import type React from "react";
 import {
   CheckSquare,
   FileText,
@@ -7,8 +7,8 @@ import {
   Plus,
   Tag,
   ClipboardList,
-  Square
-} from 'lucide-react'
+  Square,
+} from "lucide-react";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -17,50 +17,50 @@ import {
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {
   // 统计项标识。
-  id: string
+  id: string;
   // 统计项名称。
-  label: string
+  label: string;
   // 统计数值。
-  value: number
+  value: number;
   // 显示图标。
-  icon: React.ComponentType<{ className?: string }>
-}
+  icon: React.ComponentType<{ className?: string }>;
+};
 
 // 每日待办事项类型，用于今日计划区。
 type TodoItem = {
   // 待办唯一标识。
-  id: string
+  id: string;
   // 待办内容文本。
-  text: string
+  text: string;
   // 是否已完成。
-  completed: boolean
+  completed: boolean;
   // 创建时间标识或安排时间。
-  time: string
-}
+  time: string;
+};
 
 // 今日自由笔记类型，用于灵感闪念。
 type NoteItem = {
   // 笔记唯一标识。
-  id: string
+  id: string;
   // 笔记标题。
-  title: string
+  title: string;
   // 笔记正文。
-  content: string
+  content: string;
   // 笔记关联的标签列表。
-  tags: string[]
+  tags: string[];
   // 记录的具体时间。
-  time: string
-}
+  time: string;
+};
 
 // 今日主观日记类型，用于完整、私密的情感和思考记录。
 type JournalEntry = {
   // 记录的具体时间。
-  time: string
+  time: string;
   // 日记正文原文（保留主观表述不压缩）。
-  content: string
+  content: string;
   // 用户自行记录的轻量级情绪与状态感知。
-  mood: string
-}
+  mood: string;
+};
 
 /* ==========================================
  * 静态 Mock 数据 (Static Mock Data)
@@ -68,52 +68,81 @@ type JournalEntry = {
 
 // 顶部卡片今日数据统计。
 const TODAY_STATS: StatItem[] = [
-  { id: 'todo', label: '待办任务', value: 5, icon: CheckSquare },
-  { id: 'notes', label: '自由随记', value: 3, icon: FileText },
-  { id: 'journal', label: '日记段落', value: 1, icon: BookOpen },
-  { id: 'clues', label: '关联线索', value: 4, icon: Brain }
-]
+  { id: "todo", label: "待办任务", value: 5, icon: CheckSquare },
+  { id: "notes", label: "自由随记", value: 3, icon: FileText },
+  { id: "journal", label: "日记段落", value: 1, icon: BookOpen },
+  { id: "clues", label: "关联线索", value: 4, icon: Brain },
+];
 
 // 今日待办任务静态列表。
 const TODO_ITEMS: TodoItem[] = [
-  { id: 't1', text: '整理 AEON 核心协议层关于记忆关联度衰减的计算模型', completed: true, time: '09:30' },
-  { id: 't2', text: '对今日新输入的主观段落进行隐私过滤边界核对', completed: true, time: '11:00' },
-  { id: 't3', text: '完成 Today 工作台的三栏静态布局编码与视觉自审', completed: false, time: '14:00' },
-  { id: 't4', text: '修复渲染层 TypeScript 编译错误与 Lint 规范冲突', completed: false, time: '16:30' },
-  { id: 't5', text: '整理本周 Review 需要呈送的核心神经元演化线索', completed: true, time: '18:00' }
-]
+  {
+    id: "t1",
+    text: "整理 AEON 核心协议层关于记忆关联度衰减的计算模型",
+    completed: true,
+    time: "09:30",
+  },
+  {
+    id: "t2",
+    text: "对今日新输入的主观段落进行隐私过滤边界核对",
+    completed: true,
+    time: "11:00",
+  },
+  {
+    id: "t3",
+    text: "完成 Today 工作台的三栏静态布局编码与视觉自审",
+    completed: false,
+    time: "14:00",
+  },
+  {
+    id: "t4",
+    text: "修复渲染层 TypeScript 编译错误与 Lint 规范冲突",
+    completed: false,
+    time: "16:30",
+  },
+  {
+    id: "t5",
+    text: "整理本周 Review 需要呈送的核心神经元演化线索",
+    completed: true,
+    time: "18:00",
+  },
+];
 
 // 今日自由笔记静态列表（标签使用稳定字作为 key）。
 const NOTE_ITEMS: NoteItem[] = [
   {
-    id: 'n1',
-    title: '关于记忆持久化的思考',
-    content: '所有的临时闪念都不应该直接成为长期记忆，必须经过一个类似海马体的主动策展层。今天看到一个概念：信息不仅需要被存储，更需要主动被遗忘以保持高信噪比。',
-    tags: ['方法论', '产品思考'],
-    time: '10:15'
+    id: "n1",
+    title: "关于记忆持久化的思考",
+    content:
+      "所有的临时闪念都不应该直接成为长期记忆，必须经过一个类似海马体的主动策展层。今天看到一个概念：信息不仅需要被存储，更需要主动被遗忘以保持高信噪比。",
+    tags: ["方法论", "产品思考"],
+    time: "10:15",
   },
   {
-    id: 'n2',
-    title: '本地持久化方案表现',
-    content: '目前使用本地优先的文件存取，在处理高并发的多维关联查询时表现优异，读写响应时间极短，很适合桌面客户端。',
-    tags: ['架构', '本地存储'],
-    time: '13:40'
+    id: "n2",
+    title: "本地持久化方案表现",
+    content:
+      "目前使用本地优先的文件存取，在处理高并发的多维关联查询时表现优异，读写响应时间极短，很适合桌面客户端。",
+    tags: ["架构", "本地存储"],
+    time: "13:40",
   },
   {
-    id: 'n3',
-    title: '主题线索设计启发',
-    content: 'Agent 不需要给出诊断式结论（比如直接断定你焦虑了），它只需要默默地把“关系消耗”、“计划延后”作为一根根绳索摆在你面前，让你自己去连线和确认。',
-    tags: ['UX', 'AI-Agent'],
-    time: '15:20'
-  }
-]
+    id: "n3",
+    title: "主题线索设计启发",
+    content:
+      "Agent 不需要给出诊断式结论（比如直接断定你焦虑了），它只需要默默地把“关系消耗”、“计划延后”作为一根根绳索摆在你面前，让你自己去连线和确认。",
+    tags: ["UX", "AI-Agent"],
+    time: "15:20",
+  },
+];
 
 // 今日完整主观日记。
 const JOURNAL_DATA: JournalEntry = {
-  time: '21:45',
-  content: '今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱七八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片和微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。',
-  mood: '平静 / 专注'
-}
+  time: "21:45",
+  content:
+    "今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱七八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片和微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。",
+  mood: "平静 / 专注",
+};
 
 /**
  * TodayWorkspace 组件 - 负责中间列 Today 主工作台。
@@ -121,7 +150,10 @@ const JOURNAL_DATA: JournalEntry = {
  */
 export const TodayWorkspace = (): React.JSX.Element => {
   return (
-    <section className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
+    <section
+      aria-label="中间内容容器"
+      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden px-1 lg:px-2"
+    >
       {/* 顶部标题栏 */}
       <header className="flex flex-col gap-1 flex-shrink-0">
         <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-white/40">
@@ -178,7 +210,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         {/* 2. 今日概览统计（小屏 2 列，桌面 4 列） */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
           {TODAY_STATS.map((stat) => {
-            const Icon = stat.icon
+            const Icon = stat.icon;
             return (
               <div
                 key={stat.id}
@@ -196,7 +228,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   <Icon className="h-4 w-4" />
                 </div>
               </div>
-            )
+            );
           })}
         </div>
 
@@ -231,7 +263,9 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                     <span
                       className={`text-xs leading-normal ${
-                        todo.completed ? 'text-white/30 line-through' : 'text-white/80'
+                        todo.completed
+                          ? "text-white/30 line-through"
+                          : "text-white/80"
                       }`}
                     >
                       {todo.text}
@@ -305,7 +339,9 @@ export const TodayWorkspace = (): React.JSX.Element => {
             <div className="flex items-center gap-3 text-[11px] font-mono text-white/40">
               <span>记录时间: {JOURNAL_DATA.time}</span>
               <span>•</span>
-              <span className="text-emerald-400">情绪感知: {JOURNAL_DATA.mood}</span>
+              <span className="text-emerald-400">
+                情绪感知: {JOURNAL_DATA.mood}
+              </span>
             </div>
           </div>
           <div className="rounded-[6px] bg-[#000000] border border-white/5 p-3.5">
@@ -321,5 +357,5 @@ export const TodayWorkspace = (): React.JSX.Element => {
         </div>
       </div>
     </section>
-  )
-}
+  );
+};

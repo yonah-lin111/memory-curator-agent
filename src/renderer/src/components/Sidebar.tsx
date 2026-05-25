@@ -3,6 +3,8 @@ import {
   BookOpen,
   Brain,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Database,
   FileText,
@@ -38,6 +40,14 @@ type WeekDateItem = {
   active: boolean
 }
 
+// Sidebar 组件属性类型，描述左侧栏折叠状态与切换入口。
+type SidebarProps = {
+  // 当前左侧栏是否处于折叠状态。
+  isCollapsed: boolean
+  // 左侧栏折叠状态改变回调。
+  onCollapsedChange: (collapsed: boolean) => void
+}
+
 /* ==========================================
  * 静态 Mock 数据 (Static Mock Data)
  * ========================================== */
@@ -66,106 +76,133 @@ const WEEK_DATES: WeekDateItem[] = [
 
 /**
  * Sidebar 组件 - 负责左侧多维导航栏与周日期选择定位。
- * 提供纯静态无外部交互的界面结构（响应式高阶优化）。
+ * 仅提供侧栏折叠交互，其余导航信息保持静态展示。
  */
-export const Sidebar = (): React.JSX.Element => {
+export const Sidebar = ({ isCollapsed, onCollapsedChange }: SidebarProps): React.JSX.Element => {
   return (
-    <aside className="w-full lg:w-64 h-auto lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] p-4 select-none flex-shrink-0">
-      <div className="flex flex-col gap-5 w-full">
-        {/* 产品标识头 */}
-        <div className="flex items-center gap-3 px-1">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
-            <Brain className="h-5 w-5" />
+    <div className="relative flex h-auto lg:h-full flex-shrink-0">
+      <aside
+        className={`w-full h-auto lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'lg:w-16 p-3 items-center' : 'lg:w-64 p-4'
+        }`}
+      >
+        <div className="flex flex-col gap-5 w-full">
+          {/* 产品标识头 */}
+          <div className={`flex items-center gap-3 px-1 ${isCollapsed ? 'justify-center' : ''}`}>
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
+              <Brain className="h-5 w-5" />
+            </div>
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
+                  MEMORY CURATOR
+                </h2>
+                <span className="text-[9px] tracking-widest text-white/40 uppercase font-mono whitespace-nowrap">
+                  LOCAL FIRST DESKTOP
+                </span>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col">
-            <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
-              MEMORY CURATOR
-            </h2>
-            <span className="text-[9px] tracking-widest text-white/40 uppercase font-mono whitespace-nowrap">
-              LOCAL FIRST DESKTOP
-            </span>
-          </div>
-        </div>
 
-        {/* 应用级主导航（已修正为静态项，避免假交互误导） */}
-        <nav className="flex flex-col gap-1 w-full" aria-label="侧边栏主导航">
-          {NAVIGATION_ITEMS.map((item) => {
-            const Icon = item.icon
-            const isActive = item.id === 'today' // 静态聚焦 Today
+          {/* 应用级主导航（已修正为静态项，避免假交互误导） */}
+          <nav className="flex flex-col gap-1 w-full" aria-label="侧边栏主导航">
+            {NAVIGATION_ITEMS.map((item) => {
+              const Icon = item.icon
+              const isActive = item.id === 'today' // 静态聚焦 Today
 
-            return (
-              <div
-                key={item.id}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex w-full items-center gap-3 rounded-[6px] px-3 py-2 transition-all duration-150 ${
-                  isActive
-                    ? 'bg-white text-black font-semibold'
-                    : 'text-white/60'
-                }`}
-              >
-                <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-black' : 'text-white/50'}`} />
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs font-bold leading-none">{item.label}</span>
-                  <span className={`text-[9px] mt-0.5 leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
-                    {item.description}
-                  </span>
+              return (
+                <div
+                  key={item.id}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex w-full items-center rounded-[6px] transition-all duration-150 ${
+                    isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2'
+                  } ${isActive ? 'bg-white text-black font-semibold' : 'text-white/60'}`}
+                >
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-black' : 'text-white/50'}`} />
+                  {!isCollapsed && (
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-xs font-bold leading-none">{item.label}</span>
+                      <span className={`text-[9px] mt-0.5 leading-none ${isActive ? 'text-black/60 font-medium' : 'text-white/30'}`}>
+                        {item.description}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </nav>
+
+          {!isCollapsed && (
+            <>
+              {/* 分割线 */}
+              <div className="h-[1px] bg-white/5" />
+
+              {/* 周日期快捷导航（已修正为静态展示框，使用稳定日字段作为 key） */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-1">
+                  2026 MAY • WEEK 22
+                </span>
+                <div className="grid grid-cols-7 gap-1 bg-white/[0.01] border border-white/5 rounded-[6px] p-1.5">
+                  {WEEK_DATES.map((d) => (
+                    <div
+                      key={d.day}
+                      className={`flex flex-col items-center justify-center py-1.5 rounded-[6px] transition-all duration-150 ${
+                        d.active ? 'bg-white text-black font-bold' : 'text-white/40'
+                      }`}
+                    >
+                      <span className={`text-[8px] uppercase font-bold ${d.active ? 'text-black/50' : 'text-white/20'}`}>
+                        {d.weekday[0]}
+                      </span>
+                      <span className="text-xs font-mono leading-none mt-1 font-bold">
+                        {d.day}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )
-          })}
-        </nav>
-
-        {/* 分割线 */}
-        <div className="h-[1px] bg-white/5" />
-
-        {/* 周日期快捷导航（已修正为静态展示框，使用稳定日字段作为 key） */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase px-1">
-            2026 MAY • WEEK 22
-          </span>
-          <div className="grid grid-cols-7 gap-1 bg-white/[0.01] border border-white/5 rounded-[6px] p-1.5">
-            {WEEK_DATES.map((d) => (
-              <div
-                key={d.day}
-                className={`flex flex-col items-center justify-center py-1.5 rounded-[6px] transition-all duration-150 ${
-                  d.active
-                    ? 'bg-white text-black font-bold'
-                    : 'text-white/40'
-                }`}
-              >
-                <span className={`text-[8px] uppercase font-bold ${d.active ? 'text-black/50' : 'text-white/20'}`}>
-                  {d.weekday[0]}
-                </span>
-                <span className="text-xs font-mono leading-none mt-1 font-bold">
-                  {d.day}
-                </span>
-              </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* 底部本地优先隐私引擎状态 */}
-      <div className="mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full">
-        <div className="flex flex-col gap-2 rounded-[6px] bg-white/[0.02] border border-white/5 p-2.5">
-          <div className="flex items-center gap-2">
-            <Database className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-xs font-bold text-white/80">本地优先引擎</span>
-          </div>
-          <div className="flex flex-col gap-1 pl-5 text-[10px] text-white/40 font-mono">
-            <div className="flex items-center gap-1.5">
-              <Clock3 className="h-3 w-3 text-white/30" />
-              <span>同步: 今天 21:45</span>
+        {/* 底部本地优先隐私引擎状态 */}
+        <div className="mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full">
+          {isCollapsed ? (
+            <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5">
+              <Database className="h-3.5 w-3.5 text-emerald-400" />
             </div>
-            <span>引擎: 本地记录库</span>
-            <span>算力: 策展建议占位</span>
-          </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-2 rounded-[6px] bg-white/[0.02] border border-white/5 p-2.5">
+                <div className="flex items-center gap-2">
+                  <Database className="h-3.5 w-3.5 text-emerald-400" />
+                  <span className="text-xs font-bold text-white/80">本地优先引擎</span>
+                </div>
+                <div className="flex flex-col gap-1 pl-5 text-[10px] text-white/40 font-mono">
+                  <div className="flex items-center gap-1.5">
+                    <Clock3 className="h-3 w-3 text-white/30" />
+                    <span>同步: 今天 21:45</span>
+                  </div>
+                  <span>引擎: 本地记录库</span>
+                  <span>算力: 策展建议占位</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between px-1 text-[10px] text-white/30">
+                <span>存储状态: 本地存储</span>
+                <span>本地默认保存</span>
+              </div>
+            </>
+          )}
         </div>
-        <div className="flex items-center justify-between px-1 text-[10px] text-white/30">
-          <span>存储状态: 本地存储</span>
-          <span>本地默认保存</span>
-        </div>
-      </div>
-    </aside>
+      </aside>
+
+      <button
+        type="button"
+        aria-label={isCollapsed ? '展开左侧导航栏' : '折叠左侧导航栏'}
+        onClick={() => onCollapsedChange(!isCollapsed)}
+        className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+      >
+        {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+      </button>
+    </div>
   )
 }
