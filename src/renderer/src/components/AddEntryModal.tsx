@@ -160,38 +160,31 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
     <div
       data-testid="add-entry-modal-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-[2px] animate-modal-backdrop-in sm:p-6"
-      onClick={onClose}
     >
       <section
         aria-labelledby="add-entry-modal-title"
         className="w-full max-w-[520px] rounded-[6px] border border-white/15 bg-[#212121] shadow-[0_28px_90px_rgba(0,0,0,0.76)] animate-card-modal-in"
         role="dialog"
         aria-modal="true"
-        onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/5 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/70">
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <h2 id="add-entry-modal-title" className="text-sm font-bold text-white">
-                {config.title}
-              </h2>
-              <p className="text-[11px] leading-relaxed text-white/45">{config.description}</p>
-            </div>
+        <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2.5 px-4">
+          <div className="flex items-center gap-2">
+            <Icon className="h-3.5 w-3.5 text-white/60" />
+            <h2 id="add-entry-modal-title" className="text-xs font-bold text-white">
+              {config.title}
+            </h2>
           </div>
           <button
             type="button"
             aria-label="关闭添加弹窗"
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[6px] text-white/45 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/45 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-2.5 p-3.5">
           {kind === "todo" ? (
             <>
               <div className="flex items-center justify-between rounded-[6px] border border-white/10 bg-black/40 p-2.5">
@@ -212,7 +205,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   添加一条待办
                 </button>
               </div>
-              <div className="flex max-h-[390px] flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
+              <div className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
                 {todoDrafts.map((draft, index) => {
                   const itemNumber = index + 1;
                   return (
@@ -306,19 +299,19 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
             </>
           ) : (
             <>
-              <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
                 随记标题
                 <input
                   aria-label="随记标题"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-2 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="给这段想法一个临时标题"
                 />
               </label>
-              <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
                 随记内容
                 <textarea
                   aria-label="随记内容"
-                  className="min-h-28 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="min-h-24 resize-none rounded-[6px] border border-white/10 bg-black p-2.5 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="保留原始表达，不急着归类..."
                 />
               </label>
@@ -337,7 +330,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                         key={tag}
                         type="button"
                         aria-label={`添加随记标签 ${tag}`}
-                        className={`rounded-[6px] border px-2 py-1.5 text-[11px] font-semibold transition-all duration-150 ${
+                        className={`rounded-[6px] border px-2 py-1 text-[11px] font-semibold transition-all duration-150 ${
                           isSelected
                             ? "border-white bg-white text-black"
                             : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
@@ -356,11 +349,11 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   })}
                 </div>
               </div>
-              <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+              <label className="flex flex-col gap-1 text-[11px] font-semibold tracking-wide text-white/55">
                 额外标签
                 <input
                   aria-label="随记标签"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-2 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                   placeholder="补充新的标签，按逗号分隔"
                 />
               </label>
@@ -368,13 +361,13 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/5 p-4">
+        <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
           <span className="font-mono text-[10px] text-white/30">ESC 关闭 / 本地草稿待接入</span>
           <button
             type="button"
-            className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-2 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+            className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
           >
-            <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
+            <Plus className="h-3 w-3 transition-transform duration-150 group-hover:rotate-90" />
             {config.submitLabel}
           </button>
         </div>

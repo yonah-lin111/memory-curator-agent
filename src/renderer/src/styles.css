@@ -84,6 +84,15 @@ select {
   opacity: 0;
 }
 
+/* Markdown 编辑器预览区覆盖 GitHub 暗色默认背景，保持项目纯黑主题。 */
+.notes-markdown-editor .w-md-editor-preview,
+.notes-markdown-editor .w-md-editor-preview .wmde-markdown,
+.notes-markdown-editor .w-md-editor-preview .wmde-markdown-var {
+  --color-canvas-default: #000000 !important;
+  --color-canvas-subtle: #000000 !important;
+  background-color: #000000 !important;
+}
+
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
 @keyframes modal-backdrop-in {
   from {
