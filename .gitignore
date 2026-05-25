@@ -43,3 +43,6 @@ pnpm-debug.log*
 # 临时文件
 *.tmp
 *.swp
+
+# 本地隔离工作区
+.worktrees/
