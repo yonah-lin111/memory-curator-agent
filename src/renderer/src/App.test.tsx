@@ -78,13 +78,29 @@ describe('App', () => {
 
     expect(screen.getByRole('dialog', { name: '新建每日待办计划' })).toBeInTheDocument()
     expect(screen.getByTestId('add-entry-modal-overlay')).toHaveClass('items-center', 'justify-center')
-    expect(screen.getByLabelText('待办内容')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择优先级高' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '选择计划时间 16:30' })).toBeInTheDocument()
+    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '第 1 条待办选择优先级高' })).toBeInTheDocument()
+    expect(screen.getByLabelText('第 1 条待办时间')).toHaveAttribute('type', 'time')
 
     await user.keyboard('{Escape}')
 
     expect(screen.queryByRole('dialog', { name: '新建每日待办计划' })).not.toBeInTheDocument()
+  })
+
+  it('每日待办弹窗支持一次添加多条待办且每条拥有独立优先级和时间选择器', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
+
+    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
+    expect(screen.getByLabelText('第 2 条待办内容')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '第 1 条待办选择优先级高' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '第 2 条待办选择优先级高' })).toBeInTheDocument()
+    expect(screen.getByLabelText('第 1 条待办时间')).toHaveAttribute('type', 'time')
+    expect(screen.getByLabelText('第 2 条待办时间')).toHaveAttribute('type', 'time')
   })
 
   it('点击自由随记卡片添加按钮后打开对应弹窗', async () => {

@@ -25,6 +25,18 @@ type AddEntryModalConfig = {
   submitLabel: string;
 };
 
+// 待办草稿项，用于一次性录入多条待办。
+type TodoDraft = {
+  // 草稿唯一标识。
+  id: string;
+  // 待办内容。
+  text: string;
+  // 当前待办优先级。
+  priority: string;
+  // 当前待办计划时间。
+  time: string;
+};
+
 // 不同添加类型对应的静态视图配置。
 const ADD_ENTRY_MODAL_CONFIG: Record<AddEntryModalKind, AddEntryModalConfig> = {
   todo: {
@@ -44,11 +56,18 @@ const ADD_ENTRY_MODAL_CONFIG: Record<AddEntryModalKind, AddEntryModalConfig> = {
 // 待办优先级选项。
 const TODO_PRIORITY_OPTIONS = ["高", "中", "低"];
 
-// 待办快捷计划时间选项。
-const TODO_TIME_OPTIONS = ["现在", "16:30", "明早"];
-
 // 随记推荐标签选项。
 const NOTE_TAG_OPTIONS = ["UX", "AI-Agent", "架构", "产品思考"];
+
+/**
+ * 创建待办草稿。
+ */
+const createTodoDraft = (index: number): TodoDraft => ({
+  id: `todo-draft-${index}`,
+  text: "",
+  priority: "中",
+  time: "16:30",
+});
 
 /**
  * 通用添加弹窗。
@@ -57,12 +76,26 @@ const NOTE_TAG_OPTIONS = ["UX", "AI-Agent", "架构", "产品思考"];
 export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.Element => {
   const config = ADD_ENTRY_MODAL_CONFIG[kind];
   const Icon = config.icon;
-  // 当前选中的待办优先级。
-  const [selectedPriority, setSelectedPriority] = useState<string>("中");
-  // 当前选中的待办快捷时间。
-  const [selectedTime, setSelectedTime] = useState<string>("16:30");
+  // 待办草稿列表，每条保留独立优先级和时间。
+  const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>([createTodoDraft(1)]);
   // 当前已选中的随记标签。
   const [selectedTags, setSelectedTags] = useState<string[]>(["UX"]);
+
+  /**
+   * 追加一条新的待办草稿。
+   */
+  const handleAddTodoDraft = (): void => {
+    setTodoDrafts((currentDrafts) => [...currentDrafts, createTodoDraft(currentDrafts.length + 1)]);
+  };
+
+  /**
+   * 更新指定待办草稿的局部字段。
+   */
+  const handleTodoDraftChange = (id: string, patch: Partial<Omit<TodoDraft, "id">>): void => {
+    setTodoDrafts((currentDrafts) =>
+      currentDrafts.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)),
+    );
+  };
 
   useEffect(() => {
     /**
@@ -86,7 +119,7 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
     >
       <section
         aria-labelledby="add-entry-modal-title"
-        className="w-full max-w-[390px] rounded-[6px] border border-white/15 bg-[#212121] shadow-[0_28px_90px_rgba(0,0,0,0.76)] animate-card-modal-in"
+        className="w-full max-w-[520px] rounded-[6px] border border-white/15 bg-[#212121] shadow-[0_28px_90px_rgba(0,0,0,0.76)] animate-card-modal-in"
         role="dialog"
         aria-modal="true"
         onClick={(event) => event.stopPropagation()}
@@ -116,63 +149,89 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
         <div className="flex flex-col gap-3 p-4">
           {kind === "todo" ? (
             <>
-              <div className="rounded-[6px] border border-white/10 bg-black/40 p-2.5">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold tracking-wide text-white/55">
-                    行动优先级
+              <div className="flex items-center justify-between rounded-[6px] border border-white/10 bg-black/40 p-2.5">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-semibold tracking-wide text-white/65">
+                    批量待办录入
                   </span>
-                  <span className="font-mono text-[10px] text-white/30">ACTION MODE</span>
+                  <span className="font-mono text-[10px] text-white/30">
+                    {todoDrafts.length} ITEMS / EACH HAS PRIORITY + TIME
+                  </span>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {TODO_PRIORITY_OPTIONS.map((priority) => (
-                    <button
-                      key={priority}
-                      type="button"
-                      aria-label={`选择优先级${priority}`}
-                      className={`rounded-[6px] border px-2 py-1.5 text-[11px] font-bold transition-all duration-150 ${
-                        selectedPriority === priority
-                          ? "border-white bg-white text-black"
-                          : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
-                      }`}
-                      onClick={() => setSelectedPriority(priority)}
-                    >
-                      {priority}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1.5 text-[11px] font-bold text-white/70 transition-all duration-150 hover:border-white/25 hover:text-white"
+                  onClick={handleAddTodoDraft}
+                >
+                  <Plus className="h-3 w-3" />
+                  添加一条待办
+                </button>
               </div>
-              <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
-                待办内容
-                <textarea
-                  aria-label="待办内容"
-                  className="min-h-24 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
-                  placeholder="例如：16:30 复核本地持久化边界..."
-                />
-              </label>
-              <div className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
-                计划时间
-                <div className="grid grid-cols-3 gap-1.5">
-                  {TODO_TIME_OPTIONS.map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      aria-label={`选择计划时间 ${time}`}
-                      className={`rounded-[6px] border px-2 py-2 text-xs transition-all duration-150 ${
-                        selectedTime === time
-                          ? "border-white bg-white text-black"
-                          : "border-white/10 bg-black text-white/55 hover:border-white/25 hover:text-white/80"
-                      }`}
-                      onClick={() => setSelectedTime(time)}
+              <div className="flex max-h-[390px] flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
+                {todoDrafts.map((draft, index) => {
+                  const itemNumber = index + 1;
+                  return (
+                    <div
+                      key={draft.id}
+                      className="rounded-[6px] border border-white/10 bg-black/30 p-3"
                     >
-                      {time}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  aria-label="自定义计划时间"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-2 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
-                  placeholder="或手动输入精确时间"
-                />
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="font-mono text-[10px] text-white/35">
+                          TODO #{String(itemNumber).padStart(2, "0")}
+                        </span>
+                        <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/35">
+                          {draft.priority} / {draft.time}
+                        </span>
+                      </div>
+                      <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                        第 {itemNumber} 条待办内容
+                        <textarea
+                          aria-label={`第 ${itemNumber} 条待办内容`}
+                          className="min-h-16 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-xs font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                          placeholder="写下一个明确行动..."
+                          value={draft.text}
+                          onChange={(event) =>
+                            handleTodoDraftChange(draft.id, { text: event.target.value })
+                          }
+                        />
+                      </label>
+                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_112px]">
+                        <div className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                          优先级
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {TODO_PRIORITY_OPTIONS.map((priority) => (
+                              <button
+                                key={priority}
+                                type="button"
+                                aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
+                                className={`rounded-[6px] border px-2 py-1.5 text-[11px] font-bold transition-all duration-150 ${
+                                  draft.priority === priority
+                                    ? "border-white bg-white text-black"
+                                    : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
+                                }`}
+                                onClick={() => handleTodoDraftChange(draft.id, { priority })}
+                              >
+                                {priority}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
+                          时间
+                          <input
+                            type="time"
+                            aria-label={`第 ${itemNumber} 条待办时间`}
+                            className="rounded-[6px] border border-white/10 bg-black px-2 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
+                            value={draft.time}
+                            onChange={(event) =>
+                              handleTodoDraftChange(draft.id, { time: event.target.value })
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           ) : (
