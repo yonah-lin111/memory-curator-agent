@@ -724,12 +724,12 @@ export const NotesPage = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* 自由随记卡片瀑布流布局 */}
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-3 w-full mb-1">
+        {/* 自由随记卡片网格布局 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-1">
           {visibleNotes.map((note) => (
             <div
               key={note.id}
-              className={`group break-inside-avoid mb-3 rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
+              className={`group h-[258px] overflow-hidden rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
                 note.isCurated
                   ? "border-white/5 bg-[#212121]/40"
                   : "border-white/10 bg-[#212121]"
@@ -737,9 +737,9 @@ export const NotesPage = (): React.JSX.Element => {
             >
               {/* 卡片头部：时间与操作按钮（编辑/删除） */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-[11px] font-mono text-white/30">
-                  <Clock className="h-2.5 w-2.5" />
-                  <span>{note.time}</span>
+                <div className="flex items-center gap-1 text-[11px] font-mono text-white/30 leading-none">
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <span className="text-sm">{note.time}</span>
                 </div>
                 <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
                   <button
