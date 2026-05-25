@@ -46,3 +46,5 @@ pnpm-debug.log*
 
 # 本地隔离工作区
 .worktrees/
+
+.superpowers/
