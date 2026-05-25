@@ -10,6 +10,7 @@ import { App } from './App'
 describe('App', () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
@@ -19,7 +20,11 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByText('MEMORY CURATOR')).toBeInTheDocument()
+    expect(screen.queryByText('建议、归类与记忆线索')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '展开右侧策展栏' }))
     expect(screen.getByText('建议、归类与记忆线索')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '折叠右侧策展栏' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '折叠左侧导航栏' }))
     expect(screen.queryByText('MEMORY CURATOR')).not.toBeInTheDocument()
@@ -34,13 +39,16 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByRole('button', { name: '折叠左侧导航栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
-    expect(screen.getByRole('button', { name: '折叠右侧策展栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
+    expect(screen.getByRole('button', { name: '展开右侧策展栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
   })
 
   it('长按拖拽右侧折叠按钮可在最小宽度与 35vw 之间调整右栏宽度', () => {
     vi.useFakeTimers()
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 })
     render(<App />)
+
+    // 首先展开右侧栏以便测试长按拖拽
+    fireEvent.click(screen.getByRole('button', { name: '展开右侧策展栏' }))
 
     const agentPanel = screen.getByLabelText('右侧策展栏')
     const resizeButton = screen.getByRole('button', { name: '折叠右侧策展栏' })
@@ -101,6 +109,58 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '第 2 条待办选择优先级高' })).toBeInTheDocument()
     expect(screen.getByLabelText('第 1 条待办时间')).toHaveAttribute('type', 'time')
     expect(screen.getByLabelText('第 2 条待办时间')).toHaveAttribute('type', 'time')
+    expect(screen.getByLabelText('第 1 条待办时间')).toHaveClass('todo-time-picker')
+    expect(screen.getByLabelText('第 2 条待办时间')).toHaveClass('todo-time-picker')
+    expect(screen.getByRole('button', { name: '打开第 1 条待办时间选择器' })).toHaveClass('text-white/70')
+    expect(screen.getByRole('button', { name: '打开第 2 条待办时间选择器' })).toHaveClass('text-white/70')
+  })
+
+  it('新增待办后滚动到最新一条待办', async () => {
+    const user = userEvent.setup()
+    const scrollIntoView = vi.fn()
+
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    })
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'end', behavior: 'smooth' })
+  })
+
+  it('点击时间图标可打开对应时间选择器', async () => {
+    const user = userEvent.setup()
+    const showPicker = vi.fn()
+
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
+      configurable: true,
+      value: showPicker,
+    })
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+    await user.click(screen.getByRole('button', { name: '打开第 1 条待办时间选择器' }))
+
+    expect(screen.getByLabelText('第 1 条待办时间')).toHaveFocus()
+    expect(showPicker).toHaveBeenCalledTimes(1)
+  })
+
+  it('每日待办弹窗内的待办草稿可删除', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
+    await user.click(screen.getByRole('button', { name: '删除第 1 条待办' }))
+
+    expect(screen.queryByLabelText('第 2 条待办内容')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
   })
 
   it('点击自由随记卡片添加按钮后打开对应弹窗', async () => {

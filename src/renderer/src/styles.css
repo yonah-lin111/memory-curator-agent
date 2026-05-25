@@ -73,6 +73,17 @@ select {
   background: #212121;
 }
 
+/* 待办时间选择器强制使用黑色系统控件主题。 */
+.todo-time-picker {
+  color-scheme: dark;
+}
+
+/* 原生时间图标跨平台不稳定，统一使用组件内白色图标。 */
+.todo-time-picker::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0;
+}
+
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
 @keyframes modal-backdrop-in {
   from {

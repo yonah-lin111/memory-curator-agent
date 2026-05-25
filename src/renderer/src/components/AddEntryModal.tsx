@@ -1,6 +1,6 @@
 import type React from "react";
-import { useEffect, useState } from "react";
-import { CheckSquare, FileText, Plus, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckSquare, Clock, FileText, Plus, Trash2, X } from "lucide-react";
 
 // 添加弹窗类型，用于区分待办与随记表单内容。
 export type AddEntryModalKind = "todo" | "note";
@@ -76,8 +76,14 @@ const createTodoDraft = (index: number): TodoDraft => ({
 export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.Element => {
   const config = ADD_ENTRY_MODAL_CONFIG[kind];
   const Icon = config.icon;
+  // 最新待办草稿锚点，用于新增后滚动到底部。
+  const latestTodoDraftRef = useRef<HTMLDivElement | null>(null);
+  // 是否需要在下一次渲染后滚动到最新待办。
+  const shouldScrollToLatestTodoDraftRef = useRef(false);
   // 待办草稿列表，每条保留独立优先级和时间。
   const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>([createTodoDraft(1)]);
+  // 下一条待办草稿序号，避免删除后再添加产生重复 key。
+  const [nextTodoDraftIndex, setNextTodoDraftIndex] = useState(2);
   // 当前已选中的随记标签。
   const [selectedTags, setSelectedTags] = useState<string[]>(["UX"]);
 
@@ -85,7 +91,16 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
    * 追加一条新的待办草稿。
    */
   const handleAddTodoDraft = (): void => {
-    setTodoDrafts((currentDrafts) => [...currentDrafts, createTodoDraft(currentDrafts.length + 1)]);
+    shouldScrollToLatestTodoDraftRef.current = true;
+    setTodoDrafts((currentDrafts) => [...currentDrafts, createTodoDraft(nextTodoDraftIndex)]);
+    setNextTodoDraftIndex((currentIndex) => currentIndex + 1);
+  };
+
+  /**
+   * 删除指定待办草稿。
+   */
+  const handleDeleteTodoDraft = (id: string): void => {
+    setTodoDrafts((currentDrafts) => currentDrafts.filter((draft) => draft.id !== id));
   };
 
   /**
@@ -95,6 +110,25 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
     setTodoDrafts((currentDrafts) =>
       currentDrafts.map((draft) => (draft.id === id ? { ...draft, ...patch } : draft)),
     );
+  };
+
+  /**
+   * 打开原生时间选择器。
+   */
+  const handleOpenTodoTimePicker = (event: React.MouseEvent<HTMLButtonElement>): void => {
+    const input = event.currentTarget.previousElementSibling;
+
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    input.focus();
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+      return;
+    }
+
+    input.click();
   };
 
   useEffect(() => {
@@ -110,6 +144,17 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!shouldScrollToLatestTodoDraftRef.current) {
+      return;
+    }
+
+    shouldScrollToLatestTodoDraftRef.current = false;
+    if (typeof latestTodoDraftRef.current?.scrollIntoView === "function") {
+      latestTodoDraftRef.current.scrollIntoView({ block: "end", behavior: "smooth" });
+    }
+  }, [todoDrafts.length]);
 
   return (
     <div
@@ -173,15 +218,26 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                   return (
                     <div
                       key={draft.id}
+                      ref={index === todoDrafts.length - 1 ? latestTodoDraftRef : undefined}
                       className="rounded-[6px] border border-white/10 bg-black/30 p-3"
                     >
                       <div className="mb-2 flex items-center justify-between">
                         <span className="font-mono text-[10px] text-white/35">
                           TODO #{String(itemNumber).padStart(2, "0")}
                         </span>
-                        <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/35">
-                          {draft.priority} / {draft.time}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-[10px] text-white/35">
+                            {draft.priority} / {draft.time}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`删除第 ${itemNumber} 条待办`}
+                            className="flex h-6 w-6 items-center justify-center rounded-[6px] text-white/35 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                            onClick={() => handleDeleteTodoDraft(draft.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                       <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
                         第 {itemNumber} 条待办内容
@@ -218,15 +274,29 @@ export const AddEntryModal = ({ kind, onClose }: AddEntryModalProps): React.JSX.
                         </div>
                         <label className="flex flex-col gap-1.5 text-[11px] font-semibold tracking-wide text-white/55">
                           时间
-                          <input
-                            type="time"
-                            aria-label={`第 ${itemNumber} 条待办时间`}
-                            className="rounded-[6px] border border-white/10 bg-black px-2 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
-                            value={draft.time}
-                            onChange={(event) =>
-                              handleTodoDraftChange(draft.id, { time: event.target.value })
-                            }
-                          />
+                          <div className="relative">
+                            <input
+                              type="time"
+                              aria-label={`第 ${itemNumber} 条待办时间`}
+                              className="todo-time-picker w-full rounded-[6px] border border-white/10 bg-black px-2 py-1.5 pr-7 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
+                              value={draft.time}
+                              onChange={(event) =>
+                                handleTodoDraftChange(draft.id, { time: event.target.value })
+                              }
+                            />
+                            <button
+                              type="button"
+                              aria-label={`打开第 ${itemNumber} 条待办时间选择器`}
+                              className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-[6px] text-white/70 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                              onClick={handleOpenTodoTimePicker}
+                            >
+                              <Clock
+                                aria-hidden="true"
+                                data-testid={`todo-time-picker-icon-${itemNumber}`}
+                                className="h-3.5 w-3.5"
+                              />
+                            </button>
+                          </div>
                         </label>
                       </div>
                     </div>

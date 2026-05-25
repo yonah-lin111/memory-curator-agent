@@ -12,7 +12,7 @@ export const App = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
   // 右侧 Agent 策展栏折叠状态。
-  const [isAgentPanelCollapsed, setIsAgentPanelCollapsed] = useState<boolean>(false)
+  const [isAgentPanelCollapsed, setIsAgentPanelCollapsed] = useState<boolean>(true)
 
   return (
     <main className="flex flex-col lg:flex-row h-screen w-screen bg-[#000000] p-3 gap-3 text-white antialiased overflow-y-auto lg:overflow-hidden">
