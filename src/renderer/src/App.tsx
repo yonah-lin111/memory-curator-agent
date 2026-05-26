@@ -8,6 +8,7 @@ import { ThemesPage } from './components/pages/ThemesPage'
 import { WeeklyReviewPage } from './components/pages/WeeklyReviewPage'
 import { Sidebar, type SidebarPageId } from './components/Sidebar'
 import { TodayWorkspace } from './components/TodayWorkspace'
+import { ToastProvider } from './components/Toast'
 
 /**
  * 记忆策展 Agent 的主应用布局。
@@ -71,20 +72,22 @@ export const App = (): React.JSX.Element => {
   }
 
   return (
-    <main className="flex flex-col lg:flex-row h-screen w-screen bg-[#000000] p-3 gap-3 text-white antialiased overflow-y-auto lg:overflow-hidden">
-      {/* 左侧多维导航栏 */}
-      <Sidebar
-        isCollapsed={isSidebarCollapsed}
-        activePage={activePage}
-        onCollapsedChange={setIsSidebarCollapsed}
-        onPageChange={(pageId) => {
-          window.history.pushState({}, '', `/${pageId}`)
-          setActivePage(pageId)
-        }}
-      />
+    <ToastProvider>
+      <main className="flex flex-col lg:flex-row h-screen w-screen bg-[#000000] p-3 gap-3 text-white antialiased overflow-y-auto lg:overflow-hidden">
+        {/* 左侧多维导航栏 */}
+        <Sidebar
+          isCollapsed={isSidebarCollapsed}
+          activePage={activePage}
+          onCollapsedChange={setIsSidebarCollapsed}
+          onPageChange={(pageId) => {
+            window.history.pushState({}, '', `/${pageId}`)
+            setActivePage(pageId)
+          }}
+        />
 
-      {/* 中间主工作区 */}
-      {renderActivePage()}
-    </main>
+        {/* 中间主工作区 */}
+        {renderActivePage()}
+      </main>
+    </ToastProvider>
   )
 }

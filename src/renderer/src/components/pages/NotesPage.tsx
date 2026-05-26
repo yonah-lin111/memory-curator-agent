@@ -20,6 +20,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useToast } from "../Toast";
 
 /* ==========================================
  * TS 类型定义
@@ -504,6 +505,8 @@ export const NotesPage = (): React.JSX.Element => {
   const [isLoadingNotes, setIsLoadingNotes] = useState(true);
   // 笔记数据库错误文案。
   const [notesError, setNotesError] = useState<string | null>(null);
+  // 全局消息提示。
+  const toast = useToast();
 
   // 当前页面统计项。
   const statsItems = createStatsItems(notes);
@@ -554,8 +557,10 @@ export const NotesPage = (): React.JSX.Element => {
     try {
       await window.api.notes.delete(id);
       setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+      toast.success("笔记已成功删除");
     } catch {
       setNotesError("删除笔记失败，请稍后重试");
+      toast.error("删除笔记失败，请稍后重试");
     }
   };
 
@@ -577,8 +582,10 @@ export const NotesPage = (): React.JSX.Element => {
         currentNotes.map((note) => (note.id === id ? updatedNote : note)),
       );
       setEditingNote(null);
+      toast.success("笔记已更新");
     } catch {
       setNotesError("更新笔记失败，请稍后重试");
+      toast.error("更新笔记失败，请稍后重试");
     }
   };
 
@@ -599,8 +606,10 @@ export const NotesPage = (): React.JSX.Element => {
       setNotes((currentNotes) => [newNote, ...currentNotes]);
       setActiveFilter("all");
       setIsMarkdownModalOpen(false);
+      toast.success("新笔记保存成功");
     } catch {
       setNotesError("保存笔记失败，请稍后重试");
+      toast.error("保存笔记失败，请稍后重试");
     }
   };
 
