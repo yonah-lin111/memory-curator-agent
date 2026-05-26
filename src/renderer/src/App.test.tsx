@@ -12,6 +12,7 @@ describe('App', () => {
     cleanup()
     vi.restoreAllMocks()
     vi.useRealTimers()
+    window.history.replaceState({}, '', '/')
   })
 
   it('支持分别折叠左侧导航栏与右侧策展栏', async () => {
@@ -79,6 +80,29 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Memories/ }))
     expect(screen.getByRole('heading', { name: '记忆片段关联墙' })).toBeInTheDocument()
     expect(screen.getByText('Memories').closest('[aria-current="page"]')).toBeInTheDocument()
+  })
+
+  it('在切换侧栏 tab 时同步改变 URL pathname 路由，且支持通过改变 pathname 进行路由切换', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    // 默认应该设置 pathname 为 /today (如果初始 pathname 为空或 /)
+    expect(window.location.pathname).toBe('/today')
+
+    // 点击 Notes，验证 pathname 发生改变
+    await user.click(screen.getByRole('button', { name: /Notes/ }))
+    expect(window.location.pathname).toBe('/notes')
+    expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
+
+    // 模拟浏览器前进/后退改变路由
+    act(() => {
+      window.history.pushState({}, '', '/journal')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
+    expect(screen.getByRole('heading', { name: '历史日记条目' })).toBeInTheDocument()
+    expect(screen.getByText('Journal').closest('[aria-current="page"]')).toBeInTheDocument()
   })
 
   it('长按拖拽右侧折叠按钮可在最小宽度与 35vw 之间调整右栏宽度', () => {

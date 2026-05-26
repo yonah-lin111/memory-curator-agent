@@ -337,7 +337,7 @@ export const ThemesPage = (): React.JSX.Element => {
               {activeTheme.milestones.map((milestone) => (
                 <div key={milestone.title} className="relative">
                   {/* 小圆点 */}
-                  <div className="absolute -left-[20.5px] top-1.5 h-3 w-3 rounded-full border border-[#212121] bg-white" />
+                  <div className="absolute -left-[22px] top-1.5 h-3 w-3 rounded-full border border-[#212121] bg-white" />
 
                   {/* 节点内容 */}
                   <div className="flex flex-col gap-1 pl-2">

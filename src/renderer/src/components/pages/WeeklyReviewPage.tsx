@@ -306,7 +306,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 <div key={milestone.title} className="relative group">
                   {/* 时间轴上的小圆点 */}
                   <div
-                    className={`absolute -left-[20.5px] top-1 h-3 w-3 rounded-full border border-[#212121] transition-colors duration-150 ${
+                    className={`absolute -left-[22px] top-1 h-3 w-3 rounded-full border border-[#212121] transition-colors duration-150 ${
                       isBreakthrough
                         ? "bg-white"
                         : isAwakening

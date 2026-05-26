@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AgentPanel } from './components/AgentPanel'
 import { JournalPage } from './components/pages/JournalPage'
 import { MemoriesPage } from './components/pages/MemoriesPage'
@@ -16,8 +16,38 @@ import { TodayWorkspace } from './components/TodayWorkspace'
 export const App = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
+
+  // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
+  const getPageFromPathname = (): SidebarPageId => {
+    const path = window.location.pathname.replace(/^\/|\/$/g, '')
+    const validPages: SidebarPageId[] = ['today', 'notes', 'journal', 'weekly', 'themes', 'memories']
+    if (validPages.includes(path as SidebarPageId)) {
+      return path as SidebarPageId
+    }
+    return 'today'
+  }
+
   // 当前中间主内容页面。
-  const [activePage, setActivePage] = useState<SidebarPageId>('today')
+  const [activePage, setActivePage] = useState<SidebarPageId>(getPageFromPathname)
+
+  // 监听 URL 路由 pathname 变化，确保与页面状态双向同步。
+  useEffect(() => {
+    const handlePopState = () => {
+      const page = getPageFromPathname()
+      setActivePage(page)
+    }
+
+    // 初始化如果 pathname 为根路径，则默认写入 /today 路由
+    const initialPath = window.location.pathname
+    if (initialPath === '/' || initialPath === '') {
+      window.history.replaceState({}, '', '/today')
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
   // 右侧 Agent 策展栏折叠状态。
   const [isAgentPanelCollapsed, setIsAgentPanelCollapsed] = useState<boolean>(true)
 
@@ -48,7 +78,10 @@ export const App = (): React.JSX.Element => {
         isCollapsed={isSidebarCollapsed}
         activePage={activePage}
         onCollapsedChange={setIsSidebarCollapsed}
-        onPageChange={setActivePage}
+        onPageChange={(pageId) => {
+          window.history.pushState({}, '', `/${pageId}`)
+          setActivePage(pageId)
+        }}
       />
 
       {/* 中间 Today 主工作区 */}
