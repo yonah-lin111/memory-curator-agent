@@ -40,20 +40,32 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2c2c2c;
+  background: rgba(0, 0, 0, 0); /* 初始完全透明，强制启用 Webkit 渲染层 */
   border-radius: 6px;
 }
 
+/* 当鼠标 hover 在滚动容器上时，显示实色滑块，优雅提示可滚动 */
+body:hover::-webkit-scrollbar-thumb,
+html:hover::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb {
+  background: #2c2c2c !important;
+}
+
+/* 当鼠标直接 hover 在滑块上时，滑块变亮加深 */
 ::-webkit-scrollbar-thumb:hover {
-  background: #444444;
+  background: #444444 !important;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #555555 !important;
 }
 
 ::-webkit-scrollbar-corner {
-  background: #000000;
+  background: transparent;
 }
 
 /* 局部高阶滚动条样式（用于次级深色 #212121 容器） */
@@ -63,20 +75,95 @@ select {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #212121;
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: rgba(0, 0, 0, 0); /* 初始完全透明，强制启用 Webkit 渲染层 */
   border-radius: 6px;
 }
 
+/* 当鼠标 hover 在 .custom-scrollbar 容器上时，显示实色滑块 */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #3a3a3a !important;
+}
+
+/* 当鼠标直接 hover 在滑块上时，滑块变亮加深 */
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: #555555 !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #666666 !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-corner {
-  background: #212121;
+  background: transparent;
+}
+
+/* 强制 Chrome 在 hover 容器时重绘滚动条，防止渲染引擎优化掉滚动条的动态更新 */
+.custom-scrollbar:hover {
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+/* 当鼠标 hover 在滚动容器上时，显示较淡的滑块，优雅提示可滚动 */
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 当鼠标直接 hover 在滑块上时，滑块变亮加深 */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 局部高阶滚动条样式（用于次级深色 #212121 容器） */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+/* 当鼠标 hover 在 .custom-scrollbar 容器上时，显示较淡的滑块 */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 当鼠标直接 hover 在滑块上时，滑块变亮加深 */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* 待办时间选择器强制使用黑色系统控件主题。 */

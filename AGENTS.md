@@ -38,7 +38,20 @@
 ## 注释要求
 
 - 使用简体中文。
-- 禁止输出或写入替换字符（Unicode U+FFFD，对应显示为 �）。
+- 禁止输出或写入替换字符（Unicode U+FFFD，对应显示为 ）。
 - 变量、type、interface、enum 等需要使用单行注释说明。
 - 方法、函数使用多行注释说明。
 - 方法、函数内部关键部位应按需添加简短注释，说明关键逻辑、边界条件或非直观决策。
+
+## 目录结构与导入规范
+
+### 目录层级规范
+
+- **`src/renderer/src/pages/`**：存放粗粒度的路由/页面级组件（如 `JournalPage.tsx`, `TodayWorkspace.tsx`）。
+- **`src/renderer/src/pages/components/`**：存放特定页面独占、强业务属性的非通用子组件（如 `AddEntryModal.tsx`）。
+- **`src/renderer/src/components/ui/`**：存放高复用、无业务逻辑的基础原子 UI 组件（如 `IconButton.tsx`, `Toast.tsx`）。
+- **`src/renderer/src/components/layout/`**：存放通用的页面框架/布局级组件（如 `Sidebar.tsx`）。
+
+### 绝对路径导入
+
+- 渲染层内一律使用以 `@renderer/` 为前缀的绝对路径别名导入，**禁止使用任何 `../` 或 `../../` 等较深的相对路径**。

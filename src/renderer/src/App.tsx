@@ -1,14 +1,14 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
-import { AgentPage } from './pages/AgentPage'
-import { JournalPage } from './pages/JournalPage'
-import { MemoriesPage } from './pages/MemoriesPage'
-import { NotesPage } from './pages/NotesPage'
-import { ThemesPage } from './pages/ThemesPage'
-import { WeeklyReviewPage } from './pages/WeeklyReviewPage'
-import { Sidebar, type SidebarPageId } from './components/layout/Sidebar'
-import { TodayWorkspace } from './pages/TodayWorkspace'
-import { ToastProvider } from './components/ui/Toast'
+import { AgentPage } from '@renderer/pages/AgentPage'
+import { JournalPage } from '@renderer/pages/JournalPage'
+import { MemoriesPage } from '@renderer/pages/MemoriesPage'
+import { NotesPage } from '@renderer/pages/NotesPage'
+import { ThemesPage } from '@renderer/pages/ThemesPage'
+import { WeeklyReviewPage } from '@renderer/pages/WeeklyReviewPage'
+import { Sidebar, type SidebarPageId } from '@renderer/components/layout/Sidebar'
+import { TodayWorkspace } from '@renderer/pages/TodayWorkspace'
+import { ToastProvider } from '@renderer/components/ui/Toast'
 
 /**
  * 记忆策展 Agent 的主应用布局。

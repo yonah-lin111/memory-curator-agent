@@ -12,8 +12,8 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
-import { AddEntryModal, type AddEntryModalKind } from "./components/AddEntryModal";
-import { IconButton } from "../components/ui/IconButton";
+import { AddEntryModal, type AddEntryModalKind } from "@renderer/pages/components/AddEntryModal";
+import { IconButton } from "@renderer/components/ui/IconButton";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)

@@ -20,8 +20,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useToast } from "../components/ui/Toast";
-import { IconButton } from "../components/ui/IconButton";
+import { useToast } from "@renderer/components/ui/Toast";
+import { IconButton } from "@renderer/components/ui/IconButton";
 
 /* ==========================================
  * TS 类型定义
