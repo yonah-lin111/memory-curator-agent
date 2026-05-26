@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
-import { AgentPanel } from './components/AgentPanel'
+import { AgentPage } from './components/pages/AgentPage'
 import { JournalPage } from './components/pages/JournalPage'
 import { MemoriesPage } from './components/pages/MemoriesPage'
 import { NotesPage } from './components/pages/NotesPage'
@@ -10,8 +10,8 @@ import { Sidebar, type SidebarPageId } from './components/Sidebar'
 import { TodayWorkspace } from './components/TodayWorkspace'
 
 /**
- * 记忆策展 Agent 的 Today 三栏工作台页面主布局。
- * 通过响应式 Flex 布局，在移动端垂直堆叠并开启自适应滚动，在桌面端（lg 及以上）平铺为经典三栏并限制整屏滚动。
+ * 记忆策展 Agent 的主应用布局。
+ * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
 export const App = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
@@ -20,7 +20,7 @@ export const App = (): React.JSX.Element => {
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
   const getPageFromPathname = (): SidebarPageId => {
     const path = window.location.pathname.replace(/^\/|\/$/g, '')
-    const validPages: SidebarPageId[] = ['today', 'notes', 'journal', 'weekly', 'themes', 'memories']
+    const validPages: SidebarPageId[] = ['today', 'agent', 'notes', 'journal', 'weekly', 'themes', 'memories']
     if (validPages.includes(path as SidebarPageId)) {
       return path as SidebarPageId
     }
@@ -48,9 +48,6 @@ export const App = (): React.JSX.Element => {
       window.removeEventListener('popstate', handlePopState)
     }
   }, [])
-  // 右侧 Agent 策展栏折叠状态。
-  const [isAgentPanelCollapsed, setIsAgentPanelCollapsed] = useState<boolean>(true)
-
   /**
    * 根据当前侧栏页面渲染中间主内容。
    */
@@ -58,6 +55,8 @@ export const App = (): React.JSX.Element => {
     switch (activePage) {
       case 'today':
         return <TodayWorkspace />
+      case 'agent':
+        return <AgentPage />
       case 'notes':
         return <NotesPage />
       case 'journal':
@@ -84,11 +83,8 @@ export const App = (): React.JSX.Element => {
         }}
       />
 
-      {/* 中间 Today 主工作区 */}
+      {/* 中间主工作区 */}
       {renderActivePage()}
-
-      {/* 右侧 Agent 智能策展栏 */}
-      <AgentPanel isCollapsed={isAgentPanelCollapsed} onCollapsedChange={setIsAgentPanelCollapsed} />
     </main>
   )
 }

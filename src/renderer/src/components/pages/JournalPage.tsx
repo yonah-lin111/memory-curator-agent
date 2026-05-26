@@ -146,9 +146,6 @@ export const JournalPage = (): React.JSX.Element => {
   // 支持对内容、主题、人物、时间等多字段模糊匹配，实现零时滞的动态搜索过滤
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // 按分类索引快速过滤关联文章，帮助用户在一组主题内穿梭
-  const [selectedTheme, setSelectedTheme] = useState<string>("全部");
-
   // 模拟对日记存储半衰期的权重控制，支持数字海马体的自动衰退/长久驻留策略
   const [persistenceWeights, setPersistenceWeights] = useState<Record<string, string>>({
     "j-1": "永久 (DECAY_NONE)",
@@ -181,16 +178,8 @@ export const JournalPage = (): React.JSX.Element => {
     }, 2000);
   };
 
-  // 获取所有条目中涉及的不重复主题标签
-  const allThemes = [
-    "全部",
-    ...Array.from(new Set(JOURNAL_ENTRIES.flatMap((entry) => entry.themes))),
-  ];
-
-  // 根据搜索词 and 选中的主题标签对日记进行多维过滤
+  // 根据搜索词对日记进行模糊匹配过滤
   const filteredEntries = JOURNAL_ENTRIES.filter((entry) => {
-    const matchesTheme =
-      selectedTheme === "全部" || entry.themes.includes(selectedTheme);
     const matchesSearch =
       entry.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       entry.mood.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -201,7 +190,7 @@ export const JournalPage = (): React.JSX.Element => {
         p.toLowerCase().includes(searchQuery.toLowerCase()),
       ) ||
       entry.date.includes(searchQuery);
-    return matchesTheme && matchesSearch;
+    return matchesSearch;
   });
 
   // 获取当前正在阅读的活动日记条目
@@ -234,9 +223,9 @@ export const JournalPage = (): React.JSX.Element => {
       {/* 页面主内容区域：在大屏下为分栏，小屏下垂直流动 */}
       <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-y-auto lg:overflow-hidden mt-1">
         {/* 左侧：时间轴索引与快速过滤器 */}
-        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-3 overflow-y-auto lg:overflow-hidden">
+        <div className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-3 overflow-y-auto lg:overflow-hidden">
           {/* 搜索与过滤组件面板 */}
-          <div className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex flex-col gap-2.5">
+          <div className="rounded-[6px] border border-white/5 bg-[#212121] p-2.5 flex flex-col gap-2">
             {/* 搜索框 */}
             <div className="relative">
               <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-white/30" />
@@ -256,32 +245,12 @@ export const JournalPage = (): React.JSX.Element => {
                 </button>
               )}
             </div>
-
-            {/* 主题过滤器横向滑动区 */}
-            <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
-              {allThemes.map((theme) => {
-                const isThemeActive = selectedTheme === theme;
-                return (
-                  <button
-                    key={theme}
-                    onClick={() => setSelectedTheme(theme)}
-                    className={`flex-shrink-0 px-2 py-0.5 rounded-[6px] text-xs font-medium transition-all duration-150 ${
-                      isThemeActive
-                        ? "bg-white text-black font-semibold"
-                        : "bg-[#000000]/40 border border-white/5 text-white/50 hover:text-white/80 hover:border-white/10"
-                    }`}
-                  >
-                    {theme}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* 具有视觉导轨的垂直时间轴 */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 relative min-h-[200px] lg:min-h-0">
             {/* 时间轴连线 */}
-            <div className="absolute left-[13px] top-2 bottom-2 w-[1px] bg-white/10 z-0" />
+            <div className="absolute left-3 top-2 bottom-2 w-[1px] bg-white/10 z-0" />
 
             <div className="flex flex-col gap-2.5 relative z-10 pl-6">
               {filteredEntries.length > 0 ? (
@@ -291,7 +260,7 @@ export const JournalPage = (): React.JSX.Element => {
                     <div
                       key={entry.id}
                       onClick={() => setActiveEntryId(entry.id)}
-                      className={`group relative w-full text-left rounded-[6px] border p-3.5 flex flex-col gap-2 transition-all duration-200 cursor-pointer ${
+                      className={`group relative w-full text-left rounded-[6px] border p-3 flex flex-col gap-1.5 transition-all duration-200 cursor-pointer ${
                         isSelected
                           ? "bg-white border-white text-black shadow-lg"
                           : "bg-[#212121] border-white/5 text-white/70 hover:border-white/15 hover:bg-white/[0.01]"
@@ -299,7 +268,7 @@ export const JournalPage = (): React.JSX.Element => {
                     >
                       {/* 时间轴节点 */}
                       <span
-                        className={`absolute -left-[17px] top-[18px] w-2 h-2 rounded-full z-20 transition-all duration-200 ${
+                        className={`absolute -left-4 top-[16px] w-2 h-2 rounded-full z-20 transition-all duration-200 ${
                           isSelected
                             ? "bg-white ring-4 ring-white/20 scale-125"
                             : "bg-[#212121] border border-white/30 group-hover:bg-white/60 group-hover:border-white/60"
@@ -308,7 +277,7 @@ export const JournalPage = (): React.JSX.Element => {
 
                       {/* 卡片头部 */}
                       <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1 text-sm font-bold font-mono">
+                        <div className="flex items-center gap-1 text-xs font-bold font-mono">
                           <CalendarDays
                             className={`h-3 w-3 ${isSelected ? "text-black" : "text-white/40"}`}
                           />
@@ -327,38 +296,13 @@ export const JournalPage = (): React.JSX.Element => {
                       </div>
 
                       {/* 卡片缩略内容 */}
-                      <div className="flex flex-col gap-1">
-                        <span
-                          className={`text-xs font-bold ${
-                            isSelected ? "text-black/80" : "text-white/60"
-                          }`}
-                        >
-                          心境: {entry.mood}
-                        </span>
-                        <p
-                          className={`text-xs line-clamp-2 leading-relaxed ${
-                            isSelected ? "text-black/70" : "text-white/40"
-                          }`}
-                        >
-                          {entry.content}
-                        </p>
-                      </div>
-
-                      {/* 主题微型徽章 */}
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {entry.themes.map((t) => (
-                          <span
-                            key={t}
-                            className={`text-xs px-1.5 py-0.5 rounded-[4px] font-medium ${
-                              isSelected
-                                ? "bg-black/5 text-black/60 border border-black/10"
-                                : "bg-black/20 text-white/40 border border-white/5"
-                            }`}
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
+                      <p
+                        className={`text-xs line-clamp-2 leading-relaxed ${
+                          isSelected ? "text-black/70" : "text-white/40"
+                        }`}
+                      >
+                        {entry.content}
+                      </p>
                     </div>
                   );
                 })

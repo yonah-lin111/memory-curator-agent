@@ -1,6 +1,7 @@
 import type React from "react";
 import {
   BookOpen,
+  Bot,
   Brain,
   CalendarDays,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
 // 主导航项类型，描述左侧应用级入口。
 export type SidebarPageId =
   | "today"
+  | "agent"
   | "notes"
   | "journal"
   | "weekly"
@@ -84,6 +86,18 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Today",
         description: "计划 / 随记 / 日记",
         icon: Home,
+      },
+    ],
+  },
+  {
+    id: "intelligence",
+    label: "INTELLIGENCE",
+    items: [
+      {
+        id: "agent",
+        label: "Agent",
+        description: "能力编写工作台",
+        icon: Bot,
       },
     ],
   },
