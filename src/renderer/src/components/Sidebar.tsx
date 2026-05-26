@@ -5,8 +5,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  Database,
   FileText,
   Home,
   Layers,
@@ -161,7 +159,7 @@ export const Sidebar = ({
           isCollapsed ? "lg:w-16 p-3 items-center" : "lg:w-64 p-4"
         }`}
       >
-        <div className="flex flex-col gap-5 w-full">
+        <div className={`flex flex-col gap-5 w-full ${isCollapsed ? "" : "lg:w-[222px] lg:flex-shrink-0"}`}>
           {/* 产品标识头 */}
           <div
             className={`flex items-center gap-3 px-1 ${isCollapsed ? "justify-center" : ""}`}
@@ -186,7 +184,7 @@ export const Sidebar = ({
             {NAVIGATION_GROUPS.map((group) => (
               <section key={group.id} className="flex flex-col gap-1.5">
                 {!isCollapsed && (
-                  <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30">
+                  <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30 whitespace-nowrap">
                     {group.label}
                   </h3>
                 )}
@@ -212,12 +210,12 @@ export const Sidebar = ({
                           className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-black" : "text-white/50"}`}
                         />
                         {!isCollapsed && (
-                          <div className="flex min-w-0 flex-col items-start text-left">
-                            <span className="text-sm font-bold leading-none">
+                          <div className="flex min-w-0 flex-col items-start text-left whitespace-nowrap">
+                            <span className="text-sm font-bold leading-none whitespace-nowrap">
                               {item.label}
                             </span>
                             <span
-                              className={`mt-1 text-xs leading-none ${isActive ? "text-black/60 font-medium" : "text-white/30"}`}
+                              className={`mt-1 text-xs leading-none whitespace-nowrap ${isActive ? "text-black/60 font-medium" : "text-white/30"}`}
                             >
                               {item.description}
                             </span>
@@ -237,12 +235,12 @@ export const Sidebar = ({
               <div className="h-[1px] bg-white/5" />
 
               {/* 周定位卡片保持静态，服务 Today 页面上下文。 */}
-              <div className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.02] p-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold tracking-widest text-white/40 uppercase">
+              <div className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.02] p-2.5 w-full lg:w-[222px] lg:flex-shrink-0">
+                <div className="flex items-center justify-between whitespace-nowrap">
+                  <span className="text-sm font-bold tracking-widest text-white/40 uppercase whitespace-nowrap">
                     2026 MAY
                   </span>
-                  <span className="text-sm font-mono text-white/25">
+                  <span className="text-sm font-mono text-white/25 whitespace-nowrap">
                     WEEK 22
                   </span>
                 </div>
@@ -277,40 +275,19 @@ export const Sidebar = ({
           )}
         </div>
 
-        {/* 底部本地优先隐私引擎状态 */}
-        <div className="mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full">
+        {/* 底部设置 */}
+        <div className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${isCollapsed ? "" : "lg:w-[222px] lg:flex-shrink-0"}`}>
           {isCollapsed ? (
             <div className="flex flex-col gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5">
-                <Database className="h-3.5 w-3.5 text-emerald-400" />
-              </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
                 <Settings className="h-3.5 w-3.5" />
               </div>
             </div>
           ) : (
-            <>
-              <div className="flex flex-col gap-2 rounded-[6px] bg-white/[0.02] border border-white/5 p-2.5">
-                <div className="flex items-center gap-2">
-                  <Database className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-xs font-bold text-white/80">
-                    Local Vault
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 pl-5 text-xs text-white/40 font-mono">
-                  <div className="flex items-center gap-1.5">
-                    <Clock3 className="h-3 w-3 text-white/30" />
-                    <span>Last saved: Today 21:45</span>
-                  </div>
-                  <span>Storage: Local-first</span>
-                  <span>Agent: Curation standby</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35">
-                <Settings className="h-3.5 w-3.5" />
-                <span>Settings</span>
-              </div>
-            </>
+            <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35 whitespace-nowrap">
+              <Settings className="h-3.5 w-3.5" />
+              <span className="whitespace-nowrap">Settings</span>
+            </div>
           )}
         </div>
       </aside>
