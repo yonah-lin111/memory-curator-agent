@@ -12,7 +12,9 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint": "pnpm typecheck",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "rebuild:native": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

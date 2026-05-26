@@ -1,6 +1,8 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { initDatabase } from './db'
+import { registerNotesHandlers } from './ipc/notesHandlers'
 
 /**
  * 创建应用主窗口。
@@ -16,7 +18,7 @@ const createWindow = (): void => {
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
@@ -37,6 +39,8 @@ const createWindow = (): void => {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.memorycurator.agent')
+  initDatabase()
+  registerNotesHandlers()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

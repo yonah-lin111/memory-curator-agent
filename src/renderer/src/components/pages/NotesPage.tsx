@@ -135,98 +135,6 @@ const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
   ),
 ];
 
-// 自由笔记素材静态列表。
-const INITIAL_NOTES: NoteMaterialItem[] = [
-  {
-    id: "n-1",
-    title: "分布式节点状态同步算法重试机制",
-    content:
-      "在弱网环境下，AEON 核心协议层的节点状态同步容易丢失。可以设计一个基于指数退避时间的重试算法，同时引入主观连接信任度，当信任度低于 0.3 时直接进入离线暂存模式。明天和 Yonah 讨论一下。",
-    source: "随手速记",
-    tags: ["架构", "协议层"],
-    time: "2026-05-25 10:15",
-    isCurated: false,
-    clue: "可能关联主题「本地优先架构」",
-  },
-  {
-    id: "n-2",
-    title: "微信聊天记录粘贴：遗忘曲线机制探讨",
-    content:
-      "[14:22] A: 数字海马体不能做成纯粹的记事本。人脑能正常运转是因为大脑会自动遗忘 90% 的垃圾信息。B: 同意。所以我们的 Agent 在周整理时，应该鼓励用户“丢弃”或“归档”那些时效性已过的随记。遗忘机制才是核心。",
-    source: "聊天粘贴",
-    tags: ["机制探讨", "数字海马体"],
-    time: "2026-05-24 16:45",
-    isCurated: false,
-    clue: "可能关联主题「数字海马体」",
-  },
-  {
-    id: "n-3",
-    title: "截屏 OCR：极简黑白客户端设计准则",
-    content:
-      "界面背景：#000000（纯黑）。次级卡片：#212121（暗灰）。圆角：6px。严格禁止使用多色渐变。一切界面的交互通过留白、层级、微弱的白边框以及极其克制的微交互来传达。设计需要新颖，同时体现绝对的冷静。",
-    source: "截图文字",
-    tags: ["UI-UX", "规范"],
-    time: "2026-05-24 11:30",
-    isCurated: true,
-    clue: "已关联主题「数字海马体」的设计系统",
-  },
-  {
-    id: "n-4",
-    title: "海马体主动策展交互层构想",
-    content:
-      "Agent 的角色绝对不能是诊断式的。如果 Agent 直接对用户说“你今天很焦虑”，这不仅生硬，而且可能引起抵触。相反，它应该作为一根绳索，把“计划延后”和“工作时间过长”这两个事实摆在用户面前。让用户自己去连线。",
-    source: "随手速记",
-    tags: ["AI-Agent", "UX"],
-    time: "2026-05-23 15:20",
-    isCurated: false,
-    clue: "可能关联主题「数字海马体」",
-  },
-  {
-    id: "n-5",
-    title: "关于本地加密存储的讨论摘要",
-    content:
-      "在本地优先架构下，密钥直接托管于硬件级的 Keychain。数据的解密与神经元关联计算完全是在本地沙盒内完成。任何外部云同步都必须在数据完全碎块化加密后进行，保证即使云端被攻破，攻击者也只能拿到无意义的碎块。",
-    source: "会议摘要",
-    tags: ["本地存储", "安全"],
-    time: "2026-05-22 09:10",
-    isCurated: true,
-    clue: "已关联主题「本地优先架构」",
-  },
-  {
-    id: "n-6",
-    title: "拖延症的本质与应对设计",
-    content:
-      "今天再次把“Today 工作台 visual 审核”这个任务延后了。这其实是个信号，代表我对目前的渲染层 Lint 规则感到烦躁。如果能将延后任务与当时记录的主观日记进行关联，或许能帮我找出“抗拒某项工作”的底层心理根源。",
-    source: "随手速记",
-    tags: ["心理学", "行为记录"],
-    time: "2026-05-21 18:40",
-    isCurated: false,
-    clue: "可能关联主题「计划延后模式」",
-  },
-  {
-    id: "n-7",
-    title: "微信群摘录：AI 协同与个人边界",
-    content:
-      "“现在的 AI 都在教你如何快速输出，但没有人在教你如何保护你的注意力。我们每天写下的随记，是极为珍贵的个人脑电波映射。如果直接打包发给公共大模型，就是在慢性让渡思维主权。必须建立本地的策展边界。”",
-    source: "聊天粘贴",
-    tags: ["思想", "AI-Agent"],
-    time: "2026-05-20 22:15",
-    isCurated: false,
-    clue: "可能关联主题「数字海马体」",
-  },
-  {
-    id: "n-8",
-    title: "客户端冷启动性能指标",
-    content:
-      "本地优先客户端最核心的体验就是“快”。目前冷启动耗时在 120ms 左右。需要对多维关联图谱的首次加载进行预加载分片。在 App 启动时，只初始化基础 UI 树和 Today 页面，其他页面的关联网格在后台线程中懒加载。",
-    source: "随手速记",
-    tags: ["架构", "性能"],
-    time: "2026-05-19 14:00",
-    isCurated: true,
-    clue: "已关联主题「本地优先架构」",
-  },
-];
-
 /**
  * 创建动态统计项。
  */
@@ -585,18 +493,43 @@ const NoteMarkdownModal = ({
  */
 export const NotesPage = (): React.JSX.Element => {
   // 当前页面笔记列表。
-  const [notes, setNotes] = useState<NoteMaterialItem[]>(INITIAL_NOTES);
+  const [notes, setNotes] = useState<NoteMaterialItem[]>([]);
   // 当前激活的笔记筛选。
   const [activeFilter, setActiveFilter] = useState<NotesFilter>("all");
   // Markdown 编辑弹窗是否打开。
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   // 正在编辑的笔记。若为 null 则表示非编辑状态。
   const [editingNote, setEditingNote] = useState<NoteMaterialItem | null>(null);
+  // 笔记数据库是否正在读取。
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+  // 笔记数据库错误文案。
+  const [notesError, setNotesError] = useState<string | null>(null);
 
   // 当前页面统计项。
   const statsItems = createStatsItems(notes);
   // 当前筛选后的笔记列表。
   const visibleNotes = filterNotes(notes, activeFilter);
+
+  /**
+   * 从 SQLite 读取笔记列表。
+   */
+  const loadNotes = async (): Promise<void> => {
+    setIsLoadingNotes(true);
+    setNotesError(null);
+
+    try {
+      const storedNotes = await window.api.notes.list();
+      setNotes(storedNotes);
+    } catch {
+      setNotesError("无法读取本地笔记数据库");
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadNotes();
+  }, []);
 
   /**
    * 切换素材筛选范围。
@@ -615,56 +548,60 @@ export const NotesPage = (): React.JSX.Element => {
   /**
    * 删除素材。
    */
-  const handleDeleteNote = (id: string): void => {
-    setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+  const handleDeleteNote = async (id: string): Promise<void> => {
+    setNotesError(null);
+
+    try {
+      await window.api.notes.delete(id);
+      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+    } catch {
+      setNotesError("删除笔记失败，请稍后重试");
+    }
   };
 
   /**
    * 更新素材池中的笔记。
    */
-  const handleUpdateNote = (id: string, draft: NoteDraft): void => {
-    setNotes((currentNotes) =>
-      currentNotes.map((note) =>
-        note.id === id
-          ? {
-              ...note,
-              title: draft.title.trim(),
-              content: draft.content.trim(),
-              source: draft.source,
-              tags: parseTags(draft.tags),
-            }
-          : note,
-      ),
-    );
-    setEditingNote(null);
+  const handleUpdateNote = async (id: string, draft: NoteDraft): Promise<void> => {
+    setNotesError(null);
+
+    try {
+      const updatedNote = await window.api.notes.update(id, {
+        title: draft.title.trim(),
+        content: draft.content.trim(),
+        source: draft.source,
+        tags: parseTags(draft.tags),
+      });
+
+      setNotes((currentNotes) =>
+        currentNotes.map((note) => (note.id === id ? updatedNote : note)),
+      );
+      setEditingNote(null);
+    } catch {
+      setNotesError("更新笔记失败，请稍后重试");
+    }
   };
 
   /**
    * 保存 Markdown 笔记到当前页面素材池。
    */
-  const handleSaveMarkdownNote = (draft: NoteDraft): void => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const date = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const timeStr = `${year}-${month}-${date} ${hours}:${minutes}`;
+  const handleSaveMarkdownNote = async (draft: NoteDraft): Promise<void> => {
+    setNotesError(null);
 
-    const newNote: NoteMaterialItem = {
-      id: `n-${now.getTime()}`,
-      title: draft.title.trim(),
-      content: draft.content.trim(),
-      source: draft.source,
-      tags: parseTags(draft.tags),
-      time: timeStr,
-      isCurated: false,
-      clue: "可能关联主题「Markdown 新素材」",
-    };
+    try {
+      const newNote = await window.api.notes.create({
+        title: draft.title.trim(),
+        content: draft.content.trim(),
+        source: draft.source,
+        tags: parseTags(draft.tags),
+      });
 
-    setNotes((currentNotes) => [newNote, ...currentNotes]);
-    setActiveFilter("all");
-    setIsMarkdownModalOpen(false);
+      setNotes((currentNotes) => [newNote, ...currentNotes]);
+      setActiveFilter("all");
+      setIsMarkdownModalOpen(false);
+    } catch {
+      setNotesError("保存笔记失败，请稍后重试");
+    }
   };
 
   return (
@@ -762,8 +699,52 @@ export const NotesPage = (): React.JSX.Element => {
           </div>
         </div>
 
+        {notesError && (
+          <div
+            role="alert"
+            className="flex flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-3 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>{notesError}</span>
+            <button
+              type="button"
+              className="self-start rounded-[6px] border border-white/10 bg-black px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors duration-150 hover:border-white/25 hover:text-white sm:self-auto"
+              onClick={() => void loadNotes()}
+            >
+              重新读取
+            </button>
+          </div>
+        )}
+
         {/* 自由随记卡片网格布局 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-1">
+        {isLoadingNotes ? (
+          <div className="grid grid-cols-1 gap-3 mb-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-[258px] rounded-[6px] border border-white/5 bg-[#212121] p-3.5"
+              >
+                <div className="h-3 w-24 rounded-[4px] bg-white/10" />
+                <div className="mt-5 h-4 w-3/4 rounded-[4px] bg-white/10" />
+                <div className="mt-4 flex flex-col gap-2">
+                  <div className="h-2.5 w-full rounded-[4px] bg-white/5" />
+                  <div className="h-2.5 w-11/12 rounded-[4px] bg-white/5" />
+                  <div className="h-2.5 w-2/3 rounded-[4px] bg-white/5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : visibleNotes.length === 0 ? (
+          <div className="flex min-h-[240px] flex-col items-center justify-center rounded-[6px] border border-white/5 bg-[#212121] p-8 text-center">
+            <FileText className="h-7 w-7 text-white/30" />
+            <h2 className="mt-3 text-sm font-bold text-white/80">
+              暂无自由笔记素材
+            </h2>
+            <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+              点击右上角加号创建第一条 Markdown 素材，内容会写入本地 SQLite。
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-1">
           {visibleNotes.map((note) => (
             <div
               key={note.id}
@@ -791,7 +772,7 @@ export const NotesPage = (): React.JSX.Element => {
                   <button
                     type="button"
                     className="flex h-5 w-5 items-center justify-center rounded-[4px] text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
-                    onClick={() => handleDeleteNote(note.id)}
+                    onClick={() => void handleDeleteNote(note.id)}
                     title="删除笔记"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -846,7 +827,8 @@ export const NotesPage = (): React.JSX.Element => {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {isMarkdownModalOpen || editingNote ? (
@@ -867,9 +849,9 @@ export const NotesPage = (): React.JSX.Element => {
           }}
           onSave={(draft) => {
             if (editingNote) {
-              handleUpdateNote(editingNote.id, draft);
+              void handleUpdateNote(editingNote.id, draft);
             } else {
-              handleSaveMarkdownNote(draft);
+              void handleSaveMarkdownNote(draft);
             }
           }}
         />
