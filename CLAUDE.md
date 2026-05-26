@@ -14,8 +14,8 @@
 
 ### 字体
 
-- 默认字体大小大小为 13px
-- tag、描述等字体默认为12px
+- 默认字体大小为 13px（在 `styles.css` 中重载为 Tailwind 的 `text-sm` / `text-base`）
+- tag、描述等字体默认为 12px（在 `styles.css` 中重载为 Tailwind 的 `text-xs`）
 
 ### 交互与布局
 

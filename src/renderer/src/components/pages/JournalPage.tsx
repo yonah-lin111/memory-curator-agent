@@ -56,7 +56,7 @@ const JOURNAL_ENTRIES: JournalEntryItem[] = [
     weekday: "Mon",
     time: "21:45",
     content:
-      "今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱七八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片和微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。希望这个界面能够作为我新生活的见证者。",
+      "今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱七八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片 and 微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。希望这个界面能够作为我新生活的见证者。",
     mood: "平静 / 专注",
     people: ["自我", "Yonah"],
     themes: ["数字海马体", "设计系统"],
@@ -82,7 +82,7 @@ const JOURNAL_ENTRIES: JournalEntryItem[] = [
     weekday: "Fri",
     time: "23:10",
     content:
-      "一整天都在和 Rust 的桥接层编译报错作斗争。由于多维关联图谱需要极致的性能，我固执地拒绝了现成的客户端 SQL 图谱，非要用本地二进制碎块进行神经关联度衰减模型计算。编译器一遍遍报错，中途差点想放弃退回轻量 SQLite。在晚上九点终于编译通过的那一刻，看着 15ms 的渲染耗时，我知道我的固执是值得的。极度疲惫，但是内心感觉被填满了。",
+      "一整天都在和 Rust 的桥接层编译报错作斗争。由于多维关联图谱需要极致的性能，我固执地拒绝了现成的客户端 SQL 图谱，非要用本地二进制碎块进行神经关联度衰减模型计算。编译器一遍卷报错，中途差点想放弃退回轻量 SQLite。在晚上九点终于编译通过的那一刻，看着 15ms 的渲染耗时，我知道我的固执是值得的。极度疲惫，但是内心感觉被填满了。",
     mood: "精疲力竭 / 充实",
     people: ["自我"],
     themes: ["本地优先架构", "性能攻坚"],
@@ -187,7 +187,7 @@ export const JournalPage = (): React.JSX.Element => {
     ...Array.from(new Set(JOURNAL_ENTRIES.flatMap((entry) => entry.themes))),
   ];
 
-  // 根据搜索词和选中的主题标签对日记进行多维过滤
+  // 根据搜索词 and 选中的主题标签对日记进行多维过滤
   const filteredEntries = JOURNAL_ENTRIES.filter((entry) => {
     const matchesTheme =
       selectedTheme === "全部" || entry.themes.includes(selectedTheme);
@@ -245,7 +245,7 @@ export const JournalPage = (): React.JSX.Element => {
                 placeholder="检索记忆、情绪或关联词..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-7 py-1.5 bg-[#000000] border border-white/5 rounded-[6px] text-xs text-white placeholder-white/20 focus:outline-none focus:border-white/10 transition-all duration-150 font-sans"
+                className="w-full pl-8 pr-7 py-1.5 bg-[#000000] border border-white/5 rounded-[6px] text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/10 transition-all duration-150 font-sans"
               />
               {searchQuery && (
                 <button
@@ -265,7 +265,7 @@ export const JournalPage = (): React.JSX.Element => {
                   <button
                     key={theme}
                     onClick={() => setSelectedTheme(theme)}
-                    className={`flex-shrink-0 px-2 py-0.5 rounded-[6px] text-[10px] font-medium transition-all duration-150 ${
+                    className={`flex-shrink-0 px-2 py-0.5 rounded-[6px] text-xs font-medium transition-all duration-150 ${
                       isThemeActive
                         ? "bg-white text-black font-semibold"
                         : "bg-[#000000]/40 border border-white/5 text-white/50 hover:text-white/80 hover:border-white/10"
@@ -308,19 +308,19 @@ export const JournalPage = (): React.JSX.Element => {
 
                       {/* 卡片头部 */}
                       <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1 text-xs font-bold font-mono">
+                        <div className="flex items-center gap-1 text-sm font-bold font-mono">
                           <CalendarDays
                             className={`h-3 w-3 ${isSelected ? "text-black" : "text-white/40"}`}
                           />
                           <span>{entry.date}</span>
                           <span
-                            className={`text-[10px] ${isSelected ? "text-black/50" : "text-white/30"}`}
+                            className={`text-xs ${isSelected ? "text-black/50" : "text-white/30"}`}
                           >
                             ({entry.weekday})
                           </span>
                         </div>
                         <span
-                          className={`text-[10px] font-mono ${isSelected ? "text-black/50" : "text-white/30"}`}
+                          className={`text-xs font-mono ${isSelected ? "text-black/50" : "text-white/30"}`}
                         >
                           {entry.time}
                         </span>
@@ -329,7 +329,7 @@ export const JournalPage = (): React.JSX.Element => {
                       {/* 卡片缩略内容 */}
                       <div className="flex flex-col gap-1">
                         <span
-                          className={`text-[11px] font-bold ${
+                          className={`text-xs font-bold ${
                             isSelected ? "text-black/80" : "text-white/60"
                           }`}
                         >
@@ -349,7 +349,7 @@ export const JournalPage = (): React.JSX.Element => {
                         {entry.themes.map((t) => (
                           <span
                             key={t}
-                            className={`text-[9px] px-1.5 py-0.5 rounded-[4px] font-medium ${
+                            className={`text-xs px-1.5 py-0.5 rounded-[4px] font-medium ${
                               isSelected
                                 ? "bg-black/5 text-black/60 border border-black/10"
                                 : "bg-black/20 text-white/40 border border-white/5"
@@ -384,7 +384,7 @@ export const JournalPage = (): React.JSX.Element => {
                 <span className="text-xs font-mono font-bold tracking-wider text-white">
                   {activeEntry.date.split("-")[0]} / {activeEntry.date.split("-")[1]}
                 </span>
-                <span className="text-[10px] tracking-widest text-white/40 font-bold uppercase mt-0.5 flex items-center gap-1">
+                <span className="text-xs tracking-widest text-white/40 font-bold uppercase mt-0.5 flex items-center gap-1">
                   <BookOpen className="h-3 w-3" />
                   {activeEntry.weekday === "Mon"
                     ? "MONDAY"
@@ -407,7 +407,7 @@ export const JournalPage = (): React.JSX.Element => {
               </div>
 
               <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[10px] font-mono tracking-wider text-white/30 mr-1 uppercase">
+                <span className="text-xs font-mono tracking-wider text-white/30 mr-1 uppercase">
                   COGNITIVE ENERGY:
                 </span>
                 {[1, 2, 3, 4, 5].map((idx) => {
@@ -437,7 +437,7 @@ export const JournalPage = (): React.JSX.Element => {
           <div className="rounded-[6px] border border-dashed border-white/10 bg-[#000000]/30 p-4 flex flex-col gap-2.5">
             <div className="flex items-center gap-1.5">
               <Brain className="h-4 w-4 text-white/60 animate-pulse" />
-              <h3 className="text-xs font-bold tracking-wider text-white/70 uppercase">
+              <h3 className="text-sm font-bold tracking-wider text-white/70 uppercase">
                 AI 记忆策展与分析
               </h3>
             </div>
@@ -463,15 +463,15 @@ export const JournalPage = (): React.JSX.Element => {
             </div>
           </div>
 
-          {/* 完整原文段落：大尺寸精美排版 */}
+          {/* 完整原文段落：使用默认基础文字大小 text-sm (13px) */}
           <div className="flex-1 bg-[#000000] border border-white/5 rounded-[6px] p-6 flex flex-col justify-between gap-4 min-h-[220px]">
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-              <p className="text-[14px] text-white/85 leading-loose font-sans whitespace-pre-wrap tracking-wide pl-4 border-l-2 border-white/20">
+              <p className="text-sm text-white/85 leading-loose font-sans whitespace-pre-wrap tracking-wide pl-4 border-l-2 border-white/20">
                 {activeEntry.content}
               </p>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] font-mono text-white/30 border-t border-white/5 pt-3 mt-1">
+            <div className="flex items-center justify-between text-xs font-mono text-white/30 border-t border-white/5 pt-3 mt-1">
               <span className="tracking-wider">
                 ENTRY_ID: {activeEntry.id.toUpperCase()}
               </span>
@@ -486,7 +486,7 @@ export const JournalPage = (): React.JSX.Element => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 提到人物与关联主题 */}
             <div className="rounded-[6px] border border-white/5 bg-white/[0.01] p-4 flex flex-col gap-3">
-              <h4 className="text-xs font-bold tracking-wider text-white/50 uppercase flex items-center gap-1.5">
+              <h4 className="text-sm font-bold tracking-wider text-white/50 uppercase flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5" />
                 关联因子与实体
               </h4>
@@ -514,7 +514,7 @@ export const JournalPage = (): React.JSX.Element => {
 
             {/* 历史连接分析 */}
             <div className="rounded-[6px] border border-white/5 bg-white/[0.01] p-4 flex flex-col gap-3">
-              <h4 className="text-xs font-bold tracking-wider text-white/50 uppercase flex items-center gap-1.5">
+              <h4 className="text-sm font-bold tracking-wider text-white/50 uppercase flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5" />
                 神经元时空关联
               </h4>
@@ -533,11 +533,11 @@ export const JournalPage = (): React.JSX.Element => {
 
           {/* 快捷控制面板：微调保存周期与周度回顾控制 */}
           <div className="rounded-[6px] border border-white/5 bg-[#000000]/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* 半衰期权重控制 */}
+            {/* 半衰期期权重控制 */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <Sliders className="h-4 w-4 text-white/40 flex-shrink-0" />
               <div className="flex flex-col gap-1 w-full sm:w-48">
-                <div className="flex justify-between text-[10px] font-mono tracking-wider text-white/40 uppercase">
+                <div className="flex justify-between text-xs font-mono tracking-wider text-white/40 uppercase">
                   <span>记忆半衰权重</span>
                   <span className="text-white/60">
                     {persistenceWeights[activeEntry.id] || "永久 (DECAY_NONE)"}
@@ -581,7 +581,7 @@ export const JournalPage = (): React.JSX.Element => {
                     [activeEntry.id]: !prev[activeEntry.id],
                   }));
                 }}
-                className={`flex items-center gap-1.5 rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                className={`flex items-center gap-1.5 rounded-[6px] border px-3 py-1.5 text-sm font-medium transition-all duration-150 ${
                   weeklyReviewPinned[activeEntry.id]
                     ? "bg-white text-black border-white hover:bg-white/90"
                     : "bg-transparent border-white/5 text-white/65 hover:border-white/10 hover:bg-white/5"
@@ -597,7 +597,7 @@ export const JournalPage = (): React.JSX.Element => {
 
               <button
                 onClick={() => handleCopy(activeEntry.content)}
-                className="flex items-center gap-1.5 rounded-[6px] border border-white/5 bg-transparent px-3 py-1.5 text-xs font-medium text-white/65 hover:border-white/10 hover:bg-white/5 transition-all duration-150"
+                className="flex items-center gap-1.5 rounded-[6px] border border-white/5 bg-transparent px-3 py-1.5 text-sm font-medium text-white/65 hover:border-white/10 hover:bg-white/5 transition-all duration-150"
               >
                 {isCopied ? (
                   <>
