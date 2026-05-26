@@ -161,6 +161,9 @@ export const TodayWorkspace = (): React.JSX.Element => {
   // 待办事项状态列表。
   const [todos, setTodos] = useState<TodoItem[]>(TODO_ITEMS);
 
+  // 用于排序的待办列表（延迟同步以支持优雅的过渡动画）。
+  const [sortTodos, setSortTodos] = useState<TodoItem[]>(TODO_ITEMS);
+
   // 控制是否显示 inline 待办添加框。
   const [showAddInput, setShowAddInput] = useState(true);
 
@@ -183,11 +186,25 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 切换待办完成状态。
    */
   const handleToggleTodo = (id: string): void => {
+    let targetCompleted = false;
     setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-      ),
+      prev.map((todo) => {
+        if (todo.id === id) {
+          targetCompleted = !todo.completed;
+          return { ...todo, completed: targetCompleted };
+        }
+        return todo;
+      }),
     );
+
+    // 延迟 400ms 后更新用于排序的待办列表，确保勾选过渡动效流畅，避免生硬跳转。
+    setTimeout(() => {
+      setSortTodos((prev) =>
+        prev.map((todo) =>
+          todo.id === id ? { ...todo, completed: targetCompleted } : todo,
+        ),
+      );
+    }, 400);
   };
 
   /**
@@ -217,10 +234,18 @@ export const TodayWorkspace = (): React.JSX.Element => {
       setEditingId(null);
       return;
     }
+    const updatedFields = { text: editingText.trim(), priority: editingPriority };
     setTodos((prev) =>
       prev.map((todo) =>
         todo.id === id
-          ? { ...todo, text: editingText.trim(), priority: editingPriority }
+          ? { ...todo, ...updatedFields }
+          : todo,
+      ),
+    );
+    setSortTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id
+          ? { ...todo, ...updatedFields }
           : todo,
       ),
     );
@@ -232,6 +257,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
    */
   const handleDeleteTodo = (id: string): void => {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
+    setSortTodos((prev) => prev.filter((todo) => todo.id !== id));
   };
 
   /**
@@ -246,6 +272,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       priority: newTodoPriority,
     };
     setTodos((prev) => [newTodo, ...prev]);
+    setSortTodos((prev) => [newTodo, ...prev]);
     setNewTodoText("");
     setNewTodoPriority("P1");
   };
@@ -369,7 +396,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 </div>
               )}
 
-              {[...todos]
+              {[...sortTodos]
                 .sort((a, b) => {
                   if (a.completed !== b.completed) {
                     return a.completed ? 1 : -1;
@@ -377,89 +404,93 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   const order: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
                   return (order[a.priority] ?? 99) - (order[b.priority] ?? 99);
                 })
-                .map((todo) => (
-                  <div
-                    key={todo.id}
-                    className="group flex items-center justify-between gap-2.5 rounded-[6px] bg-white/[0.02] p-2 hover:bg-white/[0.04] transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleTodo(todo.id)}
-                        className="flex-shrink-0 text-white/40 hover:text-white transition-colors animate-fade-in"
-                      >
-                        {todo.completed ? (
-                          <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
-                        ) : (
-                          <Square className="h-3.5 w-3.5" />
-                        )}
-                      </button>
-                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {editingId === todo.id ? (
-                            <>
-                              <button
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={handleCyclePriority}
-                                className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-colors cursor-pointer select-none ${
-                                  editingPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
-                                  editingPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
-                                  editingPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
-                                  "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
-                                }`}
-                                title="点击切换优先级"
-                              >
-                                {editingPriority}
-                              </button>
-                              <textarea
-                                rows={2}
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                onFocus={(e) => e.target.select()}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSaveEdit(todo.id);
-                                  } else if (e.key === "Escape") {
-                                    setEditingId(null);
-                                  }
-                                }}
-                                onBlur={() => handleSaveEdit(todo.id)}
-                                className="flex-1 bg-black border border-white/10 rounded-[4px] px-1.5 py-1 text-xs text-white outline-none focus:border-white/20 resize-none min-h-[40px] leading-relaxed"
-                                autoFocus
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <span
-                                className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border ${
-                                  todo.completed
-                                    ? "text-white/20 border-white/5 bg-white/[0.01]"
-                                    : todo.priority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5" :
-                                      todo.priority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
-                                      todo.priority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5" :
-                                      "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
-                                }`}
-                              >
-                                {todo.priority}
-                              </span>
-                              <span
-                                onDoubleClick={() => handleStartEdit(todo)}
-                                className={`text-sm leading-normal flex-1 cursor-text select-text break-words ${
-                                  todo.completed
-                                    ? "text-white/30 line-through"
-                                    : "text-white/80 hover:text-white"
-                                }`}
-                                title="双击进行编辑"
-                              >
-                                {todo.text}
-                              </span>
-                            </>
-                          )}
+                .map((sortTodo) => {
+                  const todo = todos.find((t) => t.id === sortTodo.id) ?? sortTodo;
+                  return (
+                    <div
+                      key={todo.id}
+                      className={`group flex items-center justify-between gap-2.5 rounded-[6px] p-2 transition-all duration-300 ${
+                        todo.completed
+                          ? "bg-white/[0.01] opacity-60"
+                          : "bg-white/[0.02] hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTodo(todo.id)}
+                          className="flex-shrink-0 text-white/40 hover:text-white transition-colors relative h-3.5 w-3.5 focus:outline-none"
+                          title={todo.completed ? "标记为未完成" : "标记为已完成"}
+                        >
+                          <Square className={`absolute inset-0 h-3.5 w-3.5 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-75 opacity-0 rotate-45" : "scale-100 opacity-100 rotate-0"}`} />
+                          <CheckSquare className={`absolute inset-0 h-3.5 w-3.5 text-emerald-500 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-100 opacity-100 rotate-0" : "scale-75 opacity-0 -rotate-45"}`} />
+                        </button>
+                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {editingId === todo.id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={handleCyclePriority}
+                                  className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-colors cursor-pointer select-none ${
+                                    editingPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
+                                    editingPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
+                                    editingPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
+                                    "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
+                                  }`}
+                                  title="点击切换优先级"
+                                >
+                                  {editingPriority}
+                                </button>
+                                <textarea
+                                  rows={2}
+                                  value={editingText}
+                                  onChange={(e) => setEditingText(e.target.value)}
+                                  onFocus={(e) => e.target.select()}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleSaveEdit(todo.id);
+                                    } else if (e.key === "Escape") {
+                                      setEditingId(null);
+                                    }
+                                  }}
+                                  onBlur={() => handleSaveEdit(todo.id)}
+                                  className="flex-1 bg-black border border-white/10 rounded-[4px] px-1.5 py-1 text-xs text-white outline-none focus:border-white/20 resize-none min-h-[40px] leading-relaxed"
+                                  autoFocus
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <span
+                                  className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-all duration-300 ${
+                                    todo.completed
+                                      ? "text-white/20 border-white/5 bg-white/[0.01]"
+                                      : todo.priority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5" :
+                                        todo.priority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
+                                        todo.priority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5" :
+                                        "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
+                                  }`}
+                                >
+                                  {todo.priority}
+                                </span>
+                                <span
+                                  onDoubleClick={() => handleStartEdit(todo)}
+                                  className={`text-sm leading-normal flex-1 cursor-text select-text break-words transition-all duration-300 ${
+                                    todo.completed
+                                      ? "text-white/30 line-through"
+                                      : "text-white/80 hover:text-white"
+                                  }`}
+                                  title="双击进行编辑"
+                                >
+                                  {todo.text}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
                     
                     {/* 操作按钮组 */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
@@ -481,7 +512,8 @@ export const TodayWorkspace = (): React.JSX.Element => {
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
           </div>
 
