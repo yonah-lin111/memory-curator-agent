@@ -1,8 +1,8 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { CheckSquare, FileText, Plus, Trash2, X } from "lucide-react";
-import { IconButton } from "./IconButton";
-import type { TodoItem } from "./TodayWorkspace";
+import { IconButton } from "../../components/ui/IconButton";
+import type { TodoItem } from "../TodayWorkspace";
 
 // 添加弹窗类型，用于区分待办与随记表单内容。
 export type AddEntryModalKind = "todo" | "note";
