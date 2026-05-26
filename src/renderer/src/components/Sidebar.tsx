@@ -49,16 +49,6 @@ type NavigationGroup = {
   items: NavigationItem[];
 };
 
-// 周日期项类型，描述 Today 页面中的日期定位入口。
-type WeekDateItem = {
-  // 星期短名称。
-  weekday: string;
-  // 日期数字。
-  day: string;
-  // 是否为当前选中日期。
-  active: boolean;
-};
-
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
   // 当前左侧栏是否处于折叠状态。
@@ -145,20 +135,8 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
   },
 ];
 
-// 当前周日期静态数据（当前聚焦在 2026-05-25 周一）。
-const WEEK_DATES: WeekDateItem[] = [
-  { weekday: "Tue", day: "19", active: false },
-  { weekday: "Wed", day: "20", active: false },
-  { weekday: "Thu", day: "21", active: false },
-  { weekday: "Fri", day: "22", active: false },
-  { weekday: "Sat", day: "23", active: false },
-  { weekday: "Sun", day: "24", active: false },
-  { weekday: "Mon", day: "25", active: true },
-];
-
 /**
- * Sidebar 组件 - 负责左侧多维导航栏与周日期选择定位。
- * 仅提供侧栏折叠交互，其余导航信息保持静态展示。
+ * Sidebar 组件 - 负责左侧多维导航栏。
  */
 export const Sidebar = ({
   isCollapsed,
@@ -170,10 +148,12 @@ export const Sidebar = ({
     <div className="relative flex h-auto lg:h-full flex-shrink-0">
       <aside
         className={`w-full h-auto lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-          isCollapsed ? "lg:w-16 p-3 items-center" : "lg:w-64 p-4"
+          isCollapsed ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
         }`}
       >
-        <div className={`flex flex-col gap-5 w-full ${isCollapsed ? "" : "lg:w-[222px] lg:flex-shrink-0"}`}>
+        <div
+          className={`flex flex-col gap-5 w-full ${isCollapsed ? "" : "lg:w-[190px] lg:flex-shrink-0"}`}
+        >
           {/* 产品标识头 */}
           <div
             className={`flex items-center gap-3 px-1 ${isCollapsed ? "justify-center" : ""}`}
@@ -186,9 +166,6 @@ export const Sidebar = ({
                 <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
                   MEMORY CURATOR
                 </h2>
-                <span className="text-xs tracking-widest text-white/40 uppercase font-mono whitespace-nowrap">
-                  LOCAL FIRST DESKTOP
-                </span>
               </div>
             )}
           </div>
@@ -242,55 +219,12 @@ export const Sidebar = ({
               </section>
             ))}
           </nav>
-
-          {!isCollapsed && (
-            <>
-              {/* 分割线 */}
-              <div className="h-[1px] bg-white/5" />
-
-              {/* 周定位卡片保持静态，服务 Today 页面上下文。 */}
-              <div className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.02] p-2.5 w-full lg:w-[222px] lg:flex-shrink-0">
-                <div className="flex items-center justify-between whitespace-nowrap">
-                  <span className="text-sm font-bold tracking-widest text-white/40 uppercase whitespace-nowrap">
-                    2026 MAY
-                  </span>
-                  <span className="text-sm font-mono text-white/25 whitespace-nowrap">
-                    WEEK 22
-                  </span>
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {WEEK_DATES.map((d) => (
-                    <div
-                      key={d.day}
-                      className={`flex flex-col items-center justify-center py-1.5 rounded-[6px] transition-all duration-150 ${
-                        d.active
-                          ? "bg-white text-black font-bold"
-                          : "text-white/40"
-                      }`}
-                    >
-                      <span
-                        className={`text-xs uppercase font-bold ${d.active ? "text-black/50" : "text-white/20"}`}
-                      >
-                        {d.weekday[0]}
-                      </span>
-                      <span className="mt-1 text-xs font-mono font-bold leading-none">
-                        {d.day}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-          {isCollapsed && (
-            <div className="flex h-9 w-9 items-center justify-center rounded-[6px] border border-white/5 bg-white text-xs font-bold text-black">
-              25
-            </div>
-          )}
         </div>
 
         {/* 底部设置 */}
-        <div className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${isCollapsed ? "" : "lg:w-[222px] lg:flex-shrink-0"}`}>
+        <div
+          className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${isCollapsed ? "" : "lg:w-[190px] lg:flex-shrink-0"}`}
+        >
           {isCollapsed ? (
             <div className="flex flex-col gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
