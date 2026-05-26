@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "../Toast";
+import { IconButton } from "../IconButton";
 
 /* ==========================================
  * TS 类型定义
@@ -157,7 +158,7 @@ const createStatsItems = (notes: NoteMaterialItem[]): StatsSummaryItem[] => {
       label: "待整理素材",
       value: pendingCount,
       icon: HelpCircle,
-      highlight: true,
+      highlight: false,
     },
     {
       id: "curated",
@@ -310,13 +311,12 @@ const NoteMarkdownModal = ({
           <div className="flex items-center gap-2.5 flex-shrink-0">
             {/* 切换分屏预览按钮 */}
             <div className="relative group/preview">
-              <button
-                type="button"
-                className={`flex h-7 w-7 items-center justify-center rounded-[6px] border transition-all duration-150 outline-none ${
+              <IconButton
+                className={
                   previewMode === "live"
-                    ? "border-white/25 bg-white text-black hover:bg-white/90"
-                    : "border-white/10 bg-black/40 text-white/60 hover:border-white/20 hover:text-white focus-visible:border-white/25 focus-visible:bg-white/5"
-                }`}
+                    ? "bg-white text-black hover:bg-white/90 hover:text-black"
+                    : ""
+                }
                 onClick={() => {
                   setPreviewMode((currentMode) =>
                     currentMode === "live" ? "edit" : "live"
@@ -324,7 +324,7 @@ const NoteMarkdownModal = ({
                 }}
               >
                 <Columns2 className="h-3.5 w-3.5" />
-              </button>
+              </IconButton>
               <div className="absolute top-[calc(100%+8px)] right-0 scale-95 opacity-0 pointer-events-none group-hover/preview:scale-100 group-hover/preview:opacity-100 transition-all duration-150 rounded-[4px] bg-[#000000] border border-white/10 px-2 py-1 text-[11px] text-white/80 whitespace-nowrap z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                 {previewMode === "live" ? "单栏编辑" : "双栏分屏预览"}
               </div>
@@ -332,14 +332,12 @@ const NoteMarkdownModal = ({
 
             {/* 关闭按钮 */}
             <div className="relative group/close">
-              <button
-                type="button"
+              <IconButton
                 aria-label="关闭 Markdown 笔记弹窗"
-                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[6px] border border-white/10 bg-black/40 text-white/45 transition-all duration-150 hover:border-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
                 onClick={onClose}
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
+              </IconButton>
               <div className="absolute top-[calc(100%+8px)] right-0 scale-95 opacity-0 pointer-events-none group-hover/close:scale-100 group-hover/close:opacity-100 transition-all duration-150 rounded-[4px] bg-[#000000] border border-white/10 px-2 py-1 text-[11px] text-white/80 whitespace-nowrap z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                 关闭 (ESC)
               </div>
@@ -372,9 +370,11 @@ const NoteMarkdownModal = ({
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
           {/* 底部左侧：设置标签和来源渠道的悬浮 Popover 入口 */}
           <div ref={popoverRef} className="relative group/popover">
-            <button
-              type="button"
-              className={`flex items-center gap-1.5 h-7 rounded-[6px] border px-2.5 text-xs font-medium transition-all duration-150 outline-none ${
+            <IconButton
+              iconOnly={false}
+              hoverBgClass=""
+              hoverTextClass=""
+              className={`flex items-center gap-1.5 h-7 border px-2.5 text-xs font-medium outline-none ${
                 isPopoverOpen
                   ? "border-white/20 bg-white/10 text-white"
                   : "border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:text-white"
@@ -390,7 +390,7 @@ const NoteMarkdownModal = ({
               <ChevronDown
                 className={`h-3 w-3 text-white/35 transition-transform duration-150 ${isPopoverOpen ? "rotate-180" : ""}`}
               />
-            </button>
+            </IconButton>
 
             {/* Tooltip */}
             {!isPopoverOpen && (
@@ -418,19 +418,21 @@ const NoteMarkdownModal = ({
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">来源渠道</span>
                   <div ref={selectRef} className="relative">
-                    <button
-                      type="button"
+                    <IconButton
+                      iconOnly={false}
+                      hoverBgClass=""
+                      hoverTextClass=""
                       aria-haspopup="listbox"
                       aria-expanded={isSelectOpen}
                       aria-label="Markdown 笔记来源"
-                      className="flex h-8 w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-2.5 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
+                      className="flex h-8 w-full items-center justify-between border border-white/10 bg-black px-2.5 py-1.5 text-xs font-normal text-white/80 outline-none hover:border-white/20 focus:border-white/25"
                       onClick={() => setIsSelectOpen((prev) => !prev)}
                     >
                       <span>{draft.source}</span>
                       <ChevronDown
                         className={`h-3 w-3 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`}
                       />
-                    </button>
+                    </IconButton>
                     {isSelectOpen && (
                       <div
                         role="listbox"
@@ -439,12 +441,13 @@ const NoteMarkdownModal = ({
                         {NOTE_SOURCE_OPTIONS.map((source) => {
                           const isSelected = draft.source === source;
                           return (
-                            <button
+                            <IconButton
                               key={source}
-                              type="button"
                               role="option"
                               aria-selected={isSelected}
-                              className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white ${
+                              iconOnly={false}
+                              hoverBgClass="hover:bg-white/10"
+                              className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none ${
                                 isSelected
                                   ? "bg-white/5 text-white"
                                   : "text-white/70"
@@ -458,7 +461,7 @@ const NoteMarkdownModal = ({
                               {isSelected && (
                                 <Check className="h-3 w-3 text-white" />
                               )}
-                            </button>
+                            </IconButton>
                           );
                         })}
                       </div>
@@ -469,19 +472,20 @@ const NoteMarkdownModal = ({
             )}
           </div>
 
-          <button
-            type="button"
-            className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+          <IconButton
+            iconOnly={false}
+            highlighted
+            className="px-3 py-1.5 text-xs font-bold gap-1.5"
             disabled={!draft.title.trim() || !draft.content.trim()}
             onClick={handleSave}
           >
             {initialDraft ? (
-              <Check className="h-3.5 w-3.5 text-black" />
+              <Check className="h-3.5 w-3.5" />
             ) : (
-              <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
+              <Plus className="h-3.5 w-3.5" />
             )}
             {initialDraft ? "更新 Markdown 笔记" : "保存 Markdown 笔记"}
-          </button>
+          </IconButton>
         </div>
       </section>
     </div>
@@ -697,14 +701,13 @@ export const NotesPage = (): React.JSX.Element => {
             <span className="text-xs text-white/30 font-mono">
               本地剪贴板监听自动捕获已启用
             </span>
-            <button
-              type="button"
+            <IconButton
               aria-label="新建 Markdown 素材"
-              className="group flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/65 transition-all duration-150 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+              className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
               onClick={() => setIsMarkdownModalOpen(true)}
             >
-              <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
-            </button>
+              <Plus className="h-3.5 w-3.5" />
+            </IconButton>
           </div>
         </div>
 
@@ -770,22 +773,24 @@ export const NotesPage = (): React.JSX.Element => {
                   <span className="text-sm">{note.time}</span>
                 </div>
                 <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
-                  <button
-                    type="button"
-                    className="flex h-5 w-5 items-center justify-center rounded-[4px] text-white/40 hover:bg-white/10 hover:text-white transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  <IconButton
+                    iconOnly={false}
+                    className="h-5 w-5 rounded-[4px] text-white/40"
                     onClick={() => handleEditNote(note)}
                     title="编辑笔记"
                   >
                     <Edit2 className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex h-5 w-5 items-center justify-center rounded-[4px] text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  </IconButton>
+                  <IconButton
+                    iconOnly={false}
+                    className="h-5 w-5 rounded-[4px] text-white/40"
+                    hoverBgClass="hover:bg-red-500/10"
+                    hoverTextClass="hover:text-red-400"
                     onClick={() => void handleDeleteNote(note.id)}
                     title="删除笔记"
                   >
                     <Trash2 className="h-3 w-3" />
-                  </button>
+                  </IconButton>
                 </div>
               </div>
 

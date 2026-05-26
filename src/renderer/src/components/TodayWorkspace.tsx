@@ -11,6 +11,7 @@ import {
   Square,
 } from "lucide-react";
 import { AddEntryModal, type AddEntryModalKind } from "./AddEntryModal";
+import { IconButton } from "./IconButton";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -253,14 +254,13 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 <span className="font-mono text-xs text-white/40">
                   已完成 3/5
                 </span>
-                <button
-                  type="button"
+                <IconButton
                   aria-label="添加每日待办计划"
-                  className="group flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/65 transition-all duration-150 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                   onClick={() => setActiveAddModal("todo")}
                 >
-                  <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
-                </button>
+                  <Plus className="h-3.5 w-3.5" />
+                </IconButton>
               </div>
             </div>
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
@@ -306,17 +306,15 @@ export const TodayWorkspace = (): React.JSX.Element => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="hidden items-center gap-1 text-xs text-white/30 font-medium sm:flex">
-                  <Plus className="h-3 w-3" />
                   自动同步
                 </span>
-                <button
-                  type="button"
+                <IconButton
                   aria-label="添加自由随记卡片"
-                  className="group flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-black text-white/65 transition-all duration-150 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                  className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                   onClick={() => setActiveAddModal("note")}
                 >
-                  <Plus className="h-3.5 w-3.5 transition-transform duration-150 group-hover:rotate-90" />
-                </button>
+                  <Plus className="h-3.5 w-3.5" />
+                </IconButton>
               </div>
             </div>
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">

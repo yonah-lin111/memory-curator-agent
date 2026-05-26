@@ -147,7 +147,7 @@ export const ToastProvider = ({
       {children}
 
       {/* 消息提示卡片层容器 */}
-      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col-reverse items-end gap-2 max-w-sm w-full pointer-events-none">
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-2 max-w-sm w-full pointer-events-none">
         {toasts.map((toast) => {
           const { icon: Icon, iconClass, borderClass } = getToastStyle(toast.type);
 

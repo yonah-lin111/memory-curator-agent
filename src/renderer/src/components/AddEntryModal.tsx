@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { CheckSquare, Clock, FileText, Plus, Trash2, X } from "lucide-react";
+import { IconButton } from "./IconButton";
 
 // 添加弹窗类型，用于区分待办与随记表单内容。
 export type AddEntryModalKind = "todo" | "note";
@@ -197,14 +198,12 @@ export const AddEntryModal = ({
               {config.title}
             </h2>
           </div>
-          <button
-            type="button"
+          <IconButton
             aria-label="关闭添加弹窗"
-            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/45 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
             onClick={onClose}
           >
             <X className="h-3.5 w-3.5" />
-          </button>
+          </IconButton>
         </div>
 
         <div className="flex flex-col gap-2.5 p-3.5">
@@ -219,14 +218,14 @@ export const AddEntryModal = ({
                     {todoDrafts.length} ITEMS / EACH HAS PRIORITY + TIME
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1.5 text-xs font-bold text-white/70 transition-all duration-150 hover:border-white/25 hover:text-white"
+                <IconButton
+                  iconOnly={false}
+                  className="border border-white/10 bg-[#212121] px-2.5 py-1.5 text-xs font-bold text-white/70 hover:border-white/25 hover:text-white gap-1.5"
                   onClick={handleAddTodoDraft}
                 >
                   <Plus className="h-3 w-3" />
                   添加一条待办
-                </button>
+                </IconButton>
               </div>
               <div className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
                 {todoDrafts.map((draft, index) => {
@@ -249,14 +248,13 @@ export const AddEntryModal = ({
                           <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/35">
                             {draft.priority} / {draft.time}
                           </span>
-                          <button
-                            type="button"
+                          <IconButton
                             aria-label={`删除第 ${itemNumber} 条待办`}
-                            className="flex h-6 w-6 items-center justify-center rounded-[6px] text-white/35 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                            className="text-white/35"
                             onClick={() => handleDeleteTodoDraft(draft.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          </IconButton>
                         </div>
                       </div>
                       <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
@@ -277,23 +275,27 @@ export const AddEntryModal = ({
                         <div className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
                           优先级
                           <div className="grid grid-cols-3 gap-1.5">
-                            {TODO_PRIORITY_OPTIONS.map((priority) => (
-                              <button
-                                key={priority}
-                                type="button"
-                                aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
-                                className={`rounded-[6px] border px-2 py-1.5 text-xs font-bold transition-all duration-150 ${
-                                  draft.priority === priority
-                                    ? "border-white bg-white text-black"
-                                    : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
-                                }`}
-                                onClick={() =>
-                                  handleTodoDraftChange(draft.id, { priority })
-                                }
-                              >
-                                {priority}
-                              </button>
-                            ))}
+                             {TODO_PRIORITY_OPTIONS.map((priority) => {
+                               const isSelected = draft.priority === priority;
+                               return (
+                                 <IconButton
+                                   key={priority}
+                                   aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
+                                   iconOnly={false}
+                                   highlighted={isSelected}
+                                   className={`border px-2 py-1.5 text-xs font-bold ${
+                                     isSelected
+                                       ? "border-white"
+                                       : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
+                                   }`}
+                                   onClick={() =>
+                                     handleTodoDraftChange(draft.id, { priority })
+                                   }
+                                 >
+                                   {priority}
+                                 </IconButton>
+                               );
+                             })}
                           </div>
                         </div>
                         <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
@@ -310,10 +312,9 @@ export const AddEntryModal = ({
                                 })
                               }
                             />
-                            <button
-                              type="button"
+                            <IconButton
                               aria-label={`打开第 ${itemNumber} 条待办时间选择器`}
-                              className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-[6px] text-white/70 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 text-white/70"
                               onClick={handleOpenTodoTimePicker}
                             >
                               <Clock
@@ -321,7 +322,7 @@ export const AddEntryModal = ({
                                 data-testid={`todo-time-picker-icon-${itemNumber}`}
                                 className="h-3.5 w-3.5"
                               />
-                            </button>
+                            </IconButton>
                           </div>
                         </label>
                       </div>
@@ -361,13 +362,14 @@ export const AddEntryModal = ({
                   {NOTE_TAG_OPTIONS.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
-                      <button
+                      <IconButton
                         key={tag}
-                        type="button"
                         aria-label={`添加随记标签 ${tag}`}
-                        className={`rounded-[6px] border px-2 py-1 text-xs font-semibold transition-all duration-150 ${
+                        iconOnly={false}
+                        highlighted={isSelected}
+                        className={`border px-2 py-1 text-xs font-semibold ${
                           isSelected
-                            ? "border-white bg-white text-black"
+                            ? "border-white"
                             : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
                         }`}
                         onClick={() => {
@@ -381,7 +383,7 @@ export const AddEntryModal = ({
                         }}
                       >
                         #{tag}
-                      </button>
+                      </IconButton>
                     );
                   })}
                 </div>
@@ -402,13 +404,14 @@ export const AddEntryModal = ({
           <span className="font-mono text-xs text-white/30">
             ESC 关闭 / 本地草稿待接入
           </span>
-          <button
-            type="button"
-            className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+          <IconButton
+            iconOnly={false}
+            highlighted
+            className="px-3 py-1.5 text-xs font-bold gap-1.5"
           >
-            <Plus className="h-3 w-3 transition-transform duration-150 group-hover:rotate-90" />
+            <Plus className="h-3 w-3" />
             {config.submitLabel}
-          </button>
+          </IconButton>
         </div>
       </section>
     </div>
