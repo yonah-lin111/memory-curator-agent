@@ -175,45 +175,6 @@ export const TodayWorkspace = (): React.JSX.Element => {
 
       {/* 工作台主体滚动区域（大屏独立滚动，小屏自适应流动） */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
-        {/* 1. 快速输入区 (静态展示，防止假输入提交) */}
-        <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <span className="text-ms font-bold tracking-wide text-white/80">
-              快速输入与捕获
-            </span>
-            <div className="flex gap-1.5">
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
-                文本输入
-              </span>
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
-                聊天粘贴
-              </span>
-              <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/40">
-                粘贴素材
-              </span>
-            </div>
-          </div>
-          <textarea
-            aria-label="快速捕获输入区域（静态只读）"
-            readOnly
-            className="w-full h-24 bg-[#000000] border border-white/5 rounded-[6px] p-3 text-sm text-white/50 placeholder-white/20 focus:outline-none resize-none custom-scrollbar"
-            placeholder="[静态只读占位] 有什么新的闪念、日记片段，在此处输入。此区域当前仅作展示..."
-            defaultValue="正在构思新协议下的轻量持久化模型，稍后整理至笔记..."
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-white/30 font-mono">
-              本地键盘捕获已启用 (⌘I)
-            </span>
-            <button
-              disabled
-              aria-disabled="true"
-              className="rounded-[6px] bg-white/10 text-white/40 px-4 py-1.5 text-xs font-semibold cursor-not-allowed"
-            >
-              静态预览
-            </button>
-          </div>
-        </div>
-
         {/* 2. 今日概览统计（小屏 2 列，桌面 4 列） */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
           {TODAY_STATS.map((stat) => {
