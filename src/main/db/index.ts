@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
 import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { getDatabaseDir, getDatabasePath } from '../paths'
 
 // SQLite 数据库连接。
 let sqlite: Database.Database | null = null
@@ -32,9 +31,8 @@ export const initDatabase = (): Database.Database => {
     return sqlite
   }
 
-  const userDataPath = app.getPath('userData')
-  mkdirSync(userDataPath, { recursive: true })
-  sqlite = new Database(join(userDataPath, 'curator.db'))
+  mkdirSync(getDatabaseDir(), { recursive: true })
+  sqlite = new Database(getDatabasePath())
   createNotesTable(sqlite)
 
   return sqlite
