@@ -177,7 +177,7 @@ export const ThemesPage = (): React.JSX.Element => {
   return (
     <section
       aria-label="长期主题追踪页面"
-      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden px-1 lg:px-2"
+      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden px-1 lg:px-2 [scrollbar-gutter:stable]"
     >
       {/* 顶部标题栏 */}
       <header className="flex flex-col gap-1 flex-shrink-0">
