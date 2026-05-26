@@ -6,9 +6,11 @@ import {
   BookOpen,
   Brain,
   Plus,
+  Pencil,
   Tag,
   ClipboardList,
   Square,
+  Trash2,
 } from "lucide-react";
 import { AddEntryModal, type AddEntryModalKind } from "./AddEntryModal";
 import { IconButton } from "./IconButton";
@@ -30,15 +32,15 @@ type StatItem = {
 };
 
 // 每日待办事项类型，用于今日计划区。
-type TodoItem = {
+export type TodoItem = {
   // 待办唯一标识。
   id: string;
   // 待办内容文本。
   text: string;
   // 是否已完成。
   completed: boolean;
-  // 创建时间标识或安排时间。
-  time: string;
+  // 优先级 (P0, P1, P2, P3)。
+  priority: string;
 };
 
 // 今日自由笔记类型，用于灵感闪念。
@@ -83,31 +85,31 @@ const TODO_ITEMS: TodoItem[] = [
     id: "t1",
     text: "整理 AEON 核心协议层关于记忆关联度衰减的计算模型",
     completed: true,
-    time: "09:30",
+    priority: "P1",
   },
   {
     id: "t2",
     text: "对今日新输入的主观段落进行隐私过滤边界核对",
     completed: true,
-    time: "11:00",
+    priority: "P0",
   },
   {
     id: "t3",
     text: "完成 Today 工作台的三栏静态布局编码与视觉自审",
     completed: false,
-    time: "14:00",
+    priority: "P2",
   },
   {
     id: "t4",
     text: "修复渲染层 TypeScript 编译错误与 Lint 规范冲突",
     completed: false,
-    time: "16:30",
+    priority: "P1",
   },
   {
     id: "t5",
     text: "整理本周 Review 需要呈送的核心神经元演化线索",
     completed: true,
-    time: "18:00",
+    priority: "P3",
   },
 ];
 
@@ -156,6 +158,108 @@ export const TodayWorkspace = (): React.JSX.Element => {
   const [activeAddModal, setActiveAddModal] =
     useState<AddEntryModalKind | null>(null);
 
+  // 待办事项状态列表。
+  const [todos, setTodos] = useState<TodoItem[]>(TODO_ITEMS);
+
+  // 控制是否显示 inline 待办添加框。
+  const [showAddInput, setShowAddInput] = useState(true);
+
+  // 新待办的文本。
+  const [newTodoText, setNewTodoText] = useState("");
+
+  // 新待办的优先级。
+  const [newTodoPriority, setNewTodoPriority] = useState("P1");
+
+  // 当前正在编辑的待办 ID。
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // 正在编辑的待办文本内容。
+  const [editingText, setEditingText] = useState("");
+
+  // 正在编辑的待办临时优先级。
+  const [editingPriority, setEditingPriority] = useState<string>("");
+
+  /**
+   * 切换待办完成状态。
+   */
+  const handleToggleTodo = (id: string): void => {
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    );
+  };
+
+  /**
+   * 循环切换正在编辑的待办临时优先级（P0 -> P1 -> P2 -> P3 -> P0）。
+   */
+  const handleCyclePriority = (): void => {
+    const priorities = ["P0", "P1", "P2", "P3"];
+    const nextIndex =
+      (priorities.indexOf(editingPriority) + 1) % priorities.length;
+    setEditingPriority(priorities[nextIndex]);
+  };
+
+  /**
+   * 开始编辑某个待办。
+   */
+  const handleStartEdit = (todo: TodoItem): void => {
+    setEditingId(todo.id);
+    setEditingText(todo.text);
+    setEditingPriority(todo.priority);
+  };
+
+  /**
+   * 保存编辑的待办内容。
+   */
+  const handleSaveEdit = (id: string): void => {
+    if (!editingText.trim()) {
+      setEditingId(null);
+      return;
+    }
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id
+          ? { ...todo, text: editingText.trim(), priority: editingPriority }
+          : todo,
+      ),
+    );
+    setEditingId(null);
+  };
+
+  /**
+   * 删除某个待办。
+   */
+  const handleDeleteTodo = (id: string): void => {
+    setTodos((prev) => prev.filter((todo) => todo.id !== id));
+  };
+
+  /**
+   * 添加新待办项目。
+   */
+  const handleAddTodo = (): void => {
+    if (!newTodoText.trim()) return;
+    const newTodo: TodoItem = {
+      id: `todo-${Date.now()}`,
+      text: newTodoText.trim(),
+      completed: false,
+      priority: newTodoPriority,
+    };
+    setTodos((prev) => [newTodo, ...prev]);
+    setNewTodoText("");
+    setNewTodoPriority("P1");
+  };
+
+  /**
+   * 循环切换新待办的优先级。
+   */
+  const handleCycleNewPriority = (): void => {
+    const priorities = ["P0", "P1", "P2", "P3"];
+    const nextIndex =
+      (priorities.indexOf(newTodoPriority) + 1) % priorities.length;
+    setNewTodoPriority(priorities[nextIndex]);
+  };
+
   return (
     <section
       aria-label="中间内容容器"
@@ -189,7 +293,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
-                    {stat.value}
+                    {stat.id === "todo" ? todos.length : stat.value}
                   </span>
                 </div>
                 <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
@@ -213,46 +317,171 @@ export const TodayWorkspace = (): React.JSX.Element => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-white/40">
-                  已完成 3/5
+                  已完成 {todos.filter((t) => t.completed).length}/{todos.length}
                 </span>
                 <IconButton
-                  aria-label="添加每日待办计划"
+                  aria-label="切换新建待办框"
                   className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                  onClick={() => setActiveAddModal("todo")}
+                  onClick={() => setShowAddInput(!showAddInput)}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </IconButton>
               </div>
             </div>
-            <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
-              {TODO_ITEMS.map((todo) => (
-                <div
-                  key={todo.id}
-                  className="flex items-start gap-2.5 rounded-[6px] bg-white/[0.02] p-2"
-                >
-                  <div className="mt-0.5 flex-shrink-0 text-white/40">
-                    {todo.completed ? (
-                      <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Square className="h-3.5 w-3.5" />
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <span
-                      className={`text-sm leading-normal ${
-                        todo.completed
-                          ? "text-white/30 line-through"
-                          : "text-white/80"
-                      }`}
+             <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+              {showAddInput && (
+                <div className="flex items-center gap-2 rounded-[6px] border border-dashed border-white/10 bg-white/[0.01] p-2 hover:border-white/20 focus-within:border-white/25 focus-within:bg-black transition-all duration-200">
+                  <button
+                    type="button"
+                    onClick={handleCycleNewPriority}
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 leading-none rounded-[4px] border ${
+                      newTodoPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
+                      newTodoPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
+                      newTodoPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
+                      "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
+                    } transition-colors cursor-pointer select-none`}
+                    title="点击切换优先级"
+                  >
+                    {newTodoPriority}
+                  </button>
+                  <textarea
+                    rows={2}
+                    placeholder="新建待办事项并按回车..."
+                    value={newTodoText}
+                    onChange={(e) => setNewTodoText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddTodo();
+                      }
+                    }}
+                    className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none resize-none min-h-[40px] leading-relaxed"
+                  />
+                  {newTodoText.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleAddTodo}
+                      className="flex items-center justify-center rounded-[4px] bg-white/10 hover:bg-white/20 px-2 py-1 text-xs text-white/80 hover:text-white transition-colors"
                     >
-                      {todo.text}
-                    </span>
-                    <span className="text-xs font-mono text-white/30">
-                      {todo.time}
-                    </span>
-                  </div>
+                      添加
+                    </button>
+                  )}
                 </div>
-              ))}
+              )}
+
+              {[...todos]
+                .sort((a, b) => {
+                  if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                  }
+                  const order: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
+                  return (order[a.priority] ?? 99) - (order[b.priority] ?? 99);
+                })
+                .map((todo) => (
+                  <div
+                    key={todo.id}
+                    className="group flex items-center justify-between gap-2.5 rounded-[6px] bg-white/[0.02] p-2 hover:bg-white/[0.04] transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTodo(todo.id)}
+                        className="flex-shrink-0 text-white/40 hover:text-white transition-colors animate-fade-in"
+                      >
+                        {todo.completed ? (
+                          <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Square className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {editingId === todo.id ? (
+                            <>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={handleCyclePriority}
+                                className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-colors cursor-pointer select-none ${
+                                  editingPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
+                                  editingPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
+                                  editingPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
+                                  "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
+                                }`}
+                                title="点击切换优先级"
+                              >
+                                {editingPriority}
+                              </button>
+                              <textarea
+                                rows={2}
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                onFocus={(e) => e.target.select()}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSaveEdit(todo.id);
+                                  } else if (e.key === "Escape") {
+                                    setEditingId(null);
+                                  }
+                                }}
+                                onBlur={() => handleSaveEdit(todo.id)}
+                                className="flex-1 bg-black border border-white/10 rounded-[4px] px-1.5 py-1 text-xs text-white outline-none focus:border-white/20 resize-none min-h-[40px] leading-relaxed"
+                                autoFocus
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border ${
+                                  todo.completed
+                                    ? "text-white/20 border-white/5 bg-white/[0.01]"
+                                    : todo.priority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5" :
+                                      todo.priority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
+                                      todo.priority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5" :
+                                      "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
+                                }`}
+                              >
+                                {todo.priority}
+                              </span>
+                              <span
+                                onDoubleClick={() => handleStartEdit(todo)}
+                                className={`text-sm leading-normal flex-1 cursor-text select-text break-words ${
+                                  todo.completed
+                                    ? "text-white/30 line-through"
+                                    : "text-white/80 hover:text-white"
+                                }`}
+                                title="双击进行编辑"
+                              >
+                                {todo.text}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 操作按钮组 */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(todo)}
+                        className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-white transition-colors"
+                        title="编辑"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTodo(todo.id)}
+                        className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-rose-400 transition-colors"
+                        title="删除"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -345,6 +574,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         <AddEntryModal
           kind={activeAddModal}
           onClose={() => setActiveAddModal(null)}
+          initialTodos={todos}
         />
       ) : null}
     </section>

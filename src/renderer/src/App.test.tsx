@@ -117,90 +117,137 @@ describe('App', () => {
     expect(screen.getByLabelText('中间内容容器')).toHaveClass('px-1', 'lg:px-2')
   })
 
-  it('点击每日待办计划添加按钮后打开对应弹窗并可用 Escape 关闭', async () => {
+  it('支持展开/收起新建待办输入框', async () => {
     const user = userEvent.setup()
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
+    // 默认是展示的
+    expect(screen.getByPlaceholderText('新建待办事项并按回车...')).toBeInTheDocument()
 
-    expect(screen.getByRole('dialog', { name: '新建每日待办计划' })).toBeInTheDocument()
-    expect(screen.getByTestId('add-entry-modal-overlay')).toHaveClass('items-center', 'justify-center')
-    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '第 1 条待办选择优先级高' })).toBeInTheDocument()
-    expect(screen.getByLabelText('第 1 条待办时间')).toHaveAttribute('type', 'time')
+    // 点击按钮可以收起
+    await user.click(screen.getByRole('button', { name: '切换新建待办框' }))
+    expect(screen.queryByPlaceholderText('新建待办事项并按回车...')).not.toBeInTheDocument()
 
-    await user.keyboard('{Escape}')
-
-    expect(screen.queryByRole('dialog', { name: '新建每日待办计划' })).not.toBeInTheDocument()
+    // 再次点击可以展开
+    await user.click(screen.getByRole('button', { name: '切换新建待办框' }))
+    expect(screen.getByPlaceholderText('新建待办事项并按回车...')).toBeInTheDocument()
   })
 
-  it('每日待办弹窗支持一次添加多条待办且每条拥有独立优先级和时间选择器', async () => {
+  it('支持直接在输入框中添加新待办，并可点击切换优先级', async () => {
     const user = userEvent.setup()
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
-    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
+    // 初始应该有 "已完成 3/5"
+    expect(screen.getByText('已完成 3/5')).toBeInTheDocument()
 
-    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
-    expect(screen.getByLabelText('第 2 条待办内容')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '第 1 条待办选择优先级高' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '第 2 条待办选择优先级高' })).toBeInTheDocument()
-    expect(screen.getByLabelText('第 1 条待办时间')).toHaveAttribute('type', 'time')
-    expect(screen.getByLabelText('第 2 条待办时间')).toHaveAttribute('type', 'time')
-    expect(screen.getByLabelText('第 1 条待办时间')).toHaveClass('todo-time-picker')
-    expect(screen.getByLabelText('第 2 条待办时间')).toHaveClass('todo-time-picker')
-    expect(screen.getByRole('button', { name: '打开第 1 条待办时间选择器' })).toHaveClass('text-white/70')
-    expect(screen.getByRole('button', { name: '打开第 2 条待办时间选择器' })).toHaveClass('text-white/70')
+    const input = screen.getByPlaceholderText('新建待办事项并按回车...')
+    const container = input.closest('div')!
+    
+    // 默认优先级是 P1
+    const priorityBtn = container.querySelector('button')!
+    expect(priorityBtn).toHaveTextContent('P1')
+
+    // 点击循环切换优先级 P1 -> P2
+    await user.click(priorityBtn)
+    expect(priorityBtn).toHaveTextContent('P2')
+
+    // 输入文本并按回车
+    await user.type(input, '我的全新测试待办')
+    await user.keyboard('{Enter}')
+
+    // 成功添加，且输入框清空，已完成计数和待办计数更新
+    expect(screen.getByText('我的全新测试待办')).toBeInTheDocument()
+    expect(input).toHaveValue('')
+    expect(screen.getByText('已完成 3/6')).toBeInTheDocument()
   })
 
-  it('新增待办后滚动到最新一条待办', async () => {
+  it('支持点击切换待办完成状态', async () => {
     const user = userEvent.setup()
-    const scrollIntoView = vi.fn()
-
-    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-      configurable: true,
-      value: scrollIntoView,
-    })
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
-    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
+    // 初始：已完成 3/5
+    expect(screen.getByText('已完成 3/5')).toBeInTheDocument()
 
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'end', behavior: 'smooth' })
+    // 找一个未完成的待办，点击完成
+    const todoText = screen.getByText('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
+    const container = todoText.closest('.group')!
+    const checkboxBtn = container.querySelector('button')!
+
+    await user.click(checkboxBtn)
+
+    // 完成状态发生改变，计数更新
+    expect(screen.getByText('已完成 4/5')).toBeInTheDocument()
   })
 
-  it('点击时间图标可打开对应时间选择器', async () => {
+  it('支持行内编辑待办内容', async () => {
     const user = userEvent.setup()
-    const showPicker = vi.fn()
-
-    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', {
-      configurable: true,
-      value: showPicker,
-    })
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
-    await user.click(screen.getByRole('button', { name: '打开第 1 条待办时间选择器' }))
+    const todoText = screen.getByText('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
+    
+    // 双击文本开始编辑
+    await user.dblClick(todoText)
 
-    expect(screen.getByLabelText('第 1 条待办时间')).toHaveFocus()
-    expect(showPicker).toHaveBeenCalledTimes(1)
+    // 应该出现输入框，包含原有内容
+    const editInput = screen.getByDisplayValue('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
+    expect(editInput).toBeInTheDocument()
+
+    // 修改内容并回车保存
+    await user.clear(editInput)
+    await user.type(editInput, '修改后的待办内容')
+    await user.keyboard('{Enter}')
+
+    // 输入框消失，修改成功
+    expect(screen.queryByDisplayValue('修改后的待办内容')).not.toBeInTheDocument()
+    expect(screen.getByText('修改后的待办内容')).toBeInTheDocument()
   })
 
-  it('每日待办弹窗内的待办草稿可删除', async () => {
+  it('支持点击优先级标签循环切换优先级', async () => {
     const user = userEvent.setup()
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加每日待办计划' }))
-    await user.click(screen.getByRole('button', { name: '添加一条待办' }))
-    await user.click(screen.getByRole('button', { name: '删除第 1 条待办' }))
+    const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
+    const container = todoText.closest('.group')!
+    
+    // 双击文本进入编辑状态
+    await user.dblClick(todoText)
+    
+    // 进入编辑状态后，才能找到 title="点击切换优先级" 的按钮
+    const priorityBtn = container.querySelector('button[title="点击切换优先级"]')!
+    expect(priorityBtn).toHaveTextContent('P2')
 
-    expect(screen.queryByLabelText('第 2 条待办内容')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('第 1 条待办内容')).toBeInTheDocument()
+    // 点击切换优先级，P2 -> P3（此时未提交，保存后才真正切换并重排）
+    await user.click(priorityBtn)
+    expect(priorityBtn).toHaveTextContent('P3')
+
+    // 回车保存编辑
+    await user.keyboard('{Enter}')
+
+    // 已经退出编辑状态，保存为 P3
+    expect(container.querySelector('textarea')).not.toBeInTheDocument()
+    const staticPriority = container.querySelector('span[class*="font-mono"]')!
+    expect(staticPriority).toHaveTextContent('P3')
+  })
+
+  it('支持删除待办项', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
+    const container = todoText.closest('.group')!
+    const deleteBtn = container.querySelector('button[title="删除"]')!
+
+    await user.click(deleteBtn)
+
+    // 待办被移除，计数更新
+    expect(screen.queryByText('完成 Today 工作台的三栏静态布局编码与视觉自审')).not.toBeInTheDocument()
+    expect(screen.getByText('已完成 3/4')).toBeInTheDocument()
   })
 
   it('点击自由随记卡片添加按钮后打开对应弹窗', async () => {
@@ -215,6 +262,6 @@ describe('App', () => {
     expect(screen.getByLabelText('随记内容')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加随记标签 UX' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '添加随记标签 AI-Agent' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '选择优先级高' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '第 1 条待办选择优先级P0' })).not.toBeInTheDocument()
   })
 })

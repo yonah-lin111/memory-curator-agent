@@ -1,7 +1,8 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { CheckSquare, Clock, FileText, Plus, Trash2, X } from "lucide-react";
+import { CheckSquare, FileText, Plus, Trash2, X } from "lucide-react";
 import { IconButton } from "./IconButton";
+import type { TodoItem } from "./TodayWorkspace";
 
 // 添加弹窗类型，用于区分待办与随记表单内容。
 export type AddEntryModalKind = "todo" | "note";
@@ -12,6 +13,8 @@ type AddEntryModalProps = {
   kind: AddEntryModalKind;
   // 关闭弹窗回调。
   onClose: () => void;
+  // 初始待办项数据（用于编辑回显）
+  initialTodos?: TodoItem[];
 };
 
 // 添加弹窗视图配置。
@@ -34,8 +37,6 @@ type TodoDraft = {
   text: string;
   // 当前待办优先级。
   priority: string;
-  // 当前待办计划时间。
-  time: string;
 };
 
 // 不同添加类型对应的静态视图配置。
@@ -55,7 +56,27 @@ const ADD_ENTRY_MODAL_CONFIG: Record<AddEntryModalKind, AddEntryModalConfig> = {
 };
 
 // 待办优先级选项。
-const TODO_PRIORITY_OPTIONS = ["高", "中", "低"];
+const TODO_PRIORITY_OPTIONS = ["P0", "P1", "P2", "P3"];
+
+// 优先级颜色配置。
+const PRIORITY_COLOR_MAP: Record<string, { selected: string; unselected: string }> = {
+  P0: {
+    selected: "border-rose-500 bg-rose-500/10 text-rose-400",
+    unselected: "border-white/10 bg-[#212121] text-rose-400/60 hover:border-rose-500/30 hover:text-rose-400",
+  },
+  P1: {
+    selected: "border-amber-500 bg-amber-500/10 text-amber-400",
+    unselected: "border-white/10 bg-[#212121] text-amber-400/60 hover:border-amber-500/30 hover:text-amber-400",
+  },
+  P2: {
+    selected: "border-sky-500 bg-sky-500/10 text-sky-400",
+    unselected: "border-white/10 bg-[#212121] text-sky-400/60 hover:border-sky-500/30 hover:text-sky-400",
+  },
+  P3: {
+    selected: "border-neutral-500 bg-neutral-500/10 text-neutral-400",
+    unselected: "border-white/10 bg-[#212121] text-neutral-400/60 hover:border-neutral-500/30 hover:text-neutral-400",
+  },
+};
 
 // 随记推荐标签选项。
 const NOTE_TAG_OPTIONS = ["UX", "AI-Agent", "架构", "产品思考"];
@@ -66,8 +87,7 @@ const NOTE_TAG_OPTIONS = ["UX", "AI-Agent", "架构", "产品思考"];
 const createTodoDraft = (index: number): TodoDraft => ({
   id: `todo-draft-${index}`,
   text: "",
-  priority: "中",
-  time: "16:30",
+  priority: "P2",
 });
 
 /**
@@ -77,6 +97,7 @@ const createTodoDraft = (index: number): TodoDraft => ({
 export const AddEntryModal = ({
   kind,
   onClose,
+  initialTodos,
 }: AddEntryModalProps): React.JSX.Element => {
   const config = ADD_ENTRY_MODAL_CONFIG[kind];
   const Icon = config.icon;
@@ -84,12 +105,33 @@ export const AddEntryModal = ({
   const latestTodoDraftRef = useRef<HTMLDivElement | null>(null);
   // 是否需要在下一次渲染后滚动到最新待办。
   const shouldScrollToLatestTodoDraftRef = useRef(false);
-  // 待办草稿列表，每条保留独立优先级和时间。
-  const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>([
-    createTodoDraft(1),
-  ]);
+  // 待办草稿输入框的 ref 集合，用于新增后自动聚焦。
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  // 当前需要聚焦的草稿唯一标识。
+  const [focusId, setFocusId] = useState<string | null>(() => {
+    if (kind === "todo" && initialTodos && initialTodos.length > 0) {
+      return initialTodos[0].id;
+    }
+    return "todo-draft-1";
+  });
+  // 待办草稿列表，每条保留独立优先级。
+  const [todoDrafts, setTodoDrafts] = useState<TodoDraft[]>(() => {
+    if (kind === "todo" && initialTodos && initialTodos.length > 0) {
+      return initialTodos.map((todo) => ({
+        id: todo.id,
+        text: todo.text,
+        priority: todo.priority,
+      }));
+    }
+    return [createTodoDraft(1)];
+  });
   // 下一条待办草稿序号，避免删除后再添加产生重复 key。
-  const [nextTodoDraftIndex, setNextTodoDraftIndex] = useState(2);
+  const [nextTodoDraftIndex, setNextTodoDraftIndex] = useState(() => {
+    if (kind === "todo" && initialTodos && initialTodos.length > 0) {
+      return initialTodos.length + 1;
+    }
+    return 2;
+  });
   // 当前已选中的随记标签。
   const [selectedTags, setSelectedTags] = useState<string[]>(["UX"]);
 
@@ -98,11 +140,14 @@ export const AddEntryModal = ({
    */
   const handleAddTodoDraft = (): void => {
     shouldScrollToLatestTodoDraftRef.current = true;
+    const newIndex = nextTodoDraftIndex;
+    const newDraft = createTodoDraft(newIndex);
     setTodoDrafts((currentDrafts) => [
       ...currentDrafts,
-      createTodoDraft(nextTodoDraftIndex),
+      newDraft,
     ]);
     setNextTodoDraftIndex((currentIndex) => currentIndex + 1);
+    setFocusId(newDraft.id);
   };
 
   /**
@@ -128,26 +173,14 @@ export const AddEntryModal = ({
     );
   };
 
-  /**
-   * 打开原生时间选择器。
-   */
-  const handleOpenTodoTimePicker = (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ): void => {
-    const input = event.currentTarget.previousElementSibling;
-
-    if (!(input instanceof HTMLInputElement)) {
-      return;
+  useEffect(() => {
+    if (focusId && textareaRefs.current[focusId]) {
+      textareaRefs.current[focusId]?.focus();
+      setFocusId(null);
     }
+  }, [focusId, todoDrafts]);
 
-    input.focus();
-    if (typeof input.showPicker === "function") {
-      input.showPicker();
-      return;
-    }
 
-    input.click();
-  };
 
   useEffect(() => {
     /**
@@ -215,7 +248,7 @@ export const AddEntryModal = ({
                     批量待办录入
                   </span>
                   <span className="font-mono text-xs text-white/30">
-                    {todoDrafts.length} ITEMS / EACH HAS PRIORITY + TIME
+                    {todoDrafts.length} ITEMS / EACH HAS PRIORITY
                   </span>
                 </div>
                 <IconButton
@@ -245,8 +278,13 @@ export const AddEntryModal = ({
                           TODO #{String(itemNumber).padStart(2, "0")}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <span className="rounded-[6px] bg-white/5 px-2 py-0.5 text-xs text-white/35">
-                            {draft.priority} / {draft.time}
+                          <span className={`rounded-[6px] border px-1.5 py-0.5 text-xs font-bold ${
+                            draft.priority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5" :
+                            draft.priority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
+                            draft.priority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5" :
+                            "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
+                          }`}>
+                            {draft.priority}
                           </span>
                           <IconButton
                             aria-label={`删除第 ${itemNumber} 条待办`}
@@ -260,6 +298,9 @@ export const AddEntryModal = ({
                       <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
                         第 {itemNumber} 条待办内容
                         <textarea
+                          ref={(el) => {
+                            textareaRefs.current[draft.id] = el;
+                          }}
                           aria-label={`第 ${itemNumber} 条待办内容`}
                           className="min-h-16 resize-none rounded-[6px] border border-white/10 bg-black p-3 text-sm font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
                           placeholder="写下一个明确行动..."
@@ -271,60 +312,32 @@ export const AddEntryModal = ({
                           }
                         />
                       </label>
-                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_112px]">
-                        <div className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
-                          优先级
-                          <div className="grid grid-cols-3 gap-1.5">
-                             {TODO_PRIORITY_OPTIONS.map((priority) => {
-                               const isSelected = draft.priority === priority;
-                               return (
-                                 <IconButton
-                                   key={priority}
-                                   aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
-                                   iconOnly={false}
-                                   highlighted={isSelected}
-                                   className={`border px-2 py-1.5 text-xs font-bold ${
-                                     isSelected
-                                       ? "border-white"
-                                       : "border-white/10 bg-[#212121] text-white/45 hover:border-white/25 hover:text-white/80"
-                                   }`}
-                                   onClick={() =>
-                                     handleTodoDraftChange(draft.id, { priority })
-                                   }
-                                 >
-                                   {priority}
-                                 </IconButton>
-                               );
-                             })}
-                          </div>
+                      <div className="mt-2">
+                        <div className="grid grid-cols-4 gap-1.5">
+                           {TODO_PRIORITY_OPTIONS.map((priority) => {
+                             const isSelected = draft.priority === priority;
+                             return (
+                               <IconButton
+                                 key={priority}
+                                 aria-label={`第 ${itemNumber} 条待办选择优先级${priority}`}
+                                 iconOnly={false}
+                                 highlighted={false}
+                                 hoverBgClass=""
+                                 hoverTextClass=""
+                                 className={`border px-2 py-1.5 text-xs font-bold ${
+                                   isSelected
+                                     ? PRIORITY_COLOR_MAP[priority].selected
+                                     : PRIORITY_COLOR_MAP[priority].unselected
+                                  }`}
+                                 onClick={() =>
+                                   handleTodoDraftChange(draft.id, { priority })
+                                 }
+                               >
+                                 {priority}
+                               </IconButton>
+                             );
+                           })}
                         </div>
-                        <label className="flex flex-col gap-1.5 text-sm font-semibold tracking-wide text-white/55">
-                          时间
-                          <div className="relative">
-                            <input
-                              type="time"
-                              aria-label={`第 ${itemNumber} 条待办时间`}
-                              className="todo-time-picker w-full rounded-[6px] border border-white/10 bg-black px-2 py-1.5 pr-7 text-xs font-normal text-white/80 outline-none transition-colors duration-150 focus:border-white/25"
-                              value={draft.time}
-                              onChange={(event) =>
-                                handleTodoDraftChange(draft.id, {
-                                  time: event.target.value,
-                                })
-                              }
-                            />
-                            <IconButton
-                              aria-label={`打开第 ${itemNumber} 条待办时间选择器`}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 text-white/70"
-                              onClick={handleOpenTodoTimePicker}
-                            >
-                              <Clock
-                                aria-hidden="true"
-                                data-testid={`todo-time-picker-icon-${itemNumber}`}
-                                className="h-3.5 w-3.5"
-                              />
-                            </IconButton>
-                          </div>
-                        </label>
                       </div>
                     </div>
                   );
