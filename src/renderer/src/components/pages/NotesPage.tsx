@@ -10,8 +10,8 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  Columns2,
   Edit2,
-  Eye,
   FileText,
   HelpCircle,
   Plus,
@@ -79,7 +79,7 @@ type MarkdownEditorThemeStyle = React.CSSProperties &
   Record<`--${string}`, string>;
 
 // Markdown 编辑器预览模式。
-type MarkdownPreviewMode = "edit" | "preview";
+type MarkdownPreviewMode = "edit" | "preview" | "live";
 
 // 笔记弹窗属性。
 type NoteMarkdownModalProps = {
@@ -309,20 +309,28 @@ const NoteMarkdownModal = ({
   );
   // 当前 Markdown 编辑器预览模式。
   const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>("edit");
+  // 属性 Popover 是否打开。
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   // 来源下拉框是否打开。
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  // Popover 容器的 DOM 引用。
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   // 下拉框容器的 DOM 引用。
   const selectRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     /**
-     * 处理点击外部区域时自动关闭下拉框。
+     * 处理点击外部区域时自动关闭下拉框与 Popover。
      */
     const handleClickOutside = (event: MouseEvent): void => {
-      if (
-        selectRef.current &&
-        !selectRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+
+      // 如果点击在 popover 外部，则关闭整个 popover (及其内部的选择下拉框)
+      if (popoverRef.current && !popoverRef.current.contains(target)) {
+        setIsPopoverOpen(false);
+        setIsSelectOpen(false);
+      } else if (selectRef.current && !selectRef.current.contains(target)) {
+        // 如果点击在 select 外部但在 popover 内部，只关闭 select 下拉框
         setIsSelectOpen(false);
       }
     };
@@ -332,26 +340,6 @@ const NoteMarkdownModal = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Markdown 预览切换按钮命令。
-  const previewToggleCommand: ICommand = {
-    name: "preview-toggle",
-    keyCommand: "preview-toggle",
-    buttonProps: {
-      "aria-label": previewMode === "edit" ? "切换到预览" : "切换到编辑",
-    },
-    icon:
-      previewMode === "edit" ? (
-        <Eye className="h-3 w-3" />
-      ) : (
-        <FileText className="h-3 w-3" />
-      ),
-    execute: () => {
-      setPreviewMode((currentMode) =>
-        currentMode === "edit" ? "preview" : "edit",
-      );
-    },
-  };
 
   /**
    * 更新草稿局部字段。
@@ -393,135 +381,185 @@ const NoteMarkdownModal = ({
         className="w-full max-w-[920px] rounded-[6px] border border-white/15 bg-[#212121] shadow-[0_28px_90px_rgba(0,0,0,0.76)] animate-card-modal-in"
         role="dialog"
       >
-        <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2.5 px-4">
-          <div className="flex items-center gap-2">
-            <FileText className="h-3.5 w-3.5 text-white/60" />
-            <h2
+        <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2 px-4">
+          {/* 顶栏左侧：标题输入区，无缝结合弹窗标题与笔记标题输入 */}
+          <div className="flex items-center gap-2 flex-1 max-w-[500px]">
+            <FileText className="h-3.5 w-3.5 text-white/45 flex-shrink-0" />
+            <input
+              aria-label="Markdown 笔记标题"
               id="note-markdown-modal-title"
-              className="text-sm font-bold text-white"
-            >
-              {initialDraft ? "编辑 Markdown 笔记" : "编写 Markdown 笔记"}
-            </h2>
+              className="w-full bg-transparent border-0 px-0 py-1 text-sm font-semibold text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:placeholder:text-white/10"
+              placeholder={initialDraft ? "编辑 Markdown 笔记标题..." : "给这段 Markdown 一个临时标题..."}
+              value={draft.title}
+              onChange={(event) =>
+                handleDraftChange({ title: event.target.value })
+              }
+            />
           </div>
-          <button
-            type="button"
-            aria-label="关闭 Markdown 笔记弹窗"
-            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/45 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
-            onClick={onClose}
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
 
-        <div className="max-h-[82vh] overflow-y-auto p-3.5 custom-scrollbar">
-          <div className="flex flex-col gap-2.5">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1.6fr_1fr_148px]">
-              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
-                笔记标题
-                <input
-                  aria-label="Markdown 笔记标题"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
-                  placeholder="给这段 Markdown 一个临时标题"
-                  value={draft.title}
-                  onChange={(event) =>
-                    handleDraftChange({ title: event.target.value })
-                  }
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
-                标签
-                <input
-                  aria-label="Markdown 笔记标签"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
-                  placeholder="用逗号分隔，例如 架构, 待整理"
-                  value={draft.tags}
-                  onChange={(event) =>
-                    handleDraftChange({ tags: event.target.value })
-                  }
-                />
-              </label>
-              <div
-                ref={selectRef}
-                className="relative flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55"
+          {/* 顶栏右侧：功能性切换预览按钮与关闭按钮 */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            {/* 切换分屏预览按钮 */}
+            <div className="relative group/preview">
+              <button
+                type="button"
+                className={`flex h-7 w-7 items-center justify-center rounded-[6px] border transition-all duration-150 outline-none ${
+                  previewMode === "live"
+                    ? "border-white/25 bg-white text-black hover:bg-white/90"
+                    : "border-white/10 bg-black/40 text-white/60 hover:border-white/20 hover:text-white focus-visible:border-white/25 focus-visible:bg-white/5"
+                }`}
+                onClick={() => {
+                  setPreviewMode((currentMode) =>
+                    currentMode === "live" ? "edit" : "live"
+                  );
+                }}
               >
-                来源
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={isSelectOpen}
-                  aria-label="Markdown 笔记来源"
-                  className="flex h-[30px] w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
-                  onClick={() => setIsSelectOpen((prev) => !prev)}
-                >
-                  <span>{draft.source}</span>
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {isSelectOpen && (
-                  <div
-                    role="listbox"
-                    className="absolute top-[100%] left-0 z-50 mt-1 w-full rounded-[6px] border border-white/10 bg-black p-1 shadow-lg"
-                  >
-                    {NOTE_SOURCE_OPTIONS.map((source) => {
-                      const isSelected = draft.source === source;
-                      return (
-                        <button
-                          key={source}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white ${
-                            isSelected
-                              ? "bg-white/5 text-white"
-                              : "text-white/70"
-                          }`}
-                          onClick={() => {
-                            handleDraftChange({ source });
-                            setIsSelectOpen(false);
-                          }}
-                        >
-                          <span>{source}</span>
-                          {isSelected && (
-                            <Check className="h-3.5 w-3.5 text-white" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <Columns2 className="h-3.5 w-3.5" />
+              </button>
+              <div className="absolute top-[calc(100%+8px)] right-0 scale-95 opacity-0 pointer-events-none group-hover/preview:scale-100 group-hover/preview:opacity-100 transition-all duration-150 rounded-[4px] bg-[#000000] border border-white/10 px-2 py-1 text-[11px] text-white/80 whitespace-nowrap z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                {previewMode === "live" ? "单栏编辑" : "双栏分屏预览"}
               </div>
             </div>
 
-            <div className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
-              Markdown 正文
-              <MDEditor
-                className="notes-markdown-editor"
-                commands={NOTE_MARKDOWN_BASE_COMMANDS}
-                data-color-mode="dark"
-                extraCommands={[previewToggleCommand]}
-                height={430}
-                preview={previewMode}
-                style={MARKDOWN_EDITOR_THEME_STYLE}
-                textareaProps={{
-                  "aria-label": "Markdown 笔记正文",
-                  placeholder:
-                    "支持标题、列表、引用、表格、任务列表等 Markdown 写法...",
-                }}
-                value={draft.content}
-                visibleDragbar={false}
-                onChange={(value) =>
-                  handleDraftChange({ content: value ?? "" })
-                }
-              />
+            {/* 关闭按钮 */}
+            <div className="relative group/close">
+              <button
+                type="button"
+                aria-label="关闭 Markdown 笔记弹窗"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[6px] border border-white/10 bg-black/40 text-white/45 transition-all duration-150 hover:border-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+                onClick={onClose}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <div className="absolute top-[calc(100%+8px)] right-0 scale-95 opacity-0 pointer-events-none group-hover/close:scale-100 group-hover/close:opacity-100 transition-all duration-150 rounded-[4px] bg-[#000000] border border-white/10 px-2 py-1 text-[11px] text-white/80 whitespace-nowrap z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                关闭 (ESC)
+              </div>
             </div>
           </div>
         </div>
 
+        <div className="p-3">
+          <MDEditor
+            className="notes-markdown-editor"
+            commands={NOTE_MARKDOWN_BASE_COMMANDS}
+            data-color-mode="dark"
+            extraCommands={[]}
+            height={520}
+            preview={previewMode}
+            style={MARKDOWN_EDITOR_THEME_STYLE}
+            textareaProps={{
+              "aria-label": "Markdown 笔记正文",
+              placeholder:
+                "支持标题、列表、引用、表格、任务列表等 Markdown 写法...",
+            }}
+            value={draft.content}
+            visibleDragbar={false}
+            onChange={(value) =>
+              handleDraftChange({ content: value ?? "" })
+            }
+          />
+        </div>
+
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
-          <span className="font-mono text-xs text-white/30">
-            ESC 关闭 / 当前仅保存到本地页面状态
-          </span>
+          {/* 底部左侧：设置标签和来源渠道的悬浮 Popover 入口 */}
+          <div ref={popoverRef} className="relative group/popover">
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 h-7 rounded-[6px] border px-2.5 text-xs font-medium transition-all duration-150 outline-none ${
+                isPopoverOpen
+                  ? "border-white/20 bg-white/10 text-white"
+                  : "border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:text-white"
+              }`}
+              onClick={() => setIsPopoverOpen((prev) => !prev)}
+            >
+              <Tag className="h-3 w-3" />
+              <span className="max-w-[120px] truncate">
+                {draft.tags.trim() ? draft.tags : "无标签"}
+              </span>
+              <span className="text-white/20">|</span>
+              <span className="text-[11px] text-white/45">{draft.source}</span>
+              <ChevronDown
+                className={`h-3 w-3 text-white/35 transition-transform duration-150 ${isPopoverOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Tooltip */}
+            {!isPopoverOpen && (
+              <div className="absolute bottom-[calc(100%+8px)] left-0 scale-95 opacity-0 pointer-events-none group-hover/popover:scale-100 group-hover/popover:opacity-100 transition-all duration-150 rounded-[4px] bg-[#000000] border border-white/10 px-2.5 py-1 text-[11px] text-white/80 whitespace-nowrap z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.5)]">
+                设置笔记标签与来源
+              </div>
+            )}
+
+            {/* Popover 内容区域（向上弹出） */}
+            {isPopoverOpen && (
+              <div className="absolute left-0 bottom-[calc(100%+8px)] w-[280px] rounded-[6px] border border-white/10 bg-[#212121] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] animate-card-modal-in z-50 flex flex-col gap-3.5">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">关联标签</span>
+                  <input
+                    aria-label="Markdown 笔记标签"
+                    className="rounded-[6px] border border-white/10 bg-black px-2.5 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/20"
+                    placeholder="用逗号分隔，例如 架构, 待整理"
+                    value={draft.tags}
+                    onChange={(event) =>
+                      handleDraftChange({ tags: event.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">来源渠道</span>
+                  <div ref={selectRef} className="relative">
+                    <button
+                      type="button"
+                      aria-haspopup="listbox"
+                      aria-expanded={isSelectOpen}
+                      aria-label="Markdown 笔记来源"
+                      className="flex h-8 w-full items-center justify-between rounded-[6px] border border-white/10 bg-black px-2.5 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25"
+                      onClick={() => setIsSelectOpen((prev) => !prev)}
+                    >
+                      <span>{draft.source}</span>
+                      <ChevronDown
+                        className={`h-3 w-3 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {isSelectOpen && (
+                      <div
+                        role="listbox"
+                        className="absolute bottom-[100%] left-0 z-50 mb-1 w-full rounded-[6px] border border-white/10 bg-black p-1 shadow-lg"
+                      >
+                        {NOTE_SOURCE_OPTIONS.map((source) => {
+                          const isSelected = draft.source === source;
+                          return (
+                            <button
+                              key={source}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white ${
+                                isSelected
+                                  ? "bg-white/5 text-white"
+                                  : "text-white/70"
+                              }`}
+                              onClick={() => {
+                                handleDraftChange({ source });
+                                setIsSelectOpen(false);
+                              }}
+                            >
+                              <span>{source}</span>
+                              {isSelected && (
+                                <Check className="h-3 w-3 text-white" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
             className="group flex items-center gap-1.5 rounded-[6px] bg-white px-3 py-1.5 text-xs font-bold text-black transition-transform duration-150 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
