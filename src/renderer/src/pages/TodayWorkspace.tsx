@@ -173,7 +173,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
   return (
     <section
       aria-label="中间内容容器"
-      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden px-1 lg:px-2 [scrollbar-gutter:stable]"
+      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar px-1 lg:px-2 [scrollbar-gutter:stable]"
     >
       {/* 顶部标题栏 */}
       <header className="flex flex-col gap-1 flex-shrink-0">
@@ -188,7 +188,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       </header>
 
       {/* 工作台主体滚动区域（大屏独立滚动，小屏自适应流动） */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
+      <div className="flex-1 flex flex-col gap-3 pr-1">
         {/* 2. 今日概览统计（小屏 2 列，桌面 4 列） */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
           {TODAY_STATS.map((stat) => {

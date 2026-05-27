@@ -621,7 +621,7 @@ export const NotesPage = (): React.JSX.Element => {
   return (
     <section
       aria-label="自由笔记素材池页面"
-      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto lg:overflow-hidden px-1 lg:px-2 [scrollbar-gutter:stable]"
+      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar px-1 lg:px-2 [scrollbar-gutter:stable]"
     >
       {/* 顶部标题栏 */}
       <header className="flex flex-col gap-1 flex-shrink-0">
@@ -636,7 +636,7 @@ export const NotesPage = (): React.JSX.Element => {
       </header>
 
       {/* 笔记页面主体滚动区域 */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col gap-3">
+      <div className="flex-1 flex flex-col gap-3 pr-1">
         {/* 顶部指标卡片 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
           {statsItems.map((stat) => {
