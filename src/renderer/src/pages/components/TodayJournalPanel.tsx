@@ -4,7 +4,7 @@ import MDEditor from "@uiw/react-md-editor";
 import type { ICommand } from "@uiw/react-md-editor/commands";
 import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import "@uiw/react-md-editor/markdown-editor.css";
-import { BookOpen, Columns2 } from "lucide-react";
+import { BookOpen, Columns2, HelpCircle } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
 type MarkdownEditorThemeStyle = React.CSSProperties &
@@ -79,6 +79,12 @@ export const TodayJournalPanel = ({
           <span className="text-sm font-bold tracking-wide text-white/80">
             日记与主观表达
           </span>
+          <div className="relative group inline-flex items-center">
+            <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+              写下今日的深度思考与心路历程，配以情绪状态，保留真实完整的数字记忆。
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-3 text-xs font-mono text-white/40">
           <span>记录时间: {JOURNAL_DATA.time}</span>
@@ -124,7 +130,7 @@ export const TodayJournalPanel = ({
       </div>
       <div className="flex items-center justify-end">
         <span className="text-xs text-white/30">
-          * 保留完整表达，拒绝以摘要过滤真实情绪感受。
+          保留完整表达，拒绝以摘要过滤真实情绪感受。
         </span>
       </div>
     </div>

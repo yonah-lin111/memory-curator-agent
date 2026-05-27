@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { StickyNote, Plus, Trash2, Tag as TagIcon } from "lucide-react";
+import { StickyNote, Plus, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
@@ -50,6 +50,12 @@ export const TodayThoughtsPanel = ({
           <span className="text-sm font-bold tracking-wide text-white/80">
             自由随记卡片
           </span>
+          <div className="relative group inline-flex items-center">
+            <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+              快速捕捉瞬间的想法、灵感或临时便签，支持打上标签分类管理。
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <IconButton
