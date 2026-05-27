@@ -71,6 +71,10 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Memories/ }))
     expect(screen.getByRole('heading', { name: 'Memories' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Memories/ })).toHaveAttribute('aria-current', 'page')
+
+    await user.click(screen.getByRole('button', { name: /People/ }))
+    expect(screen.getByRole('heading', { name: '人物关系档案' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /People/ })).toHaveAttribute('aria-current', 'page')
   })
 
   it('在切换侧栏 tab 时同步改变 URL pathname 路由，且支持通过改变 pathname 进行路由切换', async () => {

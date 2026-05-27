@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   StickyNote,
+  Users,
 } from "lucide-react";
 
 /* ==========================================
@@ -27,7 +28,8 @@ export type SidebarPageId =
   | "themes"
   | "memories"
   | "todo"
-  | "snippets";
+  | "snippets"
+  | "people";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -108,6 +110,12 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Snippets",
         description: "随手闪念随记",
         icon: StickyNote,
+      },
+      {
+        id: "people",
+        label: "People",
+        description: "人物关系档案",
+        icon: Users,
       },
     ],
   },
