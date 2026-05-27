@@ -9,7 +9,6 @@ import {
   FileText,
   Home,
   Layers,
-  MessageSquare,
   Settings,
   Sparkles,
   StickyNote,
@@ -28,8 +27,7 @@ export type SidebarPageId =
   | "themes"
   | "memories"
   | "todo"
-  | "snippets"
-  | "chats";
+  | "snippets";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -110,12 +108,6 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Snippets",
         description: "随手闪念随记",
         icon: StickyNote,
-      },
-      {
-        id: "chats",
-        label: "Chats",
-        description: "聊天记录（日输入）",
-        icon: MessageSquare,
       },
     ],
   },

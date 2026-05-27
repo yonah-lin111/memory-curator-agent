@@ -7,7 +7,6 @@ import { ThemesPage } from '@renderer/pages/ThemesPage'
 import { WeeklyReviewPage } from '@renderer/pages/WeeklyReviewPage'
 import { TodoPage } from '@renderer/pages/TodoPage'
 import { SnippetsPage } from '@renderer/pages/SnippetsPage'
-import { ChatsPage } from '@renderer/pages/ChatsPage'
 import { Sidebar, type SidebarPageId } from '@renderer/components/layout/Sidebar'
 import { TodayWorkspace } from '@renderer/pages/TodayWorkspace'
 import { ToastProvider } from '@renderer/components/ui/Toast'
@@ -31,8 +30,7 @@ export const App = (): React.JSX.Element => {
       'themes',
       'memories',
       'todo',
-      'snippets',
-      'chats'
+      'snippets'
     ]
     if (validPages.includes(path as SidebarPageId)) {
       return path as SidebarPageId
@@ -82,8 +80,6 @@ export const App = (): React.JSX.Element => {
         return <TodoPage />
       case 'snippets':
         return <SnippetsPage />
-      case 'chats':
-        return <ChatsPage />
     }
   }
 
