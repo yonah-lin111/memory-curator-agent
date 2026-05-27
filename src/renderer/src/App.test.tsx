@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -102,21 +102,14 @@ describe('App', () => {
     expect(screen.getByLabelText('中间内容容器')).toHaveClass('px-1', 'lg:px-2')
   })
 
-  it('支持展开/收起新建待办输入框', async () => {
-    const user = userEvent.setup()
-
+  it('待办快速录入框默认常驻，一键排序按钮可对列表进行排序', async () => {
     render(<App />)
 
-    // 默认是展示的
-    expect(screen.getByPlaceholderText('新建待办事项并按回车...')).toBeInTheDocument()
+    const input = screen.getByPlaceholderText('添加一个待办，回车保存')
+    expect(input).toBeInTheDocument()
 
-    // 点击按钮可以收起
-    await user.click(screen.getByRole('button', { name: '切换新建待办框' }))
-    expect(screen.queryByPlaceholderText('新建待办事项并按回车...')).not.toBeInTheDocument()
-
-    // 再次点击可以展开
-    await user.click(screen.getByRole('button', { name: '切换新建待办框' }))
-    expect(screen.getByPlaceholderText('新建待办事项并按回车...')).toBeInTheDocument()
+    const sortBtn = screen.getByRole('button', { name: '一键排序' })
+    expect(sortBtn).toBeInTheDocument()
   })
 
   it('支持直接在输入框中添加新待办，并可点击切换优先级', async () => {
@@ -127,11 +120,9 @@ describe('App', () => {
     // 初始应该有 "已完成 3/5"
     expect(screen.getByText('已完成 3/5')).toBeInTheDocument()
 
-    const input = screen.getByPlaceholderText('新建待办事项并按回车...')
-    const container = input.closest('div')!
-    
+    const input = screen.getByPlaceholderText('添加一个待办，回车保存')
     // 默认优先级是 P1
-    const priorityBtn = container.querySelector('button')!
+    const priorityBtn = screen.getByRole('button', { name: /切换新待办优先级/ })
     expect(priorityBtn).toHaveTextContent('P1')
 
     // 点击循环切换优先级 P1 -> P2
@@ -167,15 +158,15 @@ describe('App', () => {
     expect(screen.getByText('已完成 4/5')).toBeInTheDocument()
   })
 
-  it('支持行内编辑待办内容', async () => {
+  it('支持点击文本后行内编辑待办内容', async () => {
     const user = userEvent.setup()
 
     render(<App />)
 
     const todoText = screen.getByText('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
-    
-    // 双击文本开始编辑
-    await user.dblClick(todoText)
+
+    // 点击文本开始编辑
+    await user.click(todoText)
 
     // 应该出现输入框，包含原有内容
     const editInput = screen.getByDisplayValue('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
@@ -191,32 +182,20 @@ describe('App', () => {
     expect(screen.getByText('修改后的待办内容')).toBeInTheDocument()
   })
 
-  it('支持点击优先级标签循环切换优先级', async () => {
+  it('支持直接点击优先级标签循环切换优先级', async () => {
     const user = userEvent.setup()
 
     render(<App />)
 
     const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
     const container = todoText.closest('.group')!
-    
-    // 双击文本进入编辑状态
-    await user.dblClick(todoText)
-    
-    // 进入编辑状态后，才能找到 title="点击切换优先级" 的按钮
-    const priorityBtn = container.querySelector('button[title="点击切换优先级"]')!
+
+    const priorityBtn = container.querySelector('button[aria-label^="切换 "]')!
     expect(priorityBtn).toHaveTextContent('P2')
 
-    // 点击切换优先级，P2 -> P3（此时未提交，保存后才真正切换并重排）
+    // 点击切换优先级，P2 -> P3
     await user.click(priorityBtn)
     expect(priorityBtn).toHaveTextContent('P3')
-
-    // 回车保存编辑
-    await user.keyboard('{Enter}')
-
-    // 已经退出编辑状态，保存为 P3
-    expect(container.querySelector('textarea')).not.toBeInTheDocument()
-    const staticPriority = container.querySelector('span[class*="font-mono"]')!
-    expect(staticPriority).toHaveTextContent('P3')
   })
 
   it('支持删除待办项', async () => {
@@ -226,13 +205,52 @@ describe('App', () => {
 
     const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
     const container = todoText.closest('.group')!
-    const deleteBtn = container.querySelector('button[title="删除"]')!
+    const deleteBtn = container.querySelector('button[aria-label="删除"]')!
 
     await user.click(deleteBtn)
 
-    // 待办被移除，计数更新
-    expect(screen.queryByText('完成 Today 工作台的三栏静态布局编码与视觉自审')).not.toBeInTheDocument()
+    // 等待待办被实际移除并更新计数
+    await waitFor(() => {
+      expect(screen.queryByText('完成 Today 工作台的三栏静态布局编码与视觉自审')).not.toBeInTheDocument()
+    })
     expect(screen.getByText('已完成 3/4')).toBeInTheDocument()
+  })
+
+  it('切换完成状态后不会自动重排，点击一键排序后才会重排', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    const todoItemsBefore = screen.getAllByTestId('today-todo-item')
+    const beforeIndex = todoItemsBefore.findIndex((item) =>
+      item.textContent?.includes('修复渲染层 TypeScript 编译错误与 Lint 规范冲突'),
+    )
+    expect(beforeIndex).toBe(0)
+
+    const todoText = screen.getByText('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
+    const container = todoText.closest('.group')!
+    const checkboxBtn = container.querySelector('button[aria-label="标记为已完成"]')!
+
+    await user.click(checkboxBtn)
+
+    // 验证完成状态已变，但在手动排序前，索引应该依旧保持在 0，不发生重排
+    const todoItemsAfterToggle = screen.getAllByTestId('today-todo-item')
+    const afterToggleIndex = todoItemsAfterToggle.findIndex((item) =>
+      item.textContent?.includes('修复渲染层 TypeScript 编译错误与 Lint 规范冲突'),
+    )
+    expect(afterToggleIndex).toBe(0)
+
+    // 点击一键排序按钮
+    const sortBtn = screen.getByRole('button', { name: '一键排序' })
+    await user.click(sortBtn)
+
+    // 排序后，已完成的任务应该沉底，其索引应变大
+    const todoItemsAfterSort = screen.getAllByTestId('today-todo-item')
+    const afterSortIndex = todoItemsAfterSort.findIndex((item) =>
+      item.textContent?.includes('修复渲染层 TypeScript 编译错误与 Lint 规范冲突'),
+    )
+
+    expect(afterSortIndex).toBeGreaterThan(beforeIndex)
   })
 
   it('点击自由随记卡片添加按钮后打开对应弹窗', async () => {

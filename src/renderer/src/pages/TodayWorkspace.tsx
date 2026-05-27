@@ -10,17 +10,15 @@ import {
   BookOpen,
   Brain,
   Plus,
-  Pencil,
   Tag,
-  ClipboardList,
-  Square,
-  Trash2,
   Columns2,
 } from "lucide-react";
 import {
   AddEntryModal,
   type AddEntryModalKind,
 } from "@renderer/pages/components/AddEntryModal";
+import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
+import { type TodoItem, sortTodoItems } from "@renderer/pages/components/todoShared";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
 type MarkdownEditorThemeStyle = React.CSSProperties &
@@ -63,18 +61,6 @@ type StatItem = {
   value: number;
   // 显示图标。
   icon: React.ComponentType<{ className?: string }>;
-};
-
-// 每日待办事项类型，用于今日计划区。
-export type TodoItem = {
-  // 待办唯一标识。
-  id: string;
-  // 待办内容文本。
-  text: string;
-  // 是否已完成。
-  completed: boolean;
-  // 优先级 (P0, P1, P2, P3)。
-  priority: string;
 };
 
 // 今日自由笔记类型，用于灵感闪念。
@@ -203,132 +189,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
     useState<AddEntryModalKind | null>(null);
 
   // 待办事项状态列表。
-  const [todos, setTodos] = useState<TodoItem[]>(TODO_ITEMS);
-
-  // 用于排序的待办列表（延迟同步以支持优雅的过渡动画）。
-  const [sortTodos, setSortTodos] = useState<TodoItem[]>(TODO_ITEMS);
-
-  // 控制是否显示 inline 待办添加框。
-  const [showAddInput, setShowAddInput] = useState(true);
-
-  // 新待办的文本。
-  const [newTodoText, setNewTodoText] = useState("");
-
-  // 新待办的优先级。
-  const [newTodoPriority, setNewTodoPriority] = useState("P1");
-
-  // 当前正在编辑的待办 ID。
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  // 正在编辑的待办文本内容。
-  const [editingText, setEditingText] = useState("");
-
-  // 正在编辑的待办临时优先级。
-  const [editingPriority, setEditingPriority] = useState<string>("");
-
-  /**
-   * 切换待办完成状态。
-   */
-  const handleToggleTodo = (id: string): void => {
-    let targetCompleted = false;
-    setTodos((prev) =>
-      prev.map((todo) => {
-        if (todo.id === id) {
-          targetCompleted = !todo.completed;
-          return { ...todo, completed: targetCompleted };
-        }
-        return todo;
-      }),
-    );
-
-    // 延迟 400ms 后更新用于排序的待办列表，确保勾选过渡动效流畅，避免生硬跳转。
-    setTimeout(() => {
-      setSortTodos((prev) =>
-        prev.map((todo) =>
-          todo.id === id ? { ...todo, completed: targetCompleted } : todo,
-        ),
-      );
-    }, 400);
-  };
-
-  /**
-   * 循环切换正在编辑的待办临时优先级（P0 -> P1 -> P2 -> P3 -> P0）。
-   */
-  const handleCyclePriority = (): void => {
-    const priorities = ["P0", "P1", "P2", "P3"];
-    const nextIndex =
-      (priorities.indexOf(editingPriority) + 1) % priorities.length;
-    setEditingPriority(priorities[nextIndex]);
-  };
-
-  /**
-   * 开始编辑某个待办。
-   */
-  const handleStartEdit = (todo: TodoItem): void => {
-    setEditingId(todo.id);
-    setEditingText(todo.text);
-    setEditingPriority(todo.priority);
-  };
-
-  /**
-   * 保存编辑的待办内容。
-   */
-  const handleSaveEdit = (id: string): void => {
-    if (!editingText.trim()) {
-      setEditingId(null);
-      return;
-    }
-    const updatedFields = {
-      text: editingText.trim(),
-      priority: editingPriority,
-    };
-    setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id ? { ...todo, ...updatedFields } : todo,
-      ),
-    );
-    setSortTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id ? { ...todo, ...updatedFields } : todo,
-      ),
-    );
-    setEditingId(null);
-  };
-
-  /**
-   * 删除某个待办。
-   */
-  const handleDeleteTodo = (id: string): void => {
-    setTodos((prev) => prev.filter((todo) => todo.id !== id));
-    setSortTodos((prev) => prev.filter((todo) => todo.id !== id));
-  };
-
-  /**
-   * 添加新待办项目。
-   */
-  const handleAddTodo = (): void => {
-    if (!newTodoText.trim()) return;
-    const newTodo: TodoItem = {
-      id: `todo-${Date.now()}`,
-      text: newTodoText.trim(),
-      completed: false,
-      priority: newTodoPriority,
-    };
-    setTodos((prev) => [newTodo, ...prev]);
-    setSortTodos((prev) => [newTodo, ...prev]);
-    setNewTodoText("");
-    setNewTodoPriority("P1");
-  };
-
-  /**
-   * 循环切换新待办的优先级。
-   */
-  const handleCycleNewPriority = (): void => {
-    const priorities = ["P0", "P1", "P2", "P3"];
-    const nextIndex =
-      (priorities.indexOf(newTodoPriority) + 1) % priorities.length;
-    setNewTodoPriority(priorities[nextIndex]);
-  };
+  const [todos, setTodos] = useState<TodoItem[]>(() => sortTodoItems(TODO_ITEMS));
 
   return (
     <section
@@ -376,213 +237,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
 
         {/* 3. 计划与随记分栏区（小屏 1 列，宽屏 2 列） */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
-          {/* 左侧：每日 Todo */}
-          <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold tracking-wide text-white/80">
-                  每日待办计划
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-white/40">
-                  已完成 {todos.filter((t) => t.completed).length}/
-                  {todos.length}
-                </span>
-                <IconButton
-                  aria-label="切换新建待办框"
-                  className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                  onClick={() => setShowAddInput(!showAddInput)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </IconButton>
-              </div>
-            </div>
-            <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
-              {showAddInput && (
-                <div className="flex items-center gap-2 rounded-[6px] border border-dashed border-white/10 bg-white/[0.01] p-2 hover:border-white/20 focus-within:border-white/25 focus-within:bg-black transition-all duration-200">
-                  <button
-                    type="button"
-                    onClick={handleCycleNewPriority}
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 leading-none rounded-[4px] border ${
-                      newTodoPriority === "P0"
-                        ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
-                        : newTodoPriority === "P1"
-                          ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
-                          : newTodoPriority === "P2"
-                            ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
-                            : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
-                    } transition-colors cursor-pointer select-none`}
-                    title="点击切换优先级"
-                  >
-                    {newTodoPriority}
-                  </button>
-                  <textarea
-                    rows={2}
-                    placeholder="新建待办事项并按回车..."
-                    value={newTodoText}
-                    onChange={(e) => setNewTodoText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleAddTodo();
-                      }
-                    }}
-                    className="flex-1 bg-transparent text-sm text-white placeholder-white/20 outline-none resize-none min-h-[40px] leading-relaxed"
-                  />
-                  {newTodoText.trim() && (
-                    <button
-                      type="button"
-                      onClick={handleAddTodo}
-                      className="flex items-center justify-center rounded-[4px] bg-white/10 hover:bg-white/20 px-2 py-1 text-xs text-white/80 hover:text-white transition-colors"
-                    >
-                      添加
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {[...sortTodos]
-                .sort((a, b) => {
-                  if (a.completed !== b.completed) {
-                    return a.completed ? 1 : -1;
-                  }
-                  const order: Record<string, number> = {
-                    P0: 0,
-                    P1: 1,
-                    P2: 2,
-                    P3: 3,
-                  };
-                  return (order[a.priority] ?? 99) - (order[b.priority] ?? 99);
-                })
-                .map((sortTodo) => {
-                  const todo =
-                    todos.find((t) => t.id === sortTodo.id) ?? sortTodo;
-                  return (
-                    <div
-                      key={todo.id}
-                      className={`group flex items-center justify-between gap-2.5 rounded-[6px] p-2 transition-all duration-300 ${
-                        todo.completed
-                          ? "bg-white/[0.01] opacity-60"
-                          : "bg-white/[0.02] hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTodo(todo.id)}
-                          className="flex-shrink-0 text-white/40 hover:text-white transition-colors relative h-3.5 w-3.5 focus:outline-none"
-                          title={
-                            todo.completed ? "标记为未完成" : "标记为已完成"
-                          }
-                        >
-                          <Square
-                            className={`absolute inset-0 h-3.5 w-3.5 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-75 opacity-0 rotate-45" : "scale-100 opacity-100 rotate-0"}`}
-                          />
-                          <CheckSquare
-                            className={`absolute inset-0 h-3.5 w-3.5 text-emerald-500 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-100 opacity-100 rotate-0" : "scale-75 opacity-0 -rotate-45"}`}
-                          />
-                        </button>
-                        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {editingId === todo.id ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={handleCyclePriority}
-                                  className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-colors cursor-pointer select-none ${
-                                    editingPriority === "P0"
-                                      ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
-                                      : editingPriority === "P1"
-                                        ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
-                                        : editingPriority === "P2"
-                                          ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
-                                          : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
-                                  }`}
-                                  title="点击切换优先级"
-                                >
-                                  {editingPriority}
-                                </button>
-                                <textarea
-                                  rows={2}
-                                  value={editingText}
-                                  onChange={(e) =>
-                                    setEditingText(e.target.value)
-                                  }
-                                  onFocus={(e) => e.target.select()}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                      e.preventDefault();
-                                      handleSaveEdit(todo.id);
-                                    } else if (e.key === "Escape") {
-                                      setEditingId(null);
-                                    }
-                                  }}
-                                  onBlur={() => handleSaveEdit(todo.id)}
-                                  className="flex-1 bg-black border border-white/10 rounded-[4px] px-1.5 py-1 text-xs text-white outline-none focus:border-white/20 resize-none min-h-[40px] leading-relaxed"
-                                  autoFocus
-                                />
-                              </>
-                            ) : (
-                              <>
-                                <span
-                                  className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-all duration-300 ${
-                                    todo.completed
-                                      ? "text-white/20 border-white/5 bg-white/[0.01]"
-                                      : todo.priority === "P0"
-                                        ? "text-rose-400 border-rose-500/20 bg-rose-500/5"
-                                        : todo.priority === "P1"
-                                          ? "text-amber-400 border-amber-500/20 bg-amber-500/5"
-                                          : todo.priority === "P2"
-                                            ? "text-sky-400 border-sky-500/20 bg-sky-500/5"
-                                            : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
-                                  }`}
-                                >
-                                  {todo.priority}
-                                </span>
-                                <span
-                                  onDoubleClick={() => handleStartEdit(todo)}
-                                  className={`text-sm leading-normal flex-1 cursor-text select-text break-words transition-all duration-300 ${
-                                    todo.completed
-                                      ? "text-white/30 line-through"
-                                      : "text-white/80 hover:text-white"
-                                  }`}
-                                  title="双击进行编辑"
-                                >
-                                  {todo.text}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 操作按钮组 */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
-                        <button
-                          type="button"
-                          onClick={() => handleStartEdit(todo)}
-                          className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-white transition-colors"
-                          title="编辑"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTodo(todo.id)}
-                          className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-rose-400 transition-colors"
-                          title="删除"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
+          <TodayTodoPanel setTodos={setTodos} todos={todos} />
 
           {/* 右侧：自由笔记 */}
           <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
