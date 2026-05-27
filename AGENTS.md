@@ -48,7 +48,7 @@
 ### 目录层级规范
 
 - **`src/renderer/src/pages/`**：存放粗粒度的路由/页面级组件（如 `JournalPage.tsx`, `TodayWorkspace.tsx`）。
-- **`src/renderer/src/pages/components/`**：存放特定页面独占、强业务属性的非通用子组件（如 `AddEntryModal.tsx`）。
+- **`src/renderer/src/pages/components/`**：存放特定页面独占、强业务属性的非通用子组件（如 `TodayWorkspaceEntryModal.tsx`）。
 - **`src/renderer/src/components/ui/`**：存放高复用、无业务逻辑的基础原子 UI 组件（如 `IconButton.tsx`, `Toast.tsx`）。
 - **`src/renderer/src/components/layout/`**：存放通用的页面框架/布局级组件（如 `Sidebar.tsx`）。
 

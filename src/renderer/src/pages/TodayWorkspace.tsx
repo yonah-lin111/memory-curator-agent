@@ -14,9 +14,9 @@ import {
   Columns2,
 } from "lucide-react";
 import {
-  AddEntryModal,
-  type AddEntryModalKind,
-} from "@renderer/pages/components/AddEntryModal";
+  TodayWorkspaceEntryModal,
+  type TodayWorkspaceEntryModalKind,
+} from "@renderer/pages/components/TodayWorkspaceEntryModal";
 import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
 import { type TodoItem, sortTodoItems } from "@renderer/pages/components/todoShared";
 import { IconButton } from "@renderer/components/ui/IconButton";
@@ -186,7 +186,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
 
   // 当前打开的添加弹窗类型。
   const [activeAddModal, setActiveAddModal] =
-    useState<AddEntryModalKind | null>(null);
+    useState<TodayWorkspaceEntryModalKind | null>(null);
 
   // 待办事项状态列表。
   const [todos, setTodos] = useState<TodoItem[]>(() => sortTodoItems(TODO_ITEMS));
@@ -354,7 +354,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         </div>
       </div>
       {activeAddModal ? (
-        <AddEntryModal
+        <TodayWorkspaceEntryModal
           kind={activeAddModal}
           onClose={() => setActiveAddModal(null)}
           initialTodos={todos}

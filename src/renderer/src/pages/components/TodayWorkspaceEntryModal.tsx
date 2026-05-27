@@ -5,12 +5,12 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import type { TodoItem } from "@renderer/pages/components/todoShared";
 
 // 添加弹窗类型，用于区分待办与随记表单内容。
-export type AddEntryModalKind = "todo" | "note";
+export type TodayWorkspaceEntryModalKind = "todo" | "note";
 
 // 添加弹窗组件属性。
-type AddEntryModalProps = {
+type TodayWorkspaceEntryModalProps = {
   // 当前弹窗业务类型。
-  kind: AddEntryModalKind;
+  kind: TodayWorkspaceEntryModalKind;
   // 关闭弹窗回调。
   onClose: () => void;
   // 初始待办项数据（用于编辑回显）
@@ -18,7 +18,7 @@ type AddEntryModalProps = {
 };
 
 // 添加弹窗视图配置。
-type AddEntryModalConfig = {
+type TodayWorkspaceEntryModalConfig = {
   // 弹窗标题。
   title: string;
   // 弹窗描述。
@@ -40,7 +40,7 @@ type TodoDraft = {
 };
 
 // 不同添加类型对应的静态视图配置。
-const ADD_ENTRY_MODAL_CONFIG: Record<AddEntryModalKind, AddEntryModalConfig> = {
+const TODAY_WORKSPACE_ENTRY_MODAL_CONFIG: Record<TodayWorkspaceEntryModalKind, TodayWorkspaceEntryModalConfig> = {
   todo: {
     title: "新建每日待办计划",
     description: "记录一个明确行动，后续可接入本地持久化与智能排序。",
@@ -78,9 +78,6 @@ const PRIORITY_COLOR_MAP: Record<string, { selected: string; unselected: string 
   },
 };
 
-// 随记推荐标签选项。
-const NOTE_TAG_OPTIONS = ["UX", "AI-Agent", "架构", "产品思考"];
-
 /**
  * 创建待办草稿。
  */
@@ -94,12 +91,12 @@ const createTodoDraft = (index: number): TodoDraft => ({
  * 通用添加弹窗。
  * 只负责展示与关闭交互，避免在静态工作台里伪造持久化行为。
  */
-export const AddEntryModal = ({
+export const TodayWorkspaceEntryModal = ({
   kind,
   onClose,
   initialTodos,
-}: AddEntryModalProps): React.JSX.Element => {
-  const config = ADD_ENTRY_MODAL_CONFIG[kind];
+}: TodayWorkspaceEntryModalProps): React.JSX.Element => {
+  const config = TODAY_WORKSPACE_ENTRY_MODAL_CONFIG[kind];
   const Icon = config.icon;
   // 最新待办草稿锚点，用于新增后滚动到底部。
   const latestTodoDraftRef = useRef<HTMLDivElement | null>(null);
@@ -132,8 +129,12 @@ export const AddEntryModal = ({
     }
     return 2;
   });
+  // 随记推荐/已存在标签。
+  const [tags, setTags] = useState<string[]>(["UX", "AI-Agent", "架构", "产品思考"]);
   // 当前已选中的随记标签。
   const [selectedTags, setSelectedTags] = useState<string[]>(["UX"]);
+  // 额外自定义标签输入。
+  const [tagInput, setTagInput] = useState<string>("");
 
   /**
    * 追加一条新的待办草稿。
@@ -371,8 +372,8 @@ export const AddEntryModal = ({
                     CAPTURE MODE
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {NOTE_TAG_OPTIONS.map((tag) => {
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {tags.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
                       <IconButton
@@ -400,15 +401,29 @@ export const AddEntryModal = ({
                     );
                   })}
                 </div>
-              </div>
-              <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
-                额外标签
                 <input
-                  aria-label="随记标签"
-                  className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
-                  placeholder="补充新的标签，按逗号分隔"
+                  aria-label="输入新标签"
+                  className="w-full rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
+                  placeholder="输入新标签并按回车确认..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const trimmed = tagInput.trim();
+                      if (trimmed) {
+                        if (!tags.includes(trimmed)) {
+                          setTags((current) => [...current, trimmed]);
+                        }
+                        if (!selectedTags.includes(trimmed)) {
+                          setSelectedTags((current) => [...current, trimmed]);
+                        }
+                        setTagInput("");
+                      }
+                    }
+                  }}
                 />
-              </label>
+              </div>
             </>
           )}
         </div>
