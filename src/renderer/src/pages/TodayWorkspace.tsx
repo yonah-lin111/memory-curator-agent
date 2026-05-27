@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { CheckSquare, StickyNote, BookOpen, Smile } from "lucide-react";
-import { TodayThoughtsPanel } from "@renderer/pages/components/TodayThoughtsPanel";
+import { TodaySnippetsPanel } from "@renderer/pages/components/TodaySnippetsPanel";
 import {
   TodayNoteEntryModal,
   type NoteItem,
@@ -215,7 +215,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
           <TodayTodoPanel setTodos={setTodos} todos={todos} />
 
           {/* 右侧：自由随记 */}
-          <TodayThoughtsPanel
+          <TodaySnippetsPanel
             notes={notes}
             onAddNote={() => {
               setEditingNote(null);

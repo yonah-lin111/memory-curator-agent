@@ -1,16 +1,21 @@
-import type React from 'react'
-import { useState, useEffect } from 'react'
-import { JournalPage } from '@renderer/pages/JournalPage'
-import { MemoriesPage } from '@renderer/pages/MemoriesPage'
-import { NotesPage } from '@renderer/pages/NotesPage'
-import { ThemesPage } from '@renderer/pages/ThemesPage'
-import { WeeklyReviewPage } from '@renderer/pages/WeeklyReviewPage'
-import { TodoPage } from '@renderer/pages/TodoPage'
-import { SnippetsPage } from '@renderer/pages/SnippetsPage'
-import { PeoplePage } from '@renderer/pages/PeoplePage'
-import { Sidebar, type SidebarPageId } from '@renderer/components/layout/Sidebar'
-import { TodayWorkspace } from '@renderer/pages/TodayWorkspace'
-import { ToastProvider } from '@renderer/components/ui/Toast'
+import type React from "react";
+import { useState, useEffect } from "react";
+import { JournalPage } from "@renderer/pages/JournalPage";
+import { MemoriesPage } from "@renderer/pages/MemoriesPage";
+import { NotesPage } from "@renderer/pages/NotesPage";
+import { ThemesPage } from "@renderer/pages/ThemesPage";
+import { WeeklyReviewPage } from "@renderer/pages/WeeklyReviewPage";
+import { TodoPage } from "@renderer/pages/TodoPage";
+import { SnippetsPage } from "@renderer/pages/SnippetsPage";
+import { PeoplePage } from "@renderer/pages/PeoplePage";
+import {
+  Sidebar,
+  type SidebarPageId,
+} from "@renderer/components/layout/Sidebar";
+import { TodayWorkspace } from "@renderer/pages/TodayWorkspace";
+import { ToastProvider } from "@renderer/components/ui/Toast";
+import { IconButton } from "@renderer/components/ui/IconButton";
+import { MessageSquare } from "lucide-react";
 
 /**
  * 记忆策展 Agent 的主应用布局。
@@ -18,129 +23,130 @@ import { ToastProvider } from '@renderer/components/ui/Toast'
  */
 export const App = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
   const getPageFromPathname = (): SidebarPageId => {
-    const path = window.location.pathname.replace(/^\/|\/$/g, '')
+    const path = window.location.pathname.replace(/^\/|\/$/g, "");
     const validPages: SidebarPageId[] = [
-      'today',
-      'notes',
-      'journal',
-      'weekly',
-      'themes',
-      'memories',
-      'todo',
-      'snippets',
-      'people'
-    ]
+      "today",
+      "notes",
+      "journal",
+      "weekly",
+      "themes",
+      "memories",
+      "todo",
+      "snippets",
+      "people",
+    ];
     if (validPages.includes(path as SidebarPageId)) {
-      return path as SidebarPageId
+      return path as SidebarPageId;
     }
-    return 'today'
-  }
+    return "today";
+  };
 
   // 当前中间主内容页面。
-  const [activePage, setActivePage] = useState<SidebarPageId>(getPageFromPathname)
+  const [activePage, setActivePage] =
+    useState<SidebarPageId>(getPageFromPathname);
 
   // 获取当前日期的 YYYY-MM-DD 字符串。
   const getTodayDateString = (): string => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   // 获取页面的分类名称。
   const getPageCategory = (pageId: SidebarPageId): string => {
     switch (pageId) {
-      case 'today':
-        return 'DAILY'
-      case 'notes':
-      case 'journal':
-      case 'todo':
-      case 'snippets':
-      case 'people':
-        return 'LIBRARY'
-      case 'weekly':
-      case 'themes':
-      case 'memories':
-        return 'CURATION'
+      case "today":
+        return "DAILY";
+      case "notes":
+      case "journal":
+      case "todo":
+      case "snippets":
+      case "people":
+        return "LIBRARY";
+      case "weekly":
+      case "themes":
+      case "memories":
+        return "CURATION";
       default:
-        return 'DAILY'
+        return "DAILY";
     }
-  }
+  };
 
   // 获取页面的中文标题。
   const getPageTitle = (pageId: SidebarPageId): string => {
     switch (pageId) {
-      case 'today':
-        return '今天的计划、素材与主观记录'
-      case 'notes':
-        return '自由笔记素材池'
-      case 'journal':
-        return '日记条目回看'
-      case 'todo':
-        return '待办清单'
-      case 'snippets':
-        return '随手闪念随记'
-      case 'people':
-        return '人物关系档案'
-      case 'weekly':
-        return '周度策展'
-      case 'themes':
-        return '长期主题追踪'
-      case 'memories':
-        return '记忆片段关联'
+      case "today":
+        return getTodayDateString();
+      case "notes":
+        return "自由笔记素材池";
+      case "journal":
+        return "日记条目回看";
+      case "todo":
+        return "待办清单";
+      case "snippets":
+        return "随手闪念随记";
+      case "people":
+        return "人物关系档案";
+      case "weekly":
+        return "周度策展";
+      case "themes":
+        return "长期主题追踪";
+      case "memories":
+        return "记忆片段关联";
       default:
-        return ''
+        return "";
     }
-  }
+  };
 
   // 监听 URL 路由 pathname 变化，确保与页面状态双向同步。
   useEffect(() => {
     const handlePopState = () => {
-      const page = getPageFromPathname()
-      setActivePage(page)
-    }
+      const page = getPageFromPathname();
+      setActivePage(page);
+    };
 
     // 初始化如果 pathname 为根路径，则默认写入 /today 路由
-    const initialPath = window.location.pathname
-    if (initialPath === '/' || initialPath === '') {
-      window.history.replaceState({}, '', '/today')
+    const initialPath = window.location.pathname;
+    if (initialPath === "/" || initialPath === "") {
+      window.history.replaceState({}, "", "/today");
     }
 
-    window.addEventListener('popstate', handlePopState)
+    window.addEventListener("popstate", handlePopState);
     return () => {
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
   /**
    * 根据当前侧栏页面渲染中间主内容。
    */
   const renderActivePage = (): React.JSX.Element => {
     switch (activePage) {
-      case 'today':
-        return <TodayWorkspace />
-      case 'notes':
-        return <NotesPage />
-      case 'journal':
-        return <JournalPage />
-      case 'weekly':
-        return <WeeklyReviewPage />
-      case 'themes':
-        return <ThemesPage />
-      case 'memories':
-        return <MemoriesPage />
-      case 'todo':
-        return <TodoPage />
-      case 'snippets':
-        return <SnippetsPage />
-      case 'people':
-        return <PeoplePage />
+      case "today":
+        return <TodayWorkspace />;
+      case "notes":
+        return <NotesPage />;
+      case "journal":
+        return <JournalPage />;
+      case "weekly":
+        return <WeeklyReviewPage />;
+      case "themes":
+        return <ThemesPage />;
+      case "memories":
+        return <MemoriesPage />;
+      case "todo":
+        return <TodoPage />;
+      case "snippets":
+        return <SnippetsPage />;
+      case "people":
+        return <PeoplePage />;
     }
-  }
+  };
 
   return (
     <ToastProvider>
@@ -151,8 +157,8 @@ export const App = (): React.JSX.Element => {
           activePage={activePage}
           onCollapsedChange={setIsSidebarCollapsed}
           onPageChange={(pageId) => {
-            window.history.pushState({}, '', `/${pageId}`)
-            setActivePage(pageId)
+            window.history.pushState({}, "", `/${pageId}`);
+            setActivePage(pageId);
           }}
         />
 
@@ -162,7 +168,9 @@ export const App = (): React.JSX.Element => {
           <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
             <div className="flex items-center gap-2 text-xs font-mono">
               <span className="text-white/30">//</span>
-              <span className="text-white/40 font-bold uppercase tracking-wider">{getPageCategory(activePage)}</span>
+              <span className="text-white/40 font-bold uppercase tracking-wider">
+                {getPageCategory(activePage)}
+              </span>
               <span className="text-white/20">/</span>
               <span className="text-white/60 font-medium">{activePage}</span>
               <span className="text-white/20">·</span>
@@ -170,18 +178,17 @@ export const App = (): React.JSX.Element => {
                 {getPageTitle(activePage)}
               </h1>
             </div>
-            {activePage === 'today' && (
-              <div className="text-xs font-mono text-white/45 bg-white/5 px-2 py-0.5 rounded-[4px]">
-                {getTodayDateString()}
-              </div>
-            )}
+            <IconButton
+              aria-label="打开聊天"
+              className="text-white/45 hover:bg-white/5 hover:text-white"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+            </IconButton>
           </header>
 
-          <div className="flex-1 min-h-0">
-            {renderActivePage()}
-          </div>
+          <div className="flex-1 min-h-0">{renderActivePage()}</div>
         </div>
       </main>
     </ToastProvider>
-  )
-}
+  );
+};

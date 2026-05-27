@@ -5,7 +5,7 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
 
-interface TodayThoughtsPanelProps {
+interface TodaySnippetsPanelProps {
   // 自由随记卡片列表
   notes: NoteItem[];
   // 新增随记卡片回调
@@ -17,15 +17,15 @@ interface TodayThoughtsPanelProps {
 }
 
 /**
- * TodayThoughtsPanel - 自由随记卡片面板
+ * TodaySnippetsPanel - 自由随记片段面板
  * 统一管理卡片展示、滚动条限制，支持点击卡片打开编辑弹窗及点击新增、删除按钮。
  */
-export const TodayThoughtsPanel = ({
+export const TodaySnippetsPanel = ({
   notes,
   onAddNote,
   onEditNote,
   onDeleteNote,
-}: TodayThoughtsPanelProps): React.JSX.Element => {
+}: TodaySnippetsPanelProps): React.JSX.Element => {
   // 正在执行删除动画的随记 ID 列表
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
@@ -48,18 +48,18 @@ export const TodayThoughtsPanel = ({
         <div className="flex items-center gap-2">
           <StickyNote className="h-4 w-4 text-white/60" />
           <span className="text-sm font-bold tracking-wide text-white/80">
-            自由随记卡片
+            自由随记片段
           </span>
           <div className="relative group inline-flex items-center">
             <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
             <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-              快速捕捉瞬间的想法、灵感或临时便签，支持打上标签分类管理。
+              快速捕捉瞬间的想法、灵感或临时便签片段，支持打上标签分类管理。
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <IconButton
-            aria-label="添加自由随记卡片"
+            aria-label="添加自由随记片段"
             className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
             onClick={onAddNote}
           >
@@ -82,14 +82,14 @@ export const TodayThoughtsPanel = ({
             >
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-white/80 truncate pr-2">
-                  {note.title || "无标题想法"}
+                  {note.title || "无标题片段"}
                 </h4>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <span className="text-xs font-mono text-white/30">
                     {note.time}
                   </span>
                   <button
-                    aria-label={`删除随记 ${note.title || "无标题想法"}`}
+                    aria-label={`删除片段 ${note.title || "无标题片段"}`}
                     className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
                     type="button"
                     onClick={(e) => handleDeleteNote(e, note.id)}

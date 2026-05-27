@@ -262,7 +262,7 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加自由随记卡片' }))
+    await user.click(screen.getByRole('button', { name: '添加自由随记片段' }))
 
     const dialog = screen.getByRole('dialog', { name: '新建自由随记卡片' })
     expect(dialog).toBeInTheDocument()
@@ -318,7 +318,7 @@ describe('App', () => {
     render(<App />)
 
     // 点击添加
-    await user.click(screen.getByRole('button', { name: '添加自由随记卡片' }))
+    await user.click(screen.getByRole('button', { name: '添加自由随记片段' }))
 
     const titleInput = screen.getByLabelText('随记标题')
     const contentInput = screen.getByLabelText('随记内容')
@@ -342,7 +342,7 @@ describe('App', () => {
     const cardTitle = screen.getByText('本地持久化方案表现')
     expect(cardTitle).toBeInTheDocument()
 
-    const deleteBtn = screen.getByRole('button', { name: '删除随记 本地持久化方案表现' })
+    const deleteBtn = screen.getByRole('button', { name: '删除片段 本地持久化方案表现' })
     expect(deleteBtn).toBeInTheDocument()
 
     await user.click(deleteBtn)
