@@ -1,15 +1,15 @@
 import type React from "react";
 
 /**
- * MemoriesPage 组件 - 记忆片段关联
+ * TodoPage 组件 - 待办事项页面
  */
-export const MemoriesPage = (): React.JSX.Element => {
+export const TodoPage = (): React.JSX.Element => {
   return (
     <section
-      aria-label="Memories 页面"
+      aria-label="Todo 页面"
       className="flex-1 flex flex-col items-center justify-center h-auto lg:h-full bg-[#000000] p-6 text-white"
     >
-      <h1 className="text-2xl font-bold tracking-tight">Memories</h1>
+      <h1 className="text-2xl font-bold tracking-tight">Todo</h1>
     </section>
   );
 };

@@ -5,6 +5,9 @@ import { MemoriesPage } from '@renderer/pages/MemoriesPage'
 import { NotesPage } from '@renderer/pages/NotesPage'
 import { ThemesPage } from '@renderer/pages/ThemesPage'
 import { WeeklyReviewPage } from '@renderer/pages/WeeklyReviewPage'
+import { TodoPage } from '@renderer/pages/TodoPage'
+import { SnippetsPage } from '@renderer/pages/SnippetsPage'
+import { ChatsPage } from '@renderer/pages/ChatsPage'
 import { Sidebar, type SidebarPageId } from '@renderer/components/layout/Sidebar'
 import { TodayWorkspace } from '@renderer/pages/TodayWorkspace'
 import { ToastProvider } from '@renderer/components/ui/Toast'
@@ -20,7 +23,17 @@ export const App = (): React.JSX.Element => {
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
   const getPageFromPathname = (): SidebarPageId => {
     const path = window.location.pathname.replace(/^\/|\/$/g, '')
-    const validPages: SidebarPageId[] = ['today', 'notes', 'journal', 'weekly', 'themes', 'memories']
+    const validPages: SidebarPageId[] = [
+      'today',
+      'notes',
+      'journal',
+      'weekly',
+      'themes',
+      'memories',
+      'todo',
+      'snippets',
+      'chats'
+    ]
     if (validPages.includes(path as SidebarPageId)) {
       return path as SidebarPageId
     }
@@ -65,6 +78,12 @@ export const App = (): React.JSX.Element => {
         return <ThemesPage />
       case 'memories':
         return <MemoriesPage />
+      case 'todo':
+        return <TodoPage />
+      case 'snippets':
+        return <SnippetsPage />
+      case 'chats':
+        return <ChatsPage />
     }
   }
 

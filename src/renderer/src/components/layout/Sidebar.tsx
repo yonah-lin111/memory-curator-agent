@@ -3,13 +3,16 @@ import {
   BookOpen,
   Brain,
   CalendarDays,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   FileText,
   Home,
   Layers,
+  MessageSquare,
   Settings,
   Sparkles,
+  StickyNote,
 } from "lucide-react";
 
 /* ==========================================
@@ -23,7 +26,10 @@ export type SidebarPageId =
   | "journal"
   | "weekly"
   | "themes"
-  | "memories";
+  | "memories"
+  | "todo"
+  | "snippets"
+  | "chats";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -92,6 +98,24 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Journal",
         description: "日记条目回看",
         icon: BookOpen,
+      },
+      {
+        id: "todo",
+        label: "Todo",
+        description: "待办清单",
+        icon: CheckSquare,
+      },
+      {
+        id: "snippets",
+        label: "Snippets",
+        description: "随手闪念随记",
+        icon: StickyNote,
+      },
+      {
+        id: "chats",
+        label: "Chats",
+        description: "聊天记录（日输入）",
+        icon: MessageSquare,
       },
     ],
   },

@@ -57,20 +57,20 @@ describe('App', () => {
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getByRole('heading', { name: '历史日记条目' })).toBeInTheDocument()
-    expect(screen.getByText('Journal').closest('[aria-current="page"]')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Journal' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
-    expect(screen.getByRole('heading', { name: '周度策展复盘' })).toBeInTheDocument()
-    expect(screen.getByText('Weekly Review').closest('[aria-current="page"]')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Weekly Review' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Weekly Review/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Themes/ }))
-    expect(screen.getByRole('heading', { name: '长期主题追踪' })).toBeInTheDocument()
-    expect(screen.getByText('Themes').closest('[aria-current="page"]')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Themes' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Themes/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Memories/ }))
-    expect(screen.getByRole('heading', { name: '记忆片段关联墙' })).toBeInTheDocument()
-    expect(screen.getByText('Memories').closest('[aria-current="page"]')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Memories' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Memories/ })).toHaveAttribute('aria-current', 'page')
   })
 
   it('在切换侧栏 tab 时同步改变 URL pathname 路由，且支持通过改变 pathname 进行路由切换', async () => {
@@ -92,8 +92,8 @@ describe('App', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(screen.getByRole('heading', { name: '历史日记条目' })).toBeInTheDocument()
-    expect(screen.getByText('Journal').closest('[aria-current="page"]')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Journal' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
   })
 
   it('中间内容容器保留克制的左右内边距', () => {
