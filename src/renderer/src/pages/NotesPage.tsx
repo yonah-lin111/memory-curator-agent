@@ -16,12 +16,13 @@ import {
   HelpCircle,
   Plus,
   Sparkles,
-  Tag,
+  Tag as TagIcon,
   Trash2,
   X,
 } from "lucide-react";
 import { useToast } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
+import { Tag } from "@renderer/components/ui/Tag";
 
 /* ==========================================
  * TS 类型定义
@@ -381,7 +382,7 @@ const NoteMarkdownModal = ({
               }`}
               onClick={() => setIsPopoverOpen((prev) => !prev)}
             >
-              <Tag className="h-3 w-3" />
+              <TagIcon className="h-3 w-3" />
               <span className="max-w-[120px] truncate">
                 {draft.tags.trim() ? draft.tags : "无标签"}
               </span>
@@ -810,13 +811,14 @@ export const NotesPage = (): React.JSX.Element => {
                   {note.source}
                 </span>
                 {note.tags.map((tag) => (
-                  <span
+                  <Tag
                     key={tag}
-                    className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/40"
+                    size="small"
+                    prefix={<TagIcon className="h-2.5 w-2.5" />}
+                    bgClass="border-white/5 bg-white/[0.02] text-white/40"
                   >
-                    <Tag className="h-2 w-2" />
                     {tag}
-                  </span>
+                  </Tag>
                 ))}
               </div>
 

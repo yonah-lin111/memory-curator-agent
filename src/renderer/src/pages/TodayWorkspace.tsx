@@ -4,21 +4,17 @@ import MDEditor from "@uiw/react-md-editor";
 import type { ICommand } from "@uiw/react-md-editor/commands";
 import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import "@uiw/react-md-editor/markdown-editor.css";
+import { CheckSquare, FileText, BookOpen, Brain, Columns2 } from "lucide-react";
+import { TodayNotesPanel } from "@renderer/pages/components/TodayNotesPanel";
 import {
-  CheckSquare,
-  FileText,
-  BookOpen,
-  Brain,
-  Plus,
-  Tag,
-  Columns2,
-} from "lucide-react";
-import {
-  TodayWorkspaceEntryModal,
-  type TodayWorkspaceEntryModalKind,
-} from "@renderer/pages/components/TodayWorkspaceEntryModal";
+  TodayNoteEntryModal,
+  type NoteItem,
+} from "@renderer/pages/components/TodayNoteEntryModal";
 import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
-import { type TodoItem, sortTodoItems } from "@renderer/pages/components/todoShared";
+import {
+  type TodoItem,
+  sortTodoItems,
+} from "@renderer/pages/components/todoShared";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
 type MarkdownEditorThemeStyle = React.CSSProperties &
@@ -61,20 +57,6 @@ type StatItem = {
   value: number;
   // 显示图标。
   icon: React.ComponentType<{ className?: string }>;
-};
-
-// 今日自由笔记类型，用于灵感闪念。
-type NoteItem = {
-  // 笔记唯一标识。
-  id: string;
-  // 笔记标题。
-  title: string;
-  // 笔记正文。
-  content: string;
-  // 笔记关联的标签列表。
-  tags: string[];
-  // 记录的具体时间。
-  time: string;
 };
 
 // 今日主观日记类型，用于完整、私密的情感和思考记录。
@@ -184,12 +166,55 @@ export const TodayWorkspace = (): React.JSX.Element => {
     "edit" | "preview" | "live"
   >("edit");
 
-  // 当前打开的添加弹窗类型。
-  const [activeAddModal, setActiveAddModal] =
-    useState<TodayWorkspaceEntryModalKind | null>(null);
+  // 随记卡片列表状态。
+  const [notes, setNotes] = useState<NoteItem[]>(NOTE_ITEMS);
+
+  // 随记编辑弹窗是否打开。
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+
+  // 当前正在编辑的随记（若为新建则为 null）
+  const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
 
   // 待办事项状态列表。
-  const [todos, setTodos] = useState<TodoItem[]>(() => sortTodoItems(TODO_ITEMS));
+  const [todos, setTodos] = useState<TodoItem[]>(() =>
+    sortTodoItems(TODO_ITEMS),
+  );
+
+  /**
+   * 保存或更新随记卡片
+   */
+  const handleSaveNote = (savedNote: {
+    id?: string;
+    title: string;
+    content: string;
+    tags: string[];
+  }): void => {
+    if (savedNote.id) {
+      setNotes((currentNotes) =>
+        currentNotes.map((note) =>
+          note.id === savedNote.id
+            ? {
+                ...note,
+                title: savedNote.title,
+                content: savedNote.content,
+                tags: savedNote.tags,
+              }
+            : note,
+        ),
+      );
+    } else {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const newNote: NoteItem = {
+        id: `note-${Date.now()}`,
+        title: savedNote.title,
+        content: savedNote.content,
+        tags: savedNote.tags,
+        time: timeStr,
+      };
+      setNotes((currentNotes) => [newNote, ...currentNotes]);
+    }
+  };
 
   return (
     <section
@@ -224,7 +249,11 @@ export const TodayWorkspace = (): React.JSX.Element => {
                     {stat.label}
                   </span>
                   <span className="text-lg font-bold font-mono text-white">
-                    {stat.id === "todo" ? todos.length : stat.value}
+                    {stat.id === "todo"
+                      ? todos.length
+                      : stat.id === "notes"
+                        ? notes.length
+                        : stat.value}
                   </span>
                 </div>
                 <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
@@ -240,62 +269,25 @@ export const TodayWorkspace = (): React.JSX.Element => {
           <TodayTodoPanel setTodos={setTodos} todos={todos} />
 
           {/* 右侧：自由笔记 */}
-          <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold tracking-wide text-white/80">
-                  自由随记卡片
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="hidden items-center gap-1 text-xs text-white/30 font-medium sm:flex">
-                  自动同步
-                </span>
-                <IconButton
-                  aria-label="添加自由随记卡片"
-                  className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                  onClick={() => setActiveAddModal("note")}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </IconButton>
-              </div>
-            </div>
-            <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
-              {NOTE_ITEMS.map((note) => (
-                <div
-                  key={note.id}
-                  className="flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-white/80 truncate pr-2">
-                      {note.title}
-                    </h4>
-                    <span className="text-xs font-mono text-white/30 flex-shrink-0">
-                      {note.time}
-                    </span>
-                  </div>
-                  <p className="text-xs text-white/50 leading-relaxed line-clamp-2">
-                    {note.content}
-                  </p>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {note.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="flex items-center gap-0.5 rounded-[6px] bg-white/5 px-1.5 py-0.5 text-xs text-white/40"
-                      >
-                        <Tag className="h-2 w-2" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <TodayNotesPanel
+            notes={notes}
+            onAddNote={() => {
+              setEditingNote(null);
+              setIsNoteModalOpen(true);
+            }}
+            onEditNote={(note) => {
+              setEditingNote(note);
+              setIsNoteModalOpen(true);
+            }}
+            onDeleteNote={(id) => {
+              setNotes((currentNotes) =>
+                currentNotes.filter((n) => n.id !== id),
+              );
+            }}
+          />
         </div>
 
-        {/* 4. 日记与主观表达区域 (完整显示原文) */}
+        {/* 4. 日记 */}
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0 mb-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
@@ -353,11 +345,14 @@ export const TodayWorkspace = (): React.JSX.Element => {
           </div>
         </div>
       </div>
-      {activeAddModal ? (
-        <TodayWorkspaceEntryModal
-          kind={activeAddModal}
-          onClose={() => setActiveAddModal(null)}
-          initialTodos={todos}
+      {isNoteModalOpen ? (
+        <TodayNoteEntryModal
+          note={editingNote}
+          onClose={() => {
+            setIsNoteModalOpen(false);
+            setEditingNote(null);
+          }}
+          onSave={handleSaveNote}
         />
       ) : null}
     </section>

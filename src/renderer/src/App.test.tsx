@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
@@ -260,11 +260,92 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: '添加自由随记卡片' }))
 
-    expect(screen.getByRole('dialog', { name: '新建自由随记卡片' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: '新建自由随记卡片' })
+    expect(dialog).toBeInTheDocument()
     expect(screen.getByLabelText('随记标题')).toBeInTheDocument()
     expect(screen.getByLabelText('随记内容')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '添加随记标签 UX' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '添加随记标签 AI-Agent' })).toBeInTheDocument()
+    
+    // 输入新标签并回车产生标签
+    const tagInput = screen.getByLabelText('输入新标签')
+    expect(tagInput).toBeInTheDocument()
+    await user.type(tagInput, 'UX{Enter}')
+    
+    expect(within(dialog).getByText('UX')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: '删除标签' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '第 1 条待办选择优先级P0' })).not.toBeInTheDocument()
+  })
+
+  it('支持点击随记卡片打开编辑弹窗，回显内容，并修改保存后更新卡片列表', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    // 找到卡片并点击
+    const cardTitle = screen.getByText('关于记忆持久化的思考')
+    await user.click(cardTitle)
+
+    // 弹窗应该显示编辑状态
+    const dialog = screen.getByRole('dialog', { name: '编辑自由随记卡片' })
+    expect(dialog).toBeInTheDocument()
+
+    const titleInput = screen.getByLabelText('随记标题')
+    const contentInput = screen.getByLabelText('随记内容')
+
+    expect(titleInput).toHaveValue('关于记忆持久化的思考')
+    expect(contentInput).toHaveValue('所有的临时闪念都不应该直接成为长期记忆，必须经过一个类似海马体的主动策展层。今天看到一个概念：信息不仅需要被存储，更需要主动被遗忘以保持高信噪比。')
+
+    // 修改标题
+    await user.clear(titleInput)
+    await user.type(titleInput, '修改后的持久化思考')
+
+    // 保存
+    const saveBtn = screen.getByRole('button', { name: '保存随记卡片' })
+    await user.click(saveBtn)
+
+    // 弹窗关闭，卡片标题更新
+    expect(dialog).not.toBeInTheDocument()
+    expect(screen.getByText('修改后的持久化思考')).toBeInTheDocument()
+    expect(screen.queryByText('关于记忆持久化的思考')).not.toBeInTheDocument()
+  })
+
+  it('支持在新建随记卡片弹窗中输入标题 and 内容并保存，成功添加到卡片列表', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    // 点击添加
+    await user.click(screen.getByRole('button', { name: '添加自由随记卡片' }))
+
+    const titleInput = screen.getByLabelText('随记标题')
+    const contentInput = screen.getByLabelText('随记内容')
+
+    await user.type(titleInput, '我的新闪念')
+    await user.type(contentInput, '今天突然想到的一个设计细节')
+
+    const saveBtn = screen.getByRole('button', { name: '保存随记卡片' })
+    await user.click(saveBtn)
+
+    // 随记卡片成功添加到列表
+    expect(screen.getByText('我的新闪念')).toBeInTheDocument()
+    expect(screen.getByText('今天突然想到的一个设计细节')).toBeInTheDocument()
+  })
+
+  it('支持删除自由随记卡片，并在动画后移除', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    const cardTitle = screen.getByText('本地持久化方案表现')
+    expect(cardTitle).toBeInTheDocument()
+
+    const deleteBtn = screen.getByRole('button', { name: '删除随记 本地持久化方案表现' })
+    expect(deleteBtn).toBeInTheDocument()
+
+    await user.click(deleteBtn)
+
+    // 应该在删除延时后彻底从 DOM 移除
+    await waitFor(() => {
+      expect(screen.queryByText('本地持久化方案表现')).not.toBeInTheDocument()
+    })
   })
 })
