@@ -623,18 +623,6 @@ export const NotesPage = (): React.JSX.Element => {
       aria-label="自由笔记素材池页面"
       className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar px-1 lg:px-2 [scrollbar-gutter:stable]"
     >
-      {/* 顶部标题栏 */}
-      <header className="flex flex-col gap-1 flex-shrink-0">
-        <div className="flex items-center gap-2 text-xs font-mono tracking-widest text-white/40">
-          <span>LIBRARY</span>
-          <span>/</span>
-          <span>NOTES</span>
-        </div>
-        <h1 className="text-lg font-bold tracking-tight text-white">
-          自由笔记素材池
-        </h1>
-      </header>
-
       {/* 笔记页面主体滚动区域 */}
       <div className="flex-1 flex flex-col gap-3 pr-1">
         {/* 顶部指标卡片 */}

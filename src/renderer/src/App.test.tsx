@@ -21,15 +21,15 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getByText('MEMORY CURATOR')).toBeInTheDocument()
-    expect(screen.getByText('DAILY')).toBeInTheDocument()
-    expect(screen.getByText('LIBRARY')).toBeInTheDocument()
-    expect(screen.getByText('CURATION')).toBeInTheDocument()
+    expect(screen.getAllByText('DAILY')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('LIBRARY')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('CURATION')[0]).toBeInTheDocument()
     expect(screen.getByText('计划 / 随记 / 日记')).toBeInTheDocument()
     expect(screen.queryByLabelText('右侧策展栏')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '折叠左侧导航栏' }))
     expect(screen.queryByText('MEMORY CURATOR')).not.toBeInTheDocument()
-    expect(screen.queryByText('DAILY')).not.toBeInTheDocument()
+    expect(screen.getAllByText('DAILY')).toHaveLength(1)
     expect(screen.queryByText('LIBRARY')).not.toBeInTheDocument()
     expect(screen.queryByText('CURATION')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '展开左侧导航栏' })).toBeInTheDocument()
@@ -57,19 +57,19 @@ describe('App', () => {
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getByRole('heading', { name: 'Journal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '日记条目回看' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
-    expect(screen.getByRole('heading', { name: 'Weekly Review' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '周度策展' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Weekly Review/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Themes/ }))
-    expect(screen.getByRole('heading', { name: 'Themes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '长期主题追踪' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Themes/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Memories/ }))
-    expect(screen.getByRole('heading', { name: 'Memories' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '记忆片段关联' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Memories/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /People/ }))
@@ -96,7 +96,7 @@ describe('App', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(screen.getByRole('heading', { name: 'Journal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '日记条目回看' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
   })
 

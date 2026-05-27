@@ -43,6 +43,61 @@ export const App = (): React.JSX.Element => {
   // 当前中间主内容页面。
   const [activePage, setActivePage] = useState<SidebarPageId>(getPageFromPathname)
 
+  // 获取当前日期的 YYYY-MM-DD 字符串。
+  const getTodayDateString = (): string => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // 获取页面的分类名称。
+  const getPageCategory = (pageId: SidebarPageId): string => {
+    switch (pageId) {
+      case 'today':
+        return 'DAILY'
+      case 'notes':
+      case 'journal':
+      case 'todo':
+      case 'snippets':
+      case 'people':
+        return 'LIBRARY'
+      case 'weekly':
+      case 'themes':
+      case 'memories':
+        return 'CURATION'
+      default:
+        return 'DAILY'
+    }
+  }
+
+  // 获取页面的中文标题。
+  const getPageTitle = (pageId: SidebarPageId): string => {
+    switch (pageId) {
+      case 'today':
+        return '今天的计划、素材与主观记录'
+      case 'notes':
+        return '自由笔记素材池'
+      case 'journal':
+        return '日记条目回看'
+      case 'todo':
+        return '待办清单'
+      case 'snippets':
+        return '随手闪念随记'
+      case 'people':
+        return '人物关系档案'
+      case 'weekly':
+        return '周度策展'
+      case 'themes':
+        return '长期主题追踪'
+      case 'memories':
+        return '记忆片段关联'
+      default:
+        return ''
+    }
+  }
+
   // 监听 URL 路由 pathname 变化，确保与页面状态双向同步。
   useEffect(() => {
     const handlePopState = () => {
@@ -102,7 +157,30 @@ export const App = (): React.JSX.Element => {
         />
 
         {/* 中间主工作区 */}
-        {renderActivePage()}
+        <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden min-w-0">
+          {/* 固定的顶部栏 */}
+          <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-white/30">//</span>
+              <span className="text-white/40 font-bold uppercase tracking-wider">{getPageCategory(activePage)}</span>
+              <span className="text-white/20">/</span>
+              <span className="text-white/60 font-medium">{activePage}</span>
+              <span className="text-white/20">·</span>
+              <h1 className="text-white/80 font-normal">
+                {getPageTitle(activePage)}
+              </h1>
+            </div>
+            {activePage === 'today' && (
+              <div className="text-xs font-mono text-white/45 bg-white/5 px-2 py-0.5 rounded-[4px]">
+                {getTodayDateString()}
+              </div>
+            )}
+          </header>
+
+          <div className="flex-1 min-h-0">
+            {renderActivePage()}
+          </div>
+        </div>
       </main>
     </ToastProvider>
   )
