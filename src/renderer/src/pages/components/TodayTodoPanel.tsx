@@ -1,20 +1,40 @@
 import type React from "react";
 import { useRef, useState } from "react";
-import { CheckSquare, ClipboardList, Plus, Square, Trash2, ArrowUpDown, HelpCircle } from "lucide-react";
+import {
+  ArrowUpDown,
+  CheckSquare,
+  ClipboardList,
+  HelpCircle,
+  Plus,
+  Square,
+  Trash2,
+} from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import {
   getNextTodoPriority,
-  sortTodoItems,
   type TodoItem,
   type TodoPriority,
 } from "@renderer/pages/components/todoShared";
 
-// Todo 面板属性，交由页面层托管最终列表状态。
+// Todo 面板属性，交由页面层托管真实持久化状态。
 interface TodayTodoPanelProps {
   // 当前待办列表。
   todos: TodoItem[];
-  // 页面层待办状态更新器。
-  setTodos: React.Dispatch<React.SetStateAction<TodoItem[]>>;
+  // 是否正在加载。
+  isLoading: boolean;
+  // 当前错误文案。
+  errorMessage: string | null;
+  // 新建待办回调。
+  onCreateTodo: (draft: { text: string; priority: TodoPriority }) => Promise<boolean>;
+  // 更新待办回调。
+  onUpdateTodo: (
+    id: string,
+    patch: { text: string; priority: TodoPriority; completed: boolean },
+  ) => Promise<boolean>;
+  // 删除待办回调。
+  onDeleteTodo: (id: string) => Promise<boolean>;
+  // 手动排序回调。
+  onSortTodos: () => Promise<boolean>;
 }
 
 // 新建待办草稿，仅保留必要字段。
@@ -61,7 +81,12 @@ const getPriorityClassName = (
  */
 export const TodayTodoPanel = ({
   todos,
-  setTodos,
+  isLoading,
+  errorMessage,
+  onCreateTodo,
+  onUpdateTodo,
+  onDeleteTodo,
+  onSortTodos,
 }: TodayTodoPanelProps): React.JSX.Element => {
   // 快速录入草稿。
   const [composerDraft, setComposerDraft] = useState<TodoComposerDraft>({
@@ -77,13 +102,6 @@ export const TodayTodoPanel = ({
 
   // 已完成统计，避免重复遍历表达式散落在 JSX 里。
   const completedCount = todos.filter((todo) => todo.completed).length;
-
-  /**
-   * 手动排序待办列表：未完成优先，其次按优先级权重。
-   */
-  const handleManualSort = (): void => {
-    setTodos((currentTodos) => sortTodoItems(currentTodos));
-  };
 
   /**
    * 聚焦快速录入框，维持主流列表的单入口添加体验。
@@ -105,21 +123,22 @@ export const TodayTodoPanel = ({
   /**
    * 提交一条新的待办。
    */
-  const handleAddTodo = (): void => {
+  const handleAddTodo = async (): Promise<void> => {
     const nextText = composerDraft.text.trim();
 
     if (!nextText) {
       return;
     }
 
-    const nextTodo: TodoItem = {
-      id: `todo-${Date.now()}`,
+    const isCreated = await onCreateTodo({
       text: nextText,
-      completed: false,
       priority: composerDraft.priority,
-    };
+    });
 
-    setTodos((currentTodos) => [nextTodo, ...currentTodos]);
+    if (!isCreated) {
+      return;
+    }
+
     setComposerDraft({
       text: "",
       priority: composerDraft.priority,
@@ -130,25 +149,23 @@ export const TodayTodoPanel = ({
   /**
    * 切换待办完成状态。
    */
-  const handleToggleTodo = (id: string): void => {
-    setTodos((currentTodos) =>
-      currentTodos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
-      ),
-    );
+  const handleToggleTodo = async (todo: TodoItem): Promise<void> => {
+    await onUpdateTodo(todo.id, {
+      text: todo.text,
+      priority: todo.priority,
+      completed: !todo.completed,
+    });
   };
 
   /**
    * 直接切换单条待办的优先级，无需进入编辑态。
    */
-  const handleCycleTodoPriority = (id: string): void => {
-    setTodos((currentTodos) =>
-      currentTodos.map((todo) =>
-        todo.id === id
-          ? { ...todo, priority: getNextTodoPriority(todo.priority) }
-          : todo,
-      ),
-    );
+  const handleCycleTodoPriority = async (todo: TodoItem): Promise<void> => {
+    await onUpdateTodo(todo.id, {
+      text: todo.text,
+      priority: getNextTodoPriority(todo.priority),
+      completed: todo.completed,
+    });
   };
 
   /**
@@ -164,7 +181,7 @@ export const TodayTodoPanel = ({
   /**
    * 提交行内编辑结果；空文本时保持原值，避免误删。
    */
-  const handleCommitEdit = (): void => {
+  const handleCommitEdit = async (todo: TodoItem): Promise<void> => {
     if (!editingTodo) {
       return;
     }
@@ -176,11 +193,16 @@ export const TodayTodoPanel = ({
       return;
     }
 
-    setTodos((currentTodos) =>
-      currentTodos.map((todo) =>
-        todo.id === editingTodo.id ? { ...todo, text: nextText } : todo,
-      ),
-    );
+    const isUpdated = await onUpdateTodo(todo.id, {
+      text: nextText,
+      priority: todo.priority,
+      completed: todo.completed,
+    });
+
+    if (!isUpdated) {
+      return;
+    }
+
     setEditingTodo(null);
   };
 
@@ -190,12 +212,15 @@ export const TodayTodoPanel = ({
   const handleDeleteTodo = (id: string): void => {
     setDeletingIds((currentIds) => [...currentIds, id]);
 
-    setTimeout(() => {
-      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
-      setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+    window.setTimeout(async () => {
+      try {
+        await onDeleteTodo(id);
+      } finally {
+        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
 
-      if (editingTodo?.id === id) {
-        setEditingTodo(null);
+        if (editingTodo?.id === id) {
+          setEditingTodo(null);
+        }
       }
     }, 240);
   };
@@ -222,7 +247,7 @@ export const TodayTodoPanel = ({
           <IconButton
             aria-label="一键排序"
             className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-            onClick={handleManualSort}
+            onClick={() => void onSortTodos()}
             title="手动排序"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
@@ -241,7 +266,6 @@ export const TodayTodoPanel = ({
             {composerDraft.priority}
           </button>
           <div className="relative min-w-0 flex-1">
-            {/* Ghost div to size the composer container */}
             <div
               className="invisible text-sm px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
               aria-hidden="true"
@@ -249,7 +273,6 @@ export const TodayTodoPanel = ({
             >
               {composerDraft.text || " "}
             </div>
-            {/* Actual dynamic textarea */}
             <textarea
               ref={composerInputRef}
               className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
@@ -266,7 +289,7 @@ export const TodayTodoPanel = ({
                 }
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  handleAddTodo();
+                  void handleAddTodo();
                 }
                 if (event.key === "Tab") {
                   event.preventDefault();
@@ -282,11 +305,29 @@ export const TodayTodoPanel = ({
             aria-label="添加待办"
             className="bg-white/6 text-white/55 hover:bg-white/12 hover:text-white"
             disabled={!composerDraft.text.trim()}
-            onClick={handleAddTodo}
+            onClick={() => void handleAddTodo()}
           >
             <Plus className="h-3.5 w-3.5" />
           </IconButton>
         </div>
+
+        {errorMessage ? (
+          <div className="rounded-[6px] border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs text-rose-300">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <div className="rounded-[6px] border border-white/5 bg-black/20 px-3 py-3 text-xs text-white/35">
+            正在读取今日待办...
+          </div>
+        ) : null}
+
+        {!isLoading && todos.length === 0 ? (
+          <div className="rounded-[6px] border border-dashed border-white/8 bg-black/20 px-3 py-4 text-xs text-white/30">
+            今天还没有待办，先写下第一条。
+          </div>
+        ) : null}
 
         {todos.map((todo) => {
           const isEditing = editingTodo?.id === todo.id;
@@ -307,27 +348,40 @@ export const TodayTodoPanel = ({
               <button
                 aria-label={todo.completed ? "标记为未完成" : "标记为已完成"}
                 className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
-                  todo.completed ? "text-emerald-500" : "text-white/35 hover:text-white"
+                  todo.completed
+                    ? "text-emerald-500"
+                    : "text-white/35 hover:text-white"
                 }`}
                 type="button"
-                onClick={() => handleToggleTodo(todo.id)}
+                onClick={() => void handleToggleTodo(todo)}
               >
-                <Square className={`absolute h-4 w-4 transition-all duration-300 ease-out ${todo.completed ? 'scale-0 opacity-0 rotate-45' : 'scale-100 opacity-100 rotate-0'}`} />
-                <CheckSquare className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${todo.completed ? 'scale-100 opacity-100 rotate-0' : 'scale-0 opacity-0 -rotate-45'}`} />
+                <Square
+                  className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
+                    todo.completed
+                      ? "scale-0 opacity-0 rotate-45"
+                      : "scale-100 opacity-100 rotate-0"
+                  }`}
+                />
+                <CheckSquare
+                  className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${
+                    todo.completed
+                      ? "scale-100 opacity-100 rotate-0"
+                      : "scale-0 opacity-0 -rotate-45"
+                  }`}
+                />
               </button>
 
               <button
                 aria-label={`切换 ${todo.text} 的优先级`}
                 className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(todo.priority, todo.completed)}`}
                 type="button"
-                onClick={() => handleCycleTodoPriority(todo.id)}
+                onClick={() => void handleCycleTodoPriority(todo)}
               >
                 {todo.priority}
               </button>
 
               {isEditing ? (
                 <div className="relative min-w-0 flex-1 -ml-1.5">
-                  {/* Ghost div to size the parent container */}
                   <div
                     className="invisible text-sm px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-0"
                     aria-hidden="true"
@@ -335,12 +389,11 @@ export const TodayTodoPanel = ({
                   >
                     {editingTodo.text || " "}
                   </div>
-                  {/* Absolute textarea */}
                   <textarea
                     autoFocus
                     className="absolute inset-0 w-full h-full min-w-0 rounded-[4px] border border-transparent bg-transparent px-1.5 py-0 text-sm text-white outline-none focus:border-transparent resize-none overflow-hidden min-h-0"
                     style={{ fontSize: "13px", lineHeight: "19.5px" }}
-                    onBlur={handleCommitEdit}
+                    onBlur={() => void handleCommitEdit(todo)}
                     onChange={(event) =>
                       setEditingTodo((currentDraft) =>
                         currentDraft
@@ -355,11 +408,11 @@ export const TodayTodoPanel = ({
                       }
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
-                        handleCommitEdit();
+                        void handleCommitEdit(todo);
                       }
                       if (event.key === "Tab") {
                         event.preventDefault();
-                        handleCycleTodoPriority(todo.id);
+                        void handleCycleTodoPriority(todo);
                       }
 
                       if (event.key === "Escape") {

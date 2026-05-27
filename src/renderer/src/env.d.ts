@@ -5,6 +5,17 @@ import type { ElectronAPI } from '@electron-toolkit/preload'
 // 笔记来源类型。
 type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
 
+// 工作台待办优先级类型。
+type WorkspaceTodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+
+// 工作台日记保存载荷类型。
+type WorkspaceJournalSavePayload = {
+  // 日记所属日期。
+  entryDate: string
+  // 日记正文。
+  content: string
+}
+
 // 笔记草稿载荷类型。
 type NoteDraftPayload = {
   // 笔记标题。
@@ -29,6 +40,118 @@ type NoteMaterialItem = NoteDraftPayload & {
   clue?: string
 }
 
+// 工作台待办创建载荷类型。
+type WorkspaceTodoCreatePayload = {
+  // 待办所属日期。
+  entryDate: string
+  // 待办文本。
+  text: string
+  // 待办优先级。
+  priority: WorkspaceTodoPriority
+}
+
+// 工作台待办更新载荷类型。
+type WorkspaceTodoUpdatePayload = {
+  // 待办文本。
+  text: string
+  // 待办优先级。
+  priority: WorkspaceTodoPriority
+  // 是否完成。
+  completed: boolean
+}
+
+// 工作台待办排序载荷类型。
+type WorkspaceTodoSortPayload = {
+  // 待办所属日期。
+  entryDate: string
+  // 排序后的待办 ID 列表。
+  ids: string[]
+}
+
+// 页面使用的工作台待办类型。
+type WorkspaceTodoItem = {
+  // 待办唯一标识。
+  id: string
+  // 待办所属日期。
+  entryDate: string
+  // 待办文本。
+  text: string
+  // 是否完成。
+  completed: boolean
+  // 当前优先级。
+  priority: WorkspaceTodoPriority
+  // 排序序号。
+  sortOrder: number
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
+// 工作台片段创建载荷类型。
+type WorkspaceSnippetCreatePayload = {
+  // 片段所属日期。
+  entryDate: string
+  // 片段标题。
+  title: string
+  // 片段正文。
+  content: string
+  // 片段标签列表。
+  tags: string[]
+}
+
+// 工作台片段更新载荷类型。
+type WorkspaceSnippetUpdatePayload = {
+  // 片段标题。
+  title: string
+  // 片段正文。
+  content: string
+  // 片段标签列表。
+  tags: string[]
+}
+
+// 页面使用的工作台片段类型。
+type WorkspaceSnippetItem = {
+  // 片段唯一标识。
+  id: string
+  // 片段所属日期。
+  entryDate: string
+  // 片段标题。
+  title: string
+  // 片段正文。
+  content: string
+  // 片段标签列表。
+  tags: string[]
+  // 列表展示时间。
+  time: string
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
+// 页面使用的工作台日记类型。
+type WorkspaceJournalItem = {
+  // 日记所属日期。
+  entryDate: string
+  // 日记正文。
+  content: string
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
+// 单日工作台数据类型。
+type WorkspaceDayData = {
+  // 当日待办列表。
+  todos: WorkspaceTodoItem[]
+  // 当日片段列表。
+  snippets: WorkspaceSnippetItem[]
+  // 当日日记。
+  journal: WorkspaceJournalItem | null
+}
+
 // 渲染进程安全 API 类型。
 type AppAPI = {
   // Notes 页面 API。
@@ -41,6 +164,29 @@ type AppAPI = {
     update: (id: string, draft: NoteDraftPayload) => Promise<NoteMaterialItem>
     // 删除笔记。
     delete: (id: string) => Promise<void>
+  }
+  // Today 工作台 API。
+  workspace: {
+    // 读取指定日期的工作台数据。
+    listDay: (entryDate: string) => Promise<WorkspaceDayData>
+    // 保存日记。
+    saveJournal: (draft: WorkspaceJournalSavePayload) => Promise<WorkspaceJournalItem>
+    // 删除日记。
+    deleteJournal: (entryDate: string) => Promise<void>
+    // 创建待办。
+    createTodo: (draft: WorkspaceTodoCreatePayload) => Promise<WorkspaceTodoItem>
+    // 更新待办。
+    updateTodo: (id: string, draft: WorkspaceTodoUpdatePayload) => Promise<WorkspaceTodoItem>
+    // 删除待办。
+    deleteTodo: (id: string) => Promise<void>
+    // 重排待办。
+    sortTodos: (draft: WorkspaceTodoSortPayload) => Promise<WorkspaceTodoItem[]>
+    // 创建片段。
+    createSnippet: (draft: WorkspaceSnippetCreatePayload) => Promise<WorkspaceSnippetItem>
+    // 更新片段。
+    updateSnippet: (id: string, draft: WorkspaceSnippetUpdatePayload) => Promise<WorkspaceSnippetItem>
+    // 删除片段。
+    deleteSnippet: (id: string) => Promise<void>
   }
 }
 

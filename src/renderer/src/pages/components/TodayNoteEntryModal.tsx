@@ -5,10 +5,15 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 
 export type NoteItem = {
+  // 片段唯一标识。
   id: string;
+  // 片段标题。
   title: string;
+  // 片段正文。
   content: string;
+  // 片段标签列表。
   tags: string[];
+  // 列表展示时间。
   time: string;
 };
 
@@ -18,7 +23,7 @@ type TodayNoteEntryModalProps = {
   // 关闭弹窗回调
   onClose: () => void;
   // 保存回调，参数支持带 id 的更新，不带 id 的新建
-  onSave: (note: { id?: string; title: string; content: string; tags: string[] }) => void;
+  onSave: (note: { id?: string; title: string; content: string; tags: string[] }) => Promise<boolean>;
 };
 
 /**
@@ -30,10 +35,17 @@ export const TodayNoteEntryModal = ({
   onClose,
   onSave,
 }: TodayNoteEntryModalProps): React.JSX.Element => {
+  // 是否正在保存。
+  const [isSaving, setIsSaving] = useState(false);
+  // 当前是否为编辑态。
   const isEdit = !!note;
+  // 标题输入值。
   const [title, setTitle] = useState(note?.title ?? "");
+  // 内容输入值。
   const [content, setContent] = useState(note?.content ?? "");
+  // 标签列表。
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
+  // 标签输入草稿。
   const [tagInput, setTagInput] = useState<string>("");
 
   useEffect(() => {
@@ -47,17 +59,29 @@ export const TodayNoteEntryModal = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleSubmit = (): void => {
+  const handleSubmit = async (): Promise<void> => {
     if (!title.trim() && !content.trim()) {
       return;
     }
-    onSave({
-      id: note?.id,
-      title: title.trim(),
-      content: content.trim(),
-      tags,
-    });
-    onClose();
+
+    setIsSaving(true);
+
+    try {
+      const isSaved = await onSave({
+        id: note?.id,
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+      });
+
+      if (!isSaved) {
+        return;
+      }
+
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -157,17 +181,17 @@ export const TodayNoteEntryModal = ({
 
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
           <span className="font-mono text-xs text-white/30">
-            ESC 关闭 / 本地草稿待接入
+            ESC 关闭 / 已接入本地持久化
           </span>
           <IconButton
             iconOnly={false}
             highlighted
             className="px-3 py-1.5 text-xs font-bold gap-1.5"
-            disabled={!title.trim() && !content.trim()}
-            onClick={handleSubmit}
+            disabled={isSaving || (!title.trim() && !content.trim())}
+            onClick={() => void handleSubmit()}
           >
             <Plus className="h-3 w-3" />
-            保存随记卡片
+            {isSaving ? "保存中..." : "保存随记卡片"}
           </IconButton>
         </div>
       </section>

@@ -8,12 +8,16 @@ import type { NoteItem } from "./TodayNoteEntryModal";
 interface TodaySnippetsPanelProps {
   // 自由随记卡片列表
   notes: NoteItem[];
+  // 是否正在加载
+  isLoading: boolean;
+  // 当前错误文案
+  errorMessage: string | null;
   // 新增随记卡片回调
   onAddNote: () => void;
   // 编辑/查看随记卡片回调
   onEditNote: (note: NoteItem) => void;
   // 删除随记卡片回调
-  onDeleteNote: (id: string) => void;
+  onDeleteNote: (id: string) => Promise<boolean>;
 }
 
 /**
@@ -22,6 +26,8 @@ interface TodaySnippetsPanelProps {
  */
 export const TodaySnippetsPanel = ({
   notes,
+  isLoading,
+  errorMessage,
   onAddNote,
   onEditNote,
   onDeleteNote,
@@ -36,9 +42,12 @@ export const TodaySnippetsPanel = ({
     event.stopPropagation();
     setDeletingIds((currentIds) => [...currentIds, id]);
 
-    setTimeout(() => {
-      onDeleteNote(id);
-      setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+    window.setTimeout(async () => {
+      try {
+        await onDeleteNote(id);
+      } finally {
+        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+      }
     }, 240);
   };
 
@@ -69,6 +78,24 @@ export const TodaySnippetsPanel = ({
       </div>
 
       <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+        {errorMessage ? (
+          <div className="rounded-[6px] border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs text-rose-300">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <div className="rounded-[6px] border border-white/5 bg-black/20 px-3 py-3 text-xs text-white/35">
+            正在读取今日片段...
+          </div>
+        ) : null}
+
+        {!isLoading && notes.length === 0 ? (
+          <div className="rounded-[6px] border border-dashed border-white/8 bg-black/20 px-3 py-4 text-xs text-white/30">
+            今天还没有片段，捕捉第一条瞬时想法。
+          </div>
+        ) : null}
+
         {notes.map((note) => {
           const isDeleting = deletingIds.includes(note.id);
 

@@ -1,0 +1,405 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import type { WorkspaceJournalRow, WorkspaceSnippetRow, WorkspaceTodoRow } from '../db/schema'
+import { createWorkspaceService, type DatabaseConnection, type DatabaseStatement } from './workspaceService'
+
+// 测试数据库连接。
+let sqlite: MemoryWorkspaceDatabase
+
+// 内存 Workspace 数据库。
+class MemoryWorkspaceDatabase implements DatabaseConnection {
+  // 内存待办行。
+  private todoRows: WorkspaceTodoRow[] = []
+
+  // 内存片段行。
+  private snippetRows: WorkspaceSnippetRow[] = []
+
+  // 内存日记行。
+  private journalRows: WorkspaceJournalRow[] = []
+
+  /**
+   * 准备内存 SQL 语句。
+   */
+  prepare = (sql: string): DatabaseStatement => {
+    if (
+      sql.startsWith(
+        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY'
+      )
+    ) {
+      return {
+        all: (...values) =>
+          this.todoRows
+            .filter((row) => row.entry_date === values[0])
+            .sort(
+              (left, right) =>
+                left.completed - right.completed ||
+                left.sort_order - right.sort_order ||
+                left.created_at.localeCompare(right.created_at)
+            ),
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('SELECT MAX(sort_order) AS max_sort_order FROM todos WHERE entry_date = ?')) {
+      return {
+        all: () => [],
+        get: (...values) => {
+          const rows = this.todoRows.filter((row) => row.entry_date === values[0])
+          const maxSortOrder = rows.length === 0 ? null : Math.max(...rows.map((row) => row.sort_order))
+
+          return { max_sort_order: maxSortOrder }
+        },
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('INSERT INTO todos')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows.push({
+            id: values[0] as string,
+            entry_date: values[1] as string,
+            text: values[2] as string,
+            priority: values[3] as WorkspaceTodoRow['priority'],
+            completed: values[4] as number,
+            sort_order: values[5] as number,
+            created_at: values[6] as string,
+            updated_at: values[7] as string
+          })
+        }
+      }
+    }
+
+    if (
+      sql.startsWith(
+        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
+      )
+    ) {
+      return {
+        all: () => [],
+        get: (...values) => this.todoRows.find((row) => row.id === values[0]),
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('UPDATE todos SET text = ?, priority = ?, completed = ?, updated_at = ? WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows = this.todoRows.map((row) =>
+            row.id === values[4]
+              ? {
+                  ...row,
+                  text: values[0] as string,
+                  priority: values[1] as WorkspaceTodoRow['priority'],
+                  completed: values[2] as number,
+                  updated_at: values[3] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
+    if (sql.startsWith('DELETE FROM todos WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows = this.todoRows.filter((row) => row.id !== values[0])
+        }
+      }
+    }
+
+    if (sql.startsWith('UPDATE todos SET sort_order = ?, updated_at = ? WHERE id = ? AND entry_date = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows = this.todoRows.map((row) =>
+            row.id === values[2] && row.entry_date === values[3]
+              ? {
+                  ...row,
+                  sort_order: values[0] as number,
+                  updated_at: values[1] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
+    if (
+      sql.startsWith(
+        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE entry_date = ? ORDER BY'
+      )
+    ) {
+      return {
+        all: (...values) =>
+          this.snippetRows
+            .filter((row) => row.entry_date === values[0])
+            .sort((left, right) => right.created_at.localeCompare(left.created_at) || right.id.localeCompare(left.id)),
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('INSERT INTO snippets')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.snippetRows.push({
+            id: values[0] as string,
+            entry_date: values[1] as string,
+            title: values[2] as string,
+            content: values[3] as string,
+            tags: values[4] as string,
+            created_at: values[5] as string,
+            updated_at: values[6] as string
+          })
+        }
+      }
+    }
+
+    if (
+      sql.startsWith(
+        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
+      )
+    ) {
+      return {
+        all: () => [],
+        get: (...values) => this.snippetRows.find((row) => row.id === values[0]),
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('UPDATE snippets SET title = ?, content = ?, tags = ?, updated_at = ? WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.snippetRows = this.snippetRows.map((row) =>
+            row.id === values[4]
+              ? {
+                  ...row,
+                  title: values[0] as string,
+                  content: values[1] as string,
+                  tags: values[2] as string,
+                  updated_at: values[3] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
+    if (sql.startsWith('DELETE FROM snippets WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.snippetRows = this.snippetRows.filter((row) => row.id !== values[0])
+        }
+      }
+    }
+
+    if (sql.startsWith('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')) {
+      return {
+        all: () => [],
+        get: (...values) => this.journalRows.find((row) => row.entry_date === values[0]),
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('INSERT INTO journals')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.journalRows.push({
+            entry_date: values[0] as string,
+            content: values[1] as string,
+            created_at: values[2] as string,
+            updated_at: values[3] as string
+          })
+        }
+      }
+    }
+
+    if (sql.startsWith('UPDATE journals SET content = ?, updated_at = ? WHERE entry_date = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.journalRows = this.journalRows.map((row) =>
+            row.entry_date === values[2]
+              ? {
+                  ...row,
+                  content: values[0] as string,
+                  updated_at: values[1] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
+    if (sql.startsWith('DELETE FROM journals WHERE entry_date = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.journalRows = this.journalRows.filter((row) => row.entry_date !== values[0])
+        }
+      }
+    }
+
+    throw new Error(`未支持的测试 SQL: ${sql}`)
+  }
+}
+
+beforeEach(() => {
+  sqlite = new MemoryWorkspaceDatabase()
+})
+
+describe('workspaceService', () => {
+  it('只返回指定日期的工作台数据', () => {
+    const service = createWorkspaceService(sqlite)
+
+    const firstTodo = service.createTodo({
+      entryDate: '2026-05-27',
+      text: '今天的待办',
+      priority: 'P1'
+    })
+    service.createTodo({
+      entryDate: '2026-05-26',
+      text: '昨天的待办',
+      priority: 'P2'
+    })
+    const firstSnippet = service.createSnippet({
+      entryDate: '2026-05-27',
+      title: '今天的片段',
+      content: '今天的内容',
+      tags: ['今天']
+    })
+    const firstJournal = service.saveJournal({
+      entryDate: '2026-05-27',
+      content: '今天的日记'
+    })
+    service.createSnippet({
+      entryDate: '2026-05-26',
+      title: '昨天的片段',
+      content: '昨天的内容',
+      tags: ['昨天']
+    })
+    service.saveJournal({
+      entryDate: '2026-05-26',
+      content: '昨天的日记'
+    })
+
+    const result = service.listDay('2026-05-27')
+
+    expect(result.todos).toEqual([firstTodo])
+    expect(result.snippets).toEqual([firstSnippet])
+    expect(result.journal).toEqual(firstJournal)
+  })
+
+  it('支持创建、更新、删除和重排待办', () => {
+    const service = createWorkspaceService(sqlite)
+
+    const firstTodo = service.createTodo({
+      entryDate: '2026-05-27',
+      text: '整理今天的任务',
+      priority: 'P1'
+    })
+    const secondTodo = service.createTodo({
+      entryDate: '2026-05-27',
+      text: '补充新的任务',
+      priority: 'P2'
+    })
+
+    expect(firstTodo.sortOrder).toBe(0)
+    expect(secondTodo.sortOrder).toBe(1)
+
+    const updatedTodo = service.updateTodo(firstTodo.id, {
+      text: '整理今天的核心任务',
+      priority: 'P0',
+      completed: true
+    })
+
+    expect(updatedTodo.text).toBe('整理今天的核心任务')
+    expect(updatedTodo.priority).toBe('P0')
+    expect(updatedTodo.completed).toBe(true)
+
+    const reordered = service.reorderTodos({
+      entryDate: '2026-05-27',
+      ids: [secondTodo.id, firstTodo.id]
+    })
+
+    expect(reordered.map((todo) => ({ id: todo.id, sortOrder: todo.sortOrder }))).toEqual([
+      { id: secondTodo.id, sortOrder: 0 },
+      { id: firstTodo.id, sortOrder: 1 }
+    ])
+
+    service.deleteTodo(firstTodo.id)
+
+    expect(service.listDay('2026-05-27').todos).toEqual([reordered[0]])
+  })
+
+  it('支持创建、更新和删除片段', () => {
+    const service = createWorkspaceService(sqlite)
+
+    const created = service.createSnippet({
+      entryDate: '2026-05-27',
+      title: '随手片段',
+      content: '记录一个想法',
+      tags: ['灵感', '本地']
+    })
+
+    expect(created.id).toMatch(/^ws-/)
+    expect(created.time).toMatch(/^\d{2}:\d{2}$/)
+
+    const updated = service.updateSnippet(created.id, {
+      title: '更新后的片段',
+      content: '记录一个新想法',
+      tags: ['更新']
+    })
+
+    expect(updated.title).toBe('更新后的片段')
+    expect(updated.content).toBe('记录一个新想法')
+    expect(updated.tags).toEqual(['更新'])
+
+    service.deleteSnippet(created.id)
+
+    expect(service.listDay('2026-05-27').snippets).toEqual([])
+  })
+
+  it('支持创建、更新和删除日记', () => {
+    const service = createWorkspaceService(sqlite)
+
+    const created = service.saveJournal({
+      entryDate: '2026-05-27',
+      content: '今天的第一版日记'
+    })
+
+    expect(created.entryDate).toBe('2026-05-27')
+    expect(created.content).toBe('今天的第一版日记')
+
+    const updated = service.saveJournal({
+      entryDate: '2026-05-27',
+      content: '今天的最终版日记'
+    })
+
+    expect(updated.entryDate).toBe('2026-05-27')
+    expect(updated.content).toBe('今天的最终版日记')
+    expect(updated.createdAt).toBe(created.createdAt)
+
+    service.deleteJournal('2026-05-27')
+
+    expect(service.listDay('2026-05-27').journal).toBeNull()
+  })
+})
