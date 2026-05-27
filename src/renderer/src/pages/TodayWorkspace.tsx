@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
-import { CheckSquare, FileText, BookOpen, Brain } from "lucide-react";
-import { TodayNotesPanel } from "@renderer/pages/components/TodayNotesPanel";
+import { CheckSquare, StickyNote, BookOpen, Smile } from "lucide-react";
+import { TodayThoughtsPanel } from "@renderer/pages/components/TodayThoughtsPanel";
 import {
   TodayNoteEntryModal,
   type NoteItem,
@@ -11,7 +11,7 @@ import {
   type TodoItem,
   sortTodoItems,
 } from "@renderer/pages/components/todoShared";
-import { TodayJournalPanel } from "@renderer/pages/components/TodayJournalPanel";
+import { TodayJournalPanel, JOURNAL_DATA } from "@renderer/pages/components/TodayJournalPanel";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -23,8 +23,8 @@ type StatItem = {
   id: string;
   // 统计项名称。
   label: string;
-  // 统计数值。
-  value: number;
+  // 统计数值或文本状态。
+  value: number | string;
   // 显示图标。
   icon: React.ComponentType<{ className?: string }>;
 };
@@ -36,9 +36,9 @@ type StatItem = {
 // 顶部卡片今日数据统计。
 const TODAY_STATS: StatItem[] = [
   { id: "todo", label: "待办任务", value: 5, icon: CheckSquare },
-  { id: "notes", label: "自由随记", value: 3, icon: FileText },
-  { id: "journal", label: "日记段落", value: 1, icon: BookOpen },
-  { id: "clues", label: "关联线索", value: 4, icon: Brain },
+  { id: "notes", label: "自由随记", value: 3, icon: StickyNote },
+  { id: "journal", label: "日记字数", value: 0, icon: BookOpen },
+  { id: "clues", label: "心情预测", value: "平静", icon: Smile },
 ];
 
 // 今日待办任务静态列表。
@@ -122,6 +122,18 @@ export const TodayWorkspace = (): React.JSX.Element => {
     sortTodoItems(TODO_ITEMS),
   );
 
+  // 今日日记正文状态。
+  const [journalContent, setJournalContent] = useState<string>(
+    JOURNAL_DATA.content,
+  );
+
+  // 简单的心情预测计算属性（根据日记文本中是否含特定关键词动态推断）。
+  const predictedMood = journalContent.includes("焦虑")
+    ? "波动 / 焦虑"
+    : journalContent.includes("雨")
+      ? "平静 / 专注"
+      : "良好 / 稳定";
+
   /**
    * 保存或更新随记卡片
    */
@@ -195,7 +207,11 @@ export const TodayWorkspace = (): React.JSX.Element => {
                       ? todos.length
                       : stat.id === "notes"
                         ? notes.length
-                        : stat.value}
+                        : stat.id === "journal"
+                          ? journalContent.length
+                          : stat.id === "clues"
+                            ? predictedMood
+                            : stat.value}
                   </span>
                 </div>
                 <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
@@ -210,8 +226,8 @@ export const TodayWorkspace = (): React.JSX.Element => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
           <TodayTodoPanel setTodos={setTodos} todos={todos} />
 
-          {/* 右侧：自由笔记 */}
-          <TodayNotesPanel
+          {/* 右侧：自由随记 */}
+          <TodayThoughtsPanel
             notes={notes}
             onAddNote={() => {
               setEditingNote(null);
@@ -230,7 +246,10 @@ export const TodayWorkspace = (): React.JSX.Element => {
         </div>
 
         {/* 4. 日记 */}
-        <TodayJournalPanel />
+        <TodayJournalPanel
+          journalContent={journalContent}
+          onJournalContentChange={setJournalContent}
+        />
       </div>
       {isNoteModalOpen ? (
         <TodayNoteEntryModal

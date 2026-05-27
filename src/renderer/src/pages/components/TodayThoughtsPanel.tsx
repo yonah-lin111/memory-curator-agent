@@ -1,11 +1,11 @@
 import type React from "react";
 import { useState } from "react";
-import { FileText, Plus, Trash2, Tag as TagIcon } from "lucide-react";
+import { StickyNote, Plus, Trash2, Tag as TagIcon } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
 
-interface TodayNotesPanelProps {
+interface TodayThoughtsPanelProps {
   // 自由随记卡片列表
   notes: NoteItem[];
   // 新增随记卡片回调
@@ -17,15 +17,15 @@ interface TodayNotesPanelProps {
 }
 
 /**
- * TodayNotesPanel - 自由随记卡片面板
+ * TodayThoughtsPanel - 自由随记卡片面板
  * 统一管理卡片展示、滚动条限制，支持点击卡片打开编辑弹窗及点击新增、删除按钮。
  */
-export const TodayNotesPanel = ({
+export const TodayThoughtsPanel = ({
   notes,
   onAddNote,
   onEditNote,
   onDeleteNote,
-}: TodayNotesPanelProps): React.JSX.Element => {
+}: TodayThoughtsPanelProps): React.JSX.Element => {
   // 正在执行删除动画的随记 ID 列表
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
@@ -46,7 +46,7 @@ export const TodayNotesPanel = ({
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
         <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-white/60" />
+          <StickyNote className="h-4 w-4 text-white/60" />
           <span className="text-sm font-bold tracking-wide text-white/80">
             自由随记卡片
           </span>

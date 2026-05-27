@@ -44,22 +44,28 @@ type JournalEntry = {
 };
 
 // 今日完整主观日记。
-const JOURNAL_DATA: JournalEntry = {
+export const JOURNAL_DATA: JournalEntry = {
   time: "21:45",
   content:
     "今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱朝八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片和微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。",
   mood: "平静 / 专注",
 };
 
+// TodayJournalPanel 组件的 Props 接口定义。
+interface TodayJournalPanelProps {
+  // 今日日记的正文。
+  journalContent: string;
+  // 日记内容改变时的回调函数。
+  onJournalContentChange: (value: string) => void;
+}
+
 /**
  * TodayJournalPanel - 日记与主观表达面板组件
  */
-export const TodayJournalPanel = (): React.JSX.Element => {
-  // 今日日记正文状态。
-  const [journalContent, setJournalContent] = useState<string>(
-    JOURNAL_DATA.content,
-  );
-
+export const TodayJournalPanel = ({
+  journalContent,
+  onJournalContentChange,
+}: TodayJournalPanelProps): React.JSX.Element => {
   // 日记 MDEditor 预览模式。
   const [journalPreviewMode, setJournalPreviewMode] = useState<
     "edit" | "preview" | "live"
@@ -113,7 +119,7 @@ export const TodayJournalPanel = (): React.JSX.Element => {
           }}
           value={journalContent}
           visibleDragbar={false}
-          onChange={(value) => setJournalContent(value ?? "")}
+          onChange={(value) => onJournalContentChange(value ?? "")}
         />
       </div>
       <div className="flex items-center justify-end">
