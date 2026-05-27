@@ -1,10 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import MDEditor from "@uiw/react-md-editor";
-import type { ICommand } from "@uiw/react-md-editor/commands";
-import { getCommands } from "@uiw/react-md-editor/commands-cn";
-import "@uiw/react-md-editor/markdown-editor.css";
-import { CheckSquare, FileText, BookOpen, Brain, Columns2 } from "lucide-react";
+import { CheckSquare, FileText, BookOpen, Brain } from "lucide-react";
 import { TodayNotesPanel } from "@renderer/pages/components/TodayNotesPanel";
 import {
   TodayNoteEntryModal,
@@ -15,33 +11,7 @@ import {
   type TodoItem,
   sortTodoItems,
 } from "@renderer/pages/components/todoShared";
-import { IconButton } from "@renderer/components/ui/IconButton";
-
-type MarkdownEditorThemeStyle = React.CSSProperties &
-  Record<`--${string}`, string>;
-
-// Markdown 编辑器黑色主题变量。
-const MARKDOWN_EDITOR_THEME_STYLE: MarkdownEditorThemeStyle = {
-  "--color-canvas-default": "#000000",
-  "--color-fg-default": "rgba(255,255,255,0.82)",
-  "--color-border-default": "rgba(255,255,255,0.1)",
-  "--color-neutral-muted": "rgba(255,255,255,0.08)",
-  "--color-accent-fg": "#ffffff",
-  "--color-danger-fg": "#ffffff",
-  "--md-editor-background-color": "#000000",
-  "--md-editor-box-shadow-color": "rgba(255,255,255,0.1)",
-  "--md-editor-font-family":
-    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-  borderRadius: "6px",
-  overflow: "hidden",
-};
-
-// Markdown 基础工具栏命令，移除默认帮助问号。
-const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
-  ...getCommands().filter(
-    (command) => command.name !== "help" && command.keyCommand !== "help",
-  ),
-];
+import { TodayJournalPanel } from "@renderer/pages/components/TodayJournalPanel";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -57,16 +27,6 @@ type StatItem = {
   value: number;
   // 显示图标。
   icon: React.ComponentType<{ className?: string }>;
-};
-
-// 今日主观日记类型，用于完整、私密的情感和思考记录。
-type JournalEntry = {
-  // 记录的具体时间。
-  time: string;
-  // 日记正文原文（保留主观表述不压缩）。
-  content: string;
-  // 用户自行记录的轻量级情绪与状态感知。
-  mood: string;
 };
 
 /* ==========================================
@@ -143,29 +103,11 @@ const NOTE_ITEMS: NoteItem[] = [
   },
 ];
 
-// 今日完整主观日记。
-const JOURNAL_DATA: JournalEntry = {
-  time: "21:45",
-  content:
-    "今天上海又下了小雨。在写完了 Today 工作台的布局后，看着黑色的背景板 and 克制的白色边框，有一种异样的平静。人脑里的记忆其实也是这样，乱七八糟，而我们需要一个外在的、数字化的“海马体”来帮我们整理。我把那些写在碎纸片和微信文件传输助手里的垃圾信息全都归档了，只留下了最重要的几条。今晚不需要焦虑，明天继续推进 AEON 神经关联图谱的设计。",
-  mood: "平静 / 专注",
-};
-
 /**
  * TodayWorkspace 组件 - 负责中间列 Today 主工作台。
  * 提供静态信息展示，保障小屏纵向流与大屏多栏的自适应响应。
  */
 export const TodayWorkspace = (): React.JSX.Element => {
-  // 今日日记正文状态。
-  const [journalContent, setJournalContent] = useState<string>(
-    JOURNAL_DATA.content,
-  );
-
-  // 日记 MDEditor 预览模式。
-  const [journalPreviewMode, setJournalPreviewMode] = useState<
-    "edit" | "preview" | "live"
-  >("edit");
-
   // 随记卡片列表状态。
   const [notes, setNotes] = useState<NoteItem[]>(NOTE_ITEMS);
 
@@ -288,62 +230,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         </div>
 
         {/* 4. 日记 */}
-        <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0 mb-1">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-white/60" />
-              <span className="text-sm font-bold tracking-wide text-white/80">
-                日记与主观表达
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs font-mono text-white/40">
-              <span>记录时间: {JOURNAL_DATA.time}</span>
-              <span>•</span>
-              <span className="text-emerald-400">
-                情绪感知: {JOURNAL_DATA.mood}
-              </span>
-              <span>•</span>
-              <IconButton
-                aria-label="切换双栏分屏预览"
-                className={`h-5 w-5 ${
-                  journalPreviewMode === "live"
-                    ? "bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                    : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                }`}
-                onClick={() => {
-                  setJournalPreviewMode((currentMode) =>
-                    currentMode === "live" ? "edit" : "live",
-                  );
-                }}
-              >
-                <Columns2 className="h-3 w-3" />
-              </IconButton>
-            </div>
-          </div>
-          <div className="p-1">
-            <MDEditor
-              className="notes-markdown-editor"
-              commands={NOTE_MARKDOWN_BASE_COMMANDS}
-              data-color-mode="dark"
-              extraCommands={[]}
-              height={450}
-              preview={journalPreviewMode}
-              style={MARKDOWN_EDITOR_THEME_STYLE}
-              textareaProps={{
-                "aria-label": "日记正文",
-                placeholder: "写下今天的日记与主观感受...",
-              }}
-              value={journalContent}
-              visibleDragbar={false}
-              onChange={(value) => setJournalContent(value ?? "")}
-            />
-          </div>
-          <div className="flex items-center justify-end">
-            <span className="text-xs text-white/30">
-              * 保留完整表达，拒绝以摘要过滤真实情绪感受。
-            </span>
-          </div>
-        </div>
+        <TodayJournalPanel />
       </div>
       {isNoteModalOpen ? (
         <TodayNoteEntryModal
