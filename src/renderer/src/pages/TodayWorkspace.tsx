@@ -1,5 +1,9 @@
 import type React from "react";
 import { useState } from "react";
+import MDEditor from "@uiw/react-md-editor";
+import type { ICommand } from "@uiw/react-md-editor/commands";
+import { getCommands } from "@uiw/react-md-editor/commands-cn";
+import "@uiw/react-md-editor/markdown-editor.css";
 import {
   CheckSquare,
   FileText,
@@ -11,9 +15,39 @@ import {
   ClipboardList,
   Square,
   Trash2,
+  Columns2,
 } from "lucide-react";
-import { AddEntryModal, type AddEntryModalKind } from "@renderer/pages/components/AddEntryModal";
+import {
+  AddEntryModal,
+  type AddEntryModalKind,
+} from "@renderer/pages/components/AddEntryModal";
 import { IconButton } from "@renderer/components/ui/IconButton";
+
+type MarkdownEditorThemeStyle = React.CSSProperties &
+  Record<`--${string}`, string>;
+
+// Markdown 编辑器黑色主题变量。
+const MARKDOWN_EDITOR_THEME_STYLE: MarkdownEditorThemeStyle = {
+  "--color-canvas-default": "#000000",
+  "--color-fg-default": "rgba(255,255,255,0.82)",
+  "--color-border-default": "rgba(255,255,255,0.1)",
+  "--color-neutral-muted": "rgba(255,255,255,0.08)",
+  "--color-accent-fg": "#ffffff",
+  "--color-danger-fg": "#ffffff",
+  "--md-editor-background-color": "#000000",
+  "--md-editor-box-shadow-color": "rgba(255,255,255,0.1)",
+  "--md-editor-font-family":
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  borderRadius: "6px",
+  overflow: "hidden",
+};
+
+// Markdown 基础工具栏命令，移除默认帮助问号。
+const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
+  ...getCommands().filter(
+    (command) => command.name !== "help" && command.keyCommand !== "help",
+  ),
+];
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -154,6 +188,16 @@ const JOURNAL_DATA: JournalEntry = {
  * 提供静态信息展示，保障小屏纵向流与大屏多栏的自适应响应。
  */
 export const TodayWorkspace = (): React.JSX.Element => {
+  // 今日日记正文状态。
+  const [journalContent, setJournalContent] = useState<string>(
+    JOURNAL_DATA.content,
+  );
+
+  // 日记 MDEditor 预览模式。
+  const [journalPreviewMode, setJournalPreviewMode] = useState<
+    "edit" | "preview" | "live"
+  >("edit");
+
   // 当前打开的添加弹窗类型。
   const [activeAddModal, setActiveAddModal] =
     useState<AddEntryModalKind | null>(null);
@@ -234,19 +278,18 @@ export const TodayWorkspace = (): React.JSX.Element => {
       setEditingId(null);
       return;
     }
-    const updatedFields = { text: editingText.trim(), priority: editingPriority };
+    const updatedFields = {
+      text: editingText.trim(),
+      priority: editingPriority,
+    };
     setTodos((prev) =>
       prev.map((todo) =>
-        todo.id === id
-          ? { ...todo, ...updatedFields }
-          : todo,
+        todo.id === id ? { ...todo, ...updatedFields } : todo,
       ),
     );
     setSortTodos((prev) =>
       prev.map((todo) =>
-        todo.id === id
-          ? { ...todo, ...updatedFields }
-          : todo,
+        todo.id === id ? { ...todo, ...updatedFields } : todo,
       ),
     );
     setEditingId(null);
@@ -344,7 +387,8 @@ export const TodayWorkspace = (): React.JSX.Element => {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-white/40">
-                  已完成 {todos.filter((t) => t.completed).length}/{todos.length}
+                  已完成 {todos.filter((t) => t.completed).length}/
+                  {todos.length}
                 </span>
                 <IconButton
                   aria-label="切换新建待办框"
@@ -355,17 +399,20 @@ export const TodayWorkspace = (): React.JSX.Element => {
                 </IconButton>
               </div>
             </div>
-             <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+            <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
               {showAddInput && (
                 <div className="flex items-center gap-2 rounded-[6px] border border-dashed border-white/10 bg-white/[0.01] p-2 hover:border-white/20 focus-within:border-white/25 focus-within:bg-black transition-all duration-200">
                   <button
                     type="button"
                     onClick={handleCycleNewPriority}
                     className={`text-[10px] font-mono font-bold px-1.5 py-0.5 leading-none rounded-[4px] border ${
-                      newTodoPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
-                      newTodoPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
-                      newTodoPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
-                      "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
+                      newTodoPriority === "P0"
+                        ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
+                        : newTodoPriority === "P1"
+                          ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
+                          : newTodoPriority === "P2"
+                            ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
+                            : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
                     } transition-colors cursor-pointer select-none`}
                     title="点击切换优先级"
                   >
@@ -401,11 +448,17 @@ export const TodayWorkspace = (): React.JSX.Element => {
                   if (a.completed !== b.completed) {
                     return a.completed ? 1 : -1;
                   }
-                  const order: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
+                  const order: Record<string, number> = {
+                    P0: 0,
+                    P1: 1,
+                    P2: 2,
+                    P3: 3,
+                  };
                   return (order[a.priority] ?? 99) - (order[b.priority] ?? 99);
                 })
                 .map((sortTodo) => {
-                  const todo = todos.find((t) => t.id === sortTodo.id) ?? sortTodo;
+                  const todo =
+                    todos.find((t) => t.id === sortTodo.id) ?? sortTodo;
                   return (
                     <div
                       key={todo.id}
@@ -420,10 +473,16 @@ export const TodayWorkspace = (): React.JSX.Element => {
                           type="button"
                           onClick={() => handleToggleTodo(todo.id)}
                           className="flex-shrink-0 text-white/40 hover:text-white transition-colors relative h-3.5 w-3.5 focus:outline-none"
-                          title={todo.completed ? "标记为未完成" : "标记为已完成"}
+                          title={
+                            todo.completed ? "标记为未完成" : "标记为已完成"
+                          }
                         >
-                          <Square className={`absolute inset-0 h-3.5 w-3.5 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-75 opacity-0 rotate-45" : "scale-100 opacity-100 rotate-0"}`} />
-                          <CheckSquare className={`absolute inset-0 h-3.5 w-3.5 text-emerald-500 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-100 opacity-100 rotate-0" : "scale-75 opacity-0 -rotate-45"}`} />
+                          <Square
+                            className={`absolute inset-0 h-3.5 w-3.5 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-75 opacity-0 rotate-45" : "scale-100 opacity-100 rotate-0"}`}
+                          />
+                          <CheckSquare
+                            className={`absolute inset-0 h-3.5 w-3.5 text-emerald-500 transition-all duration-300 ease-in-out transform ${todo.completed ? "scale-100 opacity-100 rotate-0" : "scale-75 opacity-0 -rotate-45"}`}
+                          />
                         </button>
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -434,10 +493,13 @@ export const TodayWorkspace = (): React.JSX.Element => {
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={handleCyclePriority}
                                   className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-colors cursor-pointer select-none ${
-                                    editingPriority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10" :
-                                    editingPriority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10" :
-                                    editingPriority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10" :
-                                    "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
+                                    editingPriority === "P0"
+                                      ? "text-rose-400 border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10"
+                                      : editingPriority === "P1"
+                                        ? "text-amber-400 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
+                                        : editingPriority === "P2"
+                                          ? "text-sky-400 border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10"
+                                          : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5 hover:bg-neutral-500/10"
                                   }`}
                                   title="点击切换优先级"
                                 >
@@ -446,7 +508,9 @@ export const TodayWorkspace = (): React.JSX.Element => {
                                 <textarea
                                   rows={2}
                                   value={editingText}
-                                  onChange={(e) => setEditingText(e.target.value)}
+                                  onChange={(e) =>
+                                    setEditingText(e.target.value)
+                                  }
                                   onFocus={(e) => e.target.select()}
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
@@ -467,10 +531,13 @@ export const TodayWorkspace = (): React.JSX.Element => {
                                   className={`inline-block flex-shrink-0 text-[10px] font-mono font-bold px-1 py-0.5 leading-none rounded-[4px] border transition-all duration-300 ${
                                     todo.completed
                                       ? "text-white/20 border-white/5 bg-white/[0.01]"
-                                      : todo.priority === "P0" ? "text-rose-400 border-rose-500/20 bg-rose-500/5" :
-                                        todo.priority === "P1" ? "text-amber-400 border-amber-500/20 bg-amber-500/5" :
-                                        todo.priority === "P2" ? "text-sky-400 border-sky-500/20 bg-sky-500/5" :
-                                        "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
+                                      : todo.priority === "P0"
+                                        ? "text-rose-400 border-rose-500/20 bg-rose-500/5"
+                                        : todo.priority === "P1"
+                                          ? "text-amber-400 border-amber-500/20 bg-amber-500/5"
+                                          : todo.priority === "P2"
+                                            ? "text-sky-400 border-sky-500/20 bg-sky-500/5"
+                                            : "text-neutral-400 border-neutral-500/20 bg-neutral-500/5"
                                   }`}
                                 >
                                   {todo.priority}
@@ -491,29 +558,29 @@ export const TodayWorkspace = (): React.JSX.Element => {
                           </div>
                         </div>
                       </div>
-                    
-                    {/* 操作按钮组 */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
-                      <button
-                        type="button"
-                        onClick={() => handleStartEdit(todo)}
-                        className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-white transition-colors"
-                        title="编辑"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTodo(todo.id)}
-                        className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-rose-400 transition-colors"
-                        title="删除"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+
+                      {/* 操作按钮组 */}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(todo)}
+                          className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-white transition-colors"
+                          title="编辑"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTodo(todo.id)}
+                          className="p-1 hover:bg-white/5 rounded text-white/40 hover:text-rose-400 transition-colors"
+                          title="删除"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </div>
 
@@ -588,12 +655,41 @@ export const TodayWorkspace = (): React.JSX.Element => {
               <span className="text-emerald-400">
                 情绪感知: {JOURNAL_DATA.mood}
               </span>
+              <span>•</span>
+              <IconButton
+                aria-label="切换双栏分屏预览"
+                className={`h-5 w-5 ${
+                  journalPreviewMode === "live"
+                    ? "bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                    : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                }`}
+                onClick={() => {
+                  setJournalPreviewMode((currentMode) =>
+                    currentMode === "live" ? "edit" : "live",
+                  );
+                }}
+              >
+                <Columns2 className="h-3 w-3" />
+              </IconButton>
             </div>
           </div>
-          <div className="rounded-[6px] bg-[#000000] border border-white/5 p-3.5">
-            <p className="text-sm text-white/80 leading-relaxed font-sans whitespace-pre-wrap">
-              {JOURNAL_DATA.content}
-            </p>
+          <div className="p-1">
+            <MDEditor
+              className="notes-markdown-editor"
+              commands={NOTE_MARKDOWN_BASE_COMMANDS}
+              data-color-mode="dark"
+              extraCommands={[]}
+              height={450}
+              preview={journalPreviewMode}
+              style={MARKDOWN_EDITOR_THEME_STYLE}
+              textareaProps={{
+                "aria-label": "日记正文",
+                placeholder: "写下今天的日记与主观感受...",
+              }}
+              value={journalContent}
+              visibleDragbar={false}
+              onChange={(value) => setJournalContent(value ?? "")}
+            />
           </div>
           <div className="flex items-center justify-end">
             <span className="text-xs text-white/30">

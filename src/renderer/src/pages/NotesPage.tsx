@@ -314,7 +314,7 @@ const NoteMarkdownModal = ({
               <IconButton
                 className={
                   previewMode === "live"
-                    ? "bg-white text-black hover:bg-white/90 hover:text-black"
+                    ? "bg-white/10 text-white hover:bg-white/20 hover:text-white"
                     : ""
                 }
                 onClick={() => {

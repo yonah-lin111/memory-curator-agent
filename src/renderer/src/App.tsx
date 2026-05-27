@@ -1,6 +1,5 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
-import { AgentPage } from '@renderer/pages/AgentPage'
 import { JournalPage } from '@renderer/pages/JournalPage'
 import { MemoriesPage } from '@renderer/pages/MemoriesPage'
 import { NotesPage } from '@renderer/pages/NotesPage'
@@ -21,7 +20,7 @@ export const App = (): React.JSX.Element => {
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
   const getPageFromPathname = (): SidebarPageId => {
     const path = window.location.pathname.replace(/^\/|\/$/g, '')
-    const validPages: SidebarPageId[] = ['today', 'agent', 'notes', 'journal', 'weekly', 'themes', 'memories']
+    const validPages: SidebarPageId[] = ['today', 'notes', 'journal', 'weekly', 'themes', 'memories']
     if (validPages.includes(path as SidebarPageId)) {
       return path as SidebarPageId
     }
@@ -56,8 +55,6 @@ export const App = (): React.JSX.Element => {
     switch (activePage) {
       case 'today':
         return <TodayWorkspace />
-      case 'agent':
-        return <AgentPage />
       case 'notes':
         return <NotesPage />
       case 'journal':

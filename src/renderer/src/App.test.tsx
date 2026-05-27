@@ -22,7 +22,6 @@ describe('App', () => {
 
     expect(screen.getByText('MEMORY CURATOR')).toBeInTheDocument()
     expect(screen.getByText('DAILY')).toBeInTheDocument()
-    expect(screen.getByText('INTELLIGENCE')).toBeInTheDocument()
     expect(screen.getByText('LIBRARY')).toBeInTheDocument()
     expect(screen.getByText('CURATION')).toBeInTheDocument()
     expect(screen.getByText('计划 / 随记 / 日记')).toBeInTheDocument()
@@ -31,7 +30,6 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: '折叠左侧导航栏' }))
     expect(screen.queryByText('MEMORY CURATOR')).not.toBeInTheDocument()
     expect(screen.queryByText('DAILY')).not.toBeInTheDocument()
-    expect(screen.queryByText('INTELLIGENCE')).not.toBeInTheDocument()
     expect(screen.queryByText('LIBRARY')).not.toBeInTheDocument()
     expect(screen.queryByText('CURATION')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '展开左侧导航栏' })).toBeInTheDocument()
@@ -53,10 +51,6 @@ describe('App', () => {
     const user = userEvent.setup()
 
     render(<App />)
-
-    await user.click(screen.getByRole('button', { name: /Agent/ }))
-    expect(screen.getByRole('heading', { name: '记忆策展 Agent 编写工作台' })).toBeInTheDocument()
-    expect(screen.getByText('Agent').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Notes/ }))
     expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
@@ -91,15 +85,6 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Notes/ }))
     expect(window.location.pathname).toBe('/notes')
     expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
-
-    // 直达 Agent 路由，验证新增页面在 popstate 下也能同步渲染。
-    act(() => {
-      window.history.pushState({}, '', '/agent')
-      window.dispatchEvent(new PopStateEvent('popstate'))
-    })
-
-    expect(screen.getByRole('heading', { name: '记忆策展 Agent 编写工作台' })).toBeInTheDocument()
-    expect(screen.getByText('Agent').closest('[aria-current="page"]')).toBeInTheDocument()
 
     // 模拟浏览器前进/后退改变路由
     act(() => {
