@@ -74,6 +74,26 @@ type WorkspaceSnippetUpdatePayload = {
   tags: string[]
 }
 
+// 工作台单日聚合概览类型。
+type WorkspaceMonthEntryOverview = {
+  // 所属日期。
+  entryDate: string
+  // 当日待办数量。
+  todoCount: number
+  // 当日片段数量。
+  snippetCount: number
+  // 当日日记数量。
+  journalCount: number
+}
+
+// 工作台整月概览类型。
+type WorkspaceMonthOverview = {
+  // 所属月份。
+  month: string
+  // 当月有记录的日期概览。
+  entries: WorkspaceMonthEntryOverview[]
+}
+
 // 渲染进程安全 API。
 const api = {
   notes: {
@@ -84,6 +104,8 @@ const api = {
   },
   workspace: {
     listDay: (entryDate: string) => ipcRenderer.invoke('workspace:list-day', entryDate),
+    listMonthOverview: (month: string): Promise<WorkspaceMonthOverview> =>
+      ipcRenderer.invoke('workspace:list-month-overview', month),
     saveJournal: (draft: WorkspaceJournalSavePayload) => ipcRenderer.invoke('workspace:journal:save', draft),
     deleteJournal: (entryDate: string) => ipcRenderer.invoke('workspace:journal:delete', entryDate),
     createTodo: (draft: WorkspaceTodoCreatePayload) => ipcRenderer.invoke('workspace:todo:create', draft),

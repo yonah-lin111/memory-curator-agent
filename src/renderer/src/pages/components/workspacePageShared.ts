@@ -12,12 +12,41 @@ export const createTodayEntryDate = (): string => {
   return `${year}-${month}-${date}`;
 };
 
+/**
+ * 把 Date 对象格式化为 entryDate。
+ */
+export const formatDateAsEntryDate = (value: Date): string => {
+  // 日期对象对应的年份。
+  const year = value.getFullYear();
+  // 日期对象对应的月份。
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  // 日期对象对应的日期。
+  const date = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${date}`;
+};
+
 // 把 YYYY-MM-DD 转成页面展示标签。
 export const formatEntryDateLabel = (entryDate: string): string => {
   // 切分出的年月日片段。
   const [year, month, date] = entryDate.split("-");
 
   return `${year}.${month}.${date}`;
+};
+
+/**
+ * 从日期提取所属月份键。
+ */
+export const getEntryMonth = (entryDate: string): string => entryDate.slice(0, 7);
+
+/**
+ * 把 YYYY-MM 转成页面展示标签。
+ */
+export const formatEntryMonthLabel = (entryMonth: string): string => {
+  // 切分出的年月片段。
+  const [year, month] = entryMonth.split("-");
+
+  return `${year}.${month}`;
 };
 
 // 计算前后一天的 entryDate。
@@ -38,6 +67,68 @@ export const shiftEntryDate = (
 
   return `${year}-${month}-${date}`;
 };
+
+/**
+ * 计算前后月份。
+ */
+export const shiftEntryMonth = (
+  entryMonth: string,
+  offsetMonths: number,
+): string => {
+  // 月份对应的基准日期。
+  const baseDate = new Date(`${entryMonth}-01T00:00:00`);
+  baseDate.setMonth(baseDate.getMonth() + offsetMonths);
+
+  return formatDateAsEntryDate(baseDate).slice(0, 7);
+};
+
+// 日历单元格类型。
+export type CalendarDayCell = {
+  // 单元格对应日期。
+  entryDate: string;
+  // 单元格展示数字。
+  dayNumber: number;
+  // 是否属于当前可见月份。
+  isCurrentMonth: boolean;
+};
+
+/**
+ * 生成整月日历网格，补齐前后月份日期，保证布局稳定。
+ */
+export const createMonthCalendarDays = (
+  entryMonth: string,
+): CalendarDayCell[] => {
+  // 当前月份第一天。
+  const firstDay = new Date(`${entryMonth}-01T00:00:00`);
+  // 当前月份开始时应从周几回退。
+  const weekOffset = (firstDay.getDay() + 6) % 7;
+  // 网格起点日期。
+  const gridStart = new Date(firstDay);
+  gridStart.setDate(firstDay.getDate() - weekOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const currentDate = new Date(gridStart);
+    currentDate.setDate(gridStart.getDate() + index);
+    const currentEntryDate = formatDateAsEntryDate(currentDate);
+
+    return {
+      entryDate: currentEntryDate,
+      dayNumber: currentDate.getDate(),
+      isCurrentMonth: getEntryMonth(currentEntryDate) === entryMonth,
+    };
+  });
+};
+
+// 日历周标题。
+export const CALENDAR_WEEKDAY_LABELS = [
+  "一",
+  "二",
+  "三",
+  "四",
+  "五",
+  "六",
+  "日",
+] as const;
 
 // 没有 preload bridge 的测试 / 预览环境保护。
 export const hasWorkspaceBridge = (): boolean => Boolean(window.api?.workspace);

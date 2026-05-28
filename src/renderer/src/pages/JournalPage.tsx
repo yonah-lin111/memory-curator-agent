@@ -6,6 +6,7 @@ import { JournalDateRail } from "@renderer/pages/components/JournalDateRail";
 import { JournalEditorSurface } from "@renderer/pages/components/JournalEditorSurface";
 import {
   createTodayEntryDate,
+  getEntryMonth,
   hasWorkspaceBridge,
 } from "@renderer/pages/components/workspacePageShared";
 
@@ -29,6 +30,14 @@ export const JournalPage = (): React.JSX.Element => {
   const toast = useToast();
   // 当前页面日期。
   const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  // 当前月历可见月份。
+  const [visibleMonth, setVisibleMonth] = useState<string>(() =>
+    getEntryMonth(createTodayEntryDate()),
+  );
+  // 当前可见月份的日记角标映射。
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
+    {},
+  );
   // 编辑器中的正文。
   const [journalContent, setJournalContent] = useState<string>("");
   // 最近一次成功保存的正文。
@@ -41,6 +50,9 @@ export const JournalPage = (): React.JSX.Element => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // 最近保存时间。
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  // 月历标记是否正在加载。
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
+    useState<boolean>(true);
   // 持久化函数引用，避免 effect 反复重建。
   const persistRef = useRef<(rawValue: string) => Promise<void>>(async () => undefined);
 
@@ -56,9 +68,41 @@ export const JournalPage = (): React.JSX.Element => {
       if (journalContent.trim() !== savedJournalContent.trim()) {
         await persistRef.current(journalContent);
       }
+      setVisibleMonth(getEntryMonth(nextDate));
       setEntryDate(nextDate);
     })();
   };
+
+  useEffect(() => {
+    /**
+     * 读取当前可见月份的日记角标概览。
+     */
+    const loadMonthOverview = async (): Promise<void> => {
+      setIsMonthOverviewLoading(true);
+
+      try {
+        if (!hasWorkspaceBridge()) {
+          setMonthEntryCounts({});
+          return;
+        }
+
+        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        setMonthEntryCounts(
+          Object.fromEntries(
+            overview.entries
+              .filter((item) => item.journalCount > 0)
+              .map((item) => [item.entryDate, item.journalCount]),
+          ),
+        );
+      } catch {
+        toast.error("读取月历标记失败");
+      } finally {
+        setIsMonthOverviewLoading(false);
+      }
+    };
+
+    void loadMonthOverview();
+  }, [toast, visibleMonth]);
 
   useEffect(() => {
     /**
@@ -107,6 +151,15 @@ export const JournalPage = (): React.JSX.Element => {
       if (!hasWorkspaceBridge()) {
         setSavedJournalContent(normalizedValue);
         setLastSavedAt(normalizedValue ? createCurrentTimestamp(entryDate) : null);
+        setMonthEntryCounts((currentCounts) => {
+          if (normalizedValue) {
+            return { ...currentCounts, [entryDate]: 1 };
+          }
+
+          const nextCounts = { ...currentCounts };
+          delete nextCounts[entryDate];
+          return nextCounts;
+        });
         return;
       }
 
@@ -114,6 +167,11 @@ export const JournalPage = (): React.JSX.Element => {
         await window.api.workspace.deleteJournal(entryDate);
         setSavedJournalContent("");
         setLastSavedAt(null);
+        setMonthEntryCounts((currentCounts) => {
+          const nextCounts = { ...currentCounts };
+          delete nextCounts[entryDate];
+          return nextCounts;
+        });
         return;
       }
 
@@ -123,6 +181,7 @@ export const JournalPage = (): React.JSX.Element => {
       });
       setSavedJournalContent(saved.content);
       setLastSavedAt(saved.updatedAt);
+      setMonthEntryCounts((currentCounts) => ({ ...currentCounts, [entryDate]: 1 }));
     } catch {
       setErrorMessage("自动保存失败，内容已保留在当前页面。");
       toast.error("自动保存失败");
@@ -159,7 +218,19 @@ export const JournalPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Journal 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator entryDate={entryDate} label="Journal" onChange={handleEntryDateChange} />
+      <PageDateNavigator
+        currentEntryCount={journalContent.trim() || savedJournalContent.trim() ? 1 : 0}
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        formatCountHint={(count) =>
+          count > 0 ? `当日已有 ${count} 篇日记` : "当日还没有日记"
+        }
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        label="Journal"
+        visibleMonth={visibleMonth}
+        onChange={handleEntryDateChange}
+        onVisibleMonthChange={setVisibleMonth}
+      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
         <JournalDateRail
           entryDate={entryDate}

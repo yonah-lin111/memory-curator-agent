@@ -57,6 +57,10 @@ describe("JournalPage", () => {
     window.api = {
       workspace: {
         listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+        listMonthOverview: vi.fn().mockResolvedValue({
+          month: "2026-05",
+          entries: [],
+        }),
         saveJournal: vi.fn(),
         deleteJournal: vi.fn(),
         createTodo: vi.fn(),
@@ -107,17 +111,76 @@ describe("JournalPage", () => {
       );
 
     window.api.workspace.listDay = listDay;
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 1,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 1,
+        },
+      ],
+    });
 
     renderJournalPage();
 
     expect(await screen.findByDisplayValue("今天的日记")).toBeInTheDocument();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "查看前一天 2026-05-26" }),
+      screen.getByRole("button", {
+        name: "打开 Journal 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日已有 1 篇日记" }),
     );
 
     expect(listDay).toHaveBeenLastCalledWith("2026-05-26");
     expect(await screen.findByDisplayValue("昨天的日记")).toBeInTheDocument();
+  });
+
+  it("点击日期后打开日期选择器并显示日记角标", async () => {
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 1,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 1,
+        },
+      ],
+    });
+
+    renderJournalPage();
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "打开 Journal 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Journal 日期选择器" });
+    expect(dialog).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-27，当日已有 1 篇日记" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日已有 1 篇日记" }),
+    ).toBeInTheDocument();
   });
 
   it("切换日期前会先按旧日期保存当前草稿", async () => {

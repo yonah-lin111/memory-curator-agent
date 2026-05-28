@@ -161,6 +161,26 @@ export type WorkspaceDayData = {
   journal: WorkspaceJournalItem | null
 }
 
+// 工作台单日聚合概览类型。
+export type WorkspaceMonthEntryOverview = {
+  // 所属日期。
+  entryDate: string
+  // 当日待办数量。
+  todoCount: number
+  // 当日片段数量。
+  snippetCount: number
+  // 当日日记数量。
+  journalCount: number
+}
+
+// 工作台整月概览类型。
+export type WorkspaceMonthOverview = {
+  // 所属月份。
+  month: string
+  // 当月有记录的日期概览。
+  entries: WorkspaceMonthEntryOverview[]
+}
+
 // 数据库笔记行类型。
 export type NoteRow = {
   // 笔记唯一标识。

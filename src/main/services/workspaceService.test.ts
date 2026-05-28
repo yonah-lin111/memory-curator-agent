@@ -46,6 +46,26 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
       }
     }
 
+    if (sql.startsWith('SELECT entry_date, COUNT(*) AS item_count FROM todos WHERE entry_date LIKE ? GROUP BY entry_date')) {
+      return {
+        all: (...values) => {
+          const monthPattern = String(values[0]).replace('%', '')
+          const counts = new Map<string, number>()
+
+          this.todoRows
+            .filter((row) => row.entry_date.startsWith(monthPattern))
+            .forEach((row) => counts.set(row.entry_date, (counts.get(row.entry_date) ?? 0) + 1))
+
+          return [...counts.entries()].map(([entry_date, item_count]) => ({
+            entry_date,
+            item_count
+          }))
+        },
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
     if (sql.startsWith('SELECT MAX(sort_order) AS max_sort_order FROM todos WHERE entry_date = ?')) {
       return {
         all: () => [],
@@ -157,6 +177,28 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
       }
     }
 
+    if (
+      sql.startsWith('SELECT entry_date, COUNT(*) AS item_count FROM snippets WHERE entry_date LIKE ? GROUP BY entry_date')
+    ) {
+      return {
+        all: (...values) => {
+          const monthPattern = String(values[0]).replace('%', '')
+          const counts = new Map<string, number>()
+
+          this.snippetRows
+            .filter((row) => row.entry_date.startsWith(monthPattern))
+            .forEach((row) => counts.set(row.entry_date, (counts.get(row.entry_date) ?? 0) + 1))
+
+          return [...counts.entries()].map(([entry_date, item_count]) => ({
+            entry_date,
+            item_count
+          }))
+        },
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
     if (sql.startsWith('INSERT INTO snippets')) {
       return {
         all: () => [],
@@ -225,6 +267,26 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
       return {
         all: () => [],
         get: (...values) => this.journalRows.find((row) => row.entry_date === values[0]),
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('SELECT entry_date, COUNT(*) AS item_count FROM journals WHERE entry_date LIKE ? GROUP BY entry_date')) {
+      return {
+        all: (...values) => {
+          const monthPattern = String(values[0]).replace('%', '')
+          const counts = new Map<string, number>()
+
+          this.journalRows
+            .filter((row) => row.entry_date.startsWith(monthPattern))
+            .forEach((row) => counts.set(row.entry_date, (counts.get(row.entry_date) ?? 0) + 1))
+
+          return [...counts.entries()].map(([entry_date, item_count]) => ({
+            entry_date,
+            item_count
+          }))
+        },
+        get: () => undefined,
         run: () => undefined
       }
     }
@@ -320,6 +382,57 @@ describe('workspaceService', () => {
     expect(result.todos).toEqual([firstTodo])
     expect(result.snippets).toEqual([firstSnippet])
     expect(result.journal).toEqual(firstJournal)
+  })
+
+  it('支持读取指定月份的工作台概览', () => {
+    const service = createWorkspaceService(sqlite)
+
+    service.createTodo({
+      entryDate: '2026-05-27',
+      text: '今天的待办一',
+      priority: 'P1'
+    })
+    service.createTodo({
+      entryDate: '2026-05-27',
+      text: '今天的待办二',
+      priority: 'P2'
+    })
+    service.createSnippet({
+      entryDate: '2026-05-27',
+      title: '今天的片段',
+      content: '内容',
+      tags: ['今天']
+    })
+    service.saveJournal({
+      entryDate: '2026-05-26',
+      content: '昨天的日记'
+    })
+    service.createSnippet({
+      entryDate: '2026-06-01',
+      title: '六月片段',
+      content: '不应被带入五月',
+      tags: ['六月']
+    })
+
+    const result = service.listMonthOverview('2026-05')
+
+    expect(result).toEqual({
+      month: '2026-05',
+      entries: [
+        {
+          entryDate: '2026-05-26',
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 1
+        },
+        {
+          entryDate: '2026-05-27',
+          todoCount: 2,
+          snippetCount: 1,
+          journalCount: 0
+        }
+      ]
+    })
   })
 
   it('支持创建、更新、删除和重排待办', () => {

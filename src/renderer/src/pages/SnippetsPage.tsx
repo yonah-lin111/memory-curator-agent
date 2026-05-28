@@ -7,6 +7,7 @@ import { SnippetDetailDrawer } from "@renderer/pages/components/SnippetDetailDra
 import { SnippetsTagMap } from "@renderer/pages/components/SnippetsTagMap";
 import {
   createTodayEntryDate,
+  getEntryMonth,
   hasWorkspaceBridge,
 } from "@renderer/pages/components/workspacePageShared";
 
@@ -25,6 +26,14 @@ export const SnippetsPage = (): React.JSX.Element => {
   const toast = useToast();
   // 当前页面日期。
   const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  // 当前月历可见月份。
+  const [visibleMonth, setVisibleMonth] = useState<string>(() =>
+    getEntryMonth(createTodayEntryDate()),
+  );
+  // 当前可见月份的片段角标映射。
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
+    {},
+  );
   // 当前片段列表。
   const [snippets, setSnippets] = useState<WorkspaceSnippetRecord[]>([]);
   // 当前选中的片段 ID。
@@ -35,6 +44,9 @@ export const SnippetsPage = (): React.JSX.Element => {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   // 加载状态。
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  // 月历标记是否正在加载。
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
+    useState<boolean>(true);
 
   useEffect(() => {
     /**
@@ -64,6 +76,37 @@ export const SnippetsPage = (): React.JSX.Element => {
 
     void loadSnippets();
   }, [entryDate, toast]);
+
+  useEffect(() => {
+    /**
+     * 读取当前可见月份的片段角标概览。
+     */
+    const loadMonthOverview = async (): Promise<void> => {
+      setIsMonthOverviewLoading(true);
+
+      try {
+        if (!hasWorkspaceBridge()) {
+          setMonthEntryCounts({});
+          return;
+        }
+
+        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        setMonthEntryCounts(
+          Object.fromEntries(
+            overview.entries
+              .filter((item) => item.snippetCount > 0)
+              .map((item) => [item.entryDate, item.snippetCount]),
+          ),
+        );
+      } catch {
+        toast.error("读取月历标记失败");
+      } finally {
+        setIsMonthOverviewLoading(false);
+      }
+    };
+
+    void loadMonthOverview();
+  }, [toast, visibleMonth]);
 
   // 当前可见片段列表。
   const visibleSnippets = useMemo(
@@ -123,7 +166,22 @@ export const SnippetsPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="随记 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator entryDate={entryDate} label="Snippets" onChange={setEntryDate} />
+      <PageDateNavigator
+        currentEntryCount={snippets.length}
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        formatCountHint={(count) =>
+          count > 0 ? `当日收录 ${count} 条片段` : "当日还没有片段"
+        }
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        label="Snippets"
+        visibleMonth={visibleMonth}
+        onChange={(nextDate) => {
+          setVisibleMonth(getEntryMonth(nextDate));
+          setEntryDate(nextDate);
+        }}
+        onVisibleMonthChange={setVisibleMonth}
+      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[220px_minmax(0,1fr)_320px]">
         <SnippetsTagMap
           activeTag={activeTag}
@@ -179,6 +237,10 @@ export const SnippetsPage = (): React.JSX.Element => {
               if (!hasWorkspaceBridge()) {
                 const created = createLocalSnippet(draft);
                 setSnippets((currentSnippets) => [created, ...currentSnippets]);
+                setMonthEntryCounts((currentCounts) => ({
+                  ...currentCounts,
+                  [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
+                }));
                 setIsCreatingNew(false);
                 setSelectedId(created.id);
                 return;
@@ -189,6 +251,10 @@ export const SnippetsPage = (): React.JSX.Element => {
                 ...draft,
               });
               setSnippets((currentSnippets) => [created, ...currentSnippets]);
+              setMonthEntryCounts((currentCounts) => ({
+                ...currentCounts,
+                [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
+              }));
               setIsCreatingNew(false);
               setSelectedId(created.id);
             } catch {
@@ -201,6 +267,23 @@ export const SnippetsPage = (): React.JSX.Element => {
                 setSnippets((currentSnippets) =>
                   currentSnippets.filter((snippet) => snippet.id !== id),
                 );
+                setMonthEntryCounts((currentCounts) => {
+                  const nextCount = Math.max(
+                    (currentCounts[entryDate] ?? snippets.length) - 1,
+                    0,
+                  );
+
+                  if (nextCount === 0) {
+                    const nextCounts = { ...currentCounts };
+                    delete nextCounts[entryDate];
+                    return nextCounts;
+                  }
+
+                  return {
+                    ...currentCounts,
+                    [entryDate]: nextCount,
+                  };
+                });
                 setIsCreatingNew(false);
                 return;
               }
@@ -209,6 +292,23 @@ export const SnippetsPage = (): React.JSX.Element => {
               setSnippets((currentSnippets) =>
                 currentSnippets.filter((snippet) => snippet.id !== id),
               );
+              setMonthEntryCounts((currentCounts) => {
+                const nextCount = Math.max(
+                  (currentCounts[entryDate] ?? snippets.length) - 1,
+                  0,
+                );
+
+                if (nextCount === 0) {
+                  const nextCounts = { ...currentCounts };
+                  delete nextCounts[entryDate];
+                  return nextCounts;
+                }
+
+                return {
+                  ...currentCounts,
+                  [entryDate]: nextCount,
+                };
+              });
               setIsCreatingNew(false);
             } catch {
               toast.error("删除片段失败");

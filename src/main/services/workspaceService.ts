@@ -3,6 +3,8 @@ import type {
   WorkspaceJournalItem,
   WorkspaceJournalRow,
   WorkspaceJournalSaveInput,
+  WorkspaceMonthEntryOverview,
+  WorkspaceMonthOverview,
   WorkspaceSnippetCreateInput,
   WorkspaceSnippetItem,
   WorkspaceSnippetRow,
@@ -35,6 +37,8 @@ export type DatabaseConnection = {
 export type WorkspaceService = {
   // 读取单日工作台数据。
   listDay: (entryDate: string) => WorkspaceDayData
+  // 读取指定月份的工作台概览。
+  listMonthOverview: (month: string) => WorkspaceMonthOverview
   // 保存日记。
   saveJournal: (input: WorkspaceJournalSaveInput) => WorkspaceJournalItem
   // 删除日记。
@@ -113,6 +117,15 @@ const parseStoredTags = (value: string): string[] => {
 const validateEntryDate = (entryDate: string): void => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
     throw new Error('工作台日期格式不正确')
+  }
+}
+
+/**
+ * 校验月份格式。
+ */
+const validateEntryMonth = (month: string): void => {
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    throw new Error('工作台月份格式不正确')
   }
 }
 
@@ -216,6 +229,14 @@ const mapJournalRow = (row: WorkspaceJournalRow): WorkspaceJournalItem => ({
   updatedAt: row.updated_at
 })
 
+// SQL 聚合行类型。
+type WorkspaceCountRow = {
+  // 聚合所属日期。
+  entry_date: string
+  // 聚合数量。
+  item_count: number
+}
+
 /**
  * 创建 Workspace 服务。
  */
@@ -242,6 +263,62 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       todos: todos.map(mapTodoRow),
       snippets: snippets.map(mapSnippetRow),
       journal: journal ? mapJournalRow(journal) : null
+    }
+  },
+  listMonthOverview: (month) => {
+    validateEntryMonth(month)
+
+    // 月份前缀查询条件。
+    const monthPattern = `${month}-%`
+    // 按日期聚合的概览映射。
+    const overviewMap = new Map<string, WorkspaceMonthEntryOverview>()
+    // 统一写入聚合计数，避免三类记录合并逻辑重复。
+    const applyCountRows = (
+      rows: WorkspaceCountRow[],
+      field: 'todoCount' | 'snippetCount' | 'journalCount'
+    ): void => {
+      rows.forEach((row) => {
+        const currentItem = overviewMap.get(row.entry_date) ?? {
+          entryDate: row.entry_date,
+          todoCount: 0,
+          snippetCount: 0,
+          journalCount: 0
+        }
+        overviewMap.set(row.entry_date, {
+          ...currentItem,
+          [field]: row.item_count
+        })
+      })
+    }
+
+    applyCountRows(
+      database
+        .prepare(
+          'SELECT entry_date, COUNT(*) AS item_count FROM todos WHERE entry_date LIKE ? GROUP BY entry_date'
+        )
+        .all(monthPattern) as WorkspaceCountRow[],
+      'todoCount'
+    )
+    applyCountRows(
+      database
+        .prepare(
+          'SELECT entry_date, COUNT(*) AS item_count FROM snippets WHERE entry_date LIKE ? GROUP BY entry_date'
+        )
+        .all(monthPattern) as WorkspaceCountRow[],
+      'snippetCount'
+    )
+    applyCountRows(
+      database
+        .prepare(
+          'SELECT entry_date, COUNT(*) AS item_count FROM journals WHERE entry_date LIKE ? GROUP BY entry_date'
+        )
+        .all(monthPattern) as WorkspaceCountRow[],
+      'journalCount'
+    )
+
+    return {
+      month,
+      entries: [...overviewMap.values()].sort((left, right) => left.entryDate.localeCompare(right.entryDate))
     }
   },
   saveJournal: (input) => {

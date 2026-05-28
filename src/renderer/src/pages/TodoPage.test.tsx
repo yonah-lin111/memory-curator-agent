@@ -37,6 +37,10 @@ describe("TodoPage", () => {
     window.api = {
       workspace: {
         listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+        listMonthOverview: vi.fn().mockResolvedValue({
+          month: "2026-05",
+          entries: [],
+        }),
         saveJournal: vi.fn(),
         deleteJournal: vi.fn(),
         createTodo: vi.fn(),
@@ -99,14 +103,73 @@ describe("TodoPage", () => {
       );
 
     window.api.workspace.listDay = listDay;
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 1,
+          snippetCount: 0,
+          journalCount: 0,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 1,
+          snippetCount: 0,
+          journalCount: 0,
+        },
+      ],
+    });
 
     renderTodoPage();
 
     expect(await screen.findByText("今天任务")).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "查看前一天 2026-05-26" }),
+      screen.getByRole("button", {
+        name: "打开 Todo 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日共有 1 条待办" }),
     );
     expect(await screen.findByText("昨天任务")).toBeInTheDocument();
+  });
+
+  it("点击日期后打开日期选择器并显示待办角标", async () => {
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 2,
+          snippetCount: 0,
+          journalCount: 0,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 1,
+          snippetCount: 0,
+          journalCount: 0,
+        },
+      ],
+    });
+
+    renderTodoPage();
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "打开 Todo 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Todo 日期选择器" });
+    expect(dialog).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-27，当日共有 1 条待办" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日共有 2 条待办" }),
+    ).toBeInTheDocument();
   });
 
   it("支持新增、切换完成、切换优先级和删除待办", async () => {

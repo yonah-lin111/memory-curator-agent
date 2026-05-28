@@ -17,6 +17,7 @@ export const registerWorkspaceHandlers = (): void => {
   const workspaceService = createWorkspaceService(getDatabase() as unknown as DatabaseConnection)
 
   ipcMain.handle('workspace:list-day', (_, entryDate: string) => workspaceService.listDay(entryDate))
+  ipcMain.handle('workspace:list-month-overview', (_, month: string) => workspaceService.listMonthOverview(month))
   ipcMain.handle('workspace:journal:save', (_, input: WorkspaceJournalSaveInput) => workspaceService.saveJournal(input))
   ipcMain.handle('workspace:journal:delete', (_, entryDate: string) => {
     workspaceService.deleteJournal(entryDate)

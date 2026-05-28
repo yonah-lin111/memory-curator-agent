@@ -4,7 +4,11 @@ import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
 import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
 import { TodoControlTower } from "@renderer/pages/components/TodoControlTower";
-import { hasWorkspaceBridge, createTodayEntryDate } from "@renderer/pages/components/workspacePageShared";
+import {
+  createTodayEntryDate,
+  getEntryMonth,
+  hasWorkspaceBridge,
+} from "@renderer/pages/components/workspacePageShared";
 
 // 工作台待办记录类型，直接从 bridge 签名反推。
 type WorkspaceTodoRecord =
@@ -22,12 +26,23 @@ export const TodoPage = (): React.JSX.Element => {
   const toast = useToast();
   // 当前页面日期。
   const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  // 当前月历可见月份。
+  const [visibleMonth, setVisibleMonth] = useState<string>(() =>
+    getEntryMonth(createTodayEntryDate()),
+  );
+  // 当前可见月份的待办角标映射。
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
+    {},
+  );
   // 当前待办列表。
   const [todos, setTodos] = useState<WorkspaceTodoRecord[]>([]);
   // 加载状态。
   const [isLoading, setIsLoading] = useState<boolean>(true);
   // 错误文案。
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // 月历标记是否正在加载。
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
+    useState<boolean>(true);
 
   useEffect(() => {
     /**
@@ -56,6 +71,37 @@ export const TodoPage = (): React.JSX.Element => {
     void loadTodos();
   }, [entryDate, toast]);
 
+  useEffect(() => {
+    /**
+     * 读取当前可见月份的待办角标概览。
+     */
+    const loadMonthOverview = async (): Promise<void> => {
+      setIsMonthOverviewLoading(true);
+
+      try {
+        if (!hasWorkspaceBridge()) {
+          setMonthEntryCounts({});
+          return;
+        }
+
+        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        setMonthEntryCounts(
+          Object.fromEntries(
+            overview.entries
+              .filter((item) => item.todoCount > 0)
+              .map((item) => [item.entryDate, item.todoCount]),
+          ),
+        );
+      } catch {
+        toast.error("读取月历标记失败");
+      } finally {
+        setIsMonthOverviewLoading(false);
+      }
+    };
+
+    void loadMonthOverview();
+  }, [toast, visibleMonth]);
+
   // 已完成数量。
   const completedCount = useMemo(
     () => todos.filter((todo) => todo.completed).length,
@@ -80,6 +126,10 @@ export const TodoPage = (): React.JSX.Element => {
         ...draft,
       });
       setTodos((currentTodos) => [created, ...currentTodos]);
+      setMonthEntryCounts((currentCounts) => ({
+        ...currentCounts,
+        [entryDate]: (currentCounts[entryDate] ?? todos.length) + 1,
+      }));
       return true;
     } catch {
       setErrorMessage("保存待办失败，请稍后再试。");
@@ -115,6 +165,20 @@ export const TodoPage = (): React.JSX.Element => {
     try {
       await window.api.workspace.deleteTodo(id);
       setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+      setMonthEntryCounts((currentCounts) => {
+        const nextCount = Math.max((currentCounts[entryDate] ?? todos.length) - 1, 0);
+
+        if (nextCount === 0) {
+          const nextCounts = { ...currentCounts };
+          delete nextCounts[entryDate];
+          return nextCounts;
+        }
+
+        return {
+          ...currentCounts,
+          [entryDate]: nextCount,
+        };
+      });
       return true;
     } catch {
       setErrorMessage("删除待办失败，请稍后再试。");
@@ -143,7 +207,22 @@ export const TodoPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Todo 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator entryDate={entryDate} label="Todo" onChange={setEntryDate} />
+      <PageDateNavigator
+        currentEntryCount={todos.length}
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        formatCountHint={(count) =>
+          count > 0 ? `当日共有 ${count} 条待办` : "当日还没有待办"
+        }
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        label="Todo"
+        visibleMonth={visibleMonth}
+        onChange={(nextDate) => {
+          setVisibleMonth(getEntryMonth(nextDate));
+          setEntryDate(nextDate);
+        }}
+        onVisibleMonthChange={setVisibleMonth}
+      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <TodayTodoPanel
           errorMessage={errorMessage}

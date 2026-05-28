@@ -59,7 +59,9 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /Journal/ }))
     expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
+    expect(
+      within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })
+    ).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
     expect(screen.getByRole('heading', { name: '周度策展' })).toBeInTheDocument()
@@ -99,7 +101,9 @@ describe('App', () => {
 
     expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
+    expect(
+      within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })
+    ).toHaveAttribute('aria-current', 'page')
   })
 
   it('Journal / Todo / Snippets 路由进入正式页面而不是占位文案', async () => {

@@ -37,6 +37,10 @@ describe("SnippetsPage", () => {
     window.api = {
       workspace: {
         listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+        listMonthOverview: vi.fn().mockResolvedValue({
+          month: "2026-05",
+          entries: [],
+        }),
         saveJournal: vi.fn(),
         deleteJournal: vi.fn(),
         createTodo: vi.fn(),
@@ -99,14 +103,73 @@ describe("SnippetsPage", () => {
       );
 
     window.api.workspace.listDay = listDay;
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 0,
+          snippetCount: 1,
+          journalCount: 0,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 0,
+          snippetCount: 1,
+          journalCount: 0,
+        },
+      ],
+    });
 
     renderSnippetsPage();
 
     expect(await screen.findByText("今天片段")).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "查看前一天 2026-05-26" }),
+      screen.getByRole("button", {
+        name: "打开 Snippets 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日收录 1 条片段" }),
     );
     expect(await screen.findByText("昨天片段")).toBeInTheDocument();
+  });
+
+  it("点击日期后打开日期选择器并显示片段角标", async () => {
+    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+      month: "2026-05",
+      entries: [
+        {
+          entryDate: "2026-05-26",
+          todoCount: 0,
+          snippetCount: 3,
+          journalCount: 0,
+        },
+        {
+          entryDate: "2026-05-27",
+          todoCount: 0,
+          snippetCount: 1,
+          journalCount: 0,
+        },
+      ],
+    });
+
+    renderSnippetsPage();
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "打开 Snippets 日期选择器，当前日期 2026-05-27",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Snippets 日期选择器" });
+    expect(dialog).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-27，当日收录 1 条片段" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "选择日期 2026-05-26，当日收录 3 条片段" }),
+    ).toBeInTheDocument();
   });
 
   it("支持按标签筛选并编辑片段", async () => {

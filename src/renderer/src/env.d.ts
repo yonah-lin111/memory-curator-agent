@@ -152,6 +152,26 @@ type WorkspaceDayData = {
   journal: WorkspaceJournalItem | null
 }
 
+// 工作台单日聚合概览类型。
+type WorkspaceMonthEntryOverview = {
+  // 所属日期。
+  entryDate: string
+  // 当日待办数量。
+  todoCount: number
+  // 当日片段数量。
+  snippetCount: number
+  // 当日日记数量。
+  journalCount: number
+}
+
+// 工作台整月概览类型。
+type WorkspaceMonthOverview = {
+  // 所属月份。
+  month: string
+  // 当月有记录的日期概览。
+  entries: WorkspaceMonthEntryOverview[]
+}
+
 // 渲染进程安全 API 类型。
 type AppAPI = {
   // Notes 页面 API。
@@ -169,6 +189,8 @@ type AppAPI = {
   workspace: {
     // 读取指定日期的工作台数据。
     listDay: (entryDate: string) => Promise<WorkspaceDayData>
+    // 读取指定月份的工作台概览。
+    listMonthOverview: (month: string) => Promise<WorkspaceMonthOverview>
     // 保存日记。
     saveJournal: (draft: WorkspaceJournalSavePayload) => Promise<WorkspaceJournalItem>
     // 删除日记。
