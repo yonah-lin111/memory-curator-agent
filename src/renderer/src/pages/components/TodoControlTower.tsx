@@ -1,6 +1,5 @@
 import type React from "react";
 import { CheckCircle2, Layers3, ListTodo } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
 
 // Todo 控制塔属性。
 interface TodoControlTowerProps {
@@ -10,8 +9,6 @@ interface TodoControlTowerProps {
   completedCount: number;
   // 未完成 P0 数量。
   p0Count: number;
-  // 排序回调。
-  onSort: () => void;
 }
 
 // 统计卡片属性。
@@ -48,7 +45,6 @@ export const TodoControlTower = ({
   totalCount,
   completedCount,
   p0Count,
-  onSort,
 }: TodoControlTowerProps): React.JSX.Element => (
   <aside className="flex min-h-0 flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
     <TodoMetricCard
@@ -66,13 +62,5 @@ export const TodoControlTower = ({
       label="P0 聚焦"
       value={p0Count}
     />
-    <IconButton
-      aria-label="重新排序待办"
-      className="h-9 justify-center bg-white/5 px-3 text-white/70 hover:bg-white/10 hover:text-white"
-      iconOnly={false}
-      onClick={onSort}
-    >
-      重新排序
-    </IconButton>
   </aside>
 );

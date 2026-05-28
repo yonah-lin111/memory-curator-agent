@@ -4,6 +4,7 @@ import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
 import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
 import { TodoControlTower } from "@renderer/pages/components/TodoControlTower";
+import { sortTodoItems } from "@renderer/pages/components/todoShared";
 import {
   createTodayEntryDate,
   getEntryMonth,
@@ -194,7 +195,7 @@ export const TodoPage = (): React.JSX.Element => {
     try {
       const reordered = await window.api.daily.sortTodos({
         entryDate,
-        ids: todos.map((todo) => todo.id),
+        ids: sortTodoItems(todos).map((todo) => todo.id),
       });
       setTodos(reordered);
       return true;
@@ -237,9 +238,6 @@ export const TodoPage = (): React.JSX.Element => {
           completedCount={completedCount}
           p0Count={p0Count}
           totalCount={todos.length}
-          onSort={() => {
-            void handleSortTodos();
-          }}
         />
       </div>
     </section>
