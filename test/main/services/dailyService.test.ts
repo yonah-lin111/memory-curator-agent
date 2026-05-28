@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { JournalRow, SnippetRow, TodoRow } from '../db/schema'
-import { createDailyService, type DatabaseConnection, type DatabaseStatement } from './dailyService'
+import type { JournalRow, SnippetRow, TodoRow } from '../../../src/main/db/schema'
+import { createDailyService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/dailyService'
 
 // 测试数据库连接。
 let sqlite: MemoryDailyDatabase

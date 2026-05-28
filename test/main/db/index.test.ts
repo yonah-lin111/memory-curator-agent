@@ -5,7 +5,7 @@ import {
   createSnippetsTable,
   createTodosTable,
   migrateLegacySchema
-} from './index'
+} from '../../../src/main/db/index'
 
 // 内存表结构。
 type MemoryTable = {

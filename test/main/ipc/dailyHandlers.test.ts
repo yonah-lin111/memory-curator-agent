@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { registerDailyHandlers } from './dailyHandlers'
+import { registerDailyHandlers } from '../../../src/main/ipc/dailyHandlers'
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
@@ -32,19 +32,19 @@ vi.mock('electron', () => ({
   }
 }))
 
-vi.mock('../db', () => ({
+vi.mock('../../../src/main/db', () => ({
   getDatabase: vi.fn(() => mocks.database)
 }))
 
-vi.mock('../services/dailyService', () => ({
+vi.mock('../../../src/main/services/dailyService', () => ({
   createDailyService: vi.fn(() => mocks.dailyService)
 }))
 
-vi.mock('../services/filesService', () => ({
+vi.mock('../../../src/main/services/filesService', () => ({
   createFilesService: vi.fn(() => mocks.filesService)
 }))
 
-vi.mock('../services/markdownImageMaintenance', () => ({
+vi.mock('../../../src/main/services/markdownImageMaintenance', () => ({
   scheduleMarkdownImageMaintenance: mocks.scheduleMarkdownImageMaintenance
 }))
 

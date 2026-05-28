@@ -4,8 +4,8 @@ import {
   MARKDOWN_IMAGE_STARTUP_DELAY_MS,
   scheduleMarkdownImageMaintenance,
   scheduleStartupMarkdownImageMaintenance
-} from './markdownImageMaintenance'
-import type { FilesService } from './filesService'
+} from '../../../src/main/services/markdownImageMaintenance'
+import type { FilesService } from '../../../src/main/services/filesService'
 
 // 测试用文件服务。
 const filesService: FilesService = {

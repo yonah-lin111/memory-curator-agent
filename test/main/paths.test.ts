@@ -7,7 +7,7 @@ import {
   getDatabasePath,
   getMarkdownImageDir,
   getMarkdownImageTrashDir
-} from './paths'
+} from '../../src/main/paths'
 
 describe('main paths', () => {
   it('uses the current user home .mc directory for app data', () => {
