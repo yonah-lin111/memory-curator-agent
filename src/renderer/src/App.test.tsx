@@ -57,7 +57,8 @@ describe('App', () => {
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getByRole('heading', { name: '日记条目回看' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
@@ -96,8 +97,27 @@ describe('App', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(screen.getByRole('heading', { name: '日记条目回看' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Journal/ })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('Journal / Todo / Snippets 路由进入正式页面而不是占位文案', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /Journal/ }))
+    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
+    expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Todo/ }))
+    expect(screen.getByPlaceholderText('添加一个待办，回车保存')).toBeInTheDocument()
+    expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Snippets/ }))
+    expect(screen.getByText('全部片段')).toBeInTheDocument()
+    expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
   })
 
   it('中间内容容器保留克制的左右内边距', () => {
@@ -209,7 +229,7 @@ describe('App', () => {
 
     const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
     const container = todoText.closest('.group')!
-    const deleteBtn = container.querySelector('button[aria-label="删除"]')!
+    const deleteBtn = container.querySelector('button[aria-label="删除待办 完成 Today 工作台的三栏静态布局编码与视觉自审"]')!
 
     await user.click(deleteBtn)
 

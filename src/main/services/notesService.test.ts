@@ -10,13 +10,16 @@ class MemoryNotesDatabase implements DatabaseConnection {
   // 内存笔记行。
   private rows: NoteRow[] = []
 
+  // 自增主键游标。
+  private nextId = 1
+
   /**
    * 准备内存 SQL 语句。
    */
   prepare = (sql: string): DatabaseStatement => {
     if (sql.startsWith('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes ORDER BY')) {
       return {
-        all: () => [...this.rows].sort((left, right) => right.time.localeCompare(left.time) || right.id.localeCompare(left.id)),
+        all: () => [...this.rows].sort((left, right) => right.time.localeCompare(left.time) || right.id - left.id),
         get: () => undefined,
         run: () => undefined
       }
@@ -27,16 +30,20 @@ class MemoryNotesDatabase implements DatabaseConnection {
         all: () => [],
         get: () => undefined,
         run: (...values) => {
+          const insertedId = this.nextId
+          this.nextId += 1
           this.rows.push({
-            id: values[0] as string,
-            title: values[1] as string,
-            content: values[2] as string,
-            source: values[3] as NoteRow['source'],
-            tags: values[4] as string,
-            time: values[5] as string,
-            is_curated: values[6] as number,
-            clue: values[7] as string | null
+            id: insertedId,
+            title: values[0] as string,
+            content: values[1] as string,
+            source: values[2] as NoteRow['source'],
+            tags: values[3] as string,
+            time: values[4] as string,
+            is_curated: values[5] as number,
+            clue: values[6] as string | null
           })
+
+          return { lastInsertRowid: insertedId }
         }
       }
     }
@@ -112,7 +119,7 @@ describe('notesService', () => {
       isCurated: false,
       clue: '可能关联主题「Markdown 新素材」'
     })
-    expect(created.id).toMatch(/^n-/)
+    expect(typeof created.id).toBe('number')
     expect(created.time).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
     expect(service.list()).toEqual([created])
 

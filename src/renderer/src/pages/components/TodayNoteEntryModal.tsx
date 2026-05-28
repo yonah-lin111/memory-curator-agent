@@ -6,7 +6,7 @@ import { Tag } from "@renderer/components/ui/Tag";
 
 export type NoteItem = {
   // 片段唯一标识。
-  id: string;
+  id: number;
   // 片段标题。
   title: string;
   // 片段正文。
@@ -23,7 +23,7 @@ type TodayNoteEntryModalProps = {
   // 关闭弹窗回调
   onClose: () => void;
   // 保存回调，参数支持带 id 的更新，不带 id 的新建
-  onSave: (note: { id?: string; title: string; content: string; tags: string[] }) => Promise<boolean>;
+  onSave: (note: { id?: number; title: string; content: string; tags: string[] }) => Promise<boolean>;
 };
 
 /**

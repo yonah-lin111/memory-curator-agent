@@ -28,11 +28,11 @@ interface TodayTodoPanelProps {
   onCreateTodo: (draft: { text: string; priority: TodoPriority }) => Promise<boolean>;
   // 更新待办回调。
   onUpdateTodo: (
-    id: string,
+    id: number,
     patch: { text: string; priority: TodoPriority; completed: boolean },
   ) => Promise<boolean>;
   // 删除待办回调。
-  onDeleteTodo: (id: string) => Promise<boolean>;
+  onDeleteTodo: (id: number) => Promise<boolean>;
   // 手动排序回调。
   onSortTodos: () => Promise<boolean>;
 }
@@ -48,7 +48,7 @@ interface TodoComposerDraft {
 // 行内编辑草稿，仅跟踪单条待办。
 interface EditingTodoDraft {
   // 正在编辑的待办 ID。
-  id: string;
+  id: number;
   // 正在编辑的文本。
   text: string;
 }
@@ -96,7 +96,7 @@ export const TodayTodoPanel = ({
   // 当前行内编辑草稿。
   const [editingTodo, setEditingTodo] = useState<EditingTodoDraft | null>(null);
   // 正在执行删除动画的待办 ID 列表。
-  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [deletingIds, setDeletingIds] = useState<number[]>([]);
   // 快速录入输入框引用，用于头部按钮聚焦。
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -209,7 +209,7 @@ export const TodayTodoPanel = ({
   /**
    * 删除指定待办（附带优雅缩放淡出与折叠动画）。
    */
-  const handleDeleteTodo = (id: string): void => {
+  const handleDeleteTodo = (id: number): void => {
     setDeletingIds((currentIds) => [...currentIds, id]);
 
     window.setTimeout(async () => {
@@ -437,8 +437,8 @@ export const TodayTodoPanel = ({
                 </button>
               )}
 
-              <button
-                aria-label="删除"
+                  <button
+                    aria-label={`删除待办 ${todo.text}`}
                 className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/30 transition-colors hover:bg-white/5 hover:text-rose-400"
                 type="button"
                 onClick={() => handleDeleteTodo(todo.id)}

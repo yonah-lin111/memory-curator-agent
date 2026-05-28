@@ -46,7 +46,7 @@ export type WorkspaceTodoReorderInput = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
-  ids: string[]
+  ids: number[]
 }
 
 // 工作台片段创建输入类型。
@@ -82,7 +82,7 @@ export type WorkspaceJournalSaveInput = {
 // 页面使用的笔记类型。
 export type NoteMaterialItem = {
   // 笔记唯一标识。
-  id: string
+  id: number
   // 笔记标题。
   title: string
   // 笔记正文。
@@ -102,7 +102,7 @@ export type NoteMaterialItem = {
 // 页面使用的工作台待办类型。
 export type WorkspaceTodoItem = {
   // 待办唯一标识。
-  id: string
+  id: number
   // 待办所属日期。
   entryDate: string
   // 待办文本。
@@ -122,7 +122,7 @@ export type WorkspaceTodoItem = {
 // 页面使用的工作台片段类型。
 export type WorkspaceSnippetItem = {
   // 片段唯一标识。
-  id: string
+  id: number
   // 片段所属日期。
   entryDate: string
   // 片段标题。
@@ -164,7 +164,7 @@ export type WorkspaceDayData = {
 // 数据库笔记行类型。
 export type NoteRow = {
   // 笔记唯一标识。
-  id: string
+  id: number
   // 笔记标题。
   title: string
   // 笔记正文。
@@ -184,7 +184,7 @@ export type NoteRow = {
 // 工作台待办数据库行类型。
 export type WorkspaceTodoRow = {
   // 待办唯一标识。
-  id: string
+  id: number
   // 待办所属日期。
   entry_date: string
   // 待办文本。
@@ -204,7 +204,7 @@ export type WorkspaceTodoRow = {
 // 工作台片段数据库行类型。
 export type WorkspaceSnippetRow = {
   // 片段唯一标识。
-  id: string
+  id: number
   // 片段所属日期。
   entry_date: string
   // 片段标题。
@@ -233,7 +233,7 @@ export type WorkspaceJournalRow = {
 
 // 笔记 SQLite 表定义。
 export const notes = sqliteTable('notes', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey(),
   title: text('title').notNull(),
   content: text('content').notNull(),
   source: text('source').$type<NoteSource>().notNull(),
@@ -245,7 +245,7 @@ export const notes = sqliteTable('notes', {
 
 // 待办 SQLite 表定义。
 export const todos = sqliteTable('todos', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey(),
   entryDate: text('entry_date').notNull(),
   text: text('text').notNull(),
   priority: text('priority').$type<WorkspaceTodoPriority>().notNull(),
@@ -257,7 +257,7 @@ export const todos = sqliteTable('todos', {
 
 // 片段 SQLite 表定义。
 export const snippets = sqliteTable('snippets', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey(),
   entryDate: text('entry_date').notNull(),
   title: text('title').notNull(),
   content: text('content').notNull(),

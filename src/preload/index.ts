@@ -49,7 +49,7 @@ type WorkspaceTodoSortPayload = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
-  ids: string[]
+  ids: number[]
 }
 
 // 工作台片段创建载荷类型。
@@ -79,22 +79,22 @@ const api = {
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),
     create: (draft: NoteDraftPayload) => ipcRenderer.invoke('notes:create', draft),
-    update: (id: string, draft: NoteDraftPayload) => ipcRenderer.invoke('notes:update', id, draft),
-    delete: (id: string) => ipcRenderer.invoke('notes:delete', id)
+    update: (id: number, draft: NoteDraftPayload) => ipcRenderer.invoke('notes:update', id, draft),
+    delete: (id: number) => ipcRenderer.invoke('notes:delete', id)
   },
   workspace: {
     listDay: (entryDate: string) => ipcRenderer.invoke('workspace:list-day', entryDate),
     saveJournal: (draft: WorkspaceJournalSavePayload) => ipcRenderer.invoke('workspace:journal:save', draft),
     deleteJournal: (entryDate: string) => ipcRenderer.invoke('workspace:journal:delete', entryDate),
     createTodo: (draft: WorkspaceTodoCreatePayload) => ipcRenderer.invoke('workspace:todo:create', draft),
-    updateTodo: (id: string, draft: WorkspaceTodoUpdatePayload) =>
+    updateTodo: (id: number, draft: WorkspaceTodoUpdatePayload) =>
       ipcRenderer.invoke('workspace:todo:update', id, draft),
-    deleteTodo: (id: string) => ipcRenderer.invoke('workspace:todo:delete', id),
+    deleteTodo: (id: number) => ipcRenderer.invoke('workspace:todo:delete', id),
     sortTodos: (draft: WorkspaceTodoSortPayload) => ipcRenderer.invoke('workspace:todo:sort', draft),
     createSnippet: (draft: WorkspaceSnippetCreatePayload) => ipcRenderer.invoke('workspace:snippet:create', draft),
-    updateSnippet: (id: string, draft: WorkspaceSnippetUpdatePayload) =>
+    updateSnippet: (id: number, draft: WorkspaceSnippetUpdatePayload) =>
       ipcRenderer.invoke('workspace:snippet:update', id, draft),
-    deleteSnippet: (id: string) => ipcRenderer.invoke('workspace:snippet:delete', id)
+    deleteSnippet: (id: number) => ipcRenderer.invoke('workspace:snippet:delete', id)
   }
 }
 

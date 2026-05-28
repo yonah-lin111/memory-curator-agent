@@ -60,7 +60,7 @@ const TODAY_STATS: StatItem[] = [
 // 无 preload bridge 时使用的待办回退数据。
 const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
   {
-    id: "t4",
+    id: 4,
     entryDate: "2026-05-27",
     text: "修复渲染层 TypeScript 编译错误与 Lint 规范冲突",
     completed: false,
@@ -70,7 +70,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
     updatedAt: "2026-05-27 09:25",
   },
   {
-    id: "t3",
+    id: 3,
     entryDate: "2026-05-27",
     text: "完成 Today 工作台的三栏静态布局编码与视觉自审",
     completed: false,
@@ -80,7 +80,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
     updatedAt: "2026-05-27 09:20",
   },
   {
-    id: "t2",
+    id: 2,
     entryDate: "2026-05-27",
     text: "对今日新输入的主观段落进行隐私过滤边界核对",
     completed: true,
@@ -90,7 +90,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
     updatedAt: "2026-05-27 09:15",
   },
   {
-    id: "t1",
+    id: 1,
     entryDate: "2026-05-27",
     text: "整理 AEON 核心协议层关于记忆关联度衰减的计算模型",
     completed: true,
@@ -100,7 +100,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
     updatedAt: "2026-05-27 09:10",
   },
   {
-    id: "t5",
+    id: 5,
     entryDate: "2026-05-27",
     text: "整理本周 Review 需要呈送的核心神经元演化线索",
     completed: true,
@@ -114,7 +114,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
 // 无 preload bridge 时使用的片段回退数据。
 const FALLBACK_NOTES: TodayWorkspaceNoteItem[] = [
   {
-    id: "n1",
+    id: 1,
     entryDate: "2026-05-27",
     title: "关于记忆持久化的思考",
     content:
@@ -125,7 +125,7 @@ const FALLBACK_NOTES: TodayWorkspaceNoteItem[] = [
     updatedAt: "2026-05-27 10:15",
   },
   {
-    id: "n2",
+    id: 2,
     entryDate: "2026-05-27",
     title: "本地持久化方案表现",
     content:
@@ -136,7 +136,7 @@ const FALLBACK_NOTES: TodayWorkspaceNoteItem[] = [
     updatedAt: "2026-05-27 13:40",
   },
   {
-    id: "n3",
+    id: 3,
     entryDate: "2026-05-27",
     title: "主题线索设计启发",
     content:
@@ -351,7 +351,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
             -1,
           ) + 1;
         const created: TodayWorkspaceTodoItem = {
-          id: `todo-${Date.now()}`,
+          id: Date.now(),
           entryDate,
           text: draft.text.trim(),
           completed: false,
@@ -382,7 +382,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 更新待办并在写入成功后同步本地状态。
    */
   const handleUpdateTodo = async (
-    id: string,
+    id: number,
     patch: { text: string; priority: TodoPriority; completed: boolean },
   ): Promise<boolean> => {
     setWorkspaceError(null);
@@ -423,7 +423,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
   /**
    * 删除待办并在写入成功后同步本地状态。
    */
-  const handleDeleteTodo = async (id: string): Promise<boolean> => {
+  const handleDeleteTodo = async (id: number): Promise<boolean> => {
     setWorkspaceError(null);
 
     try {
@@ -483,7 +483,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 保存或更新随记片段。
    */
   const handleSaveNote = async (savedNote: {
-    id?: string;
+    id?: number;
     title: string;
     content: string;
     tags: string[];
@@ -509,7 +509,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         }
 
         const created: TodayWorkspaceNoteItem = {
-          id: `note-${Date.now()}`,
+          id: Date.now(),
           entryDate,
           title: savedNote.title.trim(),
           content: savedNote.content.trim(),
@@ -554,7 +554,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
   /**
    * 删除随记片段并在写入成功后同步本地状态。
    */
-  const handleDeleteNote = async (id: string): Promise<boolean> => {
+  const handleDeleteNote = async (id: number): Promise<boolean> => {
     setWorkspaceError(null);
 
     try {

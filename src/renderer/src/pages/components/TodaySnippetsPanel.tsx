@@ -17,7 +17,7 @@ interface TodaySnippetsPanelProps {
   // 编辑/查看随记卡片回调
   onEditNote: (note: NoteItem) => void;
   // 删除随记卡片回调
-  onDeleteNote: (id: string) => Promise<boolean>;
+  onDeleteNote: (id: number) => Promise<boolean>;
 }
 
 /**
@@ -33,12 +33,12 @@ export const TodaySnippetsPanel = ({
   onDeleteNote,
 }: TodaySnippetsPanelProps): React.JSX.Element => {
   // 正在执行删除动画的随记 ID 列表
-  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [deletingIds, setDeletingIds] = useState<number[]>([]);
 
   /**
    * 触发删除动画并回调删除逻辑
    */
-  const handleDeleteNote = (event: React.MouseEvent, id: string): void => {
+  const handleDeleteNote = (event: React.MouseEvent, id: number): void => {
     event.stopPropagation();
     setDeletingIds((currentIds) => [...currentIds, id]);
 

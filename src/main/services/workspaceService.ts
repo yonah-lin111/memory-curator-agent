@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type {
   WorkspaceDayData,
   WorkspaceJournalItem,
@@ -23,7 +22,7 @@ export type DatabaseStatement = {
   // 执行查询并返回单行。
   get: (...values: unknown[]) => unknown
   // 执行写入语句。
-  run: (...values: unknown[]) => unknown
+  run: (...values: unknown[]) => { lastInsertRowid?: number | bigint } | unknown
 }
 
 // Workspace 服务依赖的最小数据库接口。
@@ -43,21 +42,38 @@ export type WorkspaceService = {
   // 创建待办。
   createTodo: (input: WorkspaceTodoCreateInput) => WorkspaceTodoItem
   // 更新待办。
-  updateTodo: (id: string, input: WorkspaceTodoUpdateInput) => WorkspaceTodoItem
+  updateTodo: (id: number, input: WorkspaceTodoUpdateInput) => WorkspaceTodoItem
   // 删除待办。
-  deleteTodo: (id: string) => void
+  deleteTodo: (id: number) => void
   // 重新排序待办。
   reorderTodos: (input: WorkspaceTodoReorderInput) => WorkspaceTodoItem[]
   // 创建片段。
   createSnippet: (input: WorkspaceSnippetCreateInput) => WorkspaceSnippetItem
   // 更新片段。
-  updateSnippet: (id: string, input: WorkspaceSnippetUpdateInput) => WorkspaceSnippetItem
+  updateSnippet: (id: number, input: WorkspaceSnippetUpdateInput) => WorkspaceSnippetItem
   // 删除片段。
-  deleteSnippet: (id: string) => void
+  deleteSnippet: (id: number) => void
 }
 
 // 合法待办优先级集合。
 const TODO_PRIORITIES: WorkspaceTodoPriority[] = ['P0', 'P1', 'P2', 'P3']
+
+/**
+ * 提取 SQLite 自增主键。
+ */
+const getInsertedRowId = (result: unknown, entityName: string): number => {
+  const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
+
+  if (typeof rowId === 'bigint') {
+    return Number(rowId)
+  }
+
+  if (typeof rowId === 'number') {
+    return rowId
+  }
+
+  throw new Error(`无法读取新建${entityName}的主键`)
+}
 
 /**
  * 生成当前时间戳。
@@ -273,33 +289,30 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
         .prepare('SELECT MAX(sort_order) AS max_sort_order FROM todos WHERE entry_date = ?')
         .get(input.entryDate) as { max_sort_order: number | null } | undefined)?.max_sort_order ?? -1
     const timestamp = createTimestamp()
-    const todo: WorkspaceTodoItem = {
-      id: `wt-${randomUUID()}`,
-      entryDate: input.entryDate,
-      text: input.text.trim(),
-      priority: input.priority,
-      completed: false,
-      sortOrder: maxSortOrder + 1,
-      createdAt: timestamp,
-      updatedAt: timestamp
-    }
-
-    database
+    const inserted = database
       .prepare(
-        'INSERT INTO todos (id, entry_date, text, priority, completed, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO todos (entry_date, text, priority, completed, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
-        todo.id,
-        todo.entryDate,
-        todo.text,
-        todo.priority,
+        input.entryDate,
+        input.text.trim(),
+        input.priority,
         0,
-        todo.sortOrder,
-        todo.createdAt,
-        todo.updatedAt
+        maxSortOrder + 1,
+        timestamp,
+        timestamp
       )
+    const row = database
+      .prepare(
+        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
+      )
+      .get(getInsertedRowId(inserted, '待办')) as WorkspaceTodoRow | undefined
 
-    return todo
+    if (!row) {
+      throw new Error('新建待办后读取失败')
+    }
+
+    return mapTodoRow(row)
   },
   updateTodo: (id, input) => {
     validateTodoUpdateInput(input)
@@ -355,32 +368,29 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
     validateSnippetInput(input)
 
     const timestamp = createTimestamp()
-    const snippet: WorkspaceSnippetItem = {
-      id: `ws-${randomUUID()}`,
-      entryDate: input.entryDate,
-      title: input.title.trim(),
-      content: input.content.trim(),
-      tags: input.tags,
-      time: toDisplayTime(timestamp),
-      createdAt: timestamp,
-      updatedAt: timestamp
-    }
-
-    database
+    const inserted = database
       .prepare(
-        'INSERT INTO snippets (id, entry_date, title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO snippets (entry_date, title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
       )
       .run(
-        snippet.id,
-        snippet.entryDate,
-        snippet.title,
-        snippet.content,
-        JSON.stringify(snippet.tags),
-        snippet.createdAt,
-        snippet.updatedAt
+        input.entryDate,
+        input.title.trim(),
+        input.content.trim(),
+        JSON.stringify(input.tags),
+        timestamp,
+        timestamp
       )
+    const row = database
+      .prepare(
+        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
+      )
+      .get(getInsertedRowId(inserted, '片段')) as WorkspaceSnippetRow | undefined
 
-    return snippet
+    if (!row) {
+      throw new Error('新建片段后读取失败')
+    }
+
+    return mapSnippetRow(row)
   },
   updateSnippet: (id, input) => {
     validateSnippetInput(input)

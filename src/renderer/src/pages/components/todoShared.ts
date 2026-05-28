@@ -4,7 +4,7 @@ export type TodoPriority = "P0" | "P1" | "P2" | "P3";
 // 待办事项对象，供页面与弹窗共享。
 export interface TodoItem {
   // 待办唯一标识。
-  id: string;
+  id: number;
   // 待办内容文本。
   text: string;
   // 是否已完成。

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type { NoteCreateInput, NoteMaterialItem, NoteRow, NoteUpdateInput } from '../db/schema'
 
 // 数据库语句接口。
@@ -8,7 +7,7 @@ export type DatabaseStatement = {
   // 执行查询并返回单行。
   get: (...values: unknown[]) => unknown
   // 执行写入语句。
-  run: (...values: unknown[]) => unknown
+  run: (...values: unknown[]) => { lastInsertRowid?: number | bigint } | unknown
 }
 
 // Notes 服务依赖的最小数据库接口。
@@ -24,9 +23,26 @@ export type NotesService = {
   // 创建笔记。
   create: (input: NoteCreateInput) => NoteMaterialItem
   // 更新笔记。
-  update: (id: string, input: NoteUpdateInput) => NoteMaterialItem
+  update: (id: number, input: NoteUpdateInput) => NoteMaterialItem
   // 删除笔记。
-  delete: (id: string) => void
+  delete: (id: number) => void
+}
+
+/**
+ * 提取 SQLite 自增主键。
+ */
+const getInsertedRowId = (result: unknown): number => {
+  const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
+
+  if (typeof rowId === 'bigint') {
+    return Number(rowId)
+  }
+
+  if (typeof rowId === 'number') {
+    return rowId
+  }
+
+  throw new Error('无法读取新建笔记的主键')
 }
 
 /**
@@ -99,24 +115,28 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
   create: (input) => {
     validateNoteInput(input)
 
-    const note: NoteMaterialItem = {
-      id: `n-${randomUUID()}`,
-      title: input.title.trim(),
-      content: input.content.trim(),
-      source: input.source,
-      tags: input.tags,
-      time: createDisplayTime(),
-      isCurated: false,
-      clue: '可能关联主题「Markdown 新素材」'
+    const inserted = database
+      .prepare(
+        'INSERT INTO notes (title, content, source, tags, time, is_curated, clue) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      )
+      .run(
+        input.title.trim(),
+        input.content.trim(),
+        input.source,
+        JSON.stringify(input.tags),
+        createDisplayTime(),
+        0,
+        '可能关联主题「Markdown 新素材」'
+      )
+    const row = database
+      .prepare('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes WHERE id = ?')
+      .get(getInsertedRowId(inserted)) as NoteRow | undefined
+
+    if (!row) {
+      throw new Error('新建笔记后读取失败')
     }
 
-    database
-      .prepare(
-        'INSERT INTO notes (id, title, content, source, tags, time, is_curated, clue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      )
-      .run(note.id, note.title, note.content, note.source, JSON.stringify(note.tags), note.time, 0, note.clue)
-
-    return note
+    return mapNoteRow(row)
   },
   update: (id, input) => {
     validateNoteInput(input)

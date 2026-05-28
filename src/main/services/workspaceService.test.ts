@@ -16,6 +16,12 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
   // 内存日记行。
   private journalRows: WorkspaceJournalRow[] = []
 
+  // 待办自增主键游标。
+  private nextTodoId = 1
+
+  // 片段自增主键游标。
+  private nextSnippetId = 1
+
   /**
    * 准备内存 SQL 语句。
    */
@@ -58,16 +64,20 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
         all: () => [],
         get: () => undefined,
         run: (...values) => {
+          const insertedId = this.nextTodoId
+          this.nextTodoId += 1
           this.todoRows.push({
-            id: values[0] as string,
-            entry_date: values[1] as string,
-            text: values[2] as string,
-            priority: values[3] as WorkspaceTodoRow['priority'],
-            completed: values[4] as number,
-            sort_order: values[5] as number,
-            created_at: values[6] as string,
-            updated_at: values[7] as string
+            id: insertedId,
+            entry_date: values[0] as string,
+            text: values[1] as string,
+            priority: values[2] as WorkspaceTodoRow['priority'],
+            completed: values[3] as number,
+            sort_order: values[4] as number,
+            created_at: values[5] as string,
+            updated_at: values[6] as string
           })
+
+          return { lastInsertRowid: insertedId }
         }
       }
     }
@@ -141,7 +151,7 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
         all: (...values) =>
           this.snippetRows
             .filter((row) => row.entry_date === values[0])
-            .sort((left, right) => right.created_at.localeCompare(left.created_at) || right.id.localeCompare(left.id)),
+            .sort((left, right) => right.created_at.localeCompare(left.created_at) || right.id - left.id),
         get: () => undefined,
         run: () => undefined
       }
@@ -152,15 +162,19 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
         all: () => [],
         get: () => undefined,
         run: (...values) => {
+          const insertedId = this.nextSnippetId
+          this.nextSnippetId += 1
           this.snippetRows.push({
-            id: values[0] as string,
-            entry_date: values[1] as string,
-            title: values[2] as string,
-            content: values[3] as string,
-            tags: values[4] as string,
-            created_at: values[5] as string,
-            updated_at: values[6] as string
+            id: insertedId,
+            entry_date: values[0] as string,
+            title: values[1] as string,
+            content: values[2] as string,
+            tags: values[3] as string,
+            created_at: values[4] as string,
+            updated_at: values[5] as string
           })
+
+          return { lastInsertRowid: insertedId }
         }
       }
     }
@@ -322,6 +336,8 @@ describe('workspaceService', () => {
       priority: 'P2'
     })
 
+    expect(typeof firstTodo.id).toBe('number')
+    expect(typeof secondTodo.id).toBe('number')
     expect(firstTodo.sortOrder).toBe(0)
     expect(secondTodo.sortOrder).toBe(1)
 
@@ -360,7 +376,7 @@ describe('workspaceService', () => {
       tags: ['灵感', '本地']
     })
 
-    expect(created.id).toMatch(/^ws-/)
+    expect(typeof created.id).toBe('number')
     expect(created.time).toMatch(/^\d{2}:\d{2}$/)
 
     const updated = service.updateSnippet(created.id, {

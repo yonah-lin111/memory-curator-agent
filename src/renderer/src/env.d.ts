@@ -31,7 +31,7 @@ type NoteDraftPayload = {
 // 页面使用的笔记类型。
 type NoteMaterialItem = NoteDraftPayload & {
   // 笔记唯一标识。
-  id: string
+  id: number
   // 记录日期与时间。
   time: string
   // 是否已经被策展归档。
@@ -65,13 +65,13 @@ type WorkspaceTodoSortPayload = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
-  ids: string[]
+  ids: number[]
 }
 
 // 页面使用的工作台待办类型。
 type WorkspaceTodoItem = {
   // 待办唯一标识。
-  id: string
+  id: number
   // 待办所属日期。
   entryDate: string
   // 待办文本。
@@ -113,7 +113,7 @@ type WorkspaceSnippetUpdatePayload = {
 // 页面使用的工作台片段类型。
 type WorkspaceSnippetItem = {
   // 片段唯一标识。
-  id: string
+  id: number
   // 片段所属日期。
   entryDate: string
   // 片段标题。
@@ -161,9 +161,9 @@ type AppAPI = {
     // 创建笔记。
     create: (draft: NoteDraftPayload) => Promise<NoteMaterialItem>
     // 更新笔记。
-    update: (id: string, draft: NoteDraftPayload) => Promise<NoteMaterialItem>
+    update: (id: number, draft: NoteDraftPayload) => Promise<NoteMaterialItem>
     // 删除笔记。
-    delete: (id: string) => Promise<void>
+    delete: (id: number) => Promise<void>
   }
   // Today 工作台 API。
   workspace: {
@@ -176,17 +176,17 @@ type AppAPI = {
     // 创建待办。
     createTodo: (draft: WorkspaceTodoCreatePayload) => Promise<WorkspaceTodoItem>
     // 更新待办。
-    updateTodo: (id: string, draft: WorkspaceTodoUpdatePayload) => Promise<WorkspaceTodoItem>
+    updateTodo: (id: number, draft: WorkspaceTodoUpdatePayload) => Promise<WorkspaceTodoItem>
     // 删除待办。
-    deleteTodo: (id: string) => Promise<void>
+    deleteTodo: (id: number) => Promise<void>
     // 重排待办。
     sortTodos: (draft: WorkspaceTodoSortPayload) => Promise<WorkspaceTodoItem[]>
     // 创建片段。
     createSnippet: (draft: WorkspaceSnippetCreatePayload) => Promise<WorkspaceSnippetItem>
     // 更新片段。
-    updateSnippet: (id: string, draft: WorkspaceSnippetUpdatePayload) => Promise<WorkspaceSnippetItem>
+    updateSnippet: (id: number, draft: WorkspaceSnippetUpdatePayload) => Promise<WorkspaceSnippetItem>
     // 删除片段。
-    deleteSnippet: (id: string) => Promise<void>
+    deleteSnippet: (id: number) => Promise<void>
   }
 }
 

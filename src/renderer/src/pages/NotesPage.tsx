@@ -31,7 +31,7 @@ import { Tag } from "@renderer/components/ui/Tag";
 // 自由笔记素材项类型。
 type NoteMaterialItem = {
   // 笔记唯一标识。
-  id: string;
+  id: number;
   // 笔记标题。
   title: string;
   // 笔记正文。
@@ -556,7 +556,7 @@ export const NotesPage = (): React.JSX.Element => {
   /**
    * 删除素材。
    */
-  const handleDeleteNote = async (id: string): Promise<void> => {
+  const handleDeleteNote = async (id: number): Promise<void> => {
     setNotesError(null);
 
     try {
@@ -572,7 +572,7 @@ export const NotesPage = (): React.JSX.Element => {
   /**
    * 更新素材池中的笔记。
    */
-  const handleUpdateNote = async (id: string, draft: NoteDraft): Promise<void> => {
+  const handleUpdateNote = async (id: number, draft: NoteDraft): Promise<void> => {
     setNotesError(null);
 
     try {
