@@ -1,11 +1,16 @@
 import { ipcMain } from 'electron'
-import { createFilesService, type MarkdownImageSaveInput } from '../services/filesService'
+import { getDatabase } from '../db'
+import {
+  createFilesService,
+  type DatabaseConnection,
+  type MarkdownImageSaveInput
+} from '../services/filesService'
 
 /**
  * 注册文件 IPC 处理器。
  */
 export const registerFilesHandlers = (): void => {
-  const filesService = createFilesService()
+  const filesService = createFilesService({ database: getDatabase() as unknown as DatabaseConnection })
 
   ipcMain.handle('files:markdown-image:save', (_, input: MarkdownImageSaveInput) =>
     filesService.saveMarkdownImage(input)

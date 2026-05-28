@@ -14,9 +14,9 @@ export const createMarkdownImageUrl = (fileName: string): string =>
   `${MARKDOWN_IMAGE_PROTOCOL}://${MARKDOWN_IMAGE_HOST}/${encodeURIComponent(fileName)}`
 
 /**
- * 从 Markdown 图片 URL 解析本机文件路径。
+ * 从 Markdown 图片 URL 解析文件名。
  */
-export const resolveMarkdownImagePath = (requestUrl: string): string | null => {
+export const resolveMarkdownImageFileName = (requestUrl: string): string | null => {
   const url = new URL(requestUrl)
 
   if (url.protocol !== `${MARKDOWN_IMAGE_PROTOCOL}:` || url.hostname !== MARKDOWN_IMAGE_HOST) {
@@ -29,5 +29,14 @@ export const resolveMarkdownImagePath = (requestUrl: string): string | null => {
     return null
   }
 
-  return join(getMarkdownImageDir(), fileName)
+  return fileName
+}
+
+/**
+ * 从 Markdown 图片 URL 解析本机文件路径。
+ */
+export const resolveMarkdownImagePath = (requestUrl: string): string | null => {
+  const fileName = resolveMarkdownImageFileName(requestUrl)
+
+  return fileName ? join(getMarkdownImageDir(), fileName) : null
 }

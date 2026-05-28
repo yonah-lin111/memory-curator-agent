@@ -20,3 +20,8 @@ export const getDatabasePath = (): string => join(getDatabaseDir(), 'curator.db'
  * 获取 Markdown 图片存储目录。
  */
 export const getMarkdownImageDir = (): string => join(getAppDataRoot(), 'img', 'md')
+
+/**
+ * 获取 Markdown 图片回收目录。
+ */
+export const getMarkdownImageTrashDir = (): string => join(getAppDataRoot(), 'trash', 'img', 'md')

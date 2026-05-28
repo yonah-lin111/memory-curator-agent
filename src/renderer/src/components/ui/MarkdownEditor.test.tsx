@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import "@testing-library/jest-dom/vitest";
-import { render, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownEditor } from "./MarkdownEditor";
 
 // MdEditor 最近一次接收的属性。
@@ -51,6 +51,11 @@ describe("MarkdownEditor", () => {
         delete: vi.fn(),
       },
     } as Window["api"];
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it("enables image upload and persists pasted images through the bridge", async () => {

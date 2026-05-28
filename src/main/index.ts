@@ -6,6 +6,8 @@ import { registerNotesHandlers } from './ipc/notesHandlers'
 import { registerDailyHandlers } from './ipc/dailyHandlers'
 import { registerFilesHandlers } from './ipc/filesHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from './protocols/imageProtocol'
+import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from './services/filesService'
+import { scheduleStartupMarkdownImageMaintenance } from './services/markdownImageMaintenance'
 
 registerImageProtocolSchemes()
 
@@ -44,11 +46,14 @@ const createWindow = (): void => {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.memorycurator.agent')
-  initDatabase()
+  const database = initDatabase()
   registerNotesHandlers()
   registerDailyHandlers()
   registerFilesHandlers()
   registerImageProtocolHandler()
+  scheduleStartupMarkdownImageMaintenance(
+    createFilesService({ database: database as unknown as FilesDatabaseConnection })
+  )
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
