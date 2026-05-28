@@ -1,10 +1,16 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { StickyNote, Plus, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
 import { EmptyState } from "@renderer/components/ui/EmptyState";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
-import { SnippetDetailDrawer } from "@renderer/pages/components/SnippetDetailDrawer";
+import { IconButton } from "@renderer/components/ui/IconButton";
+import { Tag } from "@renderer/components/ui/Tag";
 import { SnippetsTagMap } from "@renderer/pages/components/SnippetsTagMap";
+import {
+  TodayNoteEntryModal,
+  type NoteItem,
+} from "@renderer/pages/components/TodayNoteEntryModal";
 import {
   createTodayEntryDate,
   getEntryMonth,
@@ -36,10 +42,6 @@ export const SnippetsPage = (): React.JSX.Element => {
   );
   // 当前片段列表。
   const [snippets, setSnippets] = useState<DailySnippetRecord[]>([]);
-  // 当前选中的片段 ID。
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  // 当前是否处于新建态。
-  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
   // 当前激活标签。
   const [activeTag, setActiveTag] = useState<string | null>(null);
   // 加载状态。
@@ -47,6 +49,13 @@ export const SnippetsPage = (): React.JSX.Element => {
   // 月历标记是否正在加载。
   const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
     useState<boolean>(true);
+
+  // 随记弹窗状态。
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
+  // 当前编辑的随记。
+  const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
+  // 正在执行删除动画的随记 ID 列表。
+  const [deletingIds, setDeletingIds] = useState<number[]>([]);
 
   useEffect(() => {
     /**
@@ -58,14 +67,11 @@ export const SnippetsPage = (): React.JSX.Element => {
       try {
         if (!hasDailyBridge()) {
           setSnippets([]);
-          setSelectedId(null);
           return;
         }
 
         const todayData = await window.api.daily.listDay(entryDate);
         setSnippets(todayData.snippets);
-        setSelectedId(todayData.snippets[0]?.id ?? null);
-        setIsCreatingNew(false);
         setActiveTag(null);
       } catch {
         toast.error("读取片段失败");
@@ -116,6 +122,7 @@ export const SnippetsPage = (): React.JSX.Element => {
         : snippets,
     [activeTag, snippets],
   );
+
   // 标签统计列表。
   const tagItems = useMemo(() => {
     const counts = new Map<string, number>();
@@ -125,26 +132,25 @@ export const SnippetsPage = (): React.JSX.Element => {
 
     return [...counts.entries()].map(([value, count]) => ({ value, count }));
   }, [snippets]);
-  // 当前选中的片段实体。
-  const selectedSnippet =
-    isCreatingNew
-      ? null
-      : visibleSnippets.find((snippet) => snippet.id === selectedId) ?? null;
 
-  useEffect(() => {
-    if (isCreatingNew) {
-      return;
+  // 片段总数。
+  const totalCount = useMemo(() => snippets.length, [snippets]);
+
+  // 标签总数。
+  const totalTagsCount = useMemo(() => tagItems.length, [tagItems]);
+
+  // 最近更新时间。
+  const lastUpdatedTime = useMemo(() => {
+    if (snippets.length === 0) {
+      return "--:--";
     }
 
-    if (visibleSnippets.length === 0) {
-      setSelectedId(null);
-      return;
-    }
+    const latest = snippets.reduce((prev, current) => {
+      return current.updatedAt > prev.updatedAt ? current : prev;
+    }, snippets[0]);
 
-    if (!visibleSnippets.some((snippet) => snippet.id === selectedId)) {
-      setSelectedId(visibleSnippets[0].id);
-    }
-  }, [isCreatingNew, selectedId, visibleSnippets]);
+    return latest.time || latest.updatedAt.slice(-5);
+  }, [snippets]);
 
   /**
    * 在无 bridge 环境下创建本地片段。
@@ -153,16 +159,156 @@ export const SnippetsPage = (): React.JSX.Element => {
     title: string;
     content: string;
     tags: string[];
-  }): DailySnippetRecord => ({
-    id: Date.now(),
-    entryDate,
-    title: draft.title,
-    content: draft.content,
-    tags: draft.tags,
-    time: "00:00",
-    createdAt: createFallbackTimestamp(entryDate),
-    updatedAt: createFallbackTimestamp(entryDate),
-  });
+  }): DailySnippetRecord => {
+    // 当前本地时间。
+    const now = new Date();
+    // 当前小时。
+    const hours = String(now.getHours()).padStart(2, "0");
+    // 当前分钟。
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    return {
+      id: Date.now(),
+      entryDate,
+      title: draft.title,
+      content: draft.content,
+      tags: draft.tags,
+      time: `${hours}:${minutes}`,
+      createdAt: createFallbackTimestamp(entryDate),
+      updatedAt: createFallbackTimestamp(entryDate),
+    };
+  };
+
+  /**
+   * 触发删除动画并回调删除逻辑
+   */
+  const handleDeleteNote = (event: React.MouseEvent, id: number): void => {
+    event.stopPropagation();
+    setDeletingIds((currentIds) => [...currentIds, id]);
+
+    window.setTimeout(async () => {
+      try {
+        if (!hasDailyBridge()) {
+          setSnippets((currentSnippets) =>
+            currentSnippets.filter((snippet) => snippet.id !== id),
+          );
+          setMonthEntryCounts((currentCounts) => {
+            const nextCount = Math.max(
+              (currentCounts[entryDate] ?? snippets.length) - 1,
+              0,
+            );
+
+            if (nextCount === 0) {
+              const nextCounts = { ...currentCounts };
+              delete nextCounts[entryDate];
+              return nextCounts;
+            }
+
+            return {
+              ...currentCounts,
+              [entryDate]: nextCount,
+            };
+          });
+          return;
+        }
+
+        await window.api.daily.deleteSnippet(id);
+        setSnippets((currentSnippets) =>
+          currentSnippets.filter((snippet) => snippet.id !== id),
+        );
+        setMonthEntryCounts((currentCounts) => {
+          const nextCount = Math.max(
+            (currentCounts[entryDate] ?? snippets.length) - 1,
+            0,
+          );
+
+          if (nextCount === 0) {
+            const nextCounts = { ...currentCounts };
+            delete nextCounts[entryDate];
+            return nextCounts;
+          }
+
+          return {
+            ...currentCounts,
+            [entryDate]: nextCount,
+          };
+        });
+      } catch {
+        toast.error("删除片段失败");
+      } finally {
+        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+      }
+    }, 240);
+  };
+
+  /**
+   * 保存或编辑随记的回调。
+   */
+  const handleSaveNote = async (savedNote: {
+    id?: number;
+    title: string;
+    content: string;
+    tags: string[];
+  }): Promise<boolean> => {
+    try {
+      if (savedNote.id) {
+        if (!hasDailyBridge()) {
+          setSnippets((currentSnippets) =>
+            currentSnippets.map((snippet) =>
+              snippet.id === savedNote.id
+                ? {
+                    ...snippet,
+                    title: savedNote.title.trim(),
+                    content: savedNote.content.trim(),
+                    tags: savedNote.tags,
+                    updatedAt: createFallbackTimestamp(entryDate),
+                  }
+                : snippet,
+            ),
+          );
+          return true;
+        }
+
+        const updated = await window.api.daily.updateSnippet(savedNote.id, {
+          title: savedNote.title.trim(),
+          content: savedNote.content.trim(),
+          tags: savedNote.tags,
+        });
+        setSnippets((currentSnippets) =>
+          currentSnippets.map((snippet) =>
+            snippet.id === savedNote.id ? updated : snippet,
+          ),
+        );
+        return true;
+      } else {
+        if (!hasDailyBridge()) {
+          const created = createLocalSnippet(savedNote);
+          setSnippets((currentSnippets) => [created, ...currentSnippets]);
+          setMonthEntryCounts((currentCounts) => ({
+            ...currentCounts,
+            [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
+          }));
+          return true;
+        }
+
+        const created = await window.api.daily.createSnippet({
+          entryDate,
+          title: savedNote.title.trim(),
+          content: savedNote.content.trim(),
+          tags: savedNote.tags,
+        });
+        setSnippets((currentSnippets) => [created, ...currentSnippets]);
+        setMonthEntryCounts((currentCounts) => ({
+          ...currentCounts,
+          [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
+        }));
+        return true;
+      }
+    } catch {
+      toast.error(savedNote.id ? "保存片段失败" : "创建片段失败");
+      return false;
+    }
+  };
 
   return (
     <section aria-label="随记 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
@@ -182,169 +328,132 @@ export const SnippetsPage = (): React.JSX.Element => {
         }}
         onVisibleMonthChange={setVisibleMonth}
       />
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[220px_minmax(0,1fr)_320px]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
+          <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            <div className="flex items-center gap-2">
+              <StickyNote className="h-4 w-4 text-white/60" />
+              <span className="text-sm font-bold tracking-wide text-white/80">
+                随记片段列表
+              </span>
+              <div className="relative group inline-flex items-center">
+                <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                  快速捕捉瞬间的想法、灵感或临时便签片段，支持打上标签分类管理。
+                </div>
+              </div>
+            </div>
+            <IconButton
+              aria-label="添加随记片段"
+              className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+              onClick={() => {
+                setEditingNote(null);
+                setIsNoteModalOpen(true);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
+            {isLoading ? (
+              <div className="rounded-[6px] border border-white/5 bg-black/20 px-3 py-3 text-xs text-white/35">
+                正在读取当日片段...
+              </div>
+            ) : visibleSnippets.length === 0 ? (
+              <EmptyState
+                description="从零散想法里挑一条值得保存的记录。"
+                title="这一天还没有片段"
+              />
+            ) : (
+              <div className="grid gap-2">
+                {visibleSnippets.map((snippet) => {
+                  const isDeleting = deletingIds.includes(snippet.id);
+
+                  return (
+                    <div
+                      key={snippet.id}
+                      onClick={() => {
+                        setEditingNote({
+                          id: snippet.id,
+                          title: snippet.title,
+                          content: snippet.content,
+                          tags: snippet.tags,
+                          time: snippet.time,
+                        });
+                        setIsNoteModalOpen(true);
+                      }}
+                      className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 cursor-pointer hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
+                        isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-white/80 truncate pr-2">
+                          {snippet.title || "无标题片段"}
+                        </h4>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-xs font-mono text-white/30">
+                            {snippet.time}
+                          </span>
+                          <button
+                            aria-label={`删除片段 ${snippet.title || "无标题片段"}`}
+                            className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
+                            type="button"
+                            onClick={(e) => handleDeleteNote(e, snippet.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-white/50 leading-relaxed whitespace-pre-wrap">
+                        {snippet.content}
+                      </p>
+                      {snippet.tags && snippet.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {snippet.tags.map((tag) => (
+                            <Tag
+                              key={tag}
+                              size="small"
+                              prefix={<TagIcon className="h-2.5 w-2.5" />}
+                              bgClass="border-white/5 bg-white/[0.02] text-white/40"
+                            >
+                              {tag}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         <SnippetsTagMap
           activeTag={activeTag}
           tags={tagItems}
+          totalCount={totalCount}
+          totalTagsCount={totalTagsCount}
+          lastUpdatedTime={lastUpdatedTime}
           onChange={setActiveTag}
           onCreateNew={() => {
-            setIsCreatingNew(true);
-            setSelectedId(null);
-          }}
-        />
-
-        <div className="min-h-0 overflow-y-auto rounded-[6px] border border-white/6 bg-[#212121] p-4">
-          {visibleSnippets.length === 0 && !isLoading ? (
-            <EmptyState
-              description="从零散想法里挑一条值得保存的记录。"
-              title="这一天还没有片段"
-            />
-          ) : (
-            <div className="grid gap-3">
-              {visibleSnippets.map((snippet) => (
-                <button
-                  key={snippet.id}
-                  className={`rounded-[6px] border p-3 text-left transition-colors ${
-                    !isCreatingNew && selectedId === snippet.id
-                      ? "border-white/16 bg-white/[0.05]"
-                      : "border-white/8 bg-black/25 hover:border-white/18"
-                  }`}
-                  type="button"
-                  onClick={() => {
-                    setIsCreatingNew(false);
-                    setSelectedId(snippet.id);
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-white/86">{snippet.title}</p>
-                    <span className="text-[10px] font-mono text-white/30">
-                      {snippet.updatedAt}
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/46">
-                    {snippet.content}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <SnippetDetailDrawer
-          selectedSnippet={selectedSnippet}
-          onCreate={async (draft) => {
-            try {
-              if (!hasDailyBridge()) {
-                const created = createLocalSnippet(draft);
-                setSnippets((currentSnippets) => [created, ...currentSnippets]);
-                setMonthEntryCounts((currentCounts) => ({
-                  ...currentCounts,
-                  [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
-                }));
-                setIsCreatingNew(false);
-                setSelectedId(created.id);
-                return;
-              }
-
-              const created = await window.api.daily.createSnippet({
-                entryDate,
-                ...draft,
-              });
-              setSnippets((currentSnippets) => [created, ...currentSnippets]);
-              setMonthEntryCounts((currentCounts) => ({
-                ...currentCounts,
-                [entryDate]: (currentCounts[entryDate] ?? snippets.length) + 1,
-              }));
-              setIsCreatingNew(false);
-              setSelectedId(created.id);
-            } catch {
-              toast.error("创建片段失败");
-            }
-          }}
-          onDelete={async (id) => {
-            try {
-              if (!hasDailyBridge()) {
-                setSnippets((currentSnippets) =>
-                  currentSnippets.filter((snippet) => snippet.id !== id),
-                );
-                setMonthEntryCounts((currentCounts) => {
-                  const nextCount = Math.max(
-                    (currentCounts[entryDate] ?? snippets.length) - 1,
-                    0,
-                  );
-
-                  if (nextCount === 0) {
-                    const nextCounts = { ...currentCounts };
-                    delete nextCounts[entryDate];
-                    return nextCounts;
-                  }
-
-                  return {
-                    ...currentCounts,
-                    [entryDate]: nextCount,
-                  };
-                });
-                setIsCreatingNew(false);
-                return;
-              }
-
-              await window.api.daily.deleteSnippet(id);
-              setSnippets((currentSnippets) =>
-                currentSnippets.filter((snippet) => snippet.id !== id),
-              );
-              setMonthEntryCounts((currentCounts) => {
-                const nextCount = Math.max(
-                  (currentCounts[entryDate] ?? snippets.length) - 1,
-                  0,
-                );
-
-                if (nextCount === 0) {
-                  const nextCounts = { ...currentCounts };
-                  delete nextCounts[entryDate];
-                  return nextCounts;
-                }
-
-                return {
-                  ...currentCounts,
-                  [entryDate]: nextCount,
-                };
-              });
-              setIsCreatingNew(false);
-            } catch {
-              toast.error("删除片段失败");
-            }
-          }}
-          onSave={async (id, draft) => {
-            try {
-              if (!hasDailyBridge()) {
-                setSnippets((currentSnippets) =>
-                  currentSnippets.map((snippet) =>
-                    snippet.id === id
-                      ? {
-                          ...snippet,
-                          title: draft.title,
-                          content: draft.content,
-                          tags: draft.tags,
-                          updatedAt: createFallbackTimestamp(entryDate),
-                        }
-                      : snippet,
-                  ),
-                );
-                setIsCreatingNew(false);
-                return;
-              }
-
-              const updated = await window.api.daily.updateSnippet(id, draft);
-              setSnippets((currentSnippets) =>
-                currentSnippets.map((snippet) => (snippet.id === id ? updated : snippet)),
-              );
-              setIsCreatingNew(false);
-            } catch {
-              toast.error("保存片段失败");
-            }
+            setEditingNote(null);
+            setIsNoteModalOpen(true);
           }}
         />
       </div>
+
+      {isNoteModalOpen && (
+        <TodayNoteEntryModal
+          note={editingNote}
+          onClose={() => {
+            setIsNoteModalOpen(false);
+            setEditingNote(null);
+          }}
+          onSave={handleSaveNote}
+        />
+      )}
     </section>
   );
 };

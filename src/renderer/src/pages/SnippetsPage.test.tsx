@@ -219,11 +219,11 @@ describe("SnippetsPage", () => {
     expect(screen.queryByText("技术笔记")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("产品想法"));
-    await userEvent.clear(screen.getByLabelText("片段标题"));
-    await userEvent.type(screen.getByLabelText("片段标题"), "更新后的片段");
-    await userEvent.clear(screen.getByLabelText("片段正文"));
-    await userEvent.type(screen.getByLabelText("片段正文"), "更新内容");
-    await userEvent.click(screen.getByRole("button", { name: "保存片段" }));
+    await userEvent.clear(screen.getByLabelText("随记标题"));
+    await userEvent.type(screen.getByLabelText("随记标题"), "更新后的片段");
+    await userEvent.clear(screen.getByLabelText("随记内容"));
+    await userEvent.type(screen.getByLabelText("随记内容"), "更新内容");
+    await userEvent.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     await waitFor(() => {
       expect(updateSnippet).toHaveBeenCalledWith(1, {
@@ -250,10 +250,10 @@ describe("SnippetsPage", () => {
     renderSnippetsPage();
 
     await user.click(screen.getByRole("button", { name: "创建新片段" }));
-    await user.type(screen.getByLabelText("片段标题"), "离线片段");
-    await user.type(screen.getByLabelText("片段正文"), "本地创建内容");
-    await user.type(screen.getByLabelText("片段标签"), "离线");
-    await user.click(screen.getByRole("button", { name: "创建片段" }));
+    await user.type(screen.getByLabelText("随记标题"), "离线片段");
+    await user.type(screen.getByLabelText("随记内容"), "本地创建内容");
+    await user.type(screen.getByLabelText("输入新标签"), "离线{Enter}");
+    await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     expect(await screen.findByText("离线片段")).toBeInTheDocument();
   });
@@ -274,16 +274,17 @@ describe("SnippetsPage", () => {
     renderSnippetsPage();
 
     await user.click(screen.getByRole("button", { name: "创建新片段" }));
-    await user.type(screen.getByLabelText("片段标题"), "本地片段");
-    await user.type(screen.getByLabelText("片段正文"), "需要继续编辑");
-    await user.type(screen.getByLabelText("片段标签"), "本地");
-    await user.click(screen.getByRole("button", { name: "创建片段" }));
+    await user.type(screen.getByLabelText("随记标题"), "本地片段");
+    await user.type(screen.getByLabelText("随记内容"), "需要继续编辑");
+    await user.type(screen.getByLabelText("输入新标签"), "本地{Enter}");
+    await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     expect(await screen.findByText("本地片段")).toBeInTheDocument();
 
-    await user.clear(screen.getByLabelText("片段标题"));
-    await user.type(screen.getByLabelText("片段标题"), "本地片段-已更新");
-    await user.click(screen.getByRole("button", { name: "保存片段" }));
+    await user.click(screen.getByText("本地片段"));
+    await user.clear(screen.getByLabelText("随记标题"));
+    await user.type(screen.getByLabelText("随记标题"), "本地片段-已更新");
+    await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     expect(await screen.findByText("本地片段-已更新")).toBeInTheDocument();
 
     await user.click(
@@ -328,16 +329,16 @@ describe("SnippetsPage", () => {
     expect(await screen.findByText("稳定片段")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "创建新片段" }));
-    await user.type(screen.getByLabelText("片段标题"), "失败片段");
-    await user.type(screen.getByLabelText("片段正文"), "不会创建");
-    await user.click(screen.getByRole("button", { name: "创建片段" }));
+    await user.type(screen.getByLabelText("随记标题"), "失败片段");
+    await user.type(screen.getByLabelText("随记内容"), "不会创建");
+    await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("创建片段失败");
     expect(screen.queryByText("失败片段")).not.toBeInTheDocument();
 
     await user.click(screen.getByText("稳定片段"));
-    await user.clear(screen.getByLabelText("片段标题"));
-    await user.type(screen.getByLabelText("片段标题"), "稳定片段-修改");
-    await user.click(screen.getByRole("button", { name: "保存片段" }));
+    await user.clear(screen.getByLabelText("随记标题"));
+    await user.type(screen.getByLabelText("随记标题"), "稳定片段-修改");
+    await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     await waitFor(() => {
       expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("保存片段失败");
     });
