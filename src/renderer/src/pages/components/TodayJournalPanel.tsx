@@ -1,38 +1,6 @@
 import type React from "react";
-import { useState } from "react";
-import MDEditor from "@uiw/react-md-editor";
-import type { ICommand } from "@uiw/react-md-editor/commands";
-import { fullscreen } from "@uiw/react-md-editor/commands";
-import { getCommands } from "@uiw/react-md-editor/commands-cn";
-import "@uiw/react-md-editor/markdown-editor.css";
-import { BookOpen, Columns2, HelpCircle } from "lucide-react";
-
-
-type MarkdownEditorThemeStyle = React.CSSProperties &
-  Record<`--${string}`, string>;
-
-// Markdown 编辑器黑色主题变量。
-const MARKDOWN_EDITOR_THEME_STYLE: MarkdownEditorThemeStyle = {
-  "--color-canvas-default": "#000000",
-  "--color-fg-default": "rgba(255,255,255,0.82)",
-  "--color-border-default": "rgba(255,255,255,0.1)",
-  "--color-neutral-muted": "rgba(255,255,255,0.08)",
-  "--color-accent-fg": "#ffffff",
-  "--color-danger-fg": "#ffffff",
-  "--md-editor-background-color": "#000000",
-  "--md-editor-box-shadow-color": "rgba(255,255,255,0.1)",
-  "--md-editor-font-family":
-    "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  borderRadius: "6px",
-  overflow: "hidden",
-};
-
-// Markdown 基础工具栏命令，移除默认帮助问号。
-const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
-  ...getCommands().filter(
-    (command) => command.name !== "help" && command.keyCommand !== "help",
-  ),
-];
+import { BookOpen, HelpCircle } from "lucide-react";
+import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
 
 // TodayJournalPanel 组件的 Props 接口定义。
 interface TodayJournalPanelProps {
@@ -55,17 +23,10 @@ interface TodayJournalPanelProps {
  */
 export const TodayJournalPanel = ({
   journalContent,
-  isSaving,
   lastSavedAt,
-  errorMessage,
   onJournalContentChange,
   onJournalBlur,
 }: TodayJournalPanelProps): React.JSX.Element => {
-  // 日记 MDEditor 预览模式。
-  const [journalPreviewMode, setJournalPreviewMode] = useState<
-    "edit" | "preview" | "live"
-  >("edit");
-
   return (
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0 mb-1">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -86,47 +47,15 @@ export const TodayJournalPanel = ({
         </div>
       </div>
       <div className="p-1">
-        <MDEditor
+        <MarkdownEditor
           className="notes-markdown-editor"
-          commands={NOTE_MARKDOWN_BASE_COMMANDS}
-          data-color-mode="dark"
-          extraCommands={[
-            {
-              name: "toggle-preview",
-              keyCommand: "toggle-preview",
-              buttonProps: { "aria-label": "切换双栏分屏预览", title: "切换双栏分屏预览" },
-              icon: <Columns2 className="h-3 w-3" />,
-              execute: () => {
-                setJournalPreviewMode((currentMode) =>
-                  currentMode === "live" ? "edit" : "live",
-                );
-              },
-            },
-            fullscreen,
-          ]}
           height={450}
-          preview={journalPreviewMode}
-          style={MARKDOWN_EDITOR_THEME_STYLE}
-          textareaProps={{
-            "aria-label": "日记正文",
-            placeholder: "写下今天的日记与主观感受...",
-            onBlur: onJournalBlur,
-          }}
+          id="today-journal-editor"
+          placeholder="写下今天的日记与主观感受..."
           value={journalContent}
-          visibleDragbar={false}
-          onChange={(value) => onJournalContentChange(value ?? "")}
+          onBlur={onJournalBlur}
+          onChange={onJournalContentChange}
         />
-      </div>
-      <div className="flex items-center justify-between gap-3 text-xs">
-        <span
-          className={errorMessage ? "text-rose-300/80" : "text-white/35"}
-        >
-          {errorMessage ??
-            (isSaving
-              ? "正在自动保存..."
-              : "保留完整表达，拒绝以摘要过滤真实情绪感受。")}
-        </span>
-        <span className="text-white/30">{journalContent.length} 字</span>
       </div>
     </div>
   );

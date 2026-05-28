@@ -177,13 +177,41 @@ html:hover::-webkit-scrollbar-thumb,
   opacity: 0;
 }
 
-/* Markdown 编辑器预览区覆盖 GitHub 暗色默认背景，保持项目纯黑主题。 */
-.notes-markdown-editor .w-md-editor-preview,
-.notes-markdown-editor .w-md-editor-preview .wmde-markdown,
-.notes-markdown-editor .w-md-editor-preview .wmde-markdown-var {
-  --color-canvas-default: #000000 !important;
-  --color-canvas-subtle: #000000 !important;
-  background-color: #000000 !important;
+/* Markdown 编辑器覆盖为项目黑色主题，避免第三方默认灰底破坏层级。 */
+.notes-markdown-editor.md-editor,
+.notes-markdown-editor.md-editor-dark {
+  --md-color: rgba(255, 255, 255, 0.78);
+  --md-hover-color: #ffffff;
+  --md-bk-color: #000000;
+  --md-bk-color-outstand: #212121;
+  --md-bk-hover-color: #1a1a1a;
+  --md-border-color: rgba(255, 255, 255, 0.1);
+  --md-border-hover-color: rgba(255, 255, 255, 0.24);
+  --md-border-active-color: rgba(255, 255, 255, 0.36);
+  --md-scrollbar-bg-color: #000000;
+  --md-scrollbar-thumb-color: rgba(255, 255, 255, 0.16);
+  --md-scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.24);
+  --md-scrollbar-thumb-active-color: rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Markdown 编辑器工具栏尺寸收敛，匹配页面原子控件节奏。 */
+.notes-markdown-editor .md-editor-toolbar-wrapper {
+  padding: 3px 4px;
+}
+
+.notes-markdown-editor .md-editor-toolbar-item {
+  border-radius: 6px;
+}
+
+.notes-markdown-editor .md-editor-preview {
+  background-color: #000000;
+  font-size: 14px;
+}
+
+.notes-markdown-editor .cm-editor {
+  font-size: 14px;
 }
 
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */

@@ -4,7 +4,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { JournalPage } from "@renderer/pages/JournalPage";
@@ -13,21 +12,24 @@ import { JournalPage } from "@renderer/pages/JournalPage";
 type DailyDayDataShape =
   Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
 
-vi.mock("@uiw/react-md-editor", () => ({
-  default: ({
+vi.mock("md-editor-rt", () => ({
+  MdEditor: ({
     value,
     onChange,
-    textareaProps,
+    onBlur,
+    placeholder,
   }: {
     value?: string;
-    onChange?: (value?: string) => void;
-    textareaProps?: React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+    onChange?: (value: string) => void;
+    onBlur?: () => void;
+    placeholder?: string;
   }) => (
     <textarea
-      aria-label={textareaProps?.["aria-label"] ?? "日记正文"}
+      aria-label="日记正文"
+      placeholder={placeholder}
       value={value ?? ""}
       onChange={(event) => onChange?.(event.target.value)}
-      onBlur={textareaProps?.onBlur}
+      onBlur={onBlur}
     />
   ),
 }));

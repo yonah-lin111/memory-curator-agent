@@ -1,29 +1,18 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import MDEditor from "@uiw/react-md-editor";
-import type { ICommand } from "@uiw/react-md-editor/commands";
-import { getCommands } from "@uiw/react-md-editor/commands-cn";
-import "@uiw/react-md-editor/markdown-editor.css";
 import {
   Check,
   ChevronDown,
   Clock,
-  Columns2,
   FileText,
   Plus,
   Tag as TagIcon,
   X,
 } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
+import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
 import { Tag } from "@renderer/components/ui/Tag";
 import type { NoteMaterialItem, NoteDraft } from "@renderer/pages/NotesPage";
-
-// Markdown 编辑器主题样式类型。
-type MarkdownEditorThemeStyle = React.CSSProperties &
-  Record<`--${string}`, string>;
-
-// Markdown 编辑器预览模式。
-type MarkdownPreviewMode = "edit" | "live";
 
 // 笔记弹窗属性。
 type NoteMarkdownModalProps = {
@@ -52,29 +41,6 @@ const INITIAL_NOTE_DRAFT: NoteDraft = {
   tags: ["灵感", "待整理"],
 };
 
-// Markdown 编辑器黑色主题变量。
-const MARKDOWN_EDITOR_THEME_STYLE: MarkdownEditorThemeStyle = {
-  "--color-canvas-default": "#000000",
-  "--color-fg-default": "rgba(255,255,255,0.82)",
-  "--color-border-default": "rgba(255,255,255,0.1)",
-  "--color-neutral-muted": "rgba(255,255,255,0.08)",
-  "--color-accent-fg": "#ffffff",
-  "--color-danger-fg": "#ffffff",
-  "--md-editor-background-color": "#000000",
-  "--md-editor-box-shadow-color": "rgba(255,255,255,0.1)",
-  "--md-editor-font-family":
-    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-  borderRadius: "6px",
-  overflow: "hidden",
-};
-
-// Markdown 基础工具栏命令，移除默认帮助问号。
-const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
-  ...getCommands().filter(
-    (command) => command.name !== "help" && command.keyCommand !== "help",
-  ),
-];
-
 /**
  * NoteMarkdownModal - Markdown 笔记编辑弹窗。
  * 复用 Today 添加弹窗的交互模式，但为长文本编辑提供更宽的双栏空间。
@@ -88,8 +54,6 @@ export const NoteMarkdownModal = ({
   const [draft, setDraft] = useState<NoteDraft>(
     initialDraft || INITIAL_NOTE_DRAFT,
   );
-  // 当前 Markdown 编辑器预览模式。
-  const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>("edit");
   // 属性 Popover 是否打开。
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   // 来源下拉框是否打开。
@@ -199,39 +163,13 @@ export const NoteMarkdownModal = ({
         </div>
 
         <div className="p-3">
-          <MDEditor
+          <MarkdownEditor
             className="notes-markdown-editor"
-            commands={NOTE_MARKDOWN_BASE_COMMANDS}
-            data-color-mode="dark"
-            extraCommands={[
-              {
-                name: "toggle-preview",
-                keyCommand: "toggle-preview",
-                buttonProps: {
-                  "aria-label": "切换双栏分屏预览",
-                  title: "切换双栏分屏预览",
-                },
-                icon: <Columns2 className="h-3 w-3" />,
-                execute: () => {
-                  setPreviewMode((currentMode) =>
-                    currentMode === "edit" ? "live" : "edit"
-                  );
-                },
-              },
-            ]}
             height={520}
-            preview={previewMode}
-            style={MARKDOWN_EDITOR_THEME_STYLE}
-            textareaProps={{
-              "aria-label": "Markdown 笔记正文",
-              placeholder:
-                "支持标题、列表、引用、表格、任务列表等 Markdown 写法...",
-            }}
+            id="note-markdown-editor"
+            placeholder="支持标题、列表、引用、表格、任务列表等 Markdown 写法..."
             value={draft.content}
-            visibleDragbar={false}
-            onChange={(value) =>
-              handleDraftChange({ content: value ?? "" })
-            }
+            onChange={(value) => handleDraftChange({ content: value })}
           />
         </div>
 
