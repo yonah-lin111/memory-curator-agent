@@ -1,5 +1,5 @@
 import type React from "react";
-import { StickyNote, Tag as TagIcon, Clock3, Plus } from "lucide-react";
+import { StickyNote, Tag as TagIcon, Clock3 } from "lucide-react";
 
 // 标签地图属性。
 interface SnippetsTagMapProps {
@@ -9,8 +9,6 @@ interface SnippetsTagMapProps {
   activeTag: string | null;
   // 标签切换回调。
   onChange: (tag: string | null) => void;
-  // 新建片段回调。
-  onCreateNew: () => void;
   // 片段总数。
   totalCount: number;
   // 标签总数。
@@ -53,22 +51,11 @@ export const SnippetsTagMap = ({
   tags,
   activeTag,
   onChange,
-  onCreateNew,
   totalCount,
   totalTagsCount,
   lastUpdatedTime,
 }: SnippetsTagMapProps): React.JSX.Element => (
   <aside className="flex min-h-0 flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-    <button
-      aria-label="创建新片段"
-      className="flex items-center justify-center gap-2 rounded-[6px] border border-white/8 bg-white text-center text-sm font-semibold text-black px-3 py-2 transition-colors hover:bg-white/90"
-      type="button"
-      onClick={onCreateNew}
-    >
-      <Plus className="h-4 w-4" />
-      新建片段
-    </button>
-
     <div className="grid gap-2">
       <SnippetsMetricCard
         icon={<StickyNote className="h-3.5 w-3.5" />}

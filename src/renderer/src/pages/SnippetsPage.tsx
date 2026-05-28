@@ -437,10 +437,6 @@ export const SnippetsPage = (): React.JSX.Element => {
           totalTagsCount={totalTagsCount}
           lastUpdatedTime={lastUpdatedTime}
           onChange={setActiveTag}
-          onCreateNew={() => {
-            setEditingNote(null);
-            setIsNoteModalOpen(true);
-          }}
         />
       </div>
 

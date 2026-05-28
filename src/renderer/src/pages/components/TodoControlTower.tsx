@@ -30,11 +30,11 @@ const TodoMetricCard = ({
   value,
 }: TodoMetricCardProps): React.JSX.Element => (
   <div className="rounded-[6px] border border-white/8 bg-black/30 p-3">
-    <div className="flex items-center gap-2 text-white/70">
+    <div className="flex items-center gap-2 text-white/72">
       {icon}
       <span className="text-xs">{label}</span>
     </div>
-    <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    <p className="mt-2 text-sm font-semibold text-white">{value}</p>
   </div>
 );
 
@@ -47,20 +47,22 @@ export const TodoControlTower = ({
   p0Count,
 }: TodoControlTowerProps): React.JSX.Element => (
   <aside className="flex min-h-0 flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-    <TodoMetricCard
-      icon={<ListTodo className="h-3.5 w-3.5" />}
-      label="总任务"
-      value={totalCount}
-    />
-    <TodoMetricCard
-      icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-      label="已完成"
-      value={completedCount}
-    />
-    <TodoMetricCard
-      icon={<Layers3 className="h-3.5 w-3.5" />}
-      label="P0 聚焦"
-      value={p0Count}
-    />
+    <div className="grid gap-2">
+      <TodoMetricCard
+        icon={<ListTodo className="h-3.5 w-3.5" />}
+        label="总任务"
+        value={totalCount}
+      />
+      <TodoMetricCard
+        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+        label="已完成"
+        value={completedCount}
+      />
+      <TodoMetricCard
+        icon={<Layers3 className="h-3.5 w-3.5" />}
+        label="P0 聚焦"
+        value={p0Count}
+      />
+    </div>
   </aside>
 );
