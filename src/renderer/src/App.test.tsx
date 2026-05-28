@@ -53,7 +53,7 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /Notes/ }))
-    expect(screen.getByText('全部素材 (0)')).toBeInTheDocument()
+    expect(screen.getByText('全部 (0)')).toBeInTheDocument()
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
@@ -90,7 +90,7 @@ describe('App', () => {
     // 点击 Notes，验证 pathname 发生改变
     await user.click(screen.getByRole('button', { name: /Notes/ }))
     expect(window.location.pathname).toBe('/notes')
-    expect(screen.getByText('全部素材 (0)')).toBeInTheDocument()
+    expect(screen.getByText('全部 (0)')).toBeInTheDocument()
 
     // 模拟浏览器前进/后退改变路由
     act(() => {

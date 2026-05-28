@@ -1,5 +1,6 @@
 import type React from "react";
 import { useState, useEffect } from "react";
+import { Brain } from "lucide-react";
 import { JournalPage } from "@renderer/pages/JournalPage";
 import { MemoriesPage } from "@renderer/pages/MemoriesPage";
 import { NotesPage } from "@renderer/pages/NotesPage";
@@ -47,6 +48,18 @@ export const App = (): React.JSX.Element => {
   // 当前中间主内容页面。
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
+
+  // 页面切换及路由变动时的 loading 过渡状态。
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
+
+  // 监听 activePage 变化，自动触发克制且优雅的 250ms loading 过渡。
+  useEffect(() => {
+    setIsPageLoading(true);
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [activePage]);
 
   // 获取页面的分类名称。
   const getPageCategory = (pageId: SidebarPageId): string => {
@@ -134,7 +147,34 @@ export const App = (): React.JSX.Element => {
             activePage={activePage}
           />
 
-          <div className="flex-1 min-h-0">{renderActivePage()}</div>
+          <div className="flex-1 min-h-0 relative">
+            {/* 页面内容容器：过渡 loading 时微弱淡出与轻微收缩、模糊 */}
+            <div
+              className={`w-full h-full transition-all duration-300 ease-in-out ${
+                isPageLoading
+                  ? "opacity-40 scale-[0.99] filter blur-[0.5px]"
+                  : "opacity-100 scale-100 filter blur-0"
+              }`}
+            >
+              {renderActivePage()}
+            </div>
+
+            {/* 精致的极简 loading 遮罩层，保持纯黑主题与 6px 圆角 */}
+            {isPageLoading && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/15 backdrop-blur-[0.5px]">
+                <div className="flex flex-col items-center gap-2.5 px-5 py-4 rounded-[6px] border border-white/5 bg-[#212121] shadow-2xl animate-modal-backdrop-in">
+                  <div className="relative flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-white animate-pulse" />
+                    {/* 微动环形加载条 */}
+                    <div className="absolute -inset-2.5 rounded-full border border-white/10 border-t-white/80 animate-spin" />
+                  </div>
+                  <span className="text-[10px] text-white/40 font-bold tracking-[0.18em]">
+                    CURATING...
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </ToastProvider>
