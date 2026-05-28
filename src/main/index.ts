@@ -4,6 +4,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { initDatabase } from './db'
 import { registerNotesHandlers } from './ipc/notesHandlers'
 import { registerDailyHandlers } from './ipc/dailyHandlers'
+import { registerFilesHandlers } from './ipc/filesHandlers'
 
 /**
  * 创建应用主窗口。
@@ -43,6 +44,7 @@ app.whenReady().then(() => {
   initDatabase()
   registerNotesHandlers()
   registerDailyHandlers()
+  registerFilesHandlers()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

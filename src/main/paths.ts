@@ -15,3 +15,8 @@ export const getDatabaseDir = (): string => join(getAppDataRoot(), 'db')
  * 获取 SQLite 数据库文件路径。
  */
 export const getDatabasePath = (): string => join(getDatabaseDir(), 'curator.db')
+
+/**
+ * 获取 Markdown 图片存储目录。
+ */
+export const getMarkdownImageDir = (): string => join(getAppDataRoot(), 'img', 'md')

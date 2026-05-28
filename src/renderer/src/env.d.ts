@@ -110,14 +110,24 @@ type SnippetUpdatePayload = {
   tags: string[]
 }
 
-// 片段更新载荷类型。
-type SnippetUpdatePayload = {
-  // 片段标题。
-  title: string
-  // 片段正文。
-  content: string
-  // 片段标签列表。
-  tags: string[]
+// Markdown 图片保存载荷类型。
+type MarkdownImageSavePayload = {
+  // 原始文件名。
+  name: string
+  // 图片 MIME 类型。
+  mimeType: string
+  // 图片二进制内容。
+  bytes: ArrayBuffer
+}
+
+// Markdown 图片保存结果类型。
+type MarkdownImageSaveResult = {
+  // 落盘文件名。
+  fileName: string
+  // 本机绝对路径。
+  filePath: string
+  // 可写入 Markdown 的文件 URL。
+  url: string
 }
 
 // 页面使用的片段类型。
@@ -184,6 +194,11 @@ type MonthOverview = {
 
 // 渲染进程安全 API 类型。
 type AppAPI = {
+  // 文件 API。
+  files: {
+    // 保存 Markdown 图片。
+    saveMarkdownImage: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+  }
   // Notes 页面 API。
   notes: {
     // 读取全部笔记。

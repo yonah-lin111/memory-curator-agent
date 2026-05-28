@@ -74,6 +74,26 @@ type SnippetUpdatePayload = {
   tags: string[]
 }
 
+// Markdown 图片保存载荷类型。
+type MarkdownImageSavePayload = {
+  // 原始文件名。
+  name: string
+  // 图片 MIME 类型。
+  mimeType: string
+  // 图片二进制内容。
+  bytes: ArrayBuffer
+}
+
+// Markdown 图片保存结果类型。
+type MarkdownImageSaveResult = {
+  // 落盘文件名。
+  fileName: string
+  // 本机绝对路径。
+  filePath: string
+  // 可写入 Markdown 的文件 URL。
+  url: string
+}
+
 // 单日聚合概览类型。
 type MonthEntryOverview = {
   // 所属日期。
@@ -96,6 +116,10 @@ type MonthOverview = {
 
 // 渲染进程安全 API。
 const api = {
+  files: {
+    saveMarkdownImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
+      ipcRenderer.invoke('files:markdown-image:save', payload)
+  },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),
     create: (draft: NoteDraftPayload) => ipcRenderer.invoke('notes:create', draft),

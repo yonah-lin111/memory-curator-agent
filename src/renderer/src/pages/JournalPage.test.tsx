@@ -57,6 +57,9 @@ describe("JournalPage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-05-27T09:00:00"));
     window.api = {
+      files: {
+        saveMarkdownImage: vi.fn(),
+      },
       daily: {
         listDay: vi.fn().mockResolvedValue(createDailyDayData()),
         listMonthOverview: vi.fn().mockResolvedValue({

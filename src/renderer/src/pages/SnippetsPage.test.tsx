@@ -35,6 +35,9 @@ describe("SnippetsPage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-05-27T09:00:00"));
     window.api = {
+      files: {
+        saveMarkdownImage: vi.fn(),
+      },
       daily: {
         listDay: vi.fn().mockResolvedValue(createDailyDayData()),
         listMonthOverview: vi.fn().mockResolvedValue({
@@ -238,6 +241,9 @@ describe("SnippetsPage", () => {
     const user = userEvent.setup();
 
     window.api = {
+      files: {
+        saveMarkdownImage: vi.fn(),
+      },
       daily: undefined as never,
       notes: {
         list: vi.fn(),
@@ -262,6 +268,9 @@ describe("SnippetsPage", () => {
     const user = userEvent.setup();
 
     window.api = {
+      files: {
+        saveMarkdownImage: vi.fn(),
+      },
       daily: undefined as never,
       notes: {
         list: vi.fn(),

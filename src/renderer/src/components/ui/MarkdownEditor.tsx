@@ -1,7 +1,7 @@
 import type React from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { MdEditor } from "md-editor-rt";
-import type { ToolbarNames } from "md-editor-rt";
+import type { ToolbarNames, UploadImgEvent } from "md-editor-rt";
 import "md-editor-rt/lib/style.css";
 
 // Markdown 编辑器高度。
@@ -68,6 +68,27 @@ export const MarkdownEditor = ({
     [height],
   );
 
+  // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
+  const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
+    void (async () => {
+      try {
+        const savedImages = await Promise.all(
+          files.map(async (file) =>
+            window.api.files.saveMarkdownImage({
+              name: file.name,
+              mimeType: file.type,
+              bytes: await file.arrayBuffer(),
+            }),
+          ),
+        );
+
+        callback(savedImages.map((image) => image.url));
+      } catch {
+        callback([]);
+      }
+    })();
+  }, []);
+
   return (
     <MdEditor
       className={className}
@@ -75,7 +96,7 @@ export const MarkdownEditor = ({
       footers={[...MARKDOWN_EDITOR_FOOTERS]}
       id={id}
       language="zh-CN"
-      noUploadImg
+      onUploadImg={handleUploadImg}
       placeholder={placeholder}
       preview={false}
       previewTheme="default"
