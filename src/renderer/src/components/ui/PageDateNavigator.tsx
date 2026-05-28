@@ -204,13 +204,9 @@ export const PageDateNavigator = ({
                     className={`relative flex aspect-square w-full items-center justify-center rounded-[6px] border transition-colors duration-150 ${
                       isSelected
                         ? "border-white/28 bg-white/[0.09] text-white"
-                        : isToday
-                          ? dayItem.isCurrentMonth
-                            ? "border-white/20 bg-white/[0.05] text-white font-semibold hover:border-white/32 hover:bg-white/[0.08]"
-                            : "border-white/12 bg-white/[0.02] text-white/50 hover:border-white/24 hover:bg-white/[0.05]"
-                          : dayItem.isCurrentMonth
-                            ? "border-white/8 bg-black/35 text-white/78 hover:border-white/18 hover:bg-white/[0.05]"
-                            : "border-white/6 bg-black/15 text-white/24 hover:border-white/12 hover:text-white/46"
+                        : dayItem.isCurrentMonth
+                          ? "border-white/8 bg-black/35 text-white/78 hover:border-white/18 hover:bg-white/[0.05]"
+                          : "border-white/6 bg-black/15 text-white/24 hover:border-white/12 hover:text-white/46"
                     }`}
                     type="button"
                     onClick={() => {
