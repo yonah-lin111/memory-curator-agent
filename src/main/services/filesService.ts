@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { getMarkdownImageDir } from '../paths'
+import { createMarkdownImageUrl } from '../markdownImages'
 
 // Markdown 图片保存输入。
 export type MarkdownImageSaveInput = {
@@ -20,7 +20,7 @@ export type MarkdownImageSaveResult = {
   fileName: string
   // 本机绝对路径。
   filePath: string
-  // 可写入 Markdown 的文件 URL。
+  // 可写入 Markdown 的应用图片 URL。
   url: string
 }
 
@@ -96,7 +96,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       return {
         fileName,
         filePath,
-        url: pathToFileURL(filePath).href
+        url: createMarkdownImageUrl(fileName)
       }
     }
   }

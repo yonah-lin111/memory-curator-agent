@@ -98,7 +98,7 @@ export const MarkdownEditor = ({
       language="zh-CN"
       onUploadImg={handleUploadImg}
       placeholder={placeholder}
-      preview={false}
+      preview
       previewTheme="default"
       showCodeRowNumber
       style={editorStyle}

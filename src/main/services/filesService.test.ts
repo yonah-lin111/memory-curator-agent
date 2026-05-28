@@ -1,7 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createFilesService } from './filesService'
 
@@ -28,7 +27,7 @@ describe('filesService', () => {
 
     expect(saved.fileName).toMatch(/^clipboard-[a-f0-9-]+\.png$/)
     expect(saved.filePath).toBe(join(tempImageDir, saved.fileName))
-    expect(saved.url).toBe(pathToFileURL(saved.filePath).href)
+    expect(saved.url).toBe(`mc-img://md/${saved.fileName}`)
     expect(readFileSync(saved.filePath)).toEqual(Buffer.from([137, 80, 78, 71]))
   })
 

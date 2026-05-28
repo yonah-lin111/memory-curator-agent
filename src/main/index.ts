@@ -5,6 +5,9 @@ import { initDatabase } from './db'
 import { registerNotesHandlers } from './ipc/notesHandlers'
 import { registerDailyHandlers } from './ipc/dailyHandlers'
 import { registerFilesHandlers } from './ipc/filesHandlers'
+import { registerImageProtocolHandler, registerImageProtocolSchemes } from './protocols/imageProtocol'
+
+registerImageProtocolSchemes()
 
 /**
  * 创建应用主窗口。
@@ -45,6 +48,7 @@ app.whenReady().then(() => {
   registerNotesHandlers()
   registerDailyHandlers()
   registerFilesHandlers()
+  registerImageProtocolHandler()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

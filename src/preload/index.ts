@@ -90,7 +90,7 @@ type MarkdownImageSaveResult = {
   fileName: string
   // 本机绝对路径。
   filePath: string
-  // 可写入 Markdown 的文件 URL。
+  // 可写入 Markdown 的应用图片 URL。
   url: string
 }
 

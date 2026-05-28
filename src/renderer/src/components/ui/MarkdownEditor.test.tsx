@@ -9,6 +9,7 @@ import { MarkdownEditor } from "./MarkdownEditor";
 // MdEditor 最近一次接收的属性。
 let latestMdEditorProps: {
   noUploadImg?: boolean;
+  preview?: boolean;
   onUploadImg?: (files: File[], callback: (urls: string[]) => void) => void;
 } | null = null;
 
@@ -27,7 +28,7 @@ describe("MarkdownEditor", () => {
         saveMarkdownImage: vi.fn().mockResolvedValue({
           fileName: "clipboard.png",
           filePath: "/Users/yonah/.mc/img/md/clipboard.png",
-          url: "file:///Users/yonah/.mc/img/md/clipboard.png",
+          url: "mc-img://md/clipboard.png",
         }),
       },
       daily: {
@@ -69,6 +70,7 @@ describe("MarkdownEditor", () => {
     );
 
     expect(latestMdEditorProps?.noUploadImg).toBeUndefined();
+    expect(latestMdEditorProps?.preview).toBe(true);
 
     latestMdEditorProps?.onUploadImg?.([file], callback);
 
@@ -79,7 +81,7 @@ describe("MarkdownEditor", () => {
         bytes: expect.any(ArrayBuffer),
       });
       expect(callback).toHaveBeenCalledWith([
-        "file:///Users/yonah/.mc/img/md/clipboard.png",
+        "mc-img://md/clipboard.png",
       ]);
     });
   });
