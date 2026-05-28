@@ -44,8 +44,6 @@ interface TodayJournalPanelProps {
   lastSavedAt: string | null;
   // 保存失败提示。
   errorMessage: string | null;
-  // 派生情绪状态。
-  predictedMood: string;
   // 日记内容改变时的回调函数。
   onJournalContentChange: (value: string) => void;
   // 编辑器失焦时的回调函数。
@@ -60,7 +58,6 @@ export const TodayJournalPanel = ({
   isSaving,
   lastSavedAt,
   errorMessage,
-  predictedMood,
   onJournalContentChange,
   onJournalBlur,
 }: TodayJournalPanelProps): React.JSX.Element => {
@@ -86,8 +83,6 @@ export const TodayJournalPanel = ({
         </div>
         <div className="flex items-center gap-3 text-xs font-mono text-white/40">
           <span>最近保存: {lastSavedAt ?? "未保存"}</span>
-          <span>•</span>
-          <span className="text-emerald-400">情绪感知: {predictedMood}</span>
         </div>
       </div>
       <div className="p-1">

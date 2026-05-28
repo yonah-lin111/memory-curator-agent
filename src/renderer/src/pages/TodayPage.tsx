@@ -645,7 +645,6 @@ export const TodayPage = (): React.JSX.Element => {
           lastSavedAt={lastSavedAt}
           onJournalBlur={handleJournalBlur}
           onJournalContentChange={setJournalContent}
-          predictedMood={predictedMood}
         />
       </div>
       {isNoteModalOpen ? (
