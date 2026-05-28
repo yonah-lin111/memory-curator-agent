@@ -51,14 +51,27 @@ export const App = (): React.JSX.Element => {
 
   // 页面切换及路由变动时的 loading 过渡状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
+  // 控制是否激活视觉过渡动画。过渡动画结束后清除样式，以防止持续存在的 Stacking Context 导致页面内 fixed 弹窗定位失效（无法覆盖侧边栏与顶栏）。
+  const [isVisualEffectActive, setIsVisualEffectActive] = useState<boolean>(false);
 
   // 监听 activePage 变化，自动触发克制且优雅的 250ms loading 过渡。
   useEffect(() => {
     setIsPageLoading(true);
+    setIsVisualEffectActive(true);
+
     const timer = setTimeout(() => {
       setIsPageLoading(false);
     }, 250);
-    return () => clearTimeout(timer);
+
+    // 550ms（250ms 加载 + 300ms 渐变动画）后彻底清除过渡样式，恢复标准文档流与视口定位
+    const cleanupTimer = setTimeout(() => {
+      setIsVisualEffectActive(false);
+    }, 550);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cleanupTimer);
+    };
   }, [activePage]);
 
   // 获取页面的分类名称。
@@ -150,10 +163,16 @@ export const App = (): React.JSX.Element => {
           <div className="flex-1 min-h-0 relative">
             {/* 页面内容容器：过渡 loading 时微弱淡出与轻微收缩、模糊 */}
             <div
-              className={`w-full h-full transition-all duration-300 ease-in-out ${
-                isPageLoading
+              className={`w-full h-full ${
+                isVisualEffectActive
+                  ? "transition-all duration-300 ease-in-out"
+                  : ""
+              } ${
+                isVisualEffectActive && isPageLoading
                   ? "opacity-40 scale-[0.99] filter blur-[0.5px]"
-                  : "opacity-100 scale-100 filter blur-0"
+                  : isVisualEffectActive
+                  ? "opacity-100 scale-100 filter blur-0"
+                  : ""
               }`}
             >
               {renderActivePage()}
