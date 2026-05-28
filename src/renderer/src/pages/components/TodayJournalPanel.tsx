@@ -6,7 +6,7 @@ import { fullscreen } from "@uiw/react-md-editor/commands";
 import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import "@uiw/react-md-editor/markdown-editor.css";
 import { BookOpen, Columns2, HelpCircle } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
+
 
 type MarkdownEditorThemeStyle = React.CSSProperties &
   Record<`--${string}`, string>;
@@ -88,22 +88,6 @@ export const TodayJournalPanel = ({
           <span>最近保存: {lastSavedAt ?? "未保存"}</span>
           <span>•</span>
           <span className="text-emerald-400">情绪感知: {predictedMood}</span>
-          <span>•</span>
-          <IconButton
-            aria-label="切换双栏分屏预览"
-            className={`h-5 w-5 ${
-              journalPreviewMode === "live"
-                ? "bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-            }`}
-            onClick={() => {
-              setJournalPreviewMode((currentMode) =>
-                currentMode === "live" ? "edit" : "live",
-              );
-            }}
-          >
-            <Columns2 className="h-3 w-3" />
-          </IconButton>
         </div>
       </div>
       <div className="p-1">
@@ -111,7 +95,20 @@ export const TodayJournalPanel = ({
           className="notes-markdown-editor"
           commands={NOTE_MARKDOWN_BASE_COMMANDS}
           data-color-mode="dark"
-          extraCommands={[fullscreen]}
+          extraCommands={[
+            {
+              name: "toggle-preview",
+              keyCommand: "toggle-preview",
+              buttonProps: { "aria-label": "切换双栏分屏预览", title: "切换双栏分屏预览" },
+              icon: <Columns2 className="h-3 w-3" />,
+              execute: () => {
+                setJournalPreviewMode((currentMode) =>
+                  currentMode === "live" ? "edit" : "live",
+                );
+              },
+            },
+            fullscreen,
+          ]}
           height={450}
           preview={journalPreviewMode}
           style={MARKDOWN_EDITOR_THEME_STYLE}

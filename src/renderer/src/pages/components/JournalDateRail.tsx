@@ -1,11 +1,8 @@
 import type React from "react";
-import { BookOpen, Clock3, Focus, Sparkles, Trash2 } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
+import { BookOpen, Clock3, Sparkles } from "lucide-react";
 
 // 日记侧栏属性。
 interface JournalDateRailProps {
-  // 当前日期。
-  entryDate: string;
   // 当前字数。
   wordCount: number;
   // 最近保存时间。
@@ -14,10 +11,6 @@ interface JournalDateRailProps {
   moodLabel: string;
   // 是否存在未保存改动。
   isDirty: boolean;
-  // 清空回调。
-  onClear: () => void;
-  // 聚焦编辑器回调。
-  onFocusEditor: () => void;
 }
 
 // 左侧指标卡片属性。
@@ -51,13 +44,10 @@ const JournalMetricCard = ({
  * JournalDateRail - 日记页左侧日期脊柱和状态摘要。
  */
 export const JournalDateRail = ({
-  entryDate,
   wordCount,
   lastSavedAt,
   moodLabel,
   isDirty,
-  onClear,
-  onFocusEditor,
 }: JournalDateRailProps): React.JSX.Element => {
   // 最近保存时间展示值。
   const savedLabel =
@@ -65,15 +55,6 @@ export const JournalDateRail = ({
 
   return (
     <aside className="flex min-h-0 flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-      <div>
-        <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/28">
-          Journal Spine
-        </p>
-        <p className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">
-          {entryDate}
-        </p>
-      </div>
-
       <div className="grid gap-2">
         <JournalMetricCard
           icon={<BookOpen className="h-3.5 w-3.5" />}
@@ -90,27 +71,6 @@ export const JournalDateRail = ({
           label="情绪线索"
           value={moodLabel}
         />
-      </div>
-
-      <div className="mt-auto flex items-center gap-2">
-        <IconButton
-          aria-label="聚焦日记编辑器"
-          className="h-9 px-3 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
-          iconOnly={false}
-          onClick={onFocusEditor}
-        >
-          <Focus className="mr-1.5 h-3.5 w-3.5" />
-          聚焦
-        </IconButton>
-        <IconButton
-          aria-label="清空当日日记"
-          className="h-9 px-3 bg-white/5 text-white/70 hover:bg-white/10 hover:text-rose-300"
-          iconOnly={false}
-          onClick={onClear}
-        >
-          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-          {isDirty ? "清空草稿" : "清空"}
-        </IconButton>
       </div>
     </aside>
   );

@@ -6,7 +6,6 @@ import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import { fullscreen } from "@uiw/react-md-editor/commands";
 import "@uiw/react-md-editor/markdown-editor.css";
 import { Columns2 } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
 
 type MarkdownEditorThemeStyle = React.CSSProperties &
   Record<`--${string}`, string>;
@@ -38,10 +37,6 @@ const NOTE_MARKDOWN_BASE_COMMANDS: ICommand[] = [
 interface JournalEditorSurfaceProps {
   // 当前正文内容。
   value: string;
-  // 底部状态文案。
-  statusText: string;
-  // 错误提示文案。
-  errorMessage: string | null;
   // 内容变化回调。
   onChange: (value: string) => void;
   // 失焦回调。
@@ -53,8 +48,6 @@ interface JournalEditorSurfaceProps {
  */
 export const JournalEditorSurface = ({
   value,
-  statusText,
-  errorMessage,
   onChange,
   onBlur,
 }: JournalEditorSurfaceProps): React.JSX.Element => {
@@ -63,35 +56,29 @@ export const JournalEditorSurface = ({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-[6px] border border-white/6 bg-[#212121] p-4">
-      <div className="mb-3 flex items-center justify-between border-b border-white/6 pb-3">
-        <div>
-          <p className="text-[10px] font-mono uppercase tracking-[0.24em] text-white/28">
-            Long-form Entry
-          </p>
-          <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-white">
-            日记条目回看
-          </h2>
-        </div>
-        <IconButton
-          aria-label="切换双栏预览"
-          className="h-8 w-8 bg-white/5 text-white/65 hover:bg-white/10 hover:text-white"
-          onClick={() =>
-            setPreviewMode((currentMode) =>
-              currentMode === "edit" ? "live" : "edit",
-            )
-          }
-        >
-          <Columns2 className="h-4 w-4" />
-        </IconButton>
-      </div>
-
       <div className="min-h-0 flex-1 p-1">
         <MDEditor
           className="notes-markdown-editor"
           commands={NOTE_MARKDOWN_BASE_COMMANDS}
           data-color-mode="dark"
-          extraCommands={[fullscreen]}
-          height={560}
+          extraCommands={[
+            {
+              name: "toggle-preview",
+              keyCommand: "toggle-preview",
+              buttonProps: {
+                "aria-label": "切换双栏分屏预览",
+                title: "切换双栏分屏预览",
+              },
+              icon: <Columns2 className="h-3 w-3" />,
+              execute: () => {
+                setPreviewMode((currentMode) =>
+                  currentMode === "edit" ? "live" : "edit",
+                );
+              },
+            },
+            fullscreen,
+          ]}
+          height={500}
           preview={previewMode}
           style={MARKDOWN_EDITOR_THEME_STYLE}
           textareaProps={{
@@ -103,13 +90,6 @@ export const JournalEditorSurface = ({
           visibleDragbar={false}
           onChange={(nextValue) => onChange(nextValue ?? "")}
         />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between text-xs">
-        <span className={errorMessage ? "text-rose-300" : "text-white/38"}>
-          {errorMessage ?? statusText}
-        </span>
-        <span className="text-white/30">{value.length} 字</span>
       </div>
     </section>
   );

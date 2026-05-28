@@ -44,10 +44,6 @@ export const JournalPage = (): React.JSX.Element => {
   const [savedJournalContent, setSavedJournalContent] = useState<string>("");
   // 页面是否正在加载。
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // 页面是否正在保存。
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  // 错误文案。
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // 最近保存时间。
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   // 月历标记是否正在加载。
@@ -110,7 +106,6 @@ export const JournalPage = (): React.JSX.Element => {
      */
     const loadJournal = async (): Promise<void> => {
       setIsLoading(true);
-      setErrorMessage(null);
 
       try {
         if (!hasDailyBridge()) {
@@ -126,7 +121,6 @@ export const JournalPage = (): React.JSX.Element => {
         setSavedJournalContent(nextValue);
         setLastSavedAt(todayData.journal?.updatedAt ?? null);
       } catch {
-        setErrorMessage("读取日记失败，请稍后再试。");
         toast.error("读取日记失败");
       } finally {
         setIsLoading(false);
@@ -143,9 +137,6 @@ export const JournalPage = (): React.JSX.Element => {
     if (normalizedValue === savedJournalContent.trim()) {
       return;
     }
-
-    setIsSaving(true);
-    setErrorMessage(null);
 
     try {
       if (!hasDailyBridge()) {
@@ -183,10 +174,7 @@ export const JournalPage = (): React.JSX.Element => {
       setLastSavedAt(saved.updatedAt);
       setMonthEntryCounts((currentCounts) => ({ ...currentCounts, [entryDate]: 1 }));
     } catch {
-      setErrorMessage("自动保存失败，内容已保留在当前页面。");
       toast.error("自动保存失败");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -231,31 +219,19 @@ export const JournalPage = (): React.JSX.Element => {
         onChange={handleEntryDateChange}
         onVisibleMonthChange={setVisibleMonth}
       />
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <JournalDateRail
-          entryDate={entryDate}
-          isDirty={journalContent.trim() !== savedJournalContent.trim()}
-          lastSavedAt={lastSavedAt}
-          moodLabel={moodLabel}
-          wordCount={journalContent.length}
-          onClear={() => setJournalContent("")}
-          onFocusEditor={() => {
-            const element = document.querySelector<HTMLTextAreaElement>(
-              '[aria-label="日记正文"]',
-            );
-            element?.focus();
-          }}
-        />
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <JournalEditorSurface
-          errorMessage={errorMessage}
-          statusText={
-            isLoading ? "正在读取日记..." : isSaving ? "正在自动保存..." : "自动保存已开启"
-          }
           value={journalContent}
           onBlur={() => {
             void persistRef.current(journalContent);
           }}
           onChange={setJournalContent}
+        />
+        <JournalDateRail
+          isDirty={journalContent.trim() !== savedJournalContent.trim()}
+          lastSavedAt={lastSavedAt}
+          moodLabel={moodLabel}
+          wordCount={journalContent.length}
         />
       </div>
     </section>
