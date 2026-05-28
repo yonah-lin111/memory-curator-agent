@@ -53,30 +53,29 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /Notes/ }))
-    expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
+    expect(screen.getByText('全部素材 (0)')).toBeInTheDocument()
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
     expect(
       within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })
     ).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
-    expect(screen.getByRole('heading', { name: '周度策展' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Weekly Review 页面')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Weekly Review/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Themes/ }))
-    expect(screen.getByRole('heading', { name: '长期主题追踪' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Themes 页面')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Themes/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Memories/ }))
-    expect(screen.getByRole('heading', { name: '记忆片段关联' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Memories 页面')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Memories/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /People/ }))
-    expect(screen.getByRole('heading', { name: '人物关系档案' })).toBeInTheDocument()
+    expect(screen.getByLabelText('People 页面')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /People/ })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -91,7 +90,7 @@ describe('App', () => {
     // 点击 Notes，验证 pathname 发生改变
     await user.click(screen.getByRole('button', { name: /Notes/ }))
     expect(window.location.pathname).toBe('/notes')
-    expect(screen.getByRole('heading', { name: '自由笔记素材池' })).toBeInTheDocument()
+    expect(screen.getByText('全部素材 (0)')).toBeInTheDocument()
 
     // 模拟浏览器前进/后退改变路由
     act(() => {
@@ -99,7 +98,6 @@ describe('App', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(screen.getAllByRole('heading', { name: '日记条目回看' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
     expect(
       within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })

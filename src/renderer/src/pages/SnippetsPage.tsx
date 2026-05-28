@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { StickyNote, Plus, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
+import { Plus, Trash2, Tag as TagIcon } from "lucide-react";
 import { EmptyState } from "@renderer/components/ui/EmptyState";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
@@ -312,36 +312,21 @@ export const SnippetsPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="随记 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator
-        currentEntryCount={snippets.length}
-        entryCountMap={monthEntryCounts}
-        entryDate={entryDate}
-        formatCountHint={(count) =>
-          count > 0 ? `当日收录 ${count} 条片段` : "当日还没有片段"
-        }
-        isMonthOverviewLoading={isMonthOverviewLoading}
-        label="Snippets"
-        visibleMonth={visibleMonth}
-        onChange={(nextDate) => {
-          setVisibleMonth(getEntryMonth(nextDate));
-          setEntryDate(nextDate);
-        }}
-        onVisibleMonthChange={setVisibleMonth}
-      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
-              <StickyNote className="h-4 w-4 text-white/60" />
-              <span className="text-sm font-bold tracking-wide text-white/80">
-                随记片段列表
-              </span>
-              <div className="relative group inline-flex items-center">
-                <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                  快速捕捉瞬间的想法、灵感或临时便签片段，支持打上标签分类管理。
-                </div>
-              </div>
+              <PageDateNavigator
+                entryCountMap={monthEntryCounts}
+                entryDate={entryDate}
+                isMonthOverviewLoading={isMonthOverviewLoading}
+                visibleMonth={visibleMonth}
+                onChange={(nextDate) => {
+                  setVisibleMonth(getEntryMonth(nextDate));
+                  setEntryDate(nextDate);
+                }}
+                onVisibleMonthChange={setVisibleMonth}
+              />
             </div>
             <IconButton
               aria-label="添加随记片段"

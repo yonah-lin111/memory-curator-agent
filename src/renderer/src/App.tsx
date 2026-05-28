@@ -12,10 +12,9 @@ import {
   Sidebar,
   type SidebarPageId,
 } from "@renderer/components/layout/Sidebar";
+import { Header } from "@renderer/components/layout/Header";
 import { TodayPage } from "@renderer/pages/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { MessageSquare } from "lucide-react";
 
 /**
  * 记忆策展 Agent 的主应用布局。
@@ -49,15 +48,6 @@ export const App = (): React.JSX.Element => {
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
 
-  // 获取当前日期的 YYYY-MM-DD 字符串。
-  const getTodayDateString = (): string => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   // 获取页面的分类名称。
   const getPageCategory = (pageId: SidebarPageId): string => {
     switch (pageId) {
@@ -75,32 +65,6 @@ export const App = (): React.JSX.Element => {
         return "CURATION";
       default:
         return "DAILY";
-    }
-  };
-
-  // 获取页面的中文标题。
-  const getPageTitle = (pageId: SidebarPageId): string => {
-    switch (pageId) {
-      case "today":
-        return getTodayDateString();
-      case "notes":
-        return "自由笔记素材池";
-      case "journal":
-        return "日记条目回看";
-      case "todo":
-        return "待办清单";
-      case "snippets":
-        return "随手闪念随记";
-      case "people":
-        return "人物关系档案";
-      case "weekly":
-        return "周度策展";
-      case "themes":
-        return "长期主题追踪";
-      case "memories":
-        return "记忆片段关联";
-      default:
-        return "";
     }
   };
 
@@ -165,26 +129,10 @@ export const App = (): React.JSX.Element => {
         {/* 中间主工作区 */}
         <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden min-w-0">
           {/* 固定的顶部栏 */}
-          <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-white/30">//</span>
-              <span className="text-white/40 font-bold uppercase tracking-wider">
-                {getPageCategory(activePage)}
-              </span>
-              <span className="text-white/20">/</span>
-              <span className="text-white/60 font-medium">{activePage}</span>
-              <span className="text-white/20">·</span>
-              <h1 className="text-white/80 font-normal">
-                {getPageTitle(activePage)}
-              </h1>
-            </div>
-            <IconButton
-              aria-label="打开聊天"
-              className="text-white/45 hover:bg-white/5 hover:text-white"
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-            </IconButton>
-          </header>
+          <Header
+            category={getPageCategory(activePage)}
+            activePage={activePage}
+          />
 
           <div className="flex-1 min-h-0">{renderActivePage()}</div>
         </div>

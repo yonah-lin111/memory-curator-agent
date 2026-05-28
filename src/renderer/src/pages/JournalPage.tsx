@@ -206,22 +206,19 @@ export const JournalPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Journal 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator
-        currentEntryCount={journalContent.trim() || savedJournalContent.trim() ? 1 : 0}
-        entryCountMap={monthEntryCounts}
-        entryDate={entryDate}
-        formatCountHint={(count) =>
-          count > 0 ? `当日已有 ${count} 篇日记` : "当日还没有日记"
-        }
-        isMonthOverviewLoading={isMonthOverviewLoading}
-        label="Journal"
-        visibleMonth={visibleMonth}
-        onChange={handleEntryDateChange}
-        onVisibleMonthChange={setVisibleMonth}
-      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <JournalEditorSurface
           value={journalContent}
+          headerLeft={
+            <PageDateNavigator
+              entryCountMap={monthEntryCounts}
+              entryDate={entryDate}
+              isMonthOverviewLoading={isMonthOverviewLoading}
+              visibleMonth={visibleMonth}
+              onChange={handleEntryDateChange}
+              onVisibleMonthChange={setVisibleMonth}
+            />
+          }
           onBlur={() => {
             void persistRef.current(journalContent);
           }}

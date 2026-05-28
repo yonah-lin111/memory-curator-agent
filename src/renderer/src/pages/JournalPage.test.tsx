@@ -135,11 +135,11 @@ describe("JournalPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开 Journal 日期选择器，当前日期 2026-05-27",
+        name: "打开日期选择器，当前日期 2026-05-27",
       }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，当日已有 1 篇日记" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
     );
 
     expect(listDay).toHaveBeenLastCalledWith("2026-05-26");
@@ -169,17 +169,17 @@ describe("JournalPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开 Journal 日期选择器，当前日期 2026-05-27",
+        name: "打开日期选择器，当前日期 2026-05-27",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "Journal 日期选择器" });
+    const dialog = screen.getByRole("dialog", { name: "日期选择器" });
     expect(dialog).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-27，当日已有 1 篇日记" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-27，有记录" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，当日已有 1 篇日记" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
     ).toBeInTheDocument();
   });
 

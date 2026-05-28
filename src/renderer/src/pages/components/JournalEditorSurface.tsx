@@ -41,6 +41,8 @@ interface JournalEditorSurfaceProps {
   onChange: (value: string) => void;
   // 失焦回调。
   onBlur: () => void;
+  // 左侧头部日期选择器
+  headerLeft?: React.ReactNode;
 }
 
 /**
@@ -50,12 +52,20 @@ export const JournalEditorSurface = ({
   value,
   onChange,
   onBlur,
+  headerLeft,
 }: JournalEditorSurfaceProps): React.JSX.Element => {
   // 编辑器预览模式。
   const [previewMode, setPreviewMode] = useState<"edit" | "live">("edit");
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-[6px] border border-white/6 bg-[#212121] p-4">
+    <section className="flex min-h-0 flex-1 flex-col rounded-[6px] border border-white/6 bg-[#212121] p-4 gap-3">
+      {headerLeft && (
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <div className="flex items-center gap-2">
+            {headerLeft}
+          </div>
+        </div>
+      )}
       <div className="min-h-0 flex-1 p-1">
         <MDEditor
           className="notes-markdown-editor"
@@ -78,7 +88,7 @@ export const JournalEditorSurface = ({
             },
             fullscreen,
           ]}
-          height={500}
+          height="100%"
           preview={previewMode}
           style={MARKDOWN_EDITOR_THEME_STYLE}
           textareaProps={{

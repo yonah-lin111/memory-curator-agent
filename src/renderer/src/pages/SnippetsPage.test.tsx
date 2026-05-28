@@ -126,11 +126,11 @@ describe("SnippetsPage", () => {
     expect(await screen.findByText("今天片段")).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开 Snippets 日期选择器，当前日期 2026-05-27",
+        name: "打开日期选择器，当前日期 2026-05-27",
       }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，当日收录 1 条片段" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
     );
     expect(await screen.findByText("昨天片段")).toBeInTheDocument();
   });
@@ -158,17 +158,17 @@ describe("SnippetsPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开 Snippets 日期选择器，当前日期 2026-05-27",
+        name: "打开日期选择器，当前日期 2026-05-27",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "Snippets 日期选择器" });
+    const dialog = screen.getByRole("dialog", { name: "日期选择器" });
     expect(dialog).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-27，当日收录 1 条片段" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-27，有记录" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，当日收录 3 条片段" }),
+      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
     ).toBeInTheDocument();
   });
 
@@ -249,7 +249,7 @@ describe("SnippetsPage", () => {
 
     renderSnippetsPage();
 
-    await user.click(screen.getByRole("button", { name: "创建新片段" }));
+    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
     await user.type(screen.getByLabelText("随记标题"), "离线片段");
     await user.type(screen.getByLabelText("随记内容"), "本地创建内容");
     await user.type(screen.getByLabelText("输入新标签"), "离线{Enter}");
@@ -273,7 +273,7 @@ describe("SnippetsPage", () => {
 
     renderSnippetsPage();
 
-    await user.click(screen.getByRole("button", { name: "创建新片段" }));
+    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
     await user.type(screen.getByLabelText("随记标题"), "本地片段");
     await user.type(screen.getByLabelText("随记内容"), "需要继续编辑");
     await user.type(screen.getByLabelText("输入新标签"), "本地{Enter}");
@@ -328,7 +328,7 @@ describe("SnippetsPage", () => {
 
     expect(await screen.findByText("稳定片段")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "创建新片段" }));
+    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
     await user.type(screen.getByLabelText("随记标题"), "失败片段");
     await user.type(screen.getByLabelText("随记内容"), "不会创建");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));

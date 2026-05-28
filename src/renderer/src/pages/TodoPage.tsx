@@ -3,8 +3,6 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import {
   ArrowUpDown,
   CheckSquare,
-  ClipboardList,
-  HelpCircle,
   Plus,
   Square,
   Trash2,
@@ -392,36 +390,21 @@ export const TodoPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Todo 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <PageDateNavigator
-        currentEntryCount={todos.length}
-        entryCountMap={monthEntryCounts}
-        entryDate={entryDate}
-        formatCountHint={(count) =>
-          count > 0 ? `当日共有 ${count} 条待办` : "当日还没有待办"
-        }
-        isMonthOverviewLoading={isMonthOverviewLoading}
-        label="Todo"
-        visibleMonth={visibleMonth}
-        onChange={(nextDate) => {
-          setVisibleMonth(getEntryMonth(nextDate));
-          setEntryDate(nextDate);
-        }}
-        onVisibleMonthChange={setVisibleMonth}
-      />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 min-h-0 flex-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-white/60" />
-              <span className="text-sm font-bold tracking-wide text-white/80">
-                每日待办计划
-              </span>
-              <div className="relative group inline-flex items-center">
-                <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                  规划与记录今日待办事项，支持设置 P0-P3 优先级与一键排序。
-                </div>
-              </div>
+              <PageDateNavigator
+                entryCountMap={monthEntryCounts}
+                entryDate={entryDate}
+                isMonthOverviewLoading={isMonthOverviewLoading}
+                visibleMonth={visibleMonth}
+                onChange={(nextDate) => {
+                  setVisibleMonth(getEntryMonth(nextDate));
+                  setEntryDate(nextDate);
+                }}
+                onVisibleMonthChange={setVisibleMonth}
+              />
             </div>
             <div className="flex items-center gap-2">
               <span className="font-mono text-xs text-white/40">
@@ -438,7 +421,7 @@ export const TodoPage = (): React.JSX.Element => {
             </div>
           </div>
 
-          <div className="max-h-[520px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+          <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
             <div className="flex items-center gap-2 rounded-[6px] border border-white/8 bg-black/30 px-2 py-2 transition-all duration-300 ease-out focus-within:border-white/20 focus-within:bg-black">
               <button
                 aria-label={`切换新待办优先级 ${composerDraft.priority}`}
