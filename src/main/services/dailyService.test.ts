@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { WorkspaceJournalRow, WorkspaceSnippetRow, WorkspaceTodoRow } from '../db/schema'
-import { createWorkspaceService, type DatabaseConnection, type DatabaseStatement } from './workspaceService'
+import type { JournalRow, SnippetRow, TodoRow } from '../db/schema'
+import { createDailyService, type DatabaseConnection, type DatabaseStatement } from './dailyService'
 
 // 测试数据库连接。
-let sqlite: MemoryWorkspaceDatabase
+let sqlite: MemoryDailyDatabase
 
-// 内存 Workspace 数据库。
-class MemoryWorkspaceDatabase implements DatabaseConnection {
+// 内存 Daily 数据库。
+class MemoryDailyDatabase implements DatabaseConnection {
   // 内存待办行。
-  private todoRows: WorkspaceTodoRow[] = []
+  private todoRows: TodoRow[] = []
 
   // 内存片段行。
-  private snippetRows: WorkspaceSnippetRow[] = []
+  private snippetRows: SnippetRow[] = []
 
   // 内存日记行。
-  private journalRows: WorkspaceJournalRow[] = []
+  private journalRows: JournalRow[] = []
 
   // 待办自增主键游标。
   private nextTodoId = 1
@@ -90,7 +90,7 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
             id: insertedId,
             entry_date: values[0] as string,
             text: values[1] as string,
-            priority: values[2] as WorkspaceTodoRow['priority'],
+            priority: values[2] as TodoRow['priority'],
             completed: values[3] as number,
             sort_order: values[4] as number,
             created_at: values[5] as string,
@@ -124,7 +124,7 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
               ? {
                   ...row,
                   text: values[0] as string,
-                  priority: values[1] as WorkspaceTodoRow['priority'],
+                  priority: values[1] as TodoRow['priority'],
                   completed: values[2] as number,
                   updated_at: values[3] as string
                 }
@@ -339,12 +339,12 @@ class MemoryWorkspaceDatabase implements DatabaseConnection {
 }
 
 beforeEach(() => {
-  sqlite = new MemoryWorkspaceDatabase()
+  sqlite = new MemoryDailyDatabase()
 })
 
-describe('workspaceService', () => {
+describe('dailyService', () => {
   it('只返回指定日期的工作台数据', () => {
-    const service = createWorkspaceService(sqlite)
+    const service = createDailyService(sqlite)
 
     const firstTodo = service.createTodo({
       entryDate: '2026-05-27',
@@ -385,7 +385,7 @@ describe('workspaceService', () => {
   })
 
   it('支持读取指定月份的工作台概览', () => {
-    const service = createWorkspaceService(sqlite)
+    const service = createDailyService(sqlite)
 
     service.createTodo({
       entryDate: '2026-05-27',
@@ -436,7 +436,7 @@ describe('workspaceService', () => {
   })
 
   it('支持创建、更新、删除和重排待办', () => {
-    const service = createWorkspaceService(sqlite)
+    const service = createDailyService(sqlite)
 
     const firstTodo = service.createTodo({
       entryDate: '2026-05-27',
@@ -480,7 +480,7 @@ describe('workspaceService', () => {
   })
 
   it('支持创建、更新和删除片段', () => {
-    const service = createWorkspaceService(sqlite)
+    const service = createDailyService(sqlite)
 
     const created = service.createSnippet({
       entryDate: '2026-05-27',
@@ -508,7 +508,7 @@ describe('workspaceService', () => {
   })
 
   it('支持创建、更新和删除日记', () => {
-    const service = createWorkspaceService(sqlite)
+    const service = createDailyService(sqlite)
 
     const created = service.saveJournal({
       entryDate: '2026-05-27',

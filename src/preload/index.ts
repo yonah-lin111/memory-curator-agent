@@ -13,47 +13,47 @@ type NoteDraftPayload = {
   tags: string[]
 }
 
-// 工作台待办优先级类型。
-type WorkspaceTodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+// 待办优先级类型。
+type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
-// 工作台日记保存载荷类型。
-type WorkspaceJournalSavePayload = {
+// 日记保存载荷类型。
+type JournalSavePayload = {
   // 日记所属日期。
   entryDate: string
   // 日记正文。
   content: string
 }
 
-// 工作台待办创建载荷类型。
-type WorkspaceTodoCreatePayload = {
+// 待办创建载荷类型。
+type TodoCreatePayload = {
   // 待办所属日期。
   entryDate: string
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
 }
 
-// 工作台待办更新载荷类型。
-type WorkspaceTodoUpdatePayload = {
+// 待办更新载荷类型。
+type TodoUpdatePayload = {
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 是否完成。
   completed: boolean
 }
 
-// 工作台待办排序载荷类型。
-type WorkspaceTodoSortPayload = {
+// 待办排序载荷类型。
+type TodoSortPayload = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
   ids: number[]
 }
 
-// 工作台片段创建载荷类型。
-type WorkspaceSnippetCreatePayload = {
+// 片段创建载荷类型。
+type SnippetCreatePayload = {
   // 片段所属日期。
   entryDate: string
   // 片段标题。
@@ -64,8 +64,8 @@ type WorkspaceSnippetCreatePayload = {
   tags: string[]
 }
 
-// 工作台片段更新载荷类型。
-type WorkspaceSnippetUpdatePayload = {
+// 片段更新载荷类型。
+type SnippetUpdatePayload = {
   // 片段标题。
   title: string
   // 片段正文。
@@ -74,8 +74,8 @@ type WorkspaceSnippetUpdatePayload = {
   tags: string[]
 }
 
-// 工作台单日聚合概览类型。
-type WorkspaceMonthEntryOverview = {
+// 单日聚合概览类型。
+type MonthEntryOverview = {
   // 所属日期。
   entryDate: string
   // 当日待办数量。
@@ -86,12 +86,12 @@ type WorkspaceMonthEntryOverview = {
   journalCount: number
 }
 
-// 工作台整月概览类型。
-type WorkspaceMonthOverview = {
+// 整月概览类型。
+type MonthOverview = {
   // 所属月份。
   month: string
   // 当月有记录的日期概览。
-  entries: WorkspaceMonthEntryOverview[]
+  entries: MonthEntryOverview[]
 }
 
 // 渲染进程安全 API。
@@ -102,21 +102,21 @@ const api = {
     update: (id: number, draft: NoteDraftPayload) => ipcRenderer.invoke('notes:update', id, draft),
     delete: (id: number) => ipcRenderer.invoke('notes:delete', id)
   },
-  workspace: {
-    listDay: (entryDate: string) => ipcRenderer.invoke('workspace:list-day', entryDate),
-    listMonthOverview: (month: string): Promise<WorkspaceMonthOverview> =>
-      ipcRenderer.invoke('workspace:list-month-overview', month),
-    saveJournal: (draft: WorkspaceJournalSavePayload) => ipcRenderer.invoke('workspace:journal:save', draft),
-    deleteJournal: (entryDate: string) => ipcRenderer.invoke('workspace:journal:delete', entryDate),
-    createTodo: (draft: WorkspaceTodoCreatePayload) => ipcRenderer.invoke('workspace:todo:create', draft),
-    updateTodo: (id: number, draft: WorkspaceTodoUpdatePayload) =>
-      ipcRenderer.invoke('workspace:todo:update', id, draft),
-    deleteTodo: (id: number) => ipcRenderer.invoke('workspace:todo:delete', id),
-    sortTodos: (draft: WorkspaceTodoSortPayload) => ipcRenderer.invoke('workspace:todo:sort', draft),
-    createSnippet: (draft: WorkspaceSnippetCreatePayload) => ipcRenderer.invoke('workspace:snippet:create', draft),
-    updateSnippet: (id: number, draft: WorkspaceSnippetUpdatePayload) =>
-      ipcRenderer.invoke('workspace:snippet:update', id, draft),
-    deleteSnippet: (id: number) => ipcRenderer.invoke('workspace:snippet:delete', id)
+  daily: {
+    listDay: (entryDate: string) => ipcRenderer.invoke('daily:list-day', entryDate),
+    listMonthOverview: (month: string): Promise<MonthOverview> =>
+      ipcRenderer.invoke('daily:list-month-overview', month),
+    saveJournal: (draft: JournalSavePayload) => ipcRenderer.invoke('daily:journal:save', draft),
+    deleteJournal: (entryDate: string) => ipcRenderer.invoke('daily:journal:delete', entryDate),
+    createTodo: (draft: TodoCreatePayload) => ipcRenderer.invoke('daily:todo:create', draft),
+    updateTodo: (id: number, draft: TodoUpdatePayload) =>
+      ipcRenderer.invoke('daily:todo:update', id, draft),
+    deleteTodo: (id: number) => ipcRenderer.invoke('daily:todo:delete', id),
+    sortTodos: (draft: TodoSortPayload) => ipcRenderer.invoke('daily:todo:sort', draft),
+    createSnippet: (draft: SnippetCreatePayload) => ipcRenderer.invoke('daily:snippet:create', draft),
+    updateSnippet: (id: number, draft: SnippetUpdatePayload) =>
+      ipcRenderer.invoke('daily:snippet:update', id, draft),
+    deleteSnippet: (id: number) => ipcRenderer.invoke('daily:snippet:delete', id)
   }
 }
 

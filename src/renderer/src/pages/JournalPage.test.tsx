@@ -9,9 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { JournalPage } from "@renderer/pages/JournalPage";
 
-// 工作台单日数据类型，直接从 bridge 签名反推。
-type WorkspaceDayDataShape =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>;
+// Daily 单日数据类型，直接从 bridge 签名反推。
+type DailyDayDataShape =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
 
 vi.mock("@uiw/react-md-editor", () => ({
   default: ({
@@ -41,10 +41,10 @@ const renderJournalPage = (): void => {
   );
 };
 
-// 默认工作台返回值，供测试按需覆盖。
-const createWorkspaceDayData = (
-  overrides?: Partial<WorkspaceDayDataShape>,
-): WorkspaceDayDataShape => ({
+// 默认 Daily 返回值，供测试按需覆盖。
+const createDailyDayData = (
+  overrides?: Partial<DailyDayDataShape>,
+): DailyDayDataShape => ({
   todos: [],
   snippets: [],
   journal: null,
@@ -55,8 +55,8 @@ describe("JournalPage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-05-27T09:00:00"));
     window.api = {
-      workspace: {
-        listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+      daily: {
+        listDay: vi.fn().mockResolvedValue(createDailyDayData()),
         listMonthOverview: vi.fn().mockResolvedValue({
           month: "2026-05",
           entries: [],
@@ -90,7 +90,7 @@ describe("JournalPage", () => {
     const listDay = vi
       .fn()
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           journal: {
             entryDate: "2026-05-27",
             content: "今天的日记",
@@ -100,7 +100,7 @@ describe("JournalPage", () => {
         }),
       )
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           journal: {
             entryDate: "2026-05-26",
             content: "昨天的日记",
@@ -110,8 +110,8 @@ describe("JournalPage", () => {
         }),
       );
 
-    window.api.workspace.listDay = listDay;
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listDay = listDay;
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -147,7 +147,7 @@ describe("JournalPage", () => {
   });
 
   it("点击日期后打开日期选择器并显示日记角标", async () => {
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -186,9 +186,9 @@ describe("JournalPage", () => {
   it("切换日期前会先按旧日期保存当前草稿", async () => {
     const listDay = vi
       .fn()
-      .mockResolvedValueOnce(createWorkspaceDayData())
+      .mockResolvedValueOnce(createDailyDayData())
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           journal: {
             entryDate: "2026-05-26",
             content: "昨天内容",
@@ -205,8 +205,8 @@ describe("JournalPage", () => {
     });
     const user = userEvent.setup();
 
-    window.api.workspace.listDay = listDay;
-    window.api.workspace.saveJournal = saveJournal;
+    window.api.daily.listDay = listDay;
+    window.api.daily.saveJournal = saveJournal;
 
     renderJournalPage();
 
@@ -235,10 +235,10 @@ describe("JournalPage", () => {
       updatedAt: "2026-05-27 09:35",
     });
 
-    window.api.workspace.listDay = vi
+    window.api.daily.listDay = vi
       .fn()
-      .mockResolvedValue(createWorkspaceDayData());
-    window.api.workspace.saveJournal = saveJournal;
+      .mockResolvedValue(createDailyDayData());
+    window.api.daily.saveJournal = saveJournal;
 
     renderJournalPage();
 
@@ -259,8 +259,8 @@ describe("JournalPage", () => {
 
     const deleteJournal = vi.fn().mockResolvedValue(undefined);
 
-    window.api.workspace.listDay = vi.fn().mockResolvedValue(
-      createWorkspaceDayData({
+    window.api.daily.listDay = vi.fn().mockResolvedValue(
+      createDailyDayData({
         journal: {
           entryDate: "2026-05-27",
           content: "旧内容",
@@ -269,7 +269,7 @@ describe("JournalPage", () => {
         },
       }),
     );
-    window.api.workspace.deleteJournal = deleteJournal;
+    window.api.daily.deleteJournal = deleteJournal;
 
     renderJournalPage();
 

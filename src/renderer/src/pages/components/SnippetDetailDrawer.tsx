@@ -3,14 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
-// 工作台片段记录类型，直接从 bridge 签名反推。
-type WorkspaceSnippetRecord =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>["snippets"][number];
+// Daily 片段记录类型，直接从 bridge 签名反推。
+type DailySnippetRecord =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["snippets"][number];
 
 // 片段详情抽屉属性。
 interface SnippetDetailDrawerProps {
   // 当前选中的片段。
-  selectedSnippet: WorkspaceSnippetRecord | null;
+  selectedSnippet: DailySnippetRecord | null;
   // 新建回调。
   onCreate: (draft: {
     title: string;

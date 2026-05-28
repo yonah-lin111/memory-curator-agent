@@ -1,20 +1,20 @@
 import type {
-  WorkspaceDayData,
-  WorkspaceJournalItem,
-  WorkspaceJournalRow,
-  WorkspaceJournalSaveInput,
-  WorkspaceMonthEntryOverview,
-  WorkspaceMonthOverview,
-  WorkspaceSnippetCreateInput,
-  WorkspaceSnippetItem,
-  WorkspaceSnippetRow,
-  WorkspaceSnippetUpdateInput,
-  WorkspaceTodoCreateInput,
-  WorkspaceTodoItem,
-  WorkspaceTodoPriority,
-  WorkspaceTodoReorderInput,
-  WorkspaceTodoRow,
-  WorkspaceTodoUpdateInput
+  DayData,
+  JournalItem,
+  JournalRow,
+  JournalSaveInput,
+  MonthEntryOverview,
+  MonthOverview,
+  SnippetCreateInput,
+  SnippetItem,
+  SnippetRow,
+  SnippetUpdateInput,
+  TodoCreateInput,
+  TodoItem,
+  TodoPriority,
+  TodoReorderInput,
+  TodoRow,
+  TodoUpdateInput
 } from '../db/schema'
 
 // 数据库语句接口。
@@ -27,40 +27,40 @@ export type DatabaseStatement = {
   run: (...values: unknown[]) => { lastInsertRowid?: number | bigint } | unknown
 }
 
-// Workspace 服务依赖的最小数据库接口。
+// Daily 服务依赖的最小数据库接口。
 export type DatabaseConnection = {
   // 准备 SQL 语句。
   prepare: (sql: string) => DatabaseStatement
 }
 
-// Workspace 服务方法集合。
-export type WorkspaceService = {
-  // 读取单日工作台数据。
-  listDay: (entryDate: string) => WorkspaceDayData
-  // 读取指定月份的工作台概览。
-  listMonthOverview: (month: string) => WorkspaceMonthOverview
+// Daily 服务方法集合。
+export type DailyService = {
+  // 读取单日数据。
+  listDay: (entryDate: string) => DayData
+  // 读取指定月份的概览。
+  listMonthOverview: (month: string) => MonthOverview
   // 保存日记。
-  saveJournal: (input: WorkspaceJournalSaveInput) => WorkspaceJournalItem
+  saveJournal: (input: JournalSaveInput) => JournalItem
   // 删除日记。
   deleteJournal: (entryDate: string) => void
   // 创建待办。
-  createTodo: (input: WorkspaceTodoCreateInput) => WorkspaceTodoItem
+  createTodo: (input: TodoCreateInput) => TodoItem
   // 更新待办。
-  updateTodo: (id: number, input: WorkspaceTodoUpdateInput) => WorkspaceTodoItem
+  updateTodo: (id: number, input: TodoUpdateInput) => TodoItem
   // 删除待办。
   deleteTodo: (id: number) => void
   // 重新排序待办。
-  reorderTodos: (input: WorkspaceTodoReorderInput) => WorkspaceTodoItem[]
+  reorderTodos: (input: TodoReorderInput) => TodoItem[]
   // 创建片段。
-  createSnippet: (input: WorkspaceSnippetCreateInput) => WorkspaceSnippetItem
+  createSnippet: (input: SnippetCreateInput) => SnippetItem
   // 更新片段。
-  updateSnippet: (id: number, input: WorkspaceSnippetUpdateInput) => WorkspaceSnippetItem
+  updateSnippet: (id: number, input: SnippetUpdateInput) => SnippetItem
   // 删除片段。
   deleteSnippet: (id: number) => void
 }
 
 // 合法待办优先级集合。
-const TODO_PRIORITIES: WorkspaceTodoPriority[] = ['P0', 'P1', 'P2', 'P3']
+const TODO_PRIORITIES: TodoPriority[] = ['P0', 'P1', 'P2', 'P3']
 
 /**
  * 提取 SQLite 自增主键。
@@ -132,7 +132,7 @@ const validateEntryMonth = (month: string): void => {
 /**
  * 校验待办优先级。
  */
-const validateTodoPriority = (priority: WorkspaceTodoPriority): void => {
+const validateTodoPriority = (priority: TodoPriority): void => {
   if (!TODO_PRIORITIES.includes(priority)) {
     throw new Error('待办优先级不正确')
   }
@@ -141,7 +141,7 @@ const validateTodoPriority = (priority: WorkspaceTodoPriority): void => {
 /**
  * 校验待办创建输入。
  */
-const validateTodoCreateInput = (input: WorkspaceTodoCreateInput): void => {
+const validateTodoCreateInput = (input: TodoCreateInput): void => {
   validateEntryDate(input.entryDate)
   validateTodoPriority(input.priority)
 
@@ -153,7 +153,7 @@ const validateTodoCreateInput = (input: WorkspaceTodoCreateInput): void => {
 /**
  * 校验待办更新输入。
  */
-const validateTodoUpdateInput = (input: WorkspaceTodoUpdateInput): void => {
+const validateTodoUpdateInput = (input: TodoUpdateInput): void => {
   validateTodoPriority(input.priority)
 
   if (!input.text.trim()) {
@@ -165,7 +165,7 @@ const validateTodoUpdateInput = (input: WorkspaceTodoUpdateInput): void => {
  * 校验片段输入。
  */
 const validateSnippetInput = (
-  input: WorkspaceSnippetCreateInput | WorkspaceSnippetUpdateInput
+  input: SnippetCreateInput | SnippetUpdateInput
 ): void => {
   if ('entryDate' in input) {
     validateEntryDate(input.entryDate)
@@ -183,7 +183,7 @@ const validateSnippetInput = (
 /**
  * 校验日记输入。
  */
-const validateJournalSaveInput = (input: WorkspaceJournalSaveInput): void => {
+const validateJournalSaveInput = (input: JournalSaveInput): void => {
   validateEntryDate(input.entryDate)
 
   if (!input.content.trim()) {
@@ -194,7 +194,7 @@ const validateJournalSaveInput = (input: WorkspaceJournalSaveInput): void => {
 /**
  * 将数据库行映射为页面待办。
  */
-const mapTodoRow = (row: WorkspaceTodoRow): WorkspaceTodoItem => ({
+const mapTodoRow = (row: TodoRow): TodoItem => ({
   id: row.id,
   entryDate: row.entry_date,
   text: row.text,
@@ -208,7 +208,7 @@ const mapTodoRow = (row: WorkspaceTodoRow): WorkspaceTodoItem => ({
 /**
  * 将数据库行映射为页面片段。
  */
-const mapSnippetRow = (row: WorkspaceSnippetRow): WorkspaceSnippetItem => ({
+const mapSnippetRow = (row: SnippetRow): SnippetItem => ({
   id: row.id,
   entryDate: row.entry_date,
   title: row.title,
@@ -222,7 +222,7 @@ const mapSnippetRow = (row: WorkspaceSnippetRow): WorkspaceSnippetItem => ({
 /**
  * 将数据库行映射为页面日记。
  */
-const mapJournalRow = (row: WorkspaceJournalRow): WorkspaceJournalItem => ({
+const mapJournalRow = (row: JournalRow): JournalItem => ({
   entryDate: row.entry_date,
   content: row.content,
   createdAt: row.created_at,
@@ -230,7 +230,7 @@ const mapJournalRow = (row: WorkspaceJournalRow): WorkspaceJournalItem => ({
 })
 
 // SQL 聚合行类型。
-type WorkspaceCountRow = {
+type CountRow = {
   // 聚合所属日期。
   entry_date: string
   // 聚合数量。
@@ -238,9 +238,9 @@ type WorkspaceCountRow = {
 }
 
 /**
- * 创建 Workspace 服务。
+ * 创建 Daily 服务。
  */
-export const createWorkspaceService = (database: DatabaseConnection): WorkspaceService => ({
+export const createDailyService = (database: DatabaseConnection): DailyService => ({
   listDay: (entryDate) => {
     validateEntryDate(entryDate)
 
@@ -248,16 +248,16 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC'
       )
-      .all(entryDate) as WorkspaceTodoRow[]
+      .all(entryDate) as TodoRow[]
     const snippets = database
       .prepare(
         'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE entry_date = ? ORDER BY created_at DESC, id DESC'
       )
-      .all(entryDate) as WorkspaceSnippetRow[]
+      .all(entryDate) as SnippetRow[]
     const journal =
       (database
         .prepare('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
-        .get(entryDate) as WorkspaceJournalRow | undefined) ?? null
+        .get(entryDate) as JournalRow | undefined) ?? null
 
     return {
       todos: todos.map(mapTodoRow),
@@ -271,10 +271,10 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
     // 月份前缀查询条件。
     const monthPattern = `${month}-%`
     // 按日期聚合的概览映射。
-    const overviewMap = new Map<string, WorkspaceMonthEntryOverview>()
+    const overviewMap = new Map<string, MonthEntryOverview>()
     // 统一写入聚合计数，避免三类记录合并逻辑重复。
     const applyCountRows = (
-      rows: WorkspaceCountRow[],
+      rows: CountRow[],
       field: 'todoCount' | 'snippetCount' | 'journalCount'
     ): void => {
       rows.forEach((row) => {
@@ -296,7 +296,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
         .prepare(
           'SELECT entry_date, COUNT(*) AS item_count FROM todos WHERE entry_date LIKE ? GROUP BY entry_date'
         )
-        .all(monthPattern) as WorkspaceCountRow[],
+        .all(monthPattern) as CountRow[],
       'todoCount'
     )
     applyCountRows(
@@ -304,7 +304,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
         .prepare(
           'SELECT entry_date, COUNT(*) AS item_count FROM snippets WHERE entry_date LIKE ? GROUP BY entry_date'
         )
-        .all(monthPattern) as WorkspaceCountRow[],
+        .all(monthPattern) as CountRow[],
       'snippetCount'
     )
     applyCountRows(
@@ -312,7 +312,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
         .prepare(
           'SELECT entry_date, COUNT(*) AS item_count FROM journals WHERE entry_date LIKE ? GROUP BY entry_date'
         )
-        .all(monthPattern) as WorkspaceCountRow[],
+        .all(monthPattern) as CountRow[],
       'journalCount'
     )
 
@@ -327,7 +327,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
     const content = input.content.trim()
     const existing = database
       .prepare('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
-      .get(input.entryDate) as WorkspaceJournalRow | undefined
+      .get(input.entryDate) as JournalRow | undefined
     const timestamp = createTimestamp()
 
     if (!existing) {
@@ -383,7 +383,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
       )
-      .get(getInsertedRowId(inserted, '待办')) as WorkspaceTodoRow | undefined
+      .get(getInsertedRowId(inserted, '待办')) as TodoRow | undefined
 
     if (!row) {
       throw new Error('新建待办后读取失败')
@@ -398,7 +398,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
       )
-      .get(id) as WorkspaceTodoRow | undefined
+      .get(id) as TodoRow | undefined
 
     if (!existing) {
       throw new Error('待办不存在')
@@ -437,7 +437,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC'
       )
-      .all(input.entryDate) as WorkspaceTodoRow[]
+      .all(input.entryDate) as TodoRow[]
 
     return rows.map(mapTodoRow)
   },
@@ -461,7 +461,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
       )
-      .get(getInsertedRowId(inserted, '片段')) as WorkspaceSnippetRow | undefined
+      .get(getInsertedRowId(inserted, '片段')) as SnippetRow | undefined
 
     if (!row) {
       throw new Error('新建片段后读取失败')
@@ -476,7 +476,7 @@ export const createWorkspaceService = (database: DatabaseConnection): WorkspaceS
       .prepare(
         'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
       )
-      .get(id) as WorkspaceSnippetRow | undefined
+      .get(id) as SnippetRow | undefined
 
     if (!existing) {
       throw new Error('片段不存在')

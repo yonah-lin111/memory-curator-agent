@@ -131,4 +131,4 @@ export const CALENDAR_WEEKDAY_LABELS = [
 ] as const;
 
 // 没有 preload bridge 的测试 / 预览环境保护。
-export const hasWorkspaceBridge = (): boolean => Boolean(window.api?.workspace);
+export const hasDailyBridge = (): boolean => Boolean(window.api?.daily);

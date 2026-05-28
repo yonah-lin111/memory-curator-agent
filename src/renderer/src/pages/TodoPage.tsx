@@ -7,16 +7,16 @@ import { TodoControlTower } from "@renderer/pages/components/TodoControlTower";
 import {
   createTodayEntryDate,
   getEntryMonth,
-  hasWorkspaceBridge,
-} from "@renderer/pages/components/workspacePageShared";
+  hasDailyBridge,
+} from "@renderer/pages/components/dailyShared";
 
-// 工作台待办记录类型，直接从 bridge 签名反推。
-type WorkspaceTodoRecord =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>["todos"][number];
+// 待办记录类型，直接从 bridge 签名反推。
+type DailyTodoRecord =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["todos"][number];
 
-// 工作台待办优先级类型，直接从 createTodo 签名反推。
-type WorkspaceTodoPriorityValue =
-  Parameters<Window["api"]["workspace"]["createTodo"]>[0]["priority"];
+// 待办优先级类型，直接从 createTodo 签名反推。
+type DailyTodoPriorityValue =
+  Parameters<Window["api"]["daily"]["createTodo"]>[0]["priority"];
 
 /**
  * TodoPage 组件 - 单日待办执行控制台。
@@ -35,7 +35,7 @@ export const TodoPage = (): React.JSX.Element => {
     {},
   );
   // 当前待办列表。
-  const [todos, setTodos] = useState<WorkspaceTodoRecord[]>([]);
+  const [todos, setTodos] = useState<DailyTodoRecord[]>([]);
   // 加载状态。
   const [isLoading, setIsLoading] = useState<boolean>(true);
   // 错误文案。
@@ -53,13 +53,13 @@ export const TodoPage = (): React.JSX.Element => {
       setErrorMessage(null);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setTodos([]);
           return;
         }
 
-        const workspace = await window.api.workspace.listDay(entryDate);
-        setTodos(workspace.todos);
+        const todayData = await window.api.daily.listDay(entryDate);
+        setTodos(todayData.todos);
       } catch {
         setErrorMessage("读取待办失败，请稍后再试。");
         toast.error("读取待办失败");
@@ -79,12 +79,12 @@ export const TodoPage = (): React.JSX.Element => {
       setIsMonthOverviewLoading(true);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setMonthEntryCounts({});
           return;
         }
 
-        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        const overview = await window.api.daily.listMonthOverview(visibleMonth);
         setMonthEntryCounts(
           Object.fromEntries(
             overview.entries
@@ -118,10 +118,10 @@ export const TodoPage = (): React.JSX.Element => {
    */
   const handleCreateTodo = async (draft: {
     text: string;
-    priority: WorkspaceTodoPriorityValue;
+    priority: DailyTodoPriorityValue;
   }): Promise<boolean> => {
     try {
-      const created = await window.api.workspace.createTodo({
+      const created = await window.api.daily.createTodo({
         entryDate,
         ...draft,
       });
@@ -143,10 +143,10 @@ export const TodoPage = (): React.JSX.Element => {
    */
   const handleUpdateTodo = async (
     id: number,
-    patch: { text: string; priority: WorkspaceTodoPriorityValue; completed: boolean },
+    patch: { text: string; priority: DailyTodoPriorityValue; completed: boolean },
   ): Promise<boolean> => {
     try {
-      const updated = await window.api.workspace.updateTodo(id, patch);
+      const updated = await window.api.daily.updateTodo(id, patch);
       setTodos((currentTodos) =>
         currentTodos.map((todo) => (todo.id === id ? updated : todo)),
       );
@@ -163,7 +163,7 @@ export const TodoPage = (): React.JSX.Element => {
    */
   const handleDeleteTodo = async (id: number): Promise<boolean> => {
     try {
-      await window.api.workspace.deleteTodo(id);
+      await window.api.daily.deleteTodo(id);
       setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
       setMonthEntryCounts((currentCounts) => {
         const nextCount = Math.max((currentCounts[entryDate] ?? todos.length) - 1, 0);
@@ -192,7 +192,7 @@ export const TodoPage = (): React.JSX.Element => {
    */
   const handleSortTodos = async (): Promise<boolean> => {
     try {
-      const reordered = await window.api.workspace.sortTodos({
+      const reordered = await window.api.daily.sortTodos({
         entryDate,
         ids: todos.map((todo) => todo.id),
       });

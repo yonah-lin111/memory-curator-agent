@@ -8,12 +8,12 @@ import { SnippetsTagMap } from "@renderer/pages/components/SnippetsTagMap";
 import {
   createTodayEntryDate,
   getEntryMonth,
-  hasWorkspaceBridge,
-} from "@renderer/pages/components/workspacePageShared";
+  hasDailyBridge,
+} from "@renderer/pages/components/dailyShared";
 
-// 工作台片段记录类型，直接从 bridge 签名反推。
-type WorkspaceSnippetRecord =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>["snippets"][number];
+// Daily 片段记录类型，直接从 bridge 签名反推。
+type DailySnippetRecord =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["snippets"][number];
 
 // 生成本地回退时间标签。
 const createFallbackTimestamp = (entryDate: string): string => `${entryDate} 00:00`;
@@ -35,7 +35,7 @@ export const SnippetsPage = (): React.JSX.Element => {
     {},
   );
   // 当前片段列表。
-  const [snippets, setSnippets] = useState<WorkspaceSnippetRecord[]>([]);
+  const [snippets, setSnippets] = useState<DailySnippetRecord[]>([]);
   // 当前选中的片段 ID。
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // 当前是否处于新建态。
@@ -56,15 +56,15 @@ export const SnippetsPage = (): React.JSX.Element => {
       setIsLoading(true);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setSnippets([]);
           setSelectedId(null);
           return;
         }
 
-        const workspace = await window.api.workspace.listDay(entryDate);
-        setSnippets(workspace.snippets);
-        setSelectedId(workspace.snippets[0]?.id ?? null);
+        const todayData = await window.api.daily.listDay(entryDate);
+        setSnippets(todayData.snippets);
+        setSelectedId(todayData.snippets[0]?.id ?? null);
         setIsCreatingNew(false);
         setActiveTag(null);
       } catch {
@@ -85,12 +85,12 @@ export const SnippetsPage = (): React.JSX.Element => {
       setIsMonthOverviewLoading(true);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setMonthEntryCounts({});
           return;
         }
 
-        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        const overview = await window.api.daily.listMonthOverview(visibleMonth);
         setMonthEntryCounts(
           Object.fromEntries(
             overview.entries
@@ -153,7 +153,7 @@ export const SnippetsPage = (): React.JSX.Element => {
     title: string;
     content: string;
     tags: string[];
-  }): WorkspaceSnippetRecord => ({
+  }): DailySnippetRecord => ({
     id: Date.now(),
     entryDate,
     title: draft.title,
@@ -234,7 +234,7 @@ export const SnippetsPage = (): React.JSX.Element => {
           selectedSnippet={selectedSnippet}
           onCreate={async (draft) => {
             try {
-              if (!hasWorkspaceBridge()) {
+              if (!hasDailyBridge()) {
                 const created = createLocalSnippet(draft);
                 setSnippets((currentSnippets) => [created, ...currentSnippets]);
                 setMonthEntryCounts((currentCounts) => ({
@@ -246,7 +246,7 @@ export const SnippetsPage = (): React.JSX.Element => {
                 return;
               }
 
-              const created = await window.api.workspace.createSnippet({
+              const created = await window.api.daily.createSnippet({
                 entryDate,
                 ...draft,
               });
@@ -263,7 +263,7 @@ export const SnippetsPage = (): React.JSX.Element => {
           }}
           onDelete={async (id) => {
             try {
-              if (!hasWorkspaceBridge()) {
+              if (!hasDailyBridge()) {
                 setSnippets((currentSnippets) =>
                   currentSnippets.filter((snippet) => snippet.id !== id),
                 );
@@ -288,7 +288,7 @@ export const SnippetsPage = (): React.JSX.Element => {
                 return;
               }
 
-              await window.api.workspace.deleteSnippet(id);
+              await window.api.daily.deleteSnippet(id);
               setSnippets((currentSnippets) =>
                 currentSnippets.filter((snippet) => snippet.id !== id),
               );
@@ -316,7 +316,7 @@ export const SnippetsPage = (): React.JSX.Element => {
           }}
           onSave={async (id, draft) => {
             try {
-              if (!hasWorkspaceBridge()) {
+              if (!hasDailyBridge()) {
                 setSnippets((currentSnippets) =>
                   currentSnippets.map((snippet) =>
                     snippet.id === id
@@ -334,7 +334,7 @@ export const SnippetsPage = (): React.JSX.Element => {
                 return;
               }
 
-              const updated = await window.api.workspace.updateSnippet(id, draft);
+              const updated = await window.api.daily.updateSnippet(id, draft);
               setSnippets((currentSnippets) =>
                 currentSnippets.map((snippet) => (snippet.id === id ? updated : snippet)),
               );

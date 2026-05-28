@@ -27,8 +27,8 @@ type StatItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-// Today 工作台待办项类型。
-type TodayWorkspaceTodoItem = TodoItem & {
+// Today 待办项类型。
+type TodayTodoItem = TodoItem & {
   // 待办所属日期。
   entryDate: string;
   // 排序序号。
@@ -39,8 +39,8 @@ type TodayWorkspaceTodoItem = TodoItem & {
   updatedAt: string;
 };
 
-// Today 工作台片段项类型。
-type TodayWorkspaceNoteItem = NoteItem & {
+// Today 片段项类型。
+type TodayNoteItem = NoteItem & {
   // 片段所属日期。
   entryDate: string;
   // 创建时间。
@@ -58,7 +58,7 @@ const TODAY_STATS: StatItem[] = [
 ];
 
 // 无 preload bridge 时使用的待办回退数据。
-const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
+const FALLBACK_TODOS: TodayTodoItem[] = [
   {
     id: 4,
     entryDate: "2026-05-27",
@@ -112,7 +112,7 @@ const FALLBACK_TODOS: TodayWorkspaceTodoItem[] = [
 ];
 
 // 无 preload bridge 时使用的片段回退数据。
-const FALLBACK_NOTES: TodayWorkspaceNoteItem[] = [
+const FALLBACK_NOTES: TodayNoteItem[] = [
   {
     id: 1,
     entryDate: "2026-05-27",
@@ -175,26 +175,26 @@ const createCurrentTimestamp = (): string => {
 };
 
 /**
- * TodayWorkspace 组件 - 负责中间列 Today 主工作台。
- * 接入本地 SQLite，默认只展示当天工作台数据。
+ * TodayPage 组件 - 负责中间列 Today 主页面。
+ * 接入本地 SQLite，默认只展示当天数据。
  */
-export const TodayWorkspace = (): React.JSX.Element => {
-  // 当前运行环境是否存在 workspace bridge。
-  const hasWorkspaceApi = Boolean(window.api?.workspace);
-  // 当前工作台日期。
+export const TodayPage = (): React.JSX.Element => {
+  // 当前运行环境是否存在 daily bridge。
+  const hasDailyApi = Boolean(window.api?.daily);
+  // 当前日期。
   const [entryDate] = useState<string>(() => createTodayEntryDate());
   // 随记卡片列表状态。
-  const [notes, setNotes] = useState<TodayWorkspaceNoteItem[]>([]);
+  const [notes, setNotes] = useState<TodayNoteItem[]>([]);
   // 随记编辑弹窗是否打开。
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   // 当前正在编辑的随记。
   const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
   // 待办事项状态列表。
-  const [todos, setTodos] = useState<TodayWorkspaceTodoItem[]>([]);
-  // 工作台是否正在读取。
-  const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true);
-  // 工作台错误文案。
-  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [todos, setTodos] = useState<TodayTodoItem[]>([]);
+  // 页面是否正在读取。
+  const [isTodayLoading, setIsTodayLoading] = useState(true);
+  // 页面错误文案。
+  const [todayError, setTodayError] = useState<string | null>(null);
   // 今日日记正文状态。
   const [journalContent, setJournalContent] = useState<string>("");
   // 最近一次成功保存的日记正文。
@@ -243,20 +243,20 @@ export const TodayWorkspace = (): React.JSX.Element => {
     setJournalError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         setSavedJournalContent(normalizedContent);
         setLastSavedAt(normalizedContent ? createCurrentTimestamp() : null);
         return;
       }
 
       if (!normalizedContent) {
-        await window.api.workspace.deleteJournal(entryDate);
+        await window.api.daily.deleteJournal(entryDate);
         setSavedJournalContent("");
         setLastSavedAt(null);
         return;
       }
 
-      const saved = await window.api.workspace.saveJournal({
+      const saved = await window.api.daily.saveJournal({
         entryDate,
         content: rawContent,
       });
@@ -271,14 +271,14 @@ export const TodayWorkspace = (): React.JSX.Element => {
   };
 
   /**
-   * 从 SQLite 读取当天工作台数据。
+   * 从 SQLite 读取当天数据。
    */
-  const loadWorkspace = async (): Promise<void> => {
-    setIsWorkspaceLoading(true);
-    setWorkspaceError(null);
+  const loadToday = async (): Promise<void> => {
+    setIsTodayLoading(true);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         setTodos(FALLBACK_TODOS);
         setNotes(FALLBACK_NOTES);
         setJournalContent("");
@@ -288,22 +288,22 @@ export const TodayWorkspace = (): React.JSX.Element => {
         return;
       }
 
-      const workspace = await window.api.workspace.listDay(entryDate);
-      setTodos(workspace.todos);
-      setNotes(workspace.snippets);
-      setJournalContent(workspace.journal?.content ?? "");
-      setSavedJournalContent(workspace.journal?.content ?? "");
-      setLastSavedAt(workspace.journal?.updatedAt ?? null);
+      const todayData = await window.api.daily.listDay(entryDate);
+      setTodos(todayData.todos);
+      setNotes(todayData.snippets);
+      setJournalContent(todayData.journal?.content ?? "");
+      setSavedJournalContent(todayData.journal?.content ?? "");
+      setLastSavedAt(todayData.journal?.updatedAt ?? null);
       setJournalError(null);
     } catch {
-      setWorkspaceError("无法读取今日工作台数据");
+      setTodayError("无法读取今日数据");
     } finally {
-      setIsWorkspaceLoading(false);
+      setIsTodayLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadWorkspace();
+    void loadToday();
   }, [entryDate]);
 
   useEffect(() => {
@@ -341,16 +341,16 @@ export const TodayWorkspace = (): React.JSX.Element => {
     text: string;
     priority: TodoPriority;
   }): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         const nextOrder =
           todos.reduce(
             (maxOrder, todo) => Math.max(maxOrder, todo.sortOrder),
             -1,
           ) + 1;
-        const created: TodayWorkspaceTodoItem = {
+        const created: TodayTodoItem = {
           id: Date.now(),
           entryDate,
           text: draft.text.trim(),
@@ -364,7 +364,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         return true;
       }
 
-      const created = await window.api.workspace.createTodo({
+      const created = await window.api.daily.createTodo({
         entryDate,
         text: draft.text.trim(),
         priority: draft.priority,
@@ -372,7 +372,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       setTodos((currentTodos) => [created, ...currentTodos]);
       return true;
     } catch {
-      setWorkspaceError("保存待办失败，请稍后重试");
+      setTodayError("保存待办失败，请稍后重试");
       toast.error("保存待办失败，请稍后重试");
       return false;
     }
@@ -385,10 +385,10 @@ export const TodayWorkspace = (): React.JSX.Element => {
     id: number,
     patch: { text: string; priority: TodoPriority; completed: boolean },
   ): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         setTodos((currentTodos) =>
           currentTodos.map((todo) =>
             todo.id === id
@@ -404,7 +404,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         return true;
       }
 
-      const updated = await window.api.workspace.updateTodo(id, {
+      const updated = await window.api.daily.updateTodo(id, {
         text: patch.text.trim(),
         priority: patch.priority,
         completed: patch.completed,
@@ -414,7 +414,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       );
       return true;
     } catch {
-      setWorkspaceError("更新待办失败，请稍后重试");
+      setTodayError("更新待办失败，请稍后重试");
       toast.error("更新待办失败，请稍后重试");
       return false;
     }
@@ -424,19 +424,19 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 删除待办并在写入成功后同步本地状态。
    */
   const handleDeleteTodo = async (id: number): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
         return true;
       }
 
-      await window.api.workspace.deleteTodo(id);
+      await window.api.daily.deleteTodo(id);
       setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
       return true;
     } catch {
-      setWorkspaceError("删除待办失败，请稍后重试");
+      setTodayError("删除待办失败，请稍后重试");
       toast.error("删除待办失败，请稍后重试");
       return false;
     }
@@ -446,10 +446,10 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 持久化一键排序结果。
    */
   const handleSortTodos = async (): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         const reorderedIds = sortTodoItems(todos).map((todo) => todo.id);
         setTodos((currentTodos) =>
           currentTodos
@@ -466,14 +466,14 @@ export const TodayWorkspace = (): React.JSX.Element => {
         return true;
       }
 
-      const reordered = await window.api.workspace.sortTodos({
+      const reordered = await window.api.daily.sortTodos({
         entryDate,
         ids: sortTodoItems(todos).map((todo) => todo.id),
       });
       setTodos(reordered);
       return true;
     } catch {
-      setWorkspaceError("排序待办失败，请稍后重试");
+      setTodayError("排序待办失败，请稍后重试");
       toast.error("排序待办失败，请稍后重试");
       return false;
     }
@@ -488,10 +488,10 @@ export const TodayWorkspace = (): React.JSX.Element => {
     content: string;
     tags: string[];
   }): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         if (savedNote.id) {
           setNotes((currentNotes) =>
             currentNotes.map((note) =>
@@ -508,7 +508,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
           return true;
         }
 
-        const created: TodayWorkspaceNoteItem = {
+        const created: TodayNoteItem = {
           id: Date.now(),
           entryDate,
           title: savedNote.title.trim(),
@@ -523,7 +523,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       }
 
       if (savedNote.id) {
-        const updated = await window.api.workspace.updateSnippet(savedNote.id, {
+        const updated = await window.api.daily.updateSnippet(savedNote.id, {
           title: savedNote.title.trim(),
           content: savedNote.content.trim(),
           tags: savedNote.tags,
@@ -536,7 +536,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
         return true;
       }
 
-      const created = await window.api.workspace.createSnippet({
+      const created = await window.api.daily.createSnippet({
         entryDate,
         title: savedNote.title.trim(),
         content: savedNote.content.trim(),
@@ -545,7 +545,7 @@ export const TodayWorkspace = (): React.JSX.Element => {
       setNotes((currentNotes) => [created, ...currentNotes]);
       return true;
     } catch {
-      setWorkspaceError("保存片段失败，请稍后重试");
+      setTodayError("保存片段失败，请稍后重试");
       toast.error("保存片段失败，请稍后重试");
       return false;
     }
@@ -555,19 +555,19 @@ export const TodayWorkspace = (): React.JSX.Element => {
    * 删除随记片段并在写入成功后同步本地状态。
    */
   const handleDeleteNote = async (id: number): Promise<boolean> => {
-    setWorkspaceError(null);
+    setTodayError(null);
 
     try {
-      if (!hasWorkspaceApi) {
+      if (!hasDailyApi) {
         setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
         return true;
       }
 
-      await window.api.workspace.deleteSnippet(id);
+      await window.api.daily.deleteSnippet(id);
       setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
       return true;
     } catch {
-      setWorkspaceError("删除片段失败，请稍后重试");
+      setTodayError("删除片段失败，请稍后重试");
       toast.error("删除片段失败，请稍后重试");
       return false;
     }
@@ -613,8 +613,8 @@ export const TodayWorkspace = (): React.JSX.Element => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
           <TodayTodoPanel
-            errorMessage={workspaceError}
-            isLoading={isWorkspaceLoading}
+            errorMessage={todayError}
+            isLoading={isTodayLoading}
             onCreateTodo={handleCreateTodo}
             onDeleteTodo={handleDeleteTodo}
             onSortTodos={handleSortTodos}
@@ -623,8 +623,8 @@ export const TodayWorkspace = (): React.JSX.Element => {
           />
 
           <TodaySnippetsPanel
-            errorMessage={workspaceError}
-            isLoading={isWorkspaceLoading}
+            errorMessage={todayError}
+            isLoading={isTodayLoading}
             notes={notes}
             onAddNote={() => {
               setEditingNote(null);

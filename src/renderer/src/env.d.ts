@@ -5,14 +5,14 @@ import type { ElectronAPI } from '@electron-toolkit/preload'
 // 笔记来源类型。
 type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
 
-// 工作台待办优先级类型。
-type WorkspaceTodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+// 待办优先级类型。
+type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
-// 工作台日记保存载荷类型。
-type WorkspaceJournalSavePayload = {
+// 日记保存载荷类型。
+type JournalSavePayload = {
   // 日记所属日期。
   entryDate: string
-  // 日记正文。
+  // 日记正文.
   content: string
 }
 
@@ -40,36 +40,36 @@ type NoteMaterialItem = NoteDraftPayload & {
   clue?: string
 }
 
-// 工作台待办创建载荷类型。
-type WorkspaceTodoCreatePayload = {
+// 待办创建载荷类型。
+type TodoCreatePayload = {
   // 待办所属日期。
   entryDate: string
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
 }
 
-// 工作台待办更新载荷类型。
-type WorkspaceTodoUpdatePayload = {
+// 待办更新载荷类型。
+type TodoUpdatePayload = {
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 是否完成。
   completed: boolean
 }
 
-// 工作台待办排序载荷类型。
-type WorkspaceTodoSortPayload = {
+// 待办排序载荷类型。
+type TodoSortPayload = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
   ids: number[]
 }
 
-// 页面使用的工作台待办类型。
-type WorkspaceTodoItem = {
+// 页面使用的待办类型。
+type TodoItem = {
   // 待办唯一标识。
   id: number
   // 待办所属日期。
@@ -79,7 +79,7 @@ type WorkspaceTodoItem = {
   // 是否完成。
   completed: boolean
   // 当前优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 排序序号。
   sortOrder: number
   // 创建时间。
@@ -88,8 +88,8 @@ type WorkspaceTodoItem = {
   updatedAt: string
 }
 
-// 工作台片段创建载荷类型。
-type WorkspaceSnippetCreatePayload = {
+// 片段创建载荷类型。
+type SnippetCreatePayload = {
   // 片段所属日期。
   entryDate: string
   // 片段标题。
@@ -100,8 +100,8 @@ type WorkspaceSnippetCreatePayload = {
   tags: string[]
 }
 
-// 工作台片段更新载荷类型。
-type WorkspaceSnippetUpdatePayload = {
+// 片段更新载荷类型。
+type SnippetUpdatePayload = {
   // 片段标题。
   title: string
   // 片段正文。
@@ -110,8 +110,18 @@ type WorkspaceSnippetUpdatePayload = {
   tags: string[]
 }
 
-// 页面使用的工作台片段类型。
-type WorkspaceSnippetItem = {
+// 片段更新载荷类型。
+type SnippetUpdatePayload = {
+  // 片段标题。
+  title: string
+  // 片段正文。
+  content: string
+  // 片段标签列表。
+  tags: string[]
+}
+
+// 页面使用的片段类型。
+type SnippetItem = {
   // 片段唯一标识。
   id: number
   // 片段所属日期。
@@ -130,8 +140,8 @@ type WorkspaceSnippetItem = {
   updatedAt: string
 }
 
-// 页面使用的工作台日记类型。
-type WorkspaceJournalItem = {
+// 页面使用的日记类型。
+type JournalItem = {
   // 日记所属日期。
   entryDate: string
   // 日记正文。
@@ -142,18 +152,18 @@ type WorkspaceJournalItem = {
   updatedAt: string
 }
 
-// 单日工作台数据类型。
-type WorkspaceDayData = {
+// 单日数据类型。
+type DayData = {
   // 当日待办列表。
-  todos: WorkspaceTodoItem[]
+  todos: TodoItem[]
   // 当日片段列表。
-  snippets: WorkspaceSnippetItem[]
+  snippets: SnippetItem[]
   // 当日日记。
-  journal: WorkspaceJournalItem | null
+  journal: JournalItem | null
 }
 
-// 工作台单日聚合概览类型。
-type WorkspaceMonthEntryOverview = {
+// 单日聚合概览类型。
+type MonthEntryOverview = {
   // 所属日期。
   entryDate: string
   // 当日待办数量。
@@ -164,12 +174,12 @@ type WorkspaceMonthEntryOverview = {
   journalCount: number
 }
 
-// 工作台整月概览类型。
-type WorkspaceMonthOverview = {
+// 整月概览类型.
+type MonthOverview = {
   // 所属月份。
   month: string
   // 当月有记录的日期概览。
-  entries: WorkspaceMonthEntryOverview[]
+  entries: MonthEntryOverview[]
 }
 
 // 渲染进程安全 API 类型。
@@ -185,28 +195,28 @@ type AppAPI = {
     // 删除笔记。
     delete: (id: number) => Promise<void>
   }
-  // Today 工作台 API。
-  workspace: {
-    // 读取指定日期的工作台数据。
-    listDay: (entryDate: string) => Promise<WorkspaceDayData>
-    // 读取指定月份的工作台概览。
-    listMonthOverview: (month: string) => Promise<WorkspaceMonthOverview>
+  // Daily 页面 API。
+  daily: {
+    // 读取指定日期的 Daily 数据。
+    listDay: (entryDate: string) => Promise<DayData>
+    // 读取指定月份的 Daily 概览。
+    listMonthOverview: (month: string) => Promise<MonthOverview>
     // 保存日记。
-    saveJournal: (draft: WorkspaceJournalSavePayload) => Promise<WorkspaceJournalItem>
+    saveJournal: (draft: JournalSavePayload) => Promise<JournalItem>
     // 删除日记。
     deleteJournal: (entryDate: string) => Promise<void>
     // 创建待办。
-    createTodo: (draft: WorkspaceTodoCreatePayload) => Promise<WorkspaceTodoItem>
+    createTodo: (draft: TodoCreatePayload) => Promise<TodoItem>
     // 更新待办。
-    updateTodo: (id: number, draft: WorkspaceTodoUpdatePayload) => Promise<WorkspaceTodoItem>
+    updateTodo: (id: number, draft: TodoUpdatePayload) => Promise<TodoItem>
     // 删除待办。
     deleteTodo: (id: number) => Promise<void>
     // 重排待办。
-    sortTodos: (draft: WorkspaceTodoSortPayload) => Promise<WorkspaceTodoItem[]>
+    sortTodos: (draft: TodoSortPayload) => Promise<TodoItem[]>
     // 创建片段。
-    createSnippet: (draft: WorkspaceSnippetCreatePayload) => Promise<WorkspaceSnippetItem>
+    createSnippet: (draft: SnippetCreatePayload) => Promise<SnippetItem>
     // 更新片段。
-    updateSnippet: (id: number, draft: WorkspaceSnippetUpdatePayload) => Promise<WorkspaceSnippetItem>
+    updateSnippet: (id: number, draft: SnippetUpdatePayload) => Promise<SnippetItem>
     // 删除片段。
     deleteSnippet: (id: number) => Promise<void>
   }

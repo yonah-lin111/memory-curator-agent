@@ -3,8 +3,8 @@ import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 // 笔记来源类型。
 export type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
 
-// 工作台待办优先级类型。
-export type WorkspaceTodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+// 待办优先级类型。
+export type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
 // 笔记创建输入类型。
 export type NoteCreateInput = {
@@ -21,36 +21,36 @@ export type NoteCreateInput = {
 // 笔记更新输入类型。
 export type NoteUpdateInput = NoteCreateInput
 
-// 工作台待办创建输入类型。
-export type WorkspaceTodoCreateInput = {
+// 待办创建输入类型。
+export type TodoCreateInput = {
   // 待办所属日期。
   entryDate: string
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
 }
 
-// 工作台待办更新输入类型。
-export type WorkspaceTodoUpdateInput = {
+// 待办更新输入类型。
+export type TodoUpdateInput = {
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 是否完成。
   completed: boolean
 }
 
-// 工作台待办排序输入类型。
-export type WorkspaceTodoReorderInput = {
+// 待办排序输入类型。
+export type TodoReorderInput = {
   // 待办所属日期。
   entryDate: string
   // 排序后的待办 ID 列表。
   ids: number[]
 }
 
-// 工作台片段创建输入类型。
-export type WorkspaceSnippetCreateInput = {
+// 片段创建输入类型。
+export type SnippetCreateInput = {
   // 片段所属日期。
   entryDate: string
   // 片段标题。
@@ -61,8 +61,8 @@ export type WorkspaceSnippetCreateInput = {
   tags: string[]
 }
 
-// 工作台片段更新输入类型。
-export type WorkspaceSnippetUpdateInput = {
+// 片段更新输入类型。
+export type SnippetUpdateInput = {
   // 片段标题。
   title: string
   // 片段正文。
@@ -71,8 +71,8 @@ export type WorkspaceSnippetUpdateInput = {
   tags: string[]
 }
 
-// 工作台日记保存输入类型。
-export type WorkspaceJournalSaveInput = {
+// 日记保存输入类型。
+export type JournalSaveInput = {
   // 日记所属日期。
   entryDate: string
   // 日记正文。
@@ -99,8 +99,8 @@ export type NoteMaterialItem = {
   clue?: string
 }
 
-// 页面使用的工作台待办类型。
-export type WorkspaceTodoItem = {
+// 页面使用的待办类型。
+export type TodoItem = {
   // 待办唯一标识。
   id: number
   // 待办所属日期。
@@ -110,7 +110,7 @@ export type WorkspaceTodoItem = {
   // 是否完成。
   completed: boolean
   // 当前优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 排序序号。
   sortOrder: number
   // 创建时间。
@@ -119,8 +119,8 @@ export type WorkspaceTodoItem = {
   updatedAt: string
 }
 
-// 页面使用的工作台片段类型。
-export type WorkspaceSnippetItem = {
+// 页面使用的片段类型。
+export type SnippetItem = {
   // 片段唯一标识。
   id: number
   // 片段所属日期。
@@ -139,8 +139,8 @@ export type WorkspaceSnippetItem = {
   updatedAt: string
 }
 
-// 页面使用的工作台日记类型。
-export type WorkspaceJournalItem = {
+// 页面使用的日记类型。
+export type JournalItem = {
   // 日记所属日期。
   entryDate: string
   // 日记正文。
@@ -151,18 +151,18 @@ export type WorkspaceJournalItem = {
   updatedAt: string
 }
 
-// 工作台单日数据类型。
-export type WorkspaceDayData = {
+// 单日数据类型。
+export type DayData = {
   // 当日待办列表。
-  todos: WorkspaceTodoItem[]
+  todos: TodoItem[]
   // 当日片段列表。
-  snippets: WorkspaceSnippetItem[]
+  snippets: SnippetItem[]
   // 当日日记。
-  journal: WorkspaceJournalItem | null
+  journal: JournalItem | null
 }
 
-// 工作台单日聚合概览类型。
-export type WorkspaceMonthEntryOverview = {
+// 单日聚合概览类型。
+export type MonthEntryOverview = {
   // 所属日期。
   entryDate: string
   // 当日待办数量。
@@ -173,12 +173,12 @@ export type WorkspaceMonthEntryOverview = {
   journalCount: number
 }
 
-// 工作台整月概览类型。
-export type WorkspaceMonthOverview = {
+// 整月概览类型。
+export type MonthOverview = {
   // 所属月份。
   month: string
   // 当月有记录的日期概览。
-  entries: WorkspaceMonthEntryOverview[]
+  entries: MonthEntryOverview[]
 }
 
 // 数据库笔记行类型。
@@ -201,8 +201,8 @@ export type NoteRow = {
   clue: string | null
 }
 
-// 工作台待办数据库行类型。
-export type WorkspaceTodoRow = {
+// 待办数据库行类型。
+export type TodoRow = {
   // 待办唯一标识。
   id: number
   // 待办所属日期。
@@ -210,7 +210,7 @@ export type WorkspaceTodoRow = {
   // 待办文本。
   text: string
   // 待办优先级。
-  priority: WorkspaceTodoPriority
+  priority: TodoPriority
   // 是否完成。
   completed: number
   // 排序序号。
@@ -221,8 +221,8 @@ export type WorkspaceTodoRow = {
   updated_at: string
 }
 
-// 工作台片段数据库行类型。
-export type WorkspaceSnippetRow = {
+// 片段数据库行类型。
+export type SnippetRow = {
   // 片段唯一标识。
   id: number
   // 片段所属日期。
@@ -239,8 +239,8 @@ export type WorkspaceSnippetRow = {
   updated_at: string
 }
 
-// 工作台日记数据库行类型。
-export type WorkspaceJournalRow = {
+// 日记数据库行类型。
+export type JournalRow = {
   // 日记所属日期。
   entry_date: string
   // 日记正文。
@@ -268,7 +268,7 @@ export const todos = sqliteTable('todos', {
   id: integer('id').primaryKey(),
   entryDate: text('entry_date').notNull(),
   text: text('text').notNull(),
-  priority: text('priority').$type<WorkspaceTodoPriority>().notNull(),
+  priority: text('priority').$type<TodoPriority>().notNull(),
   completed: integer('completed').notNull().default(0),
   sortOrder: integer('sort_order').notNull(),
   createdAt: text('created_at').notNull(),

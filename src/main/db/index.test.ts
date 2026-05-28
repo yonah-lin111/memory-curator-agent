@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   createJournalsTable,
   createNotesTable,
-  createWorkspaceSnippetsTable,
-  createWorkspaceTodosTable,
-  migrateLegacyWorkspaceSchema
+  createSnippetsTable,
+  createTodosTable,
+  migrateLegacySchema
 } from './index'
 
 // 内存表结构。
@@ -309,10 +309,10 @@ describe('db schema migration', () => {
       updated_at: '2026-05-27 09:32'
     })
 
-    migrateLegacyWorkspaceSchema(database as never)
+    migrateLegacySchema(database as never)
     createNotesTable(database as never)
-    createWorkspaceTodosTable(database as never)
-    createWorkspaceSnippetsTable(database as never)
+    createTodosTable(database as never)
+    createSnippetsTable(database as never)
     createJournalsTable(database as never)
 
     const notesIdType = database.prepare("SELECT type FROM pragma_table_info('notes') WHERE name = 'id'").get('id') as {

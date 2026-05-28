@@ -8,9 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { SnippetsPage } from "@renderer/pages/SnippetsPage";
 
-// 工作台单日数据类型，直接从 bridge 签名反推。
-type WorkspaceDayDataShape =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>;
+// Today 单日数据类型，直接从 bridge 签名反推。
+type DailyDayDataShape =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
 
 // 渲染页面时补齐 Toast 上下文。
 const renderSnippetsPage = (): void => {
@@ -21,10 +21,10 @@ const renderSnippetsPage = (): void => {
   );
 };
 
-// 默认工作台返回值，供测试按需覆盖。
-const createWorkspaceDayData = (
-  overrides?: Partial<WorkspaceDayDataShape>,
-): WorkspaceDayDataShape => ({
+// 默认 Daily 返回值，供测试按需覆盖。
+const createDailyDayData = (
+  overrides?: Partial<DailyDayDataShape>,
+): DailyDayDataShape => ({
   todos: [],
   snippets: [],
   journal: null,
@@ -35,8 +35,8 @@ describe("SnippetsPage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-05-27T09:00:00"));
     window.api = {
-      workspace: {
-        listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+      daily: {
+        listDay: vi.fn().mockResolvedValue(createDailyDayData()),
         listMonthOverview: vi.fn().mockResolvedValue({
           month: "2026-05",
           entries: [],
@@ -70,7 +70,7 @@ describe("SnippetsPage", () => {
     const listDay = vi
       .fn()
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           snippets: [
             {
               id: 1,
@@ -86,7 +86,7 @@ describe("SnippetsPage", () => {
         }),
       )
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           snippets: [
             {
               id: 2,
@@ -102,8 +102,8 @@ describe("SnippetsPage", () => {
         }),
       );
 
-    window.api.workspace.listDay = listDay;
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listDay = listDay;
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -136,7 +136,7 @@ describe("SnippetsPage", () => {
   });
 
   it("点击日期后打开日期选择器并显示片段角标", async () => {
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -184,8 +184,8 @@ describe("SnippetsPage", () => {
       updatedAt: "2026-05-27 09:30",
     });
 
-    window.api.workspace.listDay = vi.fn().mockResolvedValue(
-      createWorkspaceDayData({
+    window.api.daily.listDay = vi.fn().mockResolvedValue(
+      createDailyDayData({
         snippets: [
           {
             id: 1,
@@ -210,7 +210,7 @@ describe("SnippetsPage", () => {
         ],
       }),
     );
-    window.api.workspace.updateSnippet = updateSnippet;
+    window.api.daily.updateSnippet = updateSnippet;
 
     renderSnippetsPage();
 
@@ -234,11 +234,11 @@ describe("SnippetsPage", () => {
     });
   });
 
-  it("无 workspace bridge 时仍可本地创建片段", async () => {
+  it("无 daily bridge 时仍可本地创建片段", async () => {
     const user = userEvent.setup();
 
     window.api = {
-      workspace: undefined as never,
+      daily: undefined as never,
       notes: {
         list: vi.fn(),
         create: vi.fn(),
@@ -258,11 +258,11 @@ describe("SnippetsPage", () => {
     expect(await screen.findByText("离线片段")).toBeInTheDocument();
   });
 
-  it("无 workspace bridge 时仍可本地更新并删除片段", async () => {
+  it("无 daily bridge 时仍可本地更新并删除片段", async () => {
     const user = userEvent.setup();
 
     window.api = {
-      workspace: undefined as never,
+      daily: undefined as never,
       notes: {
         list: vi.fn(),
         create: vi.fn(),
@@ -297,8 +297,8 @@ describe("SnippetsPage", () => {
   it("片段写接口失败时显示兜底提示并保持原状态", async () => {
     const user = userEvent.setup();
 
-    window.api.workspace.listDay = vi.fn().mockResolvedValue(
-      createWorkspaceDayData({
+    window.api.daily.listDay = vi.fn().mockResolvedValue(
+      createDailyDayData({
         snippets: [
           {
             id: 1,
@@ -313,13 +313,13 @@ describe("SnippetsPage", () => {
         ],
       }),
     );
-    window.api.workspace.createSnippet = vi
+    window.api.daily.createSnippet = vi
       .fn()
       .mockRejectedValue(new Error("create failed"));
-    window.api.workspace.updateSnippet = vi
+    window.api.daily.updateSnippet = vi
       .fn()
       .mockRejectedValue(new Error("update failed"));
-    window.api.workspace.deleteSnippet = vi
+    window.api.daily.deleteSnippet = vi
       .fn()
       .mockRejectedValue(new Error("delete failed"));
 

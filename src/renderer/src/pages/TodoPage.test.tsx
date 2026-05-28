@@ -8,9 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { TodoPage } from "@renderer/pages/TodoPage";
 
-// 工作台单日数据类型，直接从 bridge 签名反推。
-type WorkspaceDayDataShape =
-  Awaited<ReturnType<Window["api"]["workspace"]["listDay"]>>;
+// Today 单日数据类型，直接从 bridge 签名反推。
+type DailyDayDataShape =
+  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
 
 // 渲染页面时补齐 Toast 上下文。
 const renderTodoPage = (): void => {
@@ -21,10 +21,10 @@ const renderTodoPage = (): void => {
   );
 };
 
-// 默认工作台返回值，供测试按需覆盖。
-const createWorkspaceDayData = (
-  overrides?: Partial<WorkspaceDayDataShape>,
-): WorkspaceDayDataShape => ({
+// 默认 Daily 返回值，供测试按需覆盖。
+const createDailyDayData = (
+  overrides?: Partial<DailyDayDataShape>,
+): DailyDayDataShape => ({
   todos: [],
   snippets: [],
   journal: null,
@@ -35,8 +35,8 @@ describe("TodoPage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-05-27T09:00:00"));
     window.api = {
-      workspace: {
-        listDay: vi.fn().mockResolvedValue(createWorkspaceDayData()),
+      daily: {
+        listDay: vi.fn().mockResolvedValue(createDailyDayData()),
         listMonthOverview: vi.fn().mockResolvedValue({
           month: "2026-05",
           entries: [],
@@ -70,7 +70,7 @@ describe("TodoPage", () => {
     const listDay = vi
       .fn()
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           todos: [
             {
               id: 1,
@@ -86,7 +86,7 @@ describe("TodoPage", () => {
         }),
       )
       .mockResolvedValueOnce(
-        createWorkspaceDayData({
+        createDailyDayData({
           todos: [
             {
               id: 2,
@@ -102,8 +102,8 @@ describe("TodoPage", () => {
         }),
       );
 
-    window.api.workspace.listDay = listDay;
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listDay = listDay;
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -136,7 +136,7 @@ describe("TodoPage", () => {
   });
 
   it("点击日期后打开日期选择器并显示待办角标", async () => {
-    window.api.workspace.listMonthOverview = vi.fn().mockResolvedValue({
+    window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
         {
@@ -175,7 +175,7 @@ describe("TodoPage", () => {
   it("支持新增、切换完成、切换优先级和删除待办", async () => {
     const user = userEvent.setup();
     const listDay = vi.fn().mockResolvedValue(
-      createWorkspaceDayData({
+      createDailyDayData({
         todos: [
           {
             id: 1,
@@ -224,11 +224,11 @@ describe("TodoPage", () => {
       });
     const deleteTodo = vi.fn().mockResolvedValue(undefined);
 
-    window.api.workspace.listDay = listDay;
-    window.api.workspace.createTodo = createTodo;
-    window.api.workspace.updateTodo = updateTodo;
-    window.api.workspace.deleteTodo = deleteTodo;
-    window.api.workspace.sortTodos = vi.fn().mockResolvedValue([]);
+    window.api.daily.listDay = listDay;
+    window.api.daily.createTodo = createTodo;
+    window.api.daily.updateTodo = updateTodo;
+    window.api.daily.deleteTodo = deleteTodo;
+    window.api.daily.sortTodos = vi.fn().mockResolvedValue([]);
 
     renderTodoPage();
 

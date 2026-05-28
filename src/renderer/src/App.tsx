@@ -12,7 +12,7 @@ import {
   Sidebar,
   type SidebarPageId,
 } from "@renderer/components/layout/Sidebar";
-import { TodayWorkspace } from "@renderer/pages/TodayWorkspace";
+import { TodayPage } from "@renderer/pages/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { MessageSquare } from "lucide-react";
@@ -128,7 +128,7 @@ export const App = (): React.JSX.Element => {
   const renderActivePage = (): React.JSX.Element => {
     switch (activePage) {
       case "today":
-        return <TodayWorkspace />;
+        return <TodayPage />;
       case "notes":
         return <NotesPage />;
       case "journal":

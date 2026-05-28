@@ -70,9 +70,9 @@ const rebuildTableWithIntegerPrimaryKey = (
 }
 
 /**
- * 迁移旧版 Workspace 表名与文本主键结构。
+ * 迁移旧版表名与文本主键结构。
  */
-export const migrateLegacyWorkspaceSchema = (database: MigrationDatabase): void => {
+export const migrateLegacySchema = (database: MigrationDatabase): void => {
   if (tableExists(database, 'workspace_todos') && !tableExists(database, 'todos')) {
     database.exec('ALTER TABLE workspace_todos RENAME TO todos;')
   }
@@ -154,7 +154,7 @@ export const createNotesTable = (database: Database.Database): void => {
 /**
  * 创建待办表与索引。
  */
-export const createWorkspaceTodosTable = (database: Database.Database): void => {
+export const createTodosTable = (database: Database.Database): void => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS todos (
       id INTEGER PRIMARY KEY,
@@ -178,7 +178,7 @@ export const createWorkspaceTodosTable = (database: Database.Database): void => 
 /**
  * 创建片段表与索引。
  */
-export const createWorkspaceSnippetsTable = (database: Database.Database): void => {
+export const createSnippetsTable = (database: Database.Database): void => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS snippets (
       id INTEGER PRIMARY KEY,
@@ -219,10 +219,10 @@ export const initDatabase = (): Database.Database => {
 
   mkdirSync(getDatabaseDir(), { recursive: true })
   sqlite = new Database(getDatabasePath())
-  migrateLegacyWorkspaceSchema(sqlite)
+  migrateLegacySchema(sqlite)
   createNotesTable(sqlite)
-  createWorkspaceTodosTable(sqlite)
-  createWorkspaceSnippetsTable(sqlite)
+  createTodosTable(sqlite)
+  createSnippetsTable(sqlite)
   createJournalsTable(sqlite)
 
   return sqlite

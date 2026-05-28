@@ -7,8 +7,8 @@ import { JournalEditorSurface } from "@renderer/pages/components/JournalEditorSu
 import {
   createTodayEntryDate,
   getEntryMonth,
-  hasWorkspaceBridge,
-} from "@renderer/pages/components/workspacePageShared";
+  hasDailyBridge,
+} from "@renderer/pages/components/dailyShared";
 
 // 生成当前时间戳，供无 bridge 环境回退使用。
 const createCurrentTimestamp = (entryDate: string): string => {
@@ -81,12 +81,12 @@ export const JournalPage = (): React.JSX.Element => {
       setIsMonthOverviewLoading(true);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setMonthEntryCounts({});
           return;
         }
 
-        const overview = await window.api.workspace.listMonthOverview(visibleMonth);
+        const overview = await window.api.daily.listMonthOverview(visibleMonth);
         setMonthEntryCounts(
           Object.fromEntries(
             overview.entries
@@ -113,18 +113,18 @@ export const JournalPage = (): React.JSX.Element => {
       setErrorMessage(null);
 
       try {
-        if (!hasWorkspaceBridge()) {
+        if (!hasDailyBridge()) {
           setJournalContent("");
           setSavedJournalContent("");
           setLastSavedAt(null);
           return;
         }
 
-        const workspace = await window.api.workspace.listDay(entryDate);
-        const nextValue = workspace.journal?.content ?? "";
+        const todayData = await window.api.daily.listDay(entryDate);
+        const nextValue = todayData.journal?.content ?? "";
         setJournalContent(nextValue);
         setSavedJournalContent(nextValue);
-        setLastSavedAt(workspace.journal?.updatedAt ?? null);
+        setLastSavedAt(todayData.journal?.updatedAt ?? null);
       } catch {
         setErrorMessage("读取日记失败，请稍后再试。");
         toast.error("读取日记失败");
@@ -148,7 +148,7 @@ export const JournalPage = (): React.JSX.Element => {
     setErrorMessage(null);
 
     try {
-      if (!hasWorkspaceBridge()) {
+      if (!hasDailyBridge()) {
         setSavedJournalContent(normalizedValue);
         setLastSavedAt(normalizedValue ? createCurrentTimestamp(entryDate) : null);
         setMonthEntryCounts((currentCounts) => {
@@ -164,7 +164,7 @@ export const JournalPage = (): React.JSX.Element => {
       }
 
       if (!normalizedValue) {
-        await window.api.workspace.deleteJournal(entryDate);
+        await window.api.daily.deleteJournal(entryDate);
         setSavedJournalContent("");
         setLastSavedAt(null);
         setMonthEntryCounts((currentCounts) => {
@@ -175,7 +175,7 @@ export const JournalPage = (): React.JSX.Element => {
         return;
       }
 
-      const saved = await window.api.workspace.saveJournal({
+      const saved = await window.api.daily.saveJournal({
         entryDate,
         content: normalizedValue,
       });
