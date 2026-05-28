@@ -2,6 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import type { ICommand } from "@uiw/react-md-editor/commands";
+import { fullscreen } from "@uiw/react-md-editor/commands";
 import { getCommands } from "@uiw/react-md-editor/commands-cn";
 import "@uiw/react-md-editor/markdown-editor.css";
 import { BookOpen, Columns2, HelpCircle } from "lucide-react";
@@ -110,7 +111,7 @@ export const TodayJournalPanel = ({
           className="notes-markdown-editor"
           commands={NOTE_MARKDOWN_BASE_COMMANDS}
           data-color-mode="dark"
-          extraCommands={[]}
+          extraCommands={[fullscreen]}
           height={450}
           preview={journalPreviewMode}
           style={MARKDOWN_EDITOR_THEME_STYLE}
