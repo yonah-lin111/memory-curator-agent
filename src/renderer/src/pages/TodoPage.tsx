@@ -438,7 +438,7 @@ export const TodoPage = (): React.JSX.Element => {
             </div>
           </div>
 
-          <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+          <div className="max-h-[520px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
             <div className="flex items-center gap-2 rounded-[6px] border border-white/8 bg-black/30 px-2 py-2 transition-all duration-300 ease-out focus-within:border-white/20 focus-within:bg-black">
               <button
                 aria-label={`切换新待办优先级 ${composerDraft.priority}`}
