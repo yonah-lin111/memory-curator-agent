@@ -38,7 +38,7 @@ const INITIAL_NOTE_DRAFT: NoteDraft = {
   content:
     "## 今天的新素材\n\n- [ ] 先保留原始想法\n- [ ] 再交给 Agent 做主题策展\n\n> Markdown 支持标题、列表、引用、表格与任务列表。\n\n| 字段 | 状态 |\n| --- | --- |\n| 来源 | 待整理 |",
   source: "随手速记",
-  tags: ["灵感", "待整理"],
+  tags: [],
 };
 
 /**
