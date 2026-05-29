@@ -99,6 +99,77 @@ type AssociatedPersonPayload = {
   details: string
 }
 
+// AI 对话启动载荷类型。
+type AiChatStartPayload = {
+  // Agent 运行 ID。
+  runId?: string
+  // 会话 ID。
+  sessionId: string
+  // 用户消息。
+  message: string
+}
+
+// AI 工具步骤事件状态。
+type AiChatEvent =
+  | {
+      // 事件类型。
+      type: 'run_started' | 'assistant_message_started' | 'turn_finished' | 'done'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+    }
+  | {
+      // 事件类型。
+      type: 'text_delta'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+      // 文本增量。
+      delta: string
+    }
+  | {
+      // 事件类型。
+      type: 'tool_started'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+      // 工具步骤 ID。
+      id: string
+      // 工具名称。
+      name: string
+      // 工具输入。
+      input: unknown
+    }
+  | {
+      // 事件类型。
+      type: 'tool_finished'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+      // 工具步骤 ID。
+      id: string
+      // 工具名称。
+      name: string
+      // 工具观察。
+      observation: string
+      // 工具数据。
+      data: unknown
+    }
+  | {
+      // 事件类型。
+      type: 'error'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+      // 错误信息。
+      message: string
+    }
+
 // Markdown 图片保存载荷类型。
 type MarkdownImageSavePayload = {
   // 原始文件名。
@@ -175,6 +246,21 @@ const api = {
     update: (id: string, draft: AssociatedPersonPayload) =>
       ipcRenderer.invoke('people:update', id, draft),
     delete: (id: string) => ipcRenderer.invoke('people:delete', id)
+  },
+  ai: {
+    startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
+      ipcRenderer.invoke('ai:chat:start', payload),
+    onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, event: AiChatEvent): void => {
+        listener(event)
+      }
+
+      ipcRenderer.on('ai:chat:event', wrappedListener)
+
+      return () => {
+        ipcRenderer.removeListener('ai:chat:event', wrappedListener)
+      }
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '@renderer/App'
+import type { AiChatEvent, AiChatStartPayload } from '@renderer/components/layout/aiChatMock'
 
 describe('App', () => {
   afterEach(() => {
@@ -240,6 +241,83 @@ describe('App', () => {
       expect(screen.queryByText('完成 Today 工作台的三栏静态布局编码与视觉自审')).not.toBeInTheDocument()
     })
     expect(screen.getByText('已完成 3/4')).toBeInTheDocument()
+  })
+
+  it('AI 对话支持流式文本和工具步骤更新', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    let capturedPayload: AiChatStartPayload | null = null
+
+    window.api = {
+      ai: {
+        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+          capturedPayload = payload
+          return {
+            runId: payload.runId ?? 'run-test'
+          }
+        }),
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.type(screen.getByLabelText('AI 对话输入框'), '阿明是谁')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(window.api.ai?.startChat).toHaveBeenCalled()
+    })
+    expect(capturedPayload).toMatchObject({
+      message: '阿明是谁'
+    })
+
+    act(() => {
+      listeners.forEach((listener) =>
+        listener({
+          type: 'tool_started',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          id: 'call-1',
+          name: 'people_list',
+          input: {
+            query: '阿明'
+          }
+        })
+      )
+    })
+    expect(screen.getByText('正在读取本地 People 表。')).toBeInTheDocument()
+
+    act(() => {
+      listeners.forEach((listener) =>
+        listener({
+          type: 'tool_finished',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          id: 'call-1',
+          name: 'people_list',
+          observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+          data: []
+        })
+      )
+      listeners.forEach((listener) =>
+        listener({
+          type: 'text_delta',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          delta: '阿明是朋友。'
+        })
+      )
+    })
+
+    expect(screen.getByText('找到 1 位关联人物：阿明｜朋友｜技术狂热者')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('阿明是朋友。')).toBeInTheDocument()
+    })
   })
 
   it('切换完成状态后不会自动重排，点击一键排序后才会重排', async () => {

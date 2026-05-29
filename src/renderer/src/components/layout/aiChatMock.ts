@@ -15,6 +15,77 @@ export type AiToolStep = {
   observation: string;
 };
 
+// AI 对话启动载荷类型。
+export type AiChatStartPayload = {
+  // Agent 运行 ID。
+  runId?: string;
+  // 会话 ID。
+  sessionId: string;
+  // 用户消息。
+  message: string;
+};
+
+// AI 对话流式事件类型。
+export type AiChatEvent =
+  | {
+      // 事件类型。
+      type: "run_started" | "assistant_message_started" | "turn_finished" | "done";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+    }
+  | {
+      // 事件类型。
+      type: "text_delta";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 文本增量。
+      delta: string;
+    }
+  | {
+      // 事件类型。
+      type: "tool_started";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 工具步骤 ID。
+      id: string;
+      // 工具名称。
+      name: string;
+      // 工具输入。
+      input: unknown;
+    }
+  | {
+      // 事件类型。
+      type: "tool_finished";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 工具步骤 ID。
+      id: string;
+      // 工具名称。
+      name: string;
+      // 工具观察。
+      observation: string;
+      // 工具数据。
+      data: unknown;
+    }
+  | {
+      // 事件类型。
+      type: "error";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 错误信息。
+      message: string;
+    };
+
 // 消息发送者类型，描述消息归属。
 export type AiChatMessageRole = "user" | "assistant";
 

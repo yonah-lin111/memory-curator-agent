@@ -6,6 +6,7 @@ import { registerNotesHandlers } from './ipc/notesHandlers'
 import { registerDailyHandlers } from './ipc/dailyHandlers'
 import { registerFilesHandlers } from './ipc/filesHandlers'
 import { registerPeopleHandlers } from './ipc/peopleHandlers'
+import { registerAiHandlers } from './ipc/aiHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from './protocols/imageProtocol'
 import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from './services/filesService'
 import { scheduleStartupMarkdownImageMaintenance } from './services/markdownImageMaintenance'
@@ -52,6 +53,7 @@ app.whenReady().then(() => {
   registerDailyHandlers()
   registerFilesHandlers()
   registerPeopleHandlers()
+  registerAiHandlers()
   registerImageProtocolHandler()
   scheduleStartupMarkdownImageMaintenance(
     createFilesService({ database: database as unknown as FilesDatabaseConnection })
