@@ -110,6 +110,41 @@ type SnippetUpdatePayload = {
   tags: string[]
 }
 
+// 人物关系类型。
+type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+
+// 关联人物保存载荷类型。
+type AssociatedPersonPayload = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 关系分类。
+  relationship: PersonRelationship
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
+// 页面使用的关联人物类型。
+type AssociatedPersonItem = AssociatedPersonPayload & {
+  // 人物唯一标识。
+  id: string
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
 // Markdown 图片保存载荷类型。
 type MarkdownImageSavePayload = {
   // 原始文件名。
@@ -236,6 +271,17 @@ type AppAPI = {
     updateSnippet: (id: number, draft: SnippetUpdatePayload) => Promise<SnippetItem>
     // 删除片段。
     deleteSnippet: (id: number) => Promise<void>
+  }
+  // People 页面 API。
+  people?: {
+    // 读取全部关联人物。
+    list: () => Promise<AssociatedPersonItem[]>
+    // 创建关联人物。
+    create: (draft: AssociatedPersonPayload) => Promise<AssociatedPersonItem>
+    // 更新关联人物。
+    update: (id: string, draft: AssociatedPersonPayload) => Promise<AssociatedPersonItem>
+    // 删除关联人物。
+    delete: (id: string) => Promise<void>
   }
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createAssociatedPeopleTable,
   createJournalsTable,
   createNotesTable,
   createSnippetsTable,
@@ -314,6 +315,7 @@ describe('db schema migration', () => {
     createTodosTable(database as never)
     createSnippetsTable(database as never)
     createJournalsTable(database as never)
+    createAssociatedPeopleTable(database as never)
 
     const notesIdType = database.prepare("SELECT type FROM pragma_table_info('notes') WHERE name = 'id'").get('id') as {
       type: string
@@ -323,6 +325,11 @@ describe('db schema migration', () => {
     }
     const snippetsIdType = database
       .prepare("SELECT type FROM pragma_table_info('snippets') WHERE name = 'id'")
+      .get('id') as {
+      type: string
+    }
+    const associatedPeopleIdType = database
+      .prepare("SELECT type FROM pragma_table_info('associated_people') WHERE name = 'id'")
       .get('id') as {
       type: string
     }
@@ -363,6 +370,7 @@ describe('db schema migration', () => {
     expect(notesIdType.type).toBe('INTEGER')
     expect(todosIdType.type).toBe('INTEGER')
     expect(snippetsIdType.type).toBe('INTEGER')
+    expect(associatedPeopleIdType.type).toBe('TEXT')
     expect(migratedNote).toMatchObject({
       id: 1,
       title: '旧笔记',

@@ -79,6 +79,34 @@ export type JournalSaveInput = {
   content: string
 }
 
+// 人物关系类型。
+export type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+
+// 关联人物创建输入类型。
+export type AssociatedPersonCreateInput = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 关系分类。
+  relationship: PersonRelationship
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
+// 关联人物更新输入类型。
+export type AssociatedPersonUpdateInput = AssociatedPersonCreateInput
+
 // 页面使用的笔记类型。
 export type NoteMaterialItem = {
   // 笔记唯一标识。
@@ -145,6 +173,16 @@ export type JournalItem = {
   entryDate: string
   // 日记正文。
   content: string
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
+// 页面使用的关联人物类型。
+export type AssociatedPersonItem = AssociatedPersonCreateInput & {
+  // 人物唯一标识。
+  id: string
   // 创建时间。
   createdAt: string
   // 更新时间。
@@ -251,6 +289,34 @@ export type JournalRow = {
   updated_at: string
 }
 
+// 关联人物数据库行类型。
+export type AssociatedPersonRow = {
+  // 人物唯一标识。
+  id: string
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 关系分类。
+  relationship: PersonRelationship
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // JSON 字符串标签列表。
+  tags: string
+  // Markdown 详细档案。
+  details: string
+  // 创建时间。
+  created_at: string
+  // 更新时间。
+  updated_at: string
+}
+
 // 笔记 SQLite 表定义。
 export const notes = sqliteTable('notes', {
   id: integer('id').primaryKey(),
@@ -290,6 +356,22 @@ export const snippets = sqliteTable('snippets', {
 export const journals = sqliteTable('journals', {
   entryDate: text('entry_date').primaryKey(),
   content: text('content').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull()
+})
+
+// 关联人物 SQLite 表定义。
+export const associatedPeople = sqliteTable('associated_people', {
+  id: text('id').primaryKey(),
+  avatar: text('avatar').notNull(),
+  name: text('name').notNull(),
+  gender: text('gender').notNull(),
+  relationship: text('relationship').$type<PersonRelationship>().notNull(),
+  status: text('status').notNull(),
+  birthday: text('birthday').notNull(),
+  contact: text('contact').notNull(),
+  tags: text('tags').notNull(),
+  details: text('details').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull()
 })

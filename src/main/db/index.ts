@@ -210,6 +210,34 @@ export const createJournalsTable = (database: Database.Database): void => {
 }
 
 /**
+ * 创建关联人物表与索引。
+ */
+export const createAssociatedPeopleTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS associated_people (
+      id TEXT PRIMARY KEY,
+      avatar TEXT NOT NULL,
+      name TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      relationship TEXT NOT NULL,
+      status TEXT NOT NULL,
+      birthday TEXT NOT NULL,
+      contact TEXT NOT NULL,
+      tags TEXT NOT NULL,
+      details TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_associated_people_relationship
+    ON associated_people(relationship);
+
+    CREATE INDEX IF NOT EXISTS idx_associated_people_updated_at
+    ON associated_people(updated_at);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -224,6 +252,7 @@ export const initDatabase = (): Database.Database => {
   createTodosTable(sqlite)
   createSnippetsTable(sqlite)
   createJournalsTable(sqlite)
+  createAssociatedPeopleTable(sqlite)
 
   return sqlite
 }

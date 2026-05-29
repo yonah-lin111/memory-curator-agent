@@ -74,6 +74,31 @@ type SnippetUpdatePayload = {
   tags: string[]
 }
 
+// 人物关系类型。
+type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+
+// 关联人物保存载荷类型。
+type AssociatedPersonPayload = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 关系分类。
+  relationship: PersonRelationship
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
 // Markdown 图片保存载荷类型。
 type MarkdownImageSavePayload = {
   // 原始文件名。
@@ -143,6 +168,13 @@ const api = {
     updateSnippet: (id: number, draft: SnippetUpdatePayload) =>
       ipcRenderer.invoke('daily:snippet:update', id, draft),
     deleteSnippet: (id: number) => ipcRenderer.invoke('daily:snippet:delete', id)
+  },
+  people: {
+    list: () => ipcRenderer.invoke('people:list'),
+    create: (draft: AssociatedPersonPayload) => ipcRenderer.invoke('people:create', draft),
+    update: (id: string, draft: AssociatedPersonPayload) =>
+      ipcRenderer.invoke('people:update', id, draft),
+    delete: (id: string) => ipcRenderer.invoke('people:delete', id)
   }
 }
 

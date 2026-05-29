@@ -173,6 +173,48 @@ const INITIAL_FORM_STATE: FormState = {
 };
 
 /**
+ * 生成人物保存载荷。
+ */
+const createPersonPayload = (
+  formState: FormState,
+): Omit<PersonProfile, "id" | "createdAt" | "updatedAt"> => ({
+  name: formState.name.trim(),
+  gender: formState.gender.trim(),
+  relationship: formState.relationship,
+  status: formState.status.trim(),
+  birthday: formState.birthday.trim(),
+  contact: formState.contact.trim(),
+  tags: formState.tags,
+  details: formState.details,
+  avatar: formState.avatar,
+});
+
+/**
+ * 生成页面显示时间。
+ */
+const createDisplayTime = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+};
+
+/**
+ * 读取可用于初始化的人物种子。
+ */
+const readPeopleSeed = (): PersonProfile[] => {
+  const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!saved) {
+    return INITIAL_PEOPLE;
+  }
+
+  try {
+    const parsed = JSON.parse(saved) as PersonProfile[];
+    return Array.isArray(parsed) ? parsed : INITIAL_PEOPLE;
+  } catch {
+    return INITIAL_PEOPLE;
+  }
+};
+
+/**
  * PeoplePage 组件 - 个人关系链与人际档案管理
  */
 export const PeoplePage = (): React.JSX.Element => {
@@ -203,26 +245,71 @@ export const PeoplePage = (): React.JSX.Element => {
   const toast = useToast();
 
   /**
-   * 初始化：从 LocalStorage 读取数据。
+   * 初始化：优先从 SQLite 读取数据，空库时迁移 LocalStorage/初始种子。
    */
   useEffect(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as PersonProfile[];
-        setPeople(parsed);
-        if (parsed.length > 0) {
-          setSelectedId(parsed[0].id);
+    const loadPeople = async (): Promise<void> => {
+      const peopleApi = window.api?.people;
+      if (peopleApi) {
+        try {
+          const storedPeople = await peopleApi.list();
+
+          if (storedPeople.length > 0) {
+            setPeople(storedPeople);
+            setSelectedId(storedPeople[0].id);
+            return;
+          }
+
+          const seed = readPeopleSeed();
+          const createdPeople = await Promise.all(
+            seed.map((person) => peopleApi.create(createPersonPayload(person))),
+          );
+
+          setPeople(createdPeople);
+          setSelectedId(createdPeople[0]?.id ?? null);
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(createdPeople));
+          return;
+        } catch (err) {
+          console.error("读取 SQLite 人物档案失败，降级使用 LocalStorage", err);
         }
-      } catch {
-        setPeople(INITIAL_PEOPLE);
-        setSelectedId(INITIAL_PEOPLE[0].id);
       }
-    } else {
-      setPeople(INITIAL_PEOPLE);
-      setSelectedId(INITIAL_PEOPLE[0].id);
-    }
+
+      const seed = readPeopleSeed();
+      setPeople(seed);
+      setSelectedId(seed[0]?.id ?? null);
+    };
+
+    void loadPeople();
   }, []);
+
+  /**
+   * 保存 LocalStorage 降级缓存。
+   */
+  const cachePeopleFallback = (nextPeople: PersonProfile[]): void => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextPeople));
+  };
+
+  /**
+   * 创建本地降级人物档案。
+   */
+  const createFallbackPerson = (): PersonProfile => {
+    const formattedTime = createDisplayTime();
+    return {
+      id: Math.random().toString(36).substring(2, 9),
+      ...createPersonPayload(formState),
+      createdAt: formattedTime,
+      updatedAt: formattedTime,
+    };
+  };
+
+  /**
+   * 创建本地降级更新档案。
+   */
+  const createFallbackUpdatedPerson = (person: PersonProfile): PersonProfile => ({
+    ...person,
+    ...createPersonPayload(formState),
+    updatedAt: createDisplayTime(),
+  });
 
   // 获得当前选中的人档案。
   const currentPerson = useMemo(() => {
@@ -304,57 +391,43 @@ export const PeoplePage = (): React.JSX.Element => {
   /**
    * 保存当前表单（包含新建与更新）。
    */
-  const handleSaveForm = (): void => {
+  const handleSaveForm = async (): Promise<void> => {
     if (!formState.name.trim()) {
       toast.error("姓名不能为空");
       return;
     }
 
-    const now = new Date();
-    const formattedTime = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const payload = createPersonPayload(formState);
 
     if (mode === "create") {
-      const newPerson: PersonProfile = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: formState.name.trim(),
-        gender: formState.gender,
-        relationship: formState.relationship,
-        status: formState.status.trim(),
-        birthday: formState.birthday.trim(),
-        contact: formState.contact.trim(),
-        tags: formState.tags,
-        details: formState.details,
-        avatar: formState.avatar,
-        createdAt: formattedTime,
-        updatedAt: formattedTime,
-      };
-
-      const updatedPeople = [newPerson, ...people];
-      setPeople(updatedPeople);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPeople));
-      setSelectedId(newPerson.id);
-      toast.success(`成功创建 ${newPerson.name} 的人物档案`);
+      try {
+        const newPerson = window.api?.people
+          ? await window.api.people.create(payload)
+          : createFallbackPerson();
+        const updatedPeople = [newPerson, ...people];
+        setPeople(updatedPeople);
+        cachePeopleFallback(updatedPeople);
+        setSelectedId(newPerson.id);
+        toast.success(`成功创建 ${newPerson.name} 的人物档案`);
+      } catch {
+        toast.error("创建人物档案失败");
+        return;
+      }
     } else if (mode === "edit" && currentPerson) {
-      const updatedPerson: PersonProfile = {
-        ...currentPerson,
-        name: formState.name.trim(),
-        gender: formState.gender,
-        relationship: formState.relationship,
-        status: formState.status.trim(),
-        birthday: formState.birthday.trim(),
-        contact: formState.contact.trim(),
-        tags: formState.tags,
-        details: formState.details,
-        avatar: formState.avatar,
-        updatedAt: formattedTime,
-      };
-
-      const updatedPeople = people.map((p) =>
-        p.id === currentPerson.id ? updatedPerson : p,
-      );
-      setPeople(updatedPeople);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPeople));
-      toast.success("档案保存成功");
+      try {
+        const updatedPerson = window.api?.people
+          ? await window.api.people.update(currentPerson.id, payload)
+          : createFallbackUpdatedPerson(currentPerson);
+        const updatedPeople = people.map((p) =>
+          p.id === currentPerson.id ? updatedPerson : p,
+        );
+        setPeople(updatedPeople);
+        cachePeopleFallback(updatedPeople);
+        toast.success("档案保存成功");
+      } catch {
+        toast.error("保存人物档案失败");
+        return;
+      }
     }
 
     setMode("view");
@@ -363,11 +436,20 @@ export const PeoplePage = (): React.JSX.Element => {
   /**
    * 删除当前档案。
    */
-  const handleDeletePerson = (id: string, name: string): void => {
+  const handleDeletePerson = async (id: string, name: string): Promise<void> => {
     if (window.confirm(`确定要彻底删除 ${name} 的人物档案吗？此操作不可逆。`)) {
+      try {
+        if (window.api?.people) {
+          await window.api.people.delete(id);
+        }
+      } catch {
+        toast.error("删除人物档案失败");
+        return;
+      }
+
       const updated = people.filter((p) => p.id !== id);
       setPeople(updated);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      cachePeopleFallback(updated);
       toast.success(`${name} 的档案已删除`);
 
       if (selectedId === id) {
