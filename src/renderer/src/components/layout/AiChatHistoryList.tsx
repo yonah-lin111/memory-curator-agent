@@ -29,7 +29,7 @@ export const AiChatHistoryList = ({
 }: AiChatHistoryListProps): React.JSX.Element => {
   return (
     <div
-      className="flex h-full w-full flex-col gap-4 select-none"
+      className="flex h-full w-full flex-col gap-4"
       aria-label="对话历史列表"
       aria-hidden={ariaHidden}
     >

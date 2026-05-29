@@ -17,7 +17,7 @@ export const AiChatWorkspace = ({ session }: AiChatWorkspaceProps): React.JSX.El
   return (
     <section
       aria-label="AI 对话主体"
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121] select-none"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">

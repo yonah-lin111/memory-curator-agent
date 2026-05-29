@@ -27,7 +27,7 @@ export const Header = ({
   chatTitle,
 }: HeaderProps): React.JSX.Element => {
   return (
-    <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
+    <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10">
       <div className="flex items-center gap-2 text-xs font-mono">
         <span className="text-white/30">//</span>
         <span className="text-white/40 font-bold uppercase tracking-wider">

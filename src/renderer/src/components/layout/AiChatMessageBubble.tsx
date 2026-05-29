@@ -1,5 +1,5 @@
 import type React from "react";
-import { Bot, UserRound } from "lucide-react";
+import { Bot } from "lucide-react";
 import type { AiChatMessage } from "@renderer/components/layout/aiChatMock";
 import { AiToolCallBlock } from "@renderer/components/layout/AiToolCallBlock";
 
@@ -24,17 +24,13 @@ export const AiChatMessageBubble = ({
       }`}
     >
       {/* 角色头像 */}
-      <div
-        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/5 ${
-          isUser ? "bg-white/5 text-white/85" : "bg-white text-black"
-        }`}
-      >
-        {isUser ? (
-          <UserRound className="h-3.5 w-3.5" />
-        ) : (
+      {!isUser && (
+        <div
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/5 bg-white text-black"
+        >
           <Bot className="h-3.5 w-3.5" />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 消息气泡主体 */}
       <div
