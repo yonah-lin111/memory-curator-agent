@@ -1,5 +1,5 @@
 import { createPeopleListTool } from './peopleTool'
-import type { AgentTool, AgentToolPrompt, JsonSchema } from './types'
+import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from './types'
 import type { PeopleService } from '../services/peopleService'
 
 // Agent 工具注册上下文。
@@ -28,7 +28,7 @@ export type AgentToolRegistry = {
   /**
    * 获取给模型使用的工具定义。
    */
-  forModel: () => AgentTool[]
+  forModel: (messages?: AgentMessage[]) => AgentTool[]
 }
 
 // 内置工具工厂列表。
@@ -36,6 +36,9 @@ const builtinToolFactories: AgentToolFactory[] = [({ peopleService }) => createP
 
 // 工具调用公共约束。
 const TOOL_CALL_GUARD = '调用约束：严格按参数 Schema 提供参数；只在确实需要该能力时调用；不要臆造工具未返回的信息。'
+
+// 默认工具意图关键词。
+const DEFAULT_INTENT_KEYWORDS = ['工具', '查询', '查找', '搜索', '读取']
 
 /**
  * 校验工具名唯一性。
@@ -183,12 +186,58 @@ const prepareDescription = (tool: AgentTool): string => {
 }
 
 /**
- * 准备给模型和执行层使用的工具定义。
+ * 获取最近一条用户消息。
  */
-export const prepareToolsForModel = (tools: AgentTool[]): AgentTool[] => {
+const getLatestUserContent = (messages: AgentMessage[]): string =>
+  [...messages].reverse().find((message) => message.role === 'user')?.content ?? ''
+
+/**
+ * 判断本轮是否已经有工具回灌。
+ */
+const hasToolResult = (messages: AgentMessage[]): boolean => messages.some((message) => message.role === 'tool')
+
+/**
+ * 获取工具意图关键词。
+ */
+const getIntentKeywords = (tool: AgentTool): string[] => [
+  ...(tool.prompt?.intentKeywords ?? []),
+  tool.name,
+  ...DEFAULT_INTENT_KEYWORDS
+]
+
+/**
+ * 根据用户意图筛选本轮工具。
+ */
+export const selectToolsForTurn = (tools: AgentTool[], messages: AgentMessage[]): AgentTool[] => {
   assertUniqueToolNames(tools)
 
-  return tools.map((tool) => ({
+  if (hasToolResult(messages)) {
+    return [...tools]
+  }
+
+  const content = getLatestUserContent(messages).trim().toLowerCase()
+  if (!content) {
+    return []
+  }
+
+  return tools.filter((tool) => {
+    if (!tool.prompt) {
+      return true
+    }
+
+    return getIntentKeywords(tool).some((keyword) => content.includes(keyword.toLowerCase()))
+  })
+}
+
+/**
+ * 准备给模型和执行层使用的工具定义。
+ */
+export const prepareToolsForModel = (tools: AgentTool[], messages?: AgentMessage[]): AgentTool[] => {
+  assertUniqueToolNames(tools)
+
+  const selectedTools = messages ? selectToolsForTurn(tools, messages) : tools
+
+  return selectedTools.map((tool) => ({
     ...tool,
     description: prepareDescription(tool),
     execute: async (input) => {
@@ -215,6 +264,6 @@ export const createAgentToolRegistry = (
     all: () => [...tools],
     ids: () => tools.map((tool) => tool.name),
     get: (name) => toolsByName.get(name),
-    forModel: () => prepareToolsForModel(tools)
+    forModel: (messages) => prepareToolsForModel(tools, messages)
   }
 }

@@ -79,6 +79,27 @@ export const createPeopleListTool = (peopleService: Pick<PeopleService, 'list'>)
   description: '查询本地 People 表中的关联人物档案，只读，不会修改数据。',
   prompt: {
     summary: '查询本地 People 表中的关联人物档案，只读，不会修改数据。',
+    intentKeywords: [
+      '人',
+      '人物',
+      '谁',
+      '关系',
+      '女朋友',
+      '男朋友',
+      '朋友',
+      '家人',
+      '同事',
+      '喜欢',
+      '爱吃',
+      '偏好',
+      '生日',
+      '联系方式',
+      '标签',
+      '状态',
+      'people',
+      'person',
+      'profile'
+    ],
     whenToUse: [
       '用户询问某个人是谁、关系、状态、生日、联系方式、标签或详情时使用。',
       '用户的问题需要用本地 People 表确认人物事实时使用。',

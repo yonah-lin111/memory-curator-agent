@@ -5,7 +5,7 @@ import type {
   ModelToolCallDoneEvent,
   ReactAgentRunInput
 } from './types'
-import { prepareToolsForModel } from './toolRegistry'
+import { prepareToolsForModel, selectToolsForTurn } from './toolRegistry'
 
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
@@ -41,8 +41,6 @@ const resolveToolName = (toolCall: ModelToolCallDoneEvent, tools: AgentTool[]): 
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
   const messages: AgentMessage[] = [...input.messages]
-  const tools = prepareToolsForModel(input.tools)
-  const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
 
   yield {
@@ -50,6 +48,9 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
   }
 
   for (let turn = 0; turn < maxTurns; turn += 1) {
+    const selectedTools = selectToolsForTurn(input.tools, messages)
+    const tools = prepareToolsForModel(selectedTools)
+    const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
     const toolCalls: ModelToolCallDoneEvent[] = []
     let emittedText = false
 

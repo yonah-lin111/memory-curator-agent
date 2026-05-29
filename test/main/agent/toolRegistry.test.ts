@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAgentToolRegistry, prepareToolsForModel } from '../../../src/main/agent/toolRegistry'
+import { createAgentToolRegistry, prepareToolsForModel, selectToolsForTurn } from '../../../src/main/agent/toolRegistry'
 import type { AgentTool } from '../../../src/main/agent/types'
 import type { PeopleService } from '../../../src/main/services/peopleService'
 
@@ -62,7 +62,8 @@ describe('toolRegistry', () => {
           whenToUse: ['用户询问已保存记忆时使用。'],
           whenNotToUse: ['用户只是闲聊时不要使用。'],
           safety: ['只读，不写入数据。'],
-          output: '返回简短观察文本。'
+          output: '返回简短观察文本。',
+          intentKeywords: ['记忆']
         }
       }
     ])
@@ -87,6 +88,55 @@ describe('toolRegistry', () => {
     expect(peopleTool?.prompt?.summary).toContain('People 表')
     expect(prepared.description).toContain('使用时机：')
     expect(prepared.description).toContain('本地 People 表')
+  })
+
+  it('根据用户意图筛选工具，普通闲聊不注入 people_list', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }])).toEqual([])
+  })
+
+  it('根据用户意图筛选工具，人物关系问题注入 people_list', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
+      'people_list'
+    ])
+  })
+
+  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_list', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
+      'people_list'
+    ])
+  })
+
+  it('工具回灌后的后续轮保留可用工具，避免工具链被截断', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(
+      selectToolsForTurn(registry.all(), [
+        {
+          role: 'user',
+          content: '阿明是谁'
+        },
+        {
+          role: 'tool',
+          toolCallId: 'call-1',
+          name: 'people_list',
+          content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
+        }
+      ]).map((tool) => tool.name)
+    ).toEqual(['people_list'])
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

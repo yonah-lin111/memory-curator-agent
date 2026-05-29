@@ -110,6 +110,8 @@ export type AgentToolResult = {
 export type AgentToolPrompt = {
   // 工具能力摘要。
   summary: string
+  // 命中用户意图的关键词。
+  intentKeywords?: string[]
   // 适合调用工具的场景。
   whenToUse: string[]
   // 不适合调用工具的场景。

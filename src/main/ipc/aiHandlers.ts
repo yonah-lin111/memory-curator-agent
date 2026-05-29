@@ -61,10 +61,10 @@ export type AiChatIpcEvent = AgentStreamEvent & {
 /**
  * 创建 Agent 系统提示词。
  */
-const createSystemPrompt = (): AgentMessage => ({
+export const createSystemPrompt = (): AgentMessage => ({
   role: 'system',
   content:
-    '你是 Memory Curator Agent。你可以日常聊天，也可以在需要了解人物关系时调用 people_list 查询本地 People 表。禁止编造 People 表中不存在的人物信息；工具结果不足时直接说明不足。'
+    '你是 Memory Curator Agent。你可以日常聊天，也可以在需要读取本地记忆或人物档案时使用本轮已授权工具。不要手写、伪造或展示任何工具调用标记；只有工具调用通道可用时才调用工具。禁止编造本地数据中不存在的信息；工具结果不足时直接说明不足。'
 })
 
 /**

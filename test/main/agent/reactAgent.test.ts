@@ -144,4 +144,56 @@ describe('reactAgent', () => {
       input: {}
     })
   })
+
+  it('普通闲聊不会向模型注入不相关工具', async () => {
+    const providerInputs: ModelTurnInput[] = []
+    const provider: ModelProvider = {
+      id: 'fake',
+      type: 'openai-compatible',
+      streamTurn: async function* (input) {
+        providerInputs.push(input)
+        yield {
+          type: 'text_delta',
+          delta: '你好。'
+        }
+        yield {
+          type: 'done'
+        }
+      }
+    }
+    const peopleTool: AgentTool = {
+      name: 'people_list',
+      description: '查询 People 表',
+      prompt: {
+        summary: '查询本地 People 表。',
+        intentKeywords: ['人物', '关系'],
+        whenToUse: ['用户询问人物关系时使用。']
+      },
+      parameters: {
+        type: 'object',
+        properties: {}
+      },
+      execute: async () => ({
+        observation: '找到 0 位关联人物',
+        data: []
+      })
+    }
+
+    await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: 'fake-model',
+        messages: [
+          {
+            role: 'user',
+            content: '你好'
+          }
+        ],
+        tools: [peopleTool],
+        maxTurns: 1
+      })
+    )
+
+    expect(providerInputs[0].tools).toEqual([])
+  })
 })
