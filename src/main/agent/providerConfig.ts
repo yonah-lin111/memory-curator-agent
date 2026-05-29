@@ -38,6 +38,8 @@ type RawConfigFile = {
     defaultProvider?: string
     // 默认模型。
     defaultModel?: string
+    // 启用的 provider 标识列表。
+    enabled_providers?: string[]
     // Provider 配置表。
     providers?: Record<string, RawProviderConfig>
   }
@@ -110,20 +112,34 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
   const rawProviders = rawConfig.ai?.providers ?? {
     bailian: rawConfig.bailian as RawProviderConfig
   }
-  const providers = Object.fromEntries(
+  const normalizedProviders = Object.fromEntries(
     Object.entries(rawProviders).map(([id, provider]) => [id, normalizeProvider(id, provider)])
   )
-  const defaultProvider = rawConfig.ai?.defaultProvider ?? 'bailian'
-  const defaultModel =
-    rawConfig.ai?.defaultModel ?? Object.keys(providers[defaultProvider]?.models ?? {})[0] ?? 'MiniMax-M2.5'
+  const enabledProviderIds = rawConfig.ai?.enabled_providers ?? Object.keys(normalizedProviders)
+  const providers = Object.fromEntries(
+    enabledProviderIds
+      .filter((providerId) => Boolean(normalizedProviders[providerId]))
+      .map((providerId) => [providerId, normalizedProviders[providerId]])
+  )
+  const providerIds = Object.keys(providers)
+  const configuredDefaultProvider = rawConfig.ai?.defaultProvider ?? 'bailian'
+  const defaultProvider = providers[configuredDefaultProvider] ? configuredDefaultProvider : providerIds[0]
 
-  if (!providers[defaultProvider]) {
-    throw new Error(`默认 Provider 不存在：${defaultProvider}`)
+  if (!defaultProvider) {
+    throw new Error('未启用任何可用 Provider')
   }
+
+  const defaultProviderModels = providers[defaultProvider].models
+  const configuredDefaultModel = rawConfig.ai?.defaultModel
+  const defaultModel =
+    configuredDefaultModel && defaultProviderModels[configuredDefaultModel]
+      ? configuredDefaultModel
+      : Object.keys(defaultProviderModels)[0] ?? configuredDefaultModel ?? 'MiniMax-M2.5'
 
   return {
     defaultProvider,
     defaultModel,
+    enabledProviders: providerIds,
     providers
   }
 }

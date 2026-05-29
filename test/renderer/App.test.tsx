@@ -320,6 +320,63 @@ describe('App', () => {
     })
   })
 
+  it('AI 对话发送时使用当前选择的模型', async () => {
+    const user = userEvent.setup()
+    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+      runId: payload.runId ?? 'run-test'
+    }))
+
+    window.api = {
+      ai: {
+        getModelOptions: vi.fn(async () => ({
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          providers: [
+            {
+              id: 'bailian',
+              name: 'Bailian',
+              models: [
+                {
+                  id: 'MiniMax-M2.5',
+                  name: 'MiniMax-M2.5'
+                }
+              ]
+            },
+            {
+              id: 'gemini',
+              name: 'Gemini',
+              models: [
+                {
+                  id: 'gemini-3.5-flash',
+                  name: 'Gemini 3.5 Flash'
+                }
+              ]
+            }
+          ]
+        })),
+        startChat,
+        onChatEvent: () => () => undefined
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.selectOptions(await screen.findByLabelText('AI 模型'), 'gemini::gemini-3.5-flash')
+    await user.type(screen.getByLabelText('AI 对话输入框'), '使用 Gemini')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: '使用 Gemini',
+          provider: 'gemini',
+          model: 'gemini-3.5-flash'
+        })
+      )
+    })
+  })
+
   it('切换完成状态后不会自动重排，点击一键排序后才会重排', async () => {
     const user = userEvent.setup()
 

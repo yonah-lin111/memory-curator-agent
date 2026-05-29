@@ -91,4 +91,55 @@ describe('providerConfig', () => {
 
     rmSync(directory, { recursive: true, force: true })
   })
+
+  it('只启用 enabled_providers 中声明的 provider 并修正默认模型', () => {
+    const directory = join(tmpdir(), `mc-config-enabled-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          enabled_providers: ['gemini'],
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            },
+            gemini: {
+              name: 'Gemini',
+              npm: '@ai-sdk/google',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://generativelanguage.googleapis.com/v1beta'
+              },
+              models: {
+                'gemini-3.5-flash': {
+                  name: 'Gemini 3.5 Flash'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(Object.keys(config.providers)).toEqual(['gemini'])
+    expect(config.defaultProvider).toBe('gemini')
+    expect(config.defaultModel).toBe('gemini-3.5-flash')
+
+    rmSync(directory, { recursive: true, force: true })
+  })
 })

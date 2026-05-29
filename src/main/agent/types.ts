@@ -59,6 +59,8 @@ export type NormalizedAiConfig = {
   defaultProvider: string
   // 默认模型名。
   defaultModel: string
+  // 已启用 provider 标识列表。
+  enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, NormalizedProviderConfig>
 }

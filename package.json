@@ -17,9 +17,14 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.81",
+    "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/openai": "^3.0.66",
+    "@ai-sdk/openai-compatible": "^2.0.48",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tanstack/react-query": "^5.90.12",
+    "ai": "^6.0.193",
     "better-sqlite3": "^12.4.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -23,6 +23,46 @@ export type AiChatStartPayload = {
   sessionId: string;
   // 用户消息。
   message: string;
+  // 用户选择的 provider 标识。
+  provider?: string;
+  // 用户选择的模型标识。
+  model?: string;
+};
+
+// AI 模型选择状态。
+export type AiModelSelection = {
+  // Provider 唯一标识。
+  provider: string;
+  // 模型唯一标识。
+  model: string;
+};
+
+// AI 模型选项。
+export type AiModelOption = {
+  // 模型唯一标识。
+  id: string;
+  // 模型显示名。
+  name: string;
+};
+
+// AI Provider 选项。
+export type AiModelProviderOption = {
+  // Provider 唯一标识。
+  id: string;
+  // Provider 显示名。
+  name: string;
+  // Provider 下属模型列表。
+  models: AiModelOption[];
+};
+
+// AI 模型配置响应。
+export type AiModelOptionsResponse = {
+  // 默认 provider 标识。
+  defaultProvider: string;
+  // 默认模型标识。
+  defaultModel: string;
+  // 已启用 provider 与模型。
+  providers: AiModelProviderOption[];
 };
 
 // AI 对话流式事件类型。

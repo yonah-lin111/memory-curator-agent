@@ -11,6 +11,14 @@ export interface SelectOption<T> {
   label: string;
 }
 
+// 下拉菜单分组选项接口。
+export interface SelectGroup<T> {
+  // 分组显示文本。
+  label: string;
+  // 分组下的子选项。
+  options: SelectOption<T>[];
+}
+
 // 下拉菜单组件属性接口。
 export interface SelectProps<T> {
   // 组件唯一标识。
@@ -19,8 +27,8 @@ export interface SelectProps<T> {
   value: T;
   // 值改变回调。
   onChange: (value: T) => void;
-  // 可选列表。
-  options: SelectOption<T>[];
+  // 可选列表（支持平铺或按组展示）。
+  options: (SelectOption<T> | SelectGroup<T>)[];
   // 附加样式类。
   className?: string;
   // 文字对齐方式。默认为 "left"。
@@ -29,7 +37,18 @@ export interface SelectProps<T> {
   position?: "up" | "down";
   // 触发按钮背景类。默认为 "bg-black/35"。
   bgClass?: string;
+  // 是否禁用选择器。
+  disabled?: boolean;
 }
+
+/**
+ * 判断是否为分组选项
+ */
+const isGroup = <T,>(
+  item: SelectOption<T> | SelectGroup<T>
+): item is SelectGroup<T> => {
+  return "options" in item;
+};
 
 /**
  * Select - 统一的公共自定义下拉选择器组件
@@ -43,6 +62,7 @@ export const Select = <T extends string>({
   align = "left",
   position = "down",
   bgClass = "bg-black/35",
+  disabled = false,
 }: SelectProps<T>): React.JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -66,7 +86,22 @@ export const Select = <T extends string>({
     };
   }, []);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  // 查找当前选中的选项。
+  const findSelectedOption = (
+    items: (SelectOption<T> | SelectGroup<T>)[]
+  ): SelectOption<T> | undefined => {
+    for (const item of items) {
+      if (isGroup(item)) {
+        const found = item.options.find((opt) => opt.value === value);
+        if (found) return found;
+      } else if (item.value === value) {
+        return item;
+      }
+    }
+    return undefined;
+  };
+
+  const selectedOption = findSelectedOption(options);
 
   // 根据对齐方式计算触发按钮和内容的样式。
   const buttonAlignStyles =
@@ -81,6 +116,34 @@ export const Select = <T extends string>({
   const positionStyles =
     position === "up" ? "bottom-[100%] mb-1" : "top-[100%] mt-1";
 
+  // 渲染单个选项
+  const renderOption = (option: SelectOption<T>, isGrouped: boolean) => {
+    const isSelected = option.value === value;
+    return (
+      <IconButton
+        key={option.value}
+        role="option"
+        aria-selected={isSelected}
+        iconOnly={false}
+        hoverBgClass="hover:bg-white/10"
+        className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none ${
+          isSelected ? "bg-white/5 text-white" : "text-white/70"
+        } ${isGrouped ? "pl-5" : ""}`}
+        onClick={() => {
+          onChange(option.value);
+          setIsOpen(false);
+        }}
+      >
+        <span className={`flex-1 whitespace-nowrap ${textAlignStyles}`}>
+          {option.label}
+        </span>
+        {isSelected && (
+          <Check className="h-3 w-3 text-white ml-2 flex-shrink-0" />
+        )}
+      </IconButton>
+    );
+  };
+
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
       <IconButton
@@ -88,6 +151,7 @@ export const Select = <T extends string>({
         iconOnly={false}
         hoverBgClass=""
         hoverTextClass=""
+        disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`flex h-8 w-full items-center border border-white/10 ${bgClass} px-2.5 py-1.5 text-xs font-normal text-white/80 rounded-[6px] outline-none hover:border-white/20 focus:border-white/25 transition-colors duration-150 ${buttonAlignStyles}`}
@@ -105,33 +169,20 @@ export const Select = <T extends string>({
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 z-50 w-full rounded-[6px] border border-white/10 bg-black p-1 shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-card-modal-in ${positionStyles}`}
+          className={`absolute left-0 z-50 min-w-full w-max rounded-[6px] border border-white/10 bg-black p-1 shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-card-modal-in ${positionStyles}`}
         >
-          {options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <IconButton
-                key={option.value}
-                role="option"
-                aria-selected={isSelected}
-                iconOnly={false}
-                hoverBgClass="hover:bg-white/10"
-                className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none ${
-                  isSelected ? "bg-white/5 text-white" : "text-white/70"
-                }`}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-              >
-                <span className={`flex-1 truncate ${textAlignStyles}`}>
-                  {option.label}
-                </span>
-                {isSelected && (
-                  <Check className="h-3 w-3 text-white ml-2 flex-shrink-0" />
-                )}
-              </IconButton>
-            );
+          {options.map((item, index) => {
+            if (isGroup(item)) {
+              return (
+                <div key={`group-${index}`} className="flex flex-col">
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-white/30 uppercase tracking-wider text-left select-none">
+                    {item.label}
+                  </div>
+                  {item.options.map((option) => renderOption(option, true))}
+                </div>
+              );
+            }
+            return renderOption(item, false);
           })}
         </div>
       )}

@@ -16,6 +16,38 @@ type AiChatStartPayload = {
   sessionId: string
   // 用户消息。
   message: string
+  // 用户选择的 provider 标识。
+  provider?: string
+  // 用户选择的模型标识。
+  model?: string
+}
+
+// AI 模型选项。
+type AiModelOption = {
+  // 模型唯一标识。
+  id: string
+  // 模型显示名。
+  name: string
+}
+
+// AI Provider 选项。
+type AiModelProviderOption = {
+  // Provider 唯一标识。
+  id: string
+  // Provider 显示名。
+  name: string
+  // Provider 下属模型列表。
+  models: AiModelOption[]
+}
+
+// AI 模型配置响应。
+type AiModelOptionsResponse = {
+  // 默认 provider 标识。
+  defaultProvider: string
+  // 默认模型标识。
+  defaultModel: string
+  // 已启用 provider 与模型。
+  providers: AiModelProviderOption[]
 }
 
 // AI 对话事件载荷。
@@ -36,17 +68,58 @@ const createSystemPrompt = (): AgentMessage => ({
 })
 
 /**
+ * 创建不含密钥的 AI 模型选项。
+ */
+const createModelOptionsResponse = (): AiModelOptionsResponse => {
+  const config = loadProviderConfig()
+
+  return {
+    defaultProvider: config.defaultProvider,
+    defaultModel: config.defaultModel,
+    providers: Object.values(config.providers).map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      models: Object.entries(provider.models).map(([id, model]) => ({
+        id,
+        name: model.name
+      }))
+    }))
+  }
+}
+
+/**
  * 注册 AI IPC 处理器。
  */
 export const registerAiHandlers = (): void => {
   const database = getDatabase()
   const peopleService = createPeopleService(database as unknown as DatabaseConnection)
 
+  ipcMain.handle('ai:model-options:get', async () => createModelOptionsResponse())
+
   ipcMain.handle('ai:chat:start', async (event, payload: AiChatStartPayload) => {
     const runId = payload.runId ?? randomUUID()
     const config = loadProviderConfig()
-    const providerConfig = config.providers[config.defaultProvider]
-    const provider = createModelProvider(providerConfig)
+    const providerId = payload.provider ?? config.defaultProvider
+    const providerConfig = config.providers[providerId]
+
+    if (!providerConfig) {
+      throw new Error(`Provider 未启用或不存在：${providerId}`)
+    }
+
+    const requestedModel =
+      payload.model ?? (providerId === config.defaultProvider ? config.defaultModel : undefined)
+
+    if (requestedModel && !providerConfig.models[requestedModel]) {
+      throw new Error(`模型未启用或不存在：${providerId}/${requestedModel}`)
+    }
+
+    const modelId = requestedModel ?? Object.keys(providerConfig.models)[0]
+
+    if (!modelId) {
+      throw new Error(`Provider ${providerId} 未配置模型`)
+    }
+
+    const provider = await createModelProvider(providerConfig)
     const tools = [createPeopleListTool(peopleService)]
 
     const sendEvent = (agentEvent: AgentStreamEvent): void => {
@@ -61,7 +134,7 @@ export const registerAiHandlers = (): void => {
       try {
         for await (const agentEvent of runReactAgent({
           provider,
-          model: config.defaultModel,
+          model: modelId,
           messages: [
             createSystemPrompt(),
             {

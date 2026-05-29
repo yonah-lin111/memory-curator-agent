@@ -20,6 +20,8 @@ import {
   AI_CHAT_SESSIONS,
   type AiChatEvent,
   type AiChatSession,
+  type AiModelProviderOption,
+  type AiModelSelection,
 } from "@renderer/components/layout/aiChatMock";
 
 /**
@@ -39,6 +41,12 @@ export const App = (): React.JSX.Element => {
   // 当前激活的 AI 对话会话标识。
   const [activeChatId, setActiveChatId] = useState<string>(AI_CHAT_SESSIONS[0].id);
 
+  // 已启用的 AI provider 与模型选项。
+  const [aiModelOptions, setAiModelOptions] = useState<AiModelProviderOption[]>([]);
+
+  // 当前选中的 AI provider 与模型。
+  const [selectedAiModel, setSelectedAiModel] = useState<AiModelSelection | null>(null);
+
   // Agent 运行与消息的映射关系。
   const runMessageMapRef = useRef<Map<string, { sessionId: string; messageId: string }>>(new Map());
 
@@ -52,6 +60,31 @@ export const App = (): React.JSX.Element => {
   const activeChatSession =
     chatSessions.find((session) => session.id === activeChatId) ??
     chatSessions[0];
+
+  /**
+   * 从启用模型列表中解析默认选择。
+   */
+  const resolveDefaultAiModel = (
+    providers: AiModelProviderOption[],
+    defaultProvider: string,
+    defaultModel: string,
+  ): AiModelSelection | null => {
+    const provider =
+      providers.find((item) => item.id === defaultProvider) ??
+      providers.find((item) => item.models.length > 0);
+    const model =
+      provider?.models.find((item) => item.id === defaultModel) ??
+      provider?.models[0];
+
+    if (!provider || !model) {
+      return null;
+    }
+
+    return {
+      provider: provider.id,
+      model: model.id,
+    };
+  };
 
   /**
    * 切换 AI 对话模式。
@@ -238,6 +271,29 @@ export const App = (): React.JSX.Element => {
     };
   }, []);
 
+  // 读取启用的 AI 模型选项。
+  useEffect(() => {
+    let isMounted = true;
+
+    void window.api?.ai?.getModelOptions?.()
+      .then((options) => {
+        if (!isMounted) return;
+        setAiModelOptions(options.providers);
+        setSelectedAiModel(
+          resolveDefaultAiModel(options.providers, options.defaultProvider, options.defaultModel),
+        );
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setAiModelOptions([]);
+        setSelectedAiModel(null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   /**
    * 发送用户消息并触发 AI 回答。
    */
@@ -298,6 +354,8 @@ export const App = (): React.JSX.Element => {
         runId,
         sessionId,
         message: text,
+        provider: selectedAiModel?.provider,
+        model: selectedAiModel?.model,
       })
       .catch((error: unknown) => {
         updateAiMessage(sessionId, assistantMessageId, (message) => ({
@@ -446,7 +504,13 @@ export const App = (): React.JSX.Element => {
               }`}
               aria-hidden={!isChatOpen}
             >
-              <AiChatWorkspace session={activeChatSession} onSendMessage={handleSendMessage} />
+              <AiChatWorkspace
+                session={activeChatSession}
+                modelOptions={aiModelOptions}
+                selectedModel={selectedAiModel}
+                onSendMessage={handleSendMessage}
+                onModelChange={setSelectedAiModel}
+              />
             </div>
           </div>
         </div>

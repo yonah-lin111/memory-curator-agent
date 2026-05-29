@@ -107,6 +107,38 @@ type AiChatStartPayload = {
   sessionId: string
   // 用户消息。
   message: string
+  // 用户选择的 provider 标识。
+  provider?: string
+  // 用户选择的模型标识。
+  model?: string
+}
+
+// AI 模型选项。
+type AiModelOption = {
+  // 模型唯一标识。
+  id: string
+  // 模型显示名。
+  name: string
+}
+
+// AI Provider 选项。
+type AiModelProviderOption = {
+  // Provider 唯一标识。
+  id: string
+  // Provider 显示名。
+  name: string
+  // Provider 下属模型列表。
+  models: AiModelOption[]
+}
+
+// AI 模型配置响应。
+type AiModelOptionsResponse = {
+  // 默认 provider 标识。
+  defaultProvider: string
+  // 默认模型标识。
+  defaultModel: string
+  // 已启用 provider 与模型。
+  providers: AiModelProviderOption[]
 }
 
 // AI 工具步骤事件状态。
@@ -248,6 +280,8 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('people:delete', id)
   },
   ai: {
+    getModelOptions: (): Promise<AiModelOptionsResponse> =>
+      ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
       ipcRenderer.invoke('ai:chat:start', payload),
     onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {

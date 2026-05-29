@@ -1,16 +1,27 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
-import type { AiChatSession } from "@renderer/components/layout/aiChatMock";
+import type {
+  AiChatSession,
+  AiModelProviderOption,
+  AiModelSelection,
+} from "@renderer/components/layout/aiChatMock";
 import { AiChatMessageBubble } from "@renderer/components/layout/AiChatMessageBubble";
 import { IconButton } from "@renderer/components/ui/IconButton";
+import { Select } from "@renderer/components/ui/Select";
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
   // 当前激活的 AI 会话。
   session: AiChatSession;
+  // 可切换的 AI provider 与模型列表。
+  modelOptions: AiModelProviderOption[];
+  // 当前选中的 AI provider 与模型。
+  selectedModel: AiModelSelection | null;
   // 发送消息回调。
   onSendMessage: (text: string) => void;
+  // AI 模型切换回调。
+  onModelChange: (selection: AiModelSelection) => void;
 };
 
 /**
@@ -18,10 +29,28 @@ type AiChatWorkspaceProps = {
  */
 export const AiChatWorkspace = ({
   session,
+  modelOptions,
+  selectedModel,
   onSendMessage,
+  onModelChange,
 }: AiChatWorkspaceProps): React.JSX.Element => {
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedModelValue = selectedModel
+    ? `${selectedModel.provider}::${selectedModel.model}`
+    : "";
+  const hasModelOptions = modelOptions.some((provider) => provider.models.length > 0);
+
+  // 构造供 Select 组件使用的选项列表，支持 provider 分组。
+  const selectOptions = hasModelOptions
+    ? modelOptions.map((provider) => ({
+        label: provider.name,
+        options: provider.models.map((model) => ({
+          value: `${provider.id}::${model.id}`,
+          label: model.name, // 仅使用模型名，不需要包含 provider 前缀
+        })),
+      }))
+    : [{ value: "", label: "无可用模型" }];
 
   // 当消息列表更新时，平滑滚动至最底部。
   useEffect(() => {
@@ -41,6 +70,15 @@ export const AiChatWorkspace = ({
       e.preventDefault();
       handleSend();
     }
+  };
+
+  /**
+   * 处理 AI 模型切换，value 使用 provider/model 组合避免跨 provider 模型重名。
+   */
+  const handleModelChange = (value: string): void => {
+    const [provider, model] = value.split("::");
+    if (!provider || !model) return;
+    onModelChange({ provider, model });
   };
 
   return (
@@ -73,7 +111,16 @@ export const AiChatWorkspace = ({
           {/* 工具栏与发送按钮 */}
           <div className="flex items-center justify-between">
             {/* 左侧附加操作 */}
-            <div className="flex items-center gap-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <Select
+                value={selectedModelValue}
+                onChange={handleModelChange}
+                options={selectOptions}
+                position="up"
+                bgClass="bg-black"
+                disabled={!hasModelOptions}
+                className="!w-fit max-w-[220px]"
+              />
               <IconButton
                 aria-label="添加附件"
                 disabled
