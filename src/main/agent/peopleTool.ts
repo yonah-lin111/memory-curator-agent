@@ -77,6 +77,24 @@ const parseInput = (input: unknown): PeopleListToolInput => {
 export const createPeopleListTool = (peopleService: Pick<PeopleService, 'list'>): PeopleListTool => ({
   name: 'people_list',
   description: '查询本地 People 表中的关联人物档案，只读，不会修改数据。',
+  prompt: {
+    summary: '查询本地 People 表中的关联人物档案，只读，不会修改数据。',
+    whenToUse: [
+      '用户询问某个人是谁、关系、状态、生日、联系方式、标签或详情时使用。',
+      '用户的问题需要用本地 People 表确认人物事实时使用。',
+      '用户给出姓名、关系、状态、标签或详情关键词，需要查找匹配人物时使用。'
+    ],
+    whenNotToUse: [
+      '用户只是闲聊、写作、翻译或不涉及本地人物档案时不要使用。',
+      '用户要求新增、修改或删除人物档案时不要使用。'
+    ],
+    safety: [
+      '只读取本地 People 表，不写入任何数据。',
+      '工具没有返回的人物事实不能编造。',
+      '工具结果不足时直接说明信息不足。'
+    ],
+    output: '优先返回能回答用户问题的精简人物事实，不要复述无关字段。'
+  },
   parameters: {
     type: 'object',
     properties: {

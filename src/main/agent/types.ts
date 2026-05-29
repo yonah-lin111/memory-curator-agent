@@ -106,12 +106,30 @@ export type AgentToolResult = {
   data: unknown
 }
 
+// Agent 工具提示词元数据。
+export type AgentToolPrompt = {
+  // 工具能力摘要。
+  summary: string
+  // 适合调用工具的场景。
+  whenToUse: string[]
+  // 不适合调用工具的场景。
+  whenNotToUse?: string[]
+  // 工具安全边界。
+  safety?: string[]
+  // 工具输出要求。
+  output?: string
+  // 工具调用示例。
+  examples?: string[]
+}
+
 // Agent 工具。
 export type AgentTool = {
   // 工具名称。
   name: string
   // 工具说明。
   description: string
+  // 工具提示词元数据。
+  prompt?: AgentToolPrompt
   // 工具参数 Schema。
   parameters: JsonSchema
   /**

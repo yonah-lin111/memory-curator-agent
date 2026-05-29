@@ -53,6 +53,42 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('严格按参数 Schema 提供参数')
   })
 
+  it('优先用结构化 prompt 统一渲染工具说明', () => {
+    const [prepared] = prepareToolsForModel([
+      {
+        ...createTestTool('query_memory'),
+        prompt: {
+          summary: '查询本地记忆。',
+          whenToUse: ['用户询问已保存记忆时使用。'],
+          whenNotToUse: ['用户只是闲聊时不要使用。'],
+          safety: ['只读，不写入数据。'],
+          output: '返回简短观察文本。'
+        }
+      }
+    ])
+
+    expect(prepared.description).toContain('能力：查询本地记忆。')
+    expect(prepared.description).toContain('使用时机：')
+    expect(prepared.description).toContain('- 用户询问已保存记忆时使用。')
+    expect(prepared.description).toContain('不要使用：')
+    expect(prepared.description).toContain('- 用户只是闲聊时不要使用。')
+    expect(prepared.description).toContain('安全边界：')
+    expect(prepared.description).toContain('- 只读，不写入数据。')
+    expect(prepared.description).toContain('输出要求：返回简短观察文本。')
+  })
+
+  it('people_list 使用结构化 prompt 元数据', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+    const peopleTool = registry.get('people_list')
+    const [prepared] = prepareToolsForModel(registry.all())
+
+    expect(peopleTool?.prompt?.summary).toContain('People 表')
+    expect(prepared.description).toContain('使用时机：')
+    expect(prepared.description).toContain('本地 People 表')
+  })
+
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {
     const [prepared] = prepareToolsForModel([
       {

@@ -1,5 +1,5 @@
 import { createPeopleListTool } from './peopleTool'
-import type { AgentTool, JsonSchema } from './types'
+import type { AgentTool, AgentToolPrompt, JsonSchema } from './types'
 import type { PeopleService } from '../services/peopleService'
 
 // Agent 工具注册上下文。
@@ -149,10 +149,38 @@ const assertValidToolInput = (tool: AgentTool, input: unknown): void => {
 }
 
 /**
+ * 渲染列表段落。
+ */
+const renderListSection = (title: string, items: string[] | undefined): string[] => {
+  if (!items?.length) {
+    return []
+  }
+
+  return [`${title}：`, ...items.map((item) => `- ${item}`)]
+}
+
+/**
+ * 渲染结构化工具提示词。
+ */
+const renderToolPrompt = (prompt: AgentToolPrompt): string =>
+  [
+    `能力：${prompt.summary}`,
+    ...renderListSection('使用时机', prompt.whenToUse),
+    ...renderListSection('不要使用', prompt.whenNotToUse),
+    ...renderListSection('安全边界', prompt.safety),
+    prompt.output ? `输出要求：${prompt.output}` : undefined,
+    ...renderListSection('示例', prompt.examples)
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n')
+
+/**
  * 增强工具说明。
  */
-const prepareDescription = (description: string): string =>
-  description.includes(TOOL_CALL_GUARD) ? description : `${description}\n\n${TOOL_CALL_GUARD}`
+const prepareDescription = (tool: AgentTool): string => {
+  const description = tool.prompt ? renderToolPrompt(tool.prompt) : tool.description
+  return description.includes(TOOL_CALL_GUARD) ? description : `${description}\n\n${TOOL_CALL_GUARD}`
+}
 
 /**
  * 准备给模型和执行层使用的工具定义。
@@ -162,7 +190,7 @@ export const prepareToolsForModel = (tools: AgentTool[]): AgentTool[] => {
 
   return tools.map((tool) => ({
     ...tool,
-    description: prepareDescription(tool.description),
+    description: prepareDescription(tool),
     execute: async (input) => {
       assertValidToolInput(tool, input)
       return tool.execute(input)
