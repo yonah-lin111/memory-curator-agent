@@ -10,16 +10,16 @@ import {
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
-import { TodoControlTower } from "@renderer/pages/components/TodoControlTower";
+import { TodoControlTower } from "@renderer/pages/todo/components/TodoControlTower";
 import {
   sortTodoItems,
   getNextTodoPriority,
-} from "@renderer/pages/components/todoShared";
+} from "@renderer/pages/todo/components/todoShared";
 import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
-} from "@renderer/pages/components/dailyShared";
+} from "@renderer/lib/dailyShared";
 
 // 待办记录类型，直接从 bridge 签名反推。
 type DailyTodoRecord =

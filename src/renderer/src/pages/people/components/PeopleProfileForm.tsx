@@ -10,7 +10,7 @@ import type {
   FormState,
   PeoplePageMode,
   PersonProfile,
-} from "@renderer/pages/components/peopleShared";
+} from "@renderer/pages/people/components/peopleShared";
 
 // 人物表单组件属性。
 type PeopleProfileFormProps = {

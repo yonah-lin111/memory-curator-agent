@@ -14,7 +14,7 @@ import {
   getNextTodoPriority,
   type TodoItem,
   type TodoPriority,
-} from "@renderer/pages/components/todoShared";
+} from "@renderer/pages/todo/components/todoShared";
 
 // Todo 面板属性，交由页面层托管真实持久化状态。
 interface TodayTodoPanelProps {

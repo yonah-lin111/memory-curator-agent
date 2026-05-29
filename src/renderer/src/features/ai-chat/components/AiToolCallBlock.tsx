@@ -3,7 +3,7 @@ import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
 import type {
   AiToolStep,
   AiToolStepStatus,
-} from "@renderer/components/layout/aiChatMock";
+} from "@renderer/features/ai-chat/aiChatMock";
 
 // AI 工具调用块组件属性类型。
 type AiToolCallBlockProps = {

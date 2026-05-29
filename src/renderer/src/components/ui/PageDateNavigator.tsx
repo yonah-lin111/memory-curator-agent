@@ -16,7 +16,7 @@ import {
   getEntryMonth,
   shiftEntryDate,
   shiftEntryMonth,
-} from "@renderer/pages/components/dailyShared";
+} from "@renderer/lib/dailyShared";
 
 // 页面顶部日期切换器属性。
 interface PageDateNavigatorProps {

@@ -13,7 +13,7 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
 import { Tag } from "@renderer/components/ui/Tag";
 import { Select, type SelectOption } from "@renderer/components/ui/Select";
-import type { NoteMaterialItem, NoteDraft } from "@renderer/pages/NotesPage";
+import type { NoteMaterialItem, NoteDraft } from "@renderer/pages/notes/NotesPage";
 
 // 笔记弹窗属性。
 type NoteMarkdownModalProps = {

@@ -4,9 +4,9 @@ import type {
   AiChatSession,
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/components/layout/aiChatMock";
-import { AiChatMessageBubble } from "@renderer/components/layout/AiChatMessageBubble";
-import { AiChatInput } from "@renderer/components/layout/AiChatInput";
+} from "@renderer/features/ai-chat/aiChatMock";
+import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
+import { AiChatInput } from "@renderer/features/ai-chat/components/AiChatInput";
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {

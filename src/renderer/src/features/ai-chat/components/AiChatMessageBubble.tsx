@@ -1,7 +1,7 @@
 import type React from "react";
 import { Bot } from "lucide-react";
-import type { AiChatMessage } from "@renderer/components/layout/aiChatMock";
-import { AiToolCallBlock } from "@renderer/components/layout/AiToolCallBlock";
+import type { AiChatMessage } from "@renderer/features/ai-chat/aiChatMock";
+import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
 
 // AI 聊天气泡组件属性类型。
 type AiChatMessageBubbleProps = {

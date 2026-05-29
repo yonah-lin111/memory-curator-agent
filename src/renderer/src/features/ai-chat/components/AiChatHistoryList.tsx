@@ -1,6 +1,6 @@
 import type React from "react";
 import { Bot, Plus, Search } from "lucide-react";
-import type { AiChatSession } from "@renderer/components/layout/aiChatMock";
+import type { AiChatSession } from "@renderer/features/ai-chat/aiChatMock";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
 // AI 对话历史列表组件属性类型。

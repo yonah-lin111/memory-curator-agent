@@ -17,12 +17,12 @@ import {
 } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
-import { PeopleProfileForm } from "@renderer/pages/components/PeopleProfileForm";
+import { PeopleProfileForm } from "@renderer/pages/people/components/PeopleProfileForm";
 import {
   RELATIONSHIP_COLORS,
   type RelationshipFilter,
-} from "@renderer/pages/components/peopleShared";
-import { usePeopleProfiles } from "@renderer/pages/components/usePeopleProfiles";
+} from "@renderer/pages/people/components/peopleShared";
+import { usePeopleProfiles } from "@renderer/pages/people/components/usePeopleProfiles";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 

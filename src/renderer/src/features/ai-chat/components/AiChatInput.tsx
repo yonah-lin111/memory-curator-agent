@@ -6,7 +6,7 @@ import { Select } from "@renderer/components/ui/Select";
 import type {
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/components/layout/aiChatMock";
+} from "@renderer/features/ai-chat/aiChatMock";
 
 // AI 对话输入框组件属性类型。
 export type AiChatInputProps = {

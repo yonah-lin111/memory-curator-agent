@@ -16,7 +16,7 @@ import {
 import { useToast } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
-import { NoteMarkdownModal } from "@renderer/pages/components/NoteMarkdownModal";
+import { NoteMarkdownModal } from "@renderer/pages/notes/components/NoteMarkdownModal";
 
 /* ==========================================
  * TS 类型定义

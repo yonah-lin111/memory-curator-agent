@@ -1,28 +1,28 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
-import { JournalPage } from "@renderer/pages/JournalPage";
-import { MemoriesPage } from "@renderer/pages/MemoriesPage";
-import { NotesPage } from "@renderer/pages/NotesPage";
-import { ThemesPage } from "@renderer/pages/ThemesPage";
-import { WeeklyReviewPage } from "@renderer/pages/WeeklyReviewPage";
-import { TodoPage } from "@renderer/pages/TodoPage";
-import { SnippetsPage } from "@renderer/pages/SnippetsPage";
-import { PeoplePage } from "@renderer/pages/PeoplePage";
+import { JournalPage } from "@renderer/pages/journal/JournalPage";
+import { MemoriesPage } from "@renderer/pages/memories/MemoriesPage";
+import { NotesPage } from "@renderer/pages/notes/NotesPage";
+import { ThemesPage } from "@renderer/pages/themes/ThemesPage";
+import { WeeklyReviewPage } from "@renderer/pages/weekly-review/WeeklyReviewPage";
+import { TodoPage } from "@renderer/pages/todo/TodoPage";
+import { SnippetsPage } from "@renderer/pages/snippets/SnippetsPage";
+import { PeoplePage } from "@renderer/pages/people/PeoplePage";
 import {
   Sidebar,
   type SidebarPageId,
 } from "@renderer/components/layout/Sidebar";
 import { Header } from "@renderer/components/layout/Header";
-import { TodayPage } from "@renderer/pages/TodayPage";
+import { TodayPage } from "@renderer/pages/today/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
-import { AiChatWorkspace } from "@renderer/components/layout/AiChatWorkspace";
+import { AiChatWorkspace } from "@renderer/features/ai-chat/components/AiChatWorkspace";
 import {
   AI_CHAT_SESSIONS,
   type AiChatEvent,
   type AiChatSession,
   type AiModelProviderOption,
   type AiModelSelection,
-} from "@renderer/components/layout/aiChatMock";
+} from "@renderer/features/ai-chat/aiChatMock";
 
 /**
  * 记忆策展 Agent 的主应用布局。

@@ -6,16 +6,16 @@ import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
-import { SnippetsTagMap } from "@renderer/pages/components/SnippetsTagMap";
+import { SnippetsTagMap } from "@renderer/pages/snippets/components/SnippetsTagMap";
 import {
   TodayNoteEntryModal,
   type NoteItem,
-} from "@renderer/pages/components/TodayNoteEntryModal";
+} from "@renderer/pages/today/components/TodayNoteEntryModal";
 import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
-} from "@renderer/pages/components/dailyShared";
+} from "@renderer/lib/dailyShared";
 
 // Daily 片段记录类型，直接从 bridge 签名反推。
 type DailySnippetRecord =

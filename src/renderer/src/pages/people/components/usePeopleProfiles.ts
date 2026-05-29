@@ -11,7 +11,7 @@ import {
   type PeoplePageMode,
   type PersonProfile,
   type RelationshipFilter,
-} from "@renderer/pages/components/peopleShared";
+} from "@renderer/pages/people/components/peopleShared";
 
 // 标签统计项。
 type TagStat = {

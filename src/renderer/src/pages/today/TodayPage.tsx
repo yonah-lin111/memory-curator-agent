@@ -2,18 +2,18 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, CheckSquare, Smile, StickyNote } from "lucide-react";
 import { useToast } from "@renderer/components/ui/Toast";
-import { TodaySnippetsPanel } from "@renderer/pages/components/TodaySnippetsPanel";
+import { TodaySnippetsPanel } from "@renderer/pages/today/components/TodaySnippetsPanel";
 import {
   TodayNoteEntryModal,
   type NoteItem,
-} from "@renderer/pages/components/TodayNoteEntryModal";
-import { TodayTodoPanel } from "@renderer/pages/components/TodayTodoPanel";
+} from "@renderer/pages/today/components/TodayNoteEntryModal";
+import { TodayTodoPanel } from "@renderer/pages/today/components/TodayTodoPanel";
 import {
   sortTodoItems,
   type TodoPriority,
-} from "@renderer/pages/components/todoShared";
-import { TodayJournalPanel } from "@renderer/pages/components/TodayJournalPanel";
-import type { TodoItem } from "@renderer/pages/components/todoShared";
+} from "@renderer/pages/todo/components/todoShared";
+import { TodayJournalPanel } from "@renderer/pages/today/components/TodayJournalPanel";
+import type { TodoItem } from "@renderer/pages/todo/components/todoShared";
 
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {

@@ -6,7 +6,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '@renderer/App'
-import type { AiChatEvent, AiChatStartPayload } from '@renderer/components/layout/aiChatMock'
+import type { AiChatEvent, AiChatStartPayload } from '@renderer/features/ai-chat/aiChatMock'
 
 describe('App', () => {
   afterEach(() => {

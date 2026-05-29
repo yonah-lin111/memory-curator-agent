@@ -6,7 +6,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@renderer/components/ui/Toast";
-import { JournalPage } from "@renderer/pages/JournalPage";
+import { JournalPage } from "@renderer/pages/journal/JournalPage";
 
 // Daily 单日数据类型，直接从 bridge 签名反推。
 type DailyDayDataShape =
