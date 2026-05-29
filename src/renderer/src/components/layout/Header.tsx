@@ -8,12 +8,21 @@ export interface HeaderProps {
   category: string;
   // 当前页面标识
   activePage: string;
+  // AI 对话模式是否打开
+  isChatOpen?: boolean;
+  // AI 对话模式切换回调
+  onChatToggle?: () => void;
 }
 
 /**
  * Header - 框架级固定顶部栏组件
  */
-export const Header = ({ category, activePage }: HeaderProps): React.JSX.Element => {
+export const Header = ({
+  category,
+  activePage,
+  isChatOpen = false,
+  onChatToggle,
+}: HeaderProps): React.JSX.Element => {
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
       <div className="flex items-center gap-2 text-xs font-mono">
@@ -25,8 +34,10 @@ export const Header = ({ category, activePage }: HeaderProps): React.JSX.Element
         <span className="text-white font-bold">{activePage}</span>
       </div>
       <IconButton
-        aria-label="打开聊天"
-        className="text-white/45 hover:bg-white/5 hover:text-white"
+        aria-label={isChatOpen ? "关闭聊天" : "打开聊天"}
+        highlighted={isChatOpen}
+        onClick={onChatToggle}
+        className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
       >
         <MessageSquare className="h-3.5 w-3.5" />
       </IconButton>

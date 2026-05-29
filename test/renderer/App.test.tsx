@@ -374,4 +374,42 @@ describe('App', () => {
       expect(screen.queryByText('本地持久化方案表现')).not.toBeInTheDocument()
     })
   })
+
+  it('点击 Header 聊天按钮后切换为 AI 对话模式，并可关闭恢复主导航', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    expect(window.location.pathname).toBe('/today')
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+
+    expect(screen.getByRole('button', { name: '关闭聊天' })).toBeInTheDocument()
+    expect(screen.getByLabelText('对话历史列表')).toBeInTheDocument()
+    expect(screen.getByLabelText('AI 对话主体')).toBeInTheDocument()
+    expect(screen.getByText('AI DIALOGS')).toBeInTheDocument()
+    expect(screen.getAllByText('整理今天的记忆线索')[0]).toBeInTheDocument()
+    expect(window.location.pathname).toBe('/today')
+
+    await user.click(screen.getByRole('button', { name: '关闭聊天' }))
+
+    expect(screen.getByRole('button', { name: '打开聊天' })).toBeInTheDocument()
+    expect(screen.getByLabelText('侧边栏主导航')).toBeInTheDocument()
+    expect(screen.queryByLabelText('对话历史列表')).not.toBeInTheDocument()
+  })
+
+  it('AI 对话模式支持切换历史会话并展示工具调用摘要', async () => {
+    const user = userEvent.setup()
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.click(screen.getByRole('button', { name: /周回顾行动拆解/ }))
+
+    const chatMain = screen.getByLabelText('AI 对话主体')
+    expect(within(chatMain).getByText('周回顾行动拆解')).toBeInTheDocument()
+    expect(within(chatMain).getByText('ReAct 执行摘要')).toBeInTheDocument()
+    expect(within(chatMain).getByText('读取 weekly review 草稿')).toBeInTheDocument()
+    expect(screen.getAllByText('工具完成').length).toBeGreaterThan(0)
+  })
 })

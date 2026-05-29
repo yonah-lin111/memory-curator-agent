@@ -14,6 +14,8 @@ import {
   StickyNote,
   Users,
 } from "lucide-react";
+import { AiChatHistoryList } from "@renderer/components/layout/AiChatHistoryList";
+import type { AiChatSession } from "@renderer/components/layout/aiChatMock";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -53,16 +55,29 @@ type NavigationGroup = {
   items: NavigationItem[];
 };
 
+// Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
+type SidebarMode = "navigation" | "chat";
+
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
   // 当前左侧栏是否处于折叠状态。
   isCollapsed: boolean;
   // 当前选中的侧栏页面。
   activePage: SidebarPageId;
+  // 左侧栏内容模式。
+  mode: SidebarMode;
+  // AI 对话会话列表。
+  chatSessions: AiChatSession[];
+  // 当前激活的 AI 对话会话标识。
+  activeChatId: string;
   // 左侧栏折叠状态改变回调。
   onCollapsedChange: (collapsed: boolean) => void;
   // 侧栏页面切换回调。
   onPageChange: (pageId: SidebarPageId) => void;
+  // AI 对话会话切换回调。
+  onChatSessionChange: (sessionId: string) => void;
+  // 新建 AI 对话回调。
+  onNewChat: () => void;
 };
 
 /* ==========================================
@@ -151,118 +166,161 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
 export const Sidebar = ({
   isCollapsed,
   activePage,
+  mode,
+  chatSessions,
+  activeChatId,
   onCollapsedChange,
   onPageChange,
+  onChatSessionChange,
+  onNewChat,
 }: SidebarProps): React.JSX.Element => {
+  // AI 对话模式下强制使用展开宽度，避免历史列表被折叠成不可读图标。
+  const shouldUseCollapsedLayout = mode === "navigation" && isCollapsed;
+
   return (
     <div className="relative flex h-auto lg:h-full flex-shrink-0">
       <aside
         className={`w-full h-auto lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-          isCollapsed ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
+          shouldUseCollapsedLayout ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
         }`}
       >
         <div
-          className={`flex flex-col gap-5 w-full ${isCollapsed ? "" : "lg:w-[190px] lg:flex-shrink-0"}`}
+          className={`flex flex-col gap-5 w-full ${
+            shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
+          }`}
         >
-          {/* 产品标识头 */}
-          <div
-            className={`flex items-center gap-3 px-1 ${isCollapsed ? "justify-center" : ""}`}
-          >
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
-              <Brain className="h-5 w-5" />
-            </div>
-            {!isCollapsed && (
-              <div className="flex flex-col">
-                <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
-                  MEMORY CURATOR
-                </h2>
-              </div>
-            )}
-          </div>
+          {mode === "chat" && (
+            <AiChatHistoryList
+              sessions={chatSessions}
+              activeSessionId={activeChatId}
+              onSessionChange={onChatSessionChange}
+              onNewChat={onNewChat}
+            />
+          )}
 
-          {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
-          <nav className="flex flex-col gap-3 w-full" aria-label="侧边栏主导航">
-            {NAVIGATION_GROUPS.map((group) => (
-              <section key={group.id} className="flex flex-col gap-1.5">
-                {!isCollapsed && (
-                  <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30 whitespace-nowrap">
-                    {group.label}
-                  </h3>
-                )}
-                <div className="flex flex-col gap-1">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = item.id === activePage;
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        aria-current={isActive ? "page" : undefined}
-                        aria-label={isCollapsed ? item.label : undefined}
-                        onClick={() => onPageChange(item.id)}
-                        className={`flex w-full items-center rounded-[6px] transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
-                          isCollapsed
-                            ? "justify-center px-0 py-2.5"
-                            : "gap-3 px-3 py-2.5"
-                        } ${isActive ? "bg-white text-black font-semibold" : "text-white/60 hover:bg-white/5 hover:text-white/85"}`}
-                      >
-                        <Icon
-                          className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-black" : "text-white/50"}`}
-                        />
-                        {!isCollapsed && (
-                          <div className="flex min-w-0 flex-col items-start text-left whitespace-nowrap">
-                            <span className="text-sm font-bold leading-none whitespace-nowrap">
-                              {item.label}
-                            </span>
-                            <span
-                              className={`mt-1 text-xs leading-none whitespace-nowrap ${isActive ? "text-black/60 font-medium" : "text-white/30"}`}
-                            >
-                              {item.description}
-                            </span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+          {mode === "navigation" && (
+            <div
+              className={`flex flex-col gap-5 w-full ${
+                shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
+              }`}
+            >
+              {/* 产品标识头 */}
+              <div
+                className={`flex items-center gap-3 px-1 ${
+                  shouldUseCollapsedLayout ? "justify-center" : ""
+                }`}
+              >
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
+                  <Brain className="h-5 w-5" />
                 </div>
-              </section>
-            ))}
-          </nav>
-        </div>
-
-        {/* 底部设置 */}
-        <div
-          className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${isCollapsed ? "" : "lg:w-[190px] lg:flex-shrink-0"}`}
-        >
-          {isCollapsed ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
-                <Settings className="h-3.5 w-3.5" />
+                {!shouldUseCollapsedLayout && (
+                  <div className="flex flex-col">
+                    <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
+                      MEMORY CURATOR
+                    </h2>
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35 whitespace-nowrap">
-              <Settings className="h-3.5 w-3.5" />
-              <span className="whitespace-nowrap">Settings</span>
+
+              {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
+              <nav className="flex flex-col gap-3 w-full" aria-label="侧边栏主导航">
+                {NAVIGATION_GROUPS.map((group) => (
+                  <section key={group.id} className="flex flex-col gap-1.5">
+                    {!shouldUseCollapsedLayout && (
+                      <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30 whitespace-nowrap">
+                        {group.label}
+                      </h3>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = item.id === activePage;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            aria-current={isActive ? "page" : undefined}
+                            aria-label={shouldUseCollapsedLayout ? item.label : undefined}
+                            onClick={() => onPageChange(item.id)}
+                            className={`flex w-full items-center rounded-[6px] transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+                              shouldUseCollapsedLayout
+                                ? "justify-center px-0 py-2.5"
+                                : "gap-3 px-3 py-2.5"
+                            } ${
+                              isActive
+                                ? "bg-white text-black font-semibold"
+                                : "text-white/60 hover:bg-white/5 hover:text-white/85"
+                            }`}
+                          >
+                            <Icon
+                              className={`h-4 w-4 flex-shrink-0 ${
+                                isActive ? "text-black" : "text-white/50"
+                              }`}
+                            />
+                            {!shouldUseCollapsedLayout && (
+                              <div className="flex min-w-0 flex-col items-start text-left whitespace-nowrap">
+                                <span className="text-sm font-bold leading-none whitespace-nowrap">
+                                  {item.label}
+                                </span>
+                                <span
+                                  className={`mt-1 text-xs leading-none whitespace-nowrap ${
+                                    isActive ? "text-black/60 font-medium" : "text-white/30"
+                                  }`}
+                                >
+                                  {item.description}
+                                </span>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </nav>
             </div>
           )}
         </div>
+
+        {/* 底部设置 */}
+        {mode === "navigation" && (
+          <div
+            className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${
+              shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
+            }`}
+          >
+            {shouldUseCollapsedLayout ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
+                  <Settings className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35 whitespace-nowrap">
+                <Settings className="h-3.5 w-3.5" />
+                <span className="whitespace-nowrap">Settings</span>
+              </div>
+            )}
+          </div>
+        )}
       </aside>
 
-      <button
-        type="button"
-        aria-label={isCollapsed ? "展开左侧导航栏" : "折叠左侧导航栏"}
-        aria-expanded={!isCollapsed}
-        onClick={() => onCollapsedChange(!isCollapsed)}
-        className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
-      >
-        {isCollapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
-      </button>
+      {mode === "navigation" && (
+        <button
+          type="button"
+          aria-label={isCollapsed ? "展开左侧导航栏" : "折叠左侧导航栏"}
+          aria-expanded={!isCollapsed}
+          onClick={() => onCollapsedChange(!isCollapsed)}
+          className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-3 w-3" />
+          ) : (
+            <ChevronLeft className="h-3 w-3" />
+          )}
+        </button>
+      )}
     </div>
   );
 };

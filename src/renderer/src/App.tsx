@@ -15,6 +15,8 @@ import {
 import { Header } from "@renderer/components/layout/Header";
 import { TodayPage } from "@renderer/pages/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
+import { AiChatWorkspace } from "@renderer/components/layout/AiChatWorkspace";
+import { AI_CHAT_SESSIONS } from "@renderer/components/layout/aiChatMock";
 
 /**
  * 记忆策展 Agent 的主应用布局。
@@ -23,6 +25,24 @@ import { ToastProvider } from "@renderer/components/ui/Toast";
 export const App = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+
+  // AI 对话模式打开状态。
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+
+  // 当前激活的 AI 对话会话标识。
+  const [activeChatId, setActiveChatId] = useState<string>(AI_CHAT_SESSIONS[0].id);
+
+  // 当前激活的 AI 对话会话。
+  const activeChatSession =
+    AI_CHAT_SESSIONS.find((session) => session.id === activeChatId) ??
+    AI_CHAT_SESSIONS[0];
+
+  /**
+   * 切换 AI 对话模式。
+   */
+  const handleChatToggle = (): void => {
+    setIsChatOpen((current) => !current);
+  };
 
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
   const getPageFromPathname = (): SidebarPageId => {
@@ -119,10 +139,17 @@ export const App = (): React.JSX.Element => {
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           activePage={activePage}
+          mode={isChatOpen ? "chat" : "navigation"}
+          chatSessions={AI_CHAT_SESSIONS}
+          activeChatId={activeChatId}
           onCollapsedChange={setIsSidebarCollapsed}
           onPageChange={(pageId) => {
             window.history.pushState({}, "", `/${pageId}`);
             setActivePage(pageId);
+          }}
+          onChatSessionChange={setActiveChatId}
+          onNewChat={() => {
+            setActiveChatId(AI_CHAT_SESSIONS[0].id);
           }}
         />
 
@@ -130,13 +157,33 @@ export const App = (): React.JSX.Element => {
         <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden min-w-0">
           {/* 固定的顶部栏 */}
           <Header
-            category={getPageCategory(activePage)}
-            activePage={activePage}
+            category={isChatOpen ? "AGENT" : getPageCategory(activePage)}
+            activePage={isChatOpen ? "chat" : activePage}
+            isChatOpen={isChatOpen}
+            onChatToggle={handleChatToggle}
           />
 
-          <div className="flex-1 min-h-0 relative">
-            <div className="w-full h-full">
-              {renderActivePage()}
+          <div className="flex-1 min-h-0 relative overflow-hidden">
+            <div
+              className={`absolute inset-0 transition-all duration-300 ease-out ${
+                isChatOpen
+                  ? "pointer-events-none opacity-0 scale-[0.995]"
+                  : "pointer-events-auto opacity-100 scale-100"
+              }`}
+              aria-hidden={isChatOpen}
+            >
+              <div className="w-full h-full">{renderActivePage()}</div>
+            </div>
+
+            <div
+              className={`absolute inset-0 transition-all duration-300 ease-out ${
+                isChatOpen
+                  ? "pointer-events-auto translate-y-0 opacity-100"
+                  : "pointer-events-none translate-y-2 opacity-0"
+              }`}
+              aria-hidden={!isChatOpen}
+            >
+              <AiChatWorkspace session={activeChatSession} />
             </div>
           </div>
         </div>
