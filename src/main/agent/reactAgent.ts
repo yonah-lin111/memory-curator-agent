@@ -5,6 +5,7 @@ import type {
   ModelToolCallDoneEvent,
   ReactAgentRunInput
 } from './types'
+import { prepareToolsForModel } from './toolRegistry'
 
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
@@ -40,7 +41,8 @@ const resolveToolName = (toolCall: ModelToolCallDoneEvent, tools: AgentTool[]): 
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
   const messages: AgentMessage[] = [...input.messages]
-  const toolsByName = new Map<string, AgentTool>(input.tools.map((tool) => [tool.name, tool]))
+  const tools = prepareToolsForModel(input.tools)
+  const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
 
   yield {
@@ -54,7 +56,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     for await (const event of input.provider.streamTurn({
       model: input.model,
       messages,
-      tools: input.tools
+      tools
     })) {
       if (event.type === 'text_delta') {
         if (!emittedText) {
@@ -87,7 +89,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
     const normalizedToolCalls = toolCalls.map((toolCall) => ({
       ...toolCall,
-      name: resolveToolName(toolCall, input.tools)
+      name: resolveToolName(toolCall, tools)
     }))
 
     messages.push({

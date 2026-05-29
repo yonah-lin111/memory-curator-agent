@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
 import { getDatabase } from '../db'
 import { createPeopleService, type DatabaseConnection } from '../services/peopleService'
-import { createPeopleListTool } from '../agent/peopleTool'
 import { loadProviderConfig } from '../agent/providerConfig'
 import { createModelProvider } from '../agent/providerFactory'
 import { runReactAgent } from '../agent/reactAgent'
+import { createAgentToolRegistry } from '../agent/toolRegistry'
 import type { AgentMessage, AgentStreamEvent } from '../agent/types'
 
 // AI 对话启动载荷。
@@ -93,6 +93,9 @@ const createModelOptionsResponse = (): AiModelOptionsResponse => {
 export const registerAiHandlers = (): void => {
   const database = getDatabase()
   const peopleService = createPeopleService(database as unknown as DatabaseConnection)
+  const toolRegistry = createAgentToolRegistry({
+    peopleService
+  })
 
   ipcMain.handle('ai:model-options:get', async () => createModelOptionsResponse())
 
@@ -120,7 +123,7 @@ export const registerAiHandlers = (): void => {
     }
 
     const provider = await createModelProvider(providerConfig)
-    const tools = [createPeopleListTool(peopleService)]
+    const tools = toolRegistry.all()
 
     const sendEvent = (agentEvent: AgentStreamEvent): void => {
       event.sender.send('ai:chat:event', {

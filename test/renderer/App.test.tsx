@@ -362,7 +362,8 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    await user.selectOptions(await screen.findByLabelText('AI 模型'), 'gemini::gemini-3.5-flash')
+    await user.click(await screen.findByRole('button', { name: /MiniMax-M2\.5/ }))
+    await user.click(screen.getByRole('option', { name: 'Gemini 3.5 Flash' }))
     await user.type(screen.getByLabelText('AI 对话输入框'), '使用 Gemini')
     await user.click(screen.getByRole('button', { name: '发送消息' }))
 

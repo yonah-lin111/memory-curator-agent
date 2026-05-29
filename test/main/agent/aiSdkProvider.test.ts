@@ -148,4 +148,65 @@ describe('aiSdkProvider', () => {
       }
     ])
   })
+
+  it('发送给 AI SDK 前统一准备工具定义', async () => {
+    let capturedInput: Record<string, unknown> | undefined
+    const config: NormalizedProviderConfig = {
+      id: 'bailian',
+      type: 'openai-compatible',
+      name: 'Bailian',
+      npm: '@ai-sdk/openai-compatible',
+      options: {
+        apiKey: 'test-key',
+        baseURL: 'https://example.com/v1'
+      },
+      models: {}
+    }
+    const provider = await createAiSdkModelProvider(config, {
+      loadPackage: async () => ({
+        createOpenAICompatible: () => (model: string) => ({
+          model
+        })
+      }),
+      streamText: (input) => {
+        capturedInput = input
+        return {
+          stream: (async function* () {
+            yield {
+              type: 'finish'
+            }
+          })()
+        }
+      }
+    })
+
+    await Array.fromAsync(
+      provider.streamTurn({
+        model: 'MiniMax-M2.5',
+        messages: [
+          {
+            role: 'user',
+            content: '查一下'
+          }
+        ],
+        tools: [
+          {
+            name: 'people_list',
+            description: '查询 People 表',
+            parameters: {
+              type: 'object',
+              properties: {}
+            },
+            execute: async () => ({
+              observation: '',
+              data: []
+            })
+          }
+        ]
+      })
+    )
+
+    const tools = capturedInput?.tools as Record<string, { description?: string }>
+    expect(tools.people_list.description).toContain('严格按参数 Schema 提供参数')
+  })
 })

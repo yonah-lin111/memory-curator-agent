@@ -7,6 +7,7 @@ import type {
   ModelTurnInput,
   NormalizedProviderConfig
 } from './types'
+import { prepareToolsForModel } from './toolRegistry'
 
 // AI SDK provider 模块。
 type AiSdkProviderModule = Record<string, unknown>
@@ -132,7 +133,7 @@ const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
  */
 const toAiSdkTools = (tools: AgentTool[]): Record<string, unknown> =>
   Object.fromEntries(
-    tools.map((agentTool) => [
+    prepareToolsForModel(tools).map((agentTool) => [
       agentTool.name,
       tool({
         description: agentTool.description,
