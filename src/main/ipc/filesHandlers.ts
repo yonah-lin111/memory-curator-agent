@@ -15,4 +15,8 @@ export const registerFilesHandlers = (): void => {
   ipcMain.handle('files:markdown-image:save', (_, input: MarkdownImageSaveInput) =>
     filesService.saveMarkdownImage(input)
   )
+
+  ipcMain.handle('files:people-avatar:save', (_, input: MarkdownImageSaveInput) =>
+    filesService.savePeopleAvatar(input)
+  )
 }

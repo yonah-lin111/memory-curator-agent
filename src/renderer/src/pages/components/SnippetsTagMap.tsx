@@ -56,7 +56,7 @@ export const SnippetsTagMap = ({
   lastUpdatedTime,
 }: SnippetsTagMapProps): React.JSX.Element => (
   <aside className="flex min-h-0 flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-    <div className="grid gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <SnippetsMetricCard
         icon={<StickyNote className="h-3.5 w-3.5" />}
         label="片段总数"

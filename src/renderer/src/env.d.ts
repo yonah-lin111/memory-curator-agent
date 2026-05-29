@@ -198,6 +198,8 @@ type AppAPI = {
   files: {
     // 保存 Markdown 图片。
     saveMarkdownImage: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    // 保存人物头像。
+    savePeopleAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
   }
   // Notes 页面 API。
   notes: {

@@ -118,7 +118,9 @@ type MonthOverview = {
 const api = {
   files: {
     saveMarkdownImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:markdown-image:save', payload)
+      ipcRenderer.invoke('files:markdown-image:save', payload),
+    savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
+      ipcRenderer.invoke('files:people-avatar:save', payload)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),

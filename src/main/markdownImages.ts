@@ -1,5 +1,5 @@
 import { basename, join } from 'node:path'
-import { getMarkdownImageDir } from './paths'
+import { getMarkdownImageDir, getPeopleAvatarDir } from './paths'
 
 // Markdown 图片协议。
 export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
@@ -7,11 +7,20 @@ export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
 // Markdown 图片协议主机名。
 export const MARKDOWN_IMAGE_HOST = 'md'
 
+// 人物头像协议主机名。
+export const PEOPLE_AVATAR_HOST = 'people'
+
 /**
  * 创建 Markdown 图片访问 URL。
  */
 export const createMarkdownImageUrl = (fileName: string): string =>
   `${MARKDOWN_IMAGE_PROTOCOL}://${MARKDOWN_IMAGE_HOST}/${encodeURIComponent(fileName)}`
+
+/**
+ * 创建人物头像访问 URL。
+ */
+export const createPeopleAvatarUrl = (fileName: string): string =>
+  `${MARKDOWN_IMAGE_PROTOCOL}://${PEOPLE_AVATAR_HOST}/${encodeURIComponent(fileName)}`
 
 /**
  * 从 Markdown 图片 URL 解析文件名。
@@ -33,10 +42,38 @@ export const resolveMarkdownImageFileName = (requestUrl: string): string | null 
 }
 
 /**
+ * 从人物头像 URL 解析文件名。
+ */
+export const resolvePeopleAvatarFileName = (requestUrl: string): string | null => {
+  const url = new URL(requestUrl)
+
+  if (url.protocol !== `${MARKDOWN_IMAGE_PROTOCOL}:` || url.hostname !== PEOPLE_AVATAR_HOST) {
+    return null
+  }
+
+  const fileName = basename(decodeURIComponent(url.pathname.slice(1)))
+
+  if (!fileName) {
+    return null
+  }
+
+  return fileName
+}
+
+/**
  * 从 Markdown 图片 URL 解析本机文件路径。
  */
 export const resolveMarkdownImagePath = (requestUrl: string): string | null => {
   const fileName = resolveMarkdownImageFileName(requestUrl)
 
   return fileName ? join(getMarkdownImageDir(), fileName) : null
+}
+
+/**
+ * 从人物头像 URL 解析本机文件路径。
+ */
+export const resolvePeopleAvatarPath = (requestUrl: string): string | null => {
+  const fileName = resolvePeopleAvatarFileName(requestUrl)
+
+  return fileName ? join(getPeopleAvatarDir(), fileName) : null
 }

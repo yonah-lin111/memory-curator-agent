@@ -10,6 +10,7 @@ import type { FilesService } from '../../../src/main/services/filesService'
 // 测试用文件服务。
 const filesService: FilesService = {
   saveMarkdownImage: vi.fn(),
+  savePeopleAvatar: vi.fn(),
   listUnusedMarkdownImages: vi.fn(),
   restoreReferencedMarkdownImages: vi.fn(),
   deleteUnusedMarkdownImages: vi.fn()

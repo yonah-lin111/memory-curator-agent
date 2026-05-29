@@ -22,6 +22,11 @@ export const getDatabasePath = (): string => join(getDatabaseDir(), 'curator.db'
 export const getMarkdownImageDir = (): string => join(getAppDataRoot(), 'img', 'md')
 
 /**
+ * 获取人物头像存储目录。
+ */
+export const getPeopleAvatarDir = (): string => join(getAppDataRoot(), 'img', 'people')
+
+/**
  * 获取 Markdown 图片回收目录。
  */
 export const getMarkdownImageTrashDir = (): string => join(getAppDataRoot(), 'trash', 'img', 'md')

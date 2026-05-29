@@ -6,7 +6,8 @@ import { getMarkdownImageDir, getMarkdownImageTrashDir } from '../paths'
 import {
   MARKDOWN_IMAGE_PROTOCOL,
   resolveMarkdownImageFileName,
-  resolveMarkdownImagePath
+  resolveMarkdownImagePath,
+  resolvePeopleAvatarPath
 } from '../markdownImages'
 
 /**
@@ -70,7 +71,10 @@ export const registerImageProtocolHandler = (): void => {
   protocol.handle(MARKDOWN_IMAGE_PROTOCOL, async (request) => {
     await restoreRequestedImageFromTrash(request.url)
 
-    const filePath = resolveMarkdownImagePath(request.url)
+    let filePath = resolveMarkdownImagePath(request.url)
+    if (!filePath) {
+      filePath = resolvePeopleAvatarPath(request.url)
+    }
 
     if (!filePath) {
       return new Response('', { status: 404 })

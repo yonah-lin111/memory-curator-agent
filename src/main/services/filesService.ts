@@ -1,8 +1,8 @@
 import { access, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { getMarkdownImageDir, getMarkdownImageTrashDir } from '../paths'
-import { createMarkdownImageUrl } from '../markdownImages'
+import { getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir } from '../paths'
+import { createMarkdownImageUrl, createPeopleAvatarUrl } from '../markdownImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -90,6 +90,8 @@ type FilesServiceDeps = {
 export type FilesService = {
   // 保存 Markdown 图片。
   saveMarkdownImage: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
+  // 保存人物头像。
+  savePeopleAvatar: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 列出未被 Markdown 引用的图片。
   listUnusedMarkdownImages: () => Promise<MarkdownImageItem[]>
   // 恢复已进入回收目录但仍被 Markdown 引用的图片。
@@ -279,6 +281,7 @@ const getMarkdownImageItem = async (markdownImageDir: string, fileName: string):
 export const createFilesService = (deps: FilesServiceDeps = {}): FilesService => {
   const markdownImageDir = deps.markdownImageDir ?? getMarkdownImageDir()
   const markdownImageTrashDir = deps.markdownImageTrashDir ?? getMarkdownImageTrashDir()
+  const peopleAvatarDir = getPeopleAvatarDir()
 
   return {
     saveMarkdownImage: async (input) => {
@@ -297,6 +300,24 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         fileName,
         filePath,
         url: createMarkdownImageUrl(fileName)
+      }
+    },
+    savePeopleAvatar: async (input) => {
+      if (!input.mimeType.startsWith('image/')) {
+        throw new Error('仅支持保存图片文件')
+      }
+
+      const extension = resolveImageExtension(input.name, input.mimeType)
+      const fileName = `${createSafeFileStem(input.name)}-${randomUUID()}${extension}`
+      const filePath = join(peopleAvatarDir, fileName)
+
+      await mkdir(peopleAvatarDir, { recursive: true })
+      await writeFile(filePath, Buffer.from(new Uint8Array(input.bytes)))
+
+      return {
+        fileName,
+        filePath,
+        url: createPeopleAvatarUrl(fileName)
       }
     },
     listUnusedMarkdownImages: async () => {

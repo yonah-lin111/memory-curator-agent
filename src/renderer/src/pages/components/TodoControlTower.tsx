@@ -47,7 +47,7 @@ export const TodoControlTower = ({
   p0Count,
 }: TodoControlTowerProps): React.JSX.Element => (
   <aside className="flex min-h-0 flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-    <div className="grid gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <TodoMetricCard
         icon={<ListTodo className="h-3.5 w-3.5" />}
         label="总任务"

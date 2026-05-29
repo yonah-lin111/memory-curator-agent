@@ -390,7 +390,7 @@ export const TodoPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Todo 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 min-h-0 flex-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
