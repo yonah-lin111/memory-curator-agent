@@ -187,10 +187,10 @@ export const Sidebar = ({
         {/* 导航与设置面板主体（带覆盖式滑出过渡） */}
         <div
           aria-hidden={mode !== "navigation"}
-          className={`w-full flex-1 flex flex-col justify-between transition-all duration-300 ease-out ${
+          className={`w-full flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
             mode === "navigation"
-              ? "opacity-100 pointer-events-auto translate-x-0 scale-100"
-              : "opacity-0 pointer-events-none -translate-x-full scale-[0.98]"
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
           }`}
         >
           <div
@@ -299,10 +299,10 @@ export const Sidebar = ({
         {/* 聊天历史栏（带从左到右滑出的覆盖过渡动画） */}
         <div
           aria-hidden={mode !== "chat"}
-          className={`absolute inset-4 transition-all duration-300 ease-out flex flex-col ${
+          className={`absolute inset-4 transition-opacity duration-300 ease-out flex flex-col ${
             mode === "chat"
-              ? "translate-x-0 opacity-100 pointer-events-auto"
-              : "-translate-x-full opacity-0 pointer-events-none"
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
           }`}
         >
           <AiChatHistoryList
