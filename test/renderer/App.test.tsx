@@ -407,7 +407,8 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: /周回顾行动拆解/ }))
 
     const chatMain = screen.getByLabelText('AI 对话主体')
-    expect(within(chatMain).getByText('周回顾行动拆解')).toBeInTheDocument()
+    const banner = screen.getByRole('banner')
+    expect(within(banner).getByText('周回顾行动拆解')).toBeInTheDocument()
     expect(within(chatMain).getByText('读取 weekly review 草稿')).toBeInTheDocument()
     expect(screen.getAllByLabelText('工具完成').length).toBeGreaterThan(0)
   })

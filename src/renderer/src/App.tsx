@@ -161,6 +161,7 @@ export const App = (): React.JSX.Element => {
             activePage={isChatOpen ? "chat" : activePage}
             isChatOpen={isChatOpen}
             onChatToggle={handleChatToggle}
+            chatTitle={activeChatSession.title}
           />
 
           <div className="flex-1 min-h-0 relative overflow-hidden">

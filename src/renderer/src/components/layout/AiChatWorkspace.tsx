@@ -1,5 +1,5 @@
 import type React from "react";
-import { Paperclip, SendHorizontal, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import type { AiChatSession } from "@renderer/components/layout/aiChatMock";
 import { AiChatMessageBubble } from "@renderer/components/layout/AiChatMessageBubble";
 import { IconButton } from "@renderer/components/ui/IconButton";
@@ -14,40 +14,11 @@ type AiChatWorkspaceProps = {
  * AiChatWorkspace - 负责渲染 Header 下方的 AI 对话主体工作区。
  */
 export const AiChatWorkspace = ({ session }: AiChatWorkspaceProps): React.JSX.Element => {
-  // 计算当前会话的工具调用总步骤数。
-  const toolStepCount = session.messages.reduce(
-    (acc, msg) => acc + (msg.toolSteps?.length ?? 0),
-    0,
-  );
-
   return (
     <section
       aria-label="AI 对话主体"
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121] select-none"
     >
-      {/* 顶部会话信息条 */}
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-white/5 px-4 py-3 bg-black/10">
-        <div className="flex flex-col min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-white truncate">{session.title}</h3>
-            <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-xs font-mono font-bold tracking-wide text-white/45">
-              {session.status}
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-white/35 truncate">
-            {session.summary}
-          </p>
-        </div>
-
-        {/* 工具数量统计 */}
-        <div className="flex items-center gap-1.5 rounded-[6px] bg-white/[0.02] border border-white/5 px-2 py-1 flex-shrink-0">
-          <Sparkles className="h-3 w-3 text-white/50" />
-          <span className="text-xs font-mono text-white/45 leading-none">
-            {toolStepCount} 个工具步骤
-          </span>
-        </div>
-      </div>
-
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
         {session.messages.map((message) => (

@@ -12,6 +12,8 @@ export interface HeaderProps {
   isChatOpen?: boolean;
   // AI 对话模式切换回调
   onChatToggle?: () => void;
+  // 当前激活的 AI 会话标题
+  chatTitle?: string;
 }
 
 /**
@@ -22,6 +24,7 @@ export const Header = ({
   activePage,
   isChatOpen = false,
   onChatToggle,
+  chatTitle,
 }: HeaderProps): React.JSX.Element => {
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between select-none h-10">
@@ -32,6 +35,12 @@ export const Header = ({
         </span>
         <span className="text-white/20">/</span>
         <span className="text-white font-bold">{activePage}</span>
+        {isChatOpen && chatTitle && (
+          <>
+            <span className="text-white/30 font-bold">·</span>
+            <span className="text-white font-bold max-w-[240px] truncate select-text">{chatTitle}</span>
+          </>
+        )}
       </div>
       <IconButton
         aria-label={isChatOpen ? "关闭聊天" : "打开聊天"}

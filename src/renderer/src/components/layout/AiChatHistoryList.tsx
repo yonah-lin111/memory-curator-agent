@@ -1,5 +1,5 @@
 import type React from "react";
-import { Bot, Clock3, Plus, Search } from "lucide-react";
+import { Bot, Plus, Search } from "lucide-react";
 import type { AiChatSession } from "@renderer/components/layout/aiChatMock";
 import { IconButton } from "@renderer/components/ui/IconButton";
 
@@ -68,7 +68,7 @@ export const AiChatHistoryList = ({
               type="button"
               aria-current={isActive ? "true" : undefined}
               onClick={() => onSessionChange(session.id)}
-              className={`flex flex-col gap-1.5 rounded-[6px] p-2.5 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                 isActive
                   ? "bg-white text-black font-semibold"
                   : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
@@ -79,7 +79,7 @@ export const AiChatHistoryList = ({
                   {session.title}
                 </span>
                 <span
-                  className={`text-xs font-mono leading-none ${
+                  className={`text-[10px] font-mono leading-none flex-shrink-0 ${
                     isActive ? "text-black/55" : "text-white/30"
                   }`}
                 >
@@ -87,26 +87,12 @@ export const AiChatHistoryList = ({
                 </span>
               </div>
               <p
-                className={`text-xs leading-snug line-clamp-2 ${
+                className={`text-[11px] leading-relaxed truncate w-full ${
                   isActive ? "text-black/75" : "text-white/40"
                 }`}
               >
                 {session.summary}
               </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Clock3
-                  className={`h-3 w-3 flex-shrink-0 ${
-                    isActive ? "text-black/60" : "text-white/25"
-                  }`}
-                />
-                <span
-                  className={`text-xs font-mono leading-none ${
-                    isActive ? "text-black/60" : "text-white/30"
-                  }`}
-                >
-                  {session.status}
-                </span>
-              </div>
             </button>
           );
         })}
