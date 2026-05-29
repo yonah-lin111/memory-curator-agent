@@ -12,6 +12,7 @@ import {
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
 import { Tag } from "@renderer/components/ui/Tag";
+import { Select, type SelectOption } from "@renderer/components/ui/Select";
 import type { NoteMaterialItem, NoteDraft } from "@renderer/pages/NotesPage";
 
 // 笔记弹窗属性。
@@ -31,6 +32,13 @@ const NOTE_SOURCE_OPTIONS: NoteMaterialItem["source"][] = [
   "截图文字",
   "会议摘要",
 ];
+
+// 笔记来源下拉选项。
+const NOTE_SOURCE_SELECT_OPTIONS: SelectOption<NoteMaterialItem["source"]>[] =
+  NOTE_SOURCE_OPTIONS.map((source) => ({
+    value: source,
+    label: source,
+  }));
 
 // Markdown 笔记初始草稿。
 const INITIAL_NOTE_DRAFT: NoteDraft = {
@@ -56,29 +64,21 @@ export const NoteMarkdownModal = ({
   );
   // 属性 Popover 是否打开。
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // 来源下拉框是否打开。
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
   // 标签输入草稿。
   const [tagInput, setTagInput] = useState<string>("");
   // Popover 容器的 DOM 引用。
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  // 下拉框容器的 DOM 引用。
-  const selectRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     /**
-     * 处理点击外部区域时自动关闭下拉框与 Popover。
+     * 处理点击外部区域时自动关闭 Popover。
      */
     const handleClickOutside = (event: MouseEvent): void => {
       const target = event.target as Node;
 
-      // 如果点击在 popover 外部，则关闭整个 popover (及其内部的选择下拉框)
+      // 如果点击在 popover 外部，则关闭整个 popover
       if (popoverRef.current && !popoverRef.current.contains(target)) {
         setIsPopoverOpen(false);
-        setIsSelectOpen(false);
-      } else if (selectRef.current && !selectRef.current.contains(target)) {
-        // 如果点击在 select 外部但在 popover 内部，只关闭 select 下拉框
-        setIsSelectOpen(false);
       }
     };
 
@@ -249,56 +249,14 @@ export const NoteMarkdownModal = ({
 
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">来源渠道</span>
-                  <div ref={selectRef} className="relative">
-                    <IconButton
-                      iconOnly={false}
-                      hoverBgClass=""
-                      hoverTextClass=""
-                      aria-haspopup="listbox"
-                      aria-expanded={isSelectOpen}
-                      aria-label="Markdown 笔记来源"
-                      className="flex h-8 w-full items-center justify-between border border-white/10 bg-black px-2.5 py-1.5 text-xs font-normal text-white/80 outline-none hover:border-white/20 focus:border-white/25"
-                      onClick={() => setIsSelectOpen((prev) => !prev)}
-                    >
-                      <span>{draft.source}</span>
-                      <ChevronDown
-                        className={`h-3 w-3 text-white/55 transition-transform duration-150 ${isSelectOpen ? "rotate-180" : ""}`}
-                      />
-                    </IconButton>
-                    {isSelectOpen && (
-                      <div
-                        role="listbox"
-                        className="absolute bottom-[100%] left-0 z-50 mb-1 w-full rounded-[6px] border border-white/10 bg-black p-1 shadow-lg"
-                      >
-                        {NOTE_SOURCE_OPTIONS.map((source) => {
-                           const isSelected = draft.source === source;
-                           return (
-                             <IconButton
-                               key={source}
-                               role="option"
-                               aria-selected={isSelected}
-                               iconOnly={false}
-                               hoverBgClass="hover:bg-white/10"
-                               className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none ${
-                                 isSelected
-                                   ? "bg-white/5 text-white"
-                                   : "text-white/70"
-                               }`}
-                               onClick={() => {
-                                 handleDraftChange({ source });
-                                 setIsSelectOpen(false);
-                               }}
-                             >
-                               <span>{source}</span>
-                               {isSelected && (
-                                 <Check className="h-3 w-3 text-white" />
-                               )}
-                             </IconButton>
-                           );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  <Select
+                    value={draft.source}
+                    options={NOTE_SOURCE_SELECT_OPTIONS}
+                    position="up"
+                    bgClass="bg-black"
+                    align="left"
+                    onChange={(source) => handleDraftChange({ source })}
+                  />
                 </div>
               </div>
             )}
