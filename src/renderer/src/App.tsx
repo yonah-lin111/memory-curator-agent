@@ -17,6 +17,11 @@ import { TodayPage } from "@renderer/pages/today/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { AiChatWorkspace } from "@renderer/features/ai-chat/components/AiChatWorkspace";
 import {
+  buildMessageContextItems,
+  type AiChatContextItem,
+} from "@renderer/features/ai-chat/aiChatContextBuilder";
+import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
+import {
   AI_CHAT_SESSIONS,
   type AiChatEvent,
   type AiChatSession,
@@ -295,6 +300,25 @@ export const App = (): React.JSX.Element => {
   }, []);
 
   /**
+   * 构造发送给主进程的上下文，优先使用当前 React 状态中的消息避免 store 同步延迟。
+   */
+  const buildStartContextItems = (sessionId: string): AiChatContextItem[] => {
+    const session = chatSessions.find((item) => item.id === sessionId);
+    const storeItems = useAiChatContextStore.getState().getSessionItems(sessionId);
+    const preservedItems = storeItems.filter((item) => item.kind !== "message");
+    const messageItems = buildMessageContextItems(sessionId, session?.messages ?? []);
+    const itemsByKey = new Map<string, AiChatContextItem>();
+
+    for (const item of [...preservedItems, ...messageItems]) {
+      if (!itemsByKey.has(item.key)) {
+        itemsByKey.set(item.key, item);
+      }
+    }
+
+    return Array.from(itemsByKey.values());
+  };
+
+  /**
    * 发送用户消息并触发 AI 回答。
    */
   const handleSendMessage = (text: string): void => {
@@ -306,6 +330,7 @@ export const App = (): React.JSX.Element => {
     const assistantMessageId = `msg-${Date.now()}-ai`;
     const runId = `run-${Date.now()}`;
     const hasAiBridge = Boolean(window.api?.ai);
+    const contextItems = buildStartContextItems(sessionId);
 
     const userMessage = {
       id: `msg-${Date.now()}-user`,
@@ -356,6 +381,7 @@ export const App = (): React.JSX.Element => {
         message: text,
         provider: selectedAiModel?.provider,
         model: selectedAiModel?.model,
+        context: contextItems,
       })
       .catch((error: unknown) => {
         updateAiMessage(sessionId, assistantMessageId, (message) => ({
@@ -486,10 +512,10 @@ export const App = (): React.JSX.Element => {
 
           <div className="flex-1 min-h-0 relative overflow-hidden">
             <div
-              className={`absolute inset-0 transition-all duration-300 ease-out ${
+              className={`absolute inset-0 transition-opacity duration-300 ease-out ${
                 isChatOpen
-                  ? "pointer-events-none opacity-0 scale-[0.98] -translate-y-8"
-                  : "pointer-events-auto opacity-100 scale-100 translate-y-0"
+                  ? "pointer-events-none opacity-0"
+                  : "pointer-events-auto opacity-100"
               }`}
               aria-hidden={isChatOpen}
             >
@@ -497,10 +523,10 @@ export const App = (): React.JSX.Element => {
             </div>
 
             <div
-              className={`absolute inset-0 transition-all duration-300 ease-out ${
+              className={`absolute inset-0 transition-opacity duration-300 ease-out ${
                 isChatOpen
-                  ? "pointer-events-auto translate-y-0 opacity-100"
-                  : "pointer-events-none translate-y-12 opacity-0"
+                  ? "pointer-events-auto opacity-100"
+                  : "pointer-events-none opacity-0"
               }`}
               aria-hidden={!isChatOpen}
             >

@@ -378,6 +378,77 @@ describe('App', () => {
     })
   })
 
+  it('AI 对话第二轮发送时携带上一轮消息上下文', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+      runId: payload.runId ?? 'run-test'
+    }))
+
+    window.api = {
+      ai: {
+        startChat,
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.type(screen.getByLabelText('AI 对话输入框'), '第一个问题是什么')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledTimes(1)
+    })
+
+    const firstPayload = startChat.mock.calls[0][0]
+
+    act(() => {
+      listeners.forEach((listener) =>
+        listener({
+          type: 'text_delta',
+          runId: firstPayload.runId!,
+          sessionId: firstPayload.sessionId,
+          delta: '第一个问题是关于上下文。'
+        })
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('第一个问题是关于上下文。')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByLabelText('AI 对话输入框'), '上一个问题是什么')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledTimes(2)
+    })
+
+    expect(startChat.mock.calls[1][0].context).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'message',
+          content: '第一个问题是什么',
+          meta: expect.objectContaining({
+            role: 'user'
+          })
+        }),
+        expect.objectContaining({
+          kind: 'message',
+          content: '第一个问题是关于上下文。',
+          meta: expect.objectContaining({
+            role: 'assistant'
+          })
+        })
+      ])
+    )
+  })
+
   it('切换完成状态后不会自动重排，点击一键排序后才会重排', async () => {
     const user = userEvent.setup()
 

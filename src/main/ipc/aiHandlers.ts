@@ -6,6 +6,7 @@ import { loadProviderConfig } from '../agent/providerConfig'
 import { createModelProvider } from '../agent/providerFactory'
 import { runReactAgent } from '../agent/reactAgent'
 import { createAgentToolRegistry } from '../agent/toolRegistry'
+import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/contextMessages'
 import type { AgentMessage, AgentStreamEvent } from '../agent/types'
 
 // AI 对话启动载荷。
@@ -20,6 +21,8 @@ type AiChatStartPayload = {
   provider?: string
   // 用户选择的模型标识。
   model?: string
+  // 本轮请求可用上下文。
+  context?: AgentContextPayloadItem[]
 }
 
 // AI 模型选项。
@@ -28,6 +31,20 @@ type AiModelOption = {
   id: string
   // 模型显示名。
   name: string
+  // 模型限制。
+  limit?: {
+    // 上下文窗口 token 上限。
+    context: number
+    // 输出 token 上限。
+    output: number
+  }
+  // 模型输入输出模态。
+  modalities?: {
+    // 支持的输入模态。
+    input: string[]
+    // 支持的输出模态。
+    output: string[]
+  }
 }
 
 // AI Provider 选项。
@@ -70,7 +87,7 @@ export const createSystemPrompt = (): AgentMessage => ({
 /**
  * 创建不含密钥的 AI 模型选项。
  */
-const createModelOptionsResponse = (): AiModelOptionsResponse => {
+export const createModelOptionsResponse = (): AiModelOptionsResponse => {
   const config = loadProviderConfig()
 
   return {
@@ -81,7 +98,9 @@ const createModelOptionsResponse = (): AiModelOptionsResponse => {
       name: provider.name,
       models: Object.entries(provider.models).map(([id, model]) => ({
         id,
-        name: model.name
+        name: model.name,
+        limit: model.limit,
+        modalities: model.modalities
       }))
     }))
   }
@@ -124,6 +143,7 @@ export const registerAiHandlers = (): void => {
 
     const provider = await createModelProvider(providerConfig)
     const tools = toolRegistry.all()
+    const modelConfig = providerConfig.models[modelId]
 
     const sendEvent = (agentEvent: AgentStreamEvent): void => {
       event.sender.send('ai:chat:event', {
@@ -138,13 +158,13 @@ export const registerAiHandlers = (): void => {
         for await (const agentEvent of runReactAgent({
           provider,
           model: modelId,
-          messages: [
-            createSystemPrompt(),
-            {
-              role: 'user',
-              content: payload.message
-            }
-          ],
+          messages: buildContextAgentMessages({
+            systemMessage: createSystemPrompt(),
+            userMessage: payload.message,
+            contextItems: payload.context,
+            contextLimit: modelConfig.limit?.context,
+            outputLimit: modelConfig.limit?.output
+          }),
           tools
         })) {
           sendEvent(agentEvent)

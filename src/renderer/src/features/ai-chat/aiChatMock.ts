@@ -15,6 +15,24 @@ export type AiToolStep = {
   observation: string;
 };
 
+// AI 对话启动上下文条目类型。
+export type AiChatStartContextItem = {
+  // 上下文稳定去重键。
+  key: string;
+  // 上下文来源类型。
+  kind: "message" | "memory" | "page" | "file" | "tool" | "agent";
+  // 展示标题。
+  title: string;
+  // 参与模型请求的正文。
+  content: string;
+  // 估算 token 数。
+  tokens?: number;
+  // 创建顺序或时间戳。
+  createdAt?: number;
+  // 来源相关补充信息。
+  meta?: Record<string, string | number | boolean | undefined>;
+};
+
 // AI 对话启动载荷类型。
 export type AiChatStartPayload = {
   // Agent 运行 ID。
@@ -27,6 +45,8 @@ export type AiChatStartPayload = {
   provider?: string;
   // 用户选择的模型标识。
   model?: string;
+  // 本轮请求可用上下文。
+  context?: AiChatStartContextItem[];
 };
 
 // AI 模型选择状态。
@@ -43,6 +63,20 @@ export type AiModelOption = {
   id: string;
   // 模型显示名。
   name: string;
+  // 模型限制。
+  limit?: {
+    // 上下文窗口 token 上限。
+    context: number;
+    // 输出 token 上限。
+    output: number;
+  };
+  // 模型输入输出模态。
+  modalities?: {
+    // 支持的输入模态。
+    input: string[];
+    // 支持的输出模态。
+    output: string[];
+  };
 };
 
 // AI Provider 选项。

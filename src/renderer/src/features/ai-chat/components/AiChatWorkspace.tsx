@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type {
   AiChatSession,
   AiModelProviderOption,
@@ -7,6 +7,16 @@ import type {
 } from "@renderer/features/ai-chat/aiChatMock";
 import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
 import { AiChatInput } from "@renderer/features/ai-chat/components/AiChatInput";
+import { AiChatContextBar } from "@renderer/features/ai-chat/components/AiChatContextBar";
+import {
+  buildMessageContextItems,
+  getAiChatContextBudget,
+  type AiChatContextItem,
+} from "@renderer/features/ai-chat/aiChatContextBuilder";
+import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
+
+// 空上下文数组，避免 Zustand selector 在空态返回新引用。
+const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
@@ -33,11 +43,33 @@ export const AiChatWorkspace = ({
   onModelChange,
 }: AiChatWorkspaceProps): React.JSX.Element => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const syncMessageItems = useAiChatContextStore((state) => state.syncMessageItems);
+  const contextItems = useAiChatContextStore(
+    (state) => state.sessionItems[session.id] ?? EMPTY_CONTEXT_ITEMS,
+  );
+  const messageContextItems = useMemo(
+    () => buildMessageContextItems(session.id, session.messages),
+    [session.id, session.messages],
+  );
+  const contextBudget = useMemo(
+    () =>
+      getAiChatContextBudget({
+        items: contextItems,
+        modelOptions,
+        selectedModel,
+      }),
+    [contextItems, modelOptions, selectedModel],
+  );
 
   // 当消息列表更新时，平滑滚动至最底部。
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [session.messages]);
+
+  // 将当前消息列表同步为全局上下文中的 message 来源。
+  useEffect(() => {
+    syncMessageItems(session.id, messageContextItems);
+  }, [messageContextItems, session.id, syncMessageItems]);
 
   return (
     <section
@@ -46,6 +78,7 @@ export const AiChatWorkspace = ({
     >
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
+        <AiChatContextBar items={contextItems} budget={contextBudget} />
         {session.messages.map((message) => (
           <AiChatMessageBubble key={message.id} message={message} />
         ))}
