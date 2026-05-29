@@ -214,6 +214,15 @@ html:hover::-webkit-scrollbar-thumb,
   font-size: 14px;
 }
 
+/* 人物档案 Markdown 预览背景设为透明，消除灰色或黑底，自然融入卡片底色 */
+.markdown-preview-container .md-editor,
+.markdown-preview-container .md-editor-dark,
+.markdown-preview-container .md-editor-preview,
+.markdown-preview-container .md-editor-preview-wrapper {
+  background-color: transparent !important;
+  --md-bk-color: transparent !important;
+}
+
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
 @keyframes modal-backdrop-in {
   from {

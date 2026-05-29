@@ -840,6 +840,7 @@ export const PeoplePage = (): React.JSX.Element => {
                               modelValue={currentPerson.details}
                               previewTheme="default"
                               codeTheme="atom"
+                              style={{ backgroundColor: 'transparent' }}
                             />
                           </div>
                         ) : (
