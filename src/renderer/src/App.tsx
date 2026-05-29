@@ -167,8 +167,8 @@ export const App = (): React.JSX.Element => {
             <div
               className={`absolute inset-0 transition-all duration-300 ease-out ${
                 isChatOpen
-                  ? "pointer-events-none opacity-0 scale-[0.995]"
-                  : "pointer-events-auto opacity-100 scale-100"
+                  ? "pointer-events-none opacity-0 scale-[0.98] -translate-y-8"
+                  : "pointer-events-auto opacity-100 scale-100 translate-y-0"
               }`}
               aria-hidden={isChatOpen}
             >
@@ -179,7 +179,7 @@ export const App = (): React.JSX.Element => {
               className={`absolute inset-0 transition-all duration-300 ease-out ${
                 isChatOpen
                   ? "pointer-events-auto translate-y-0 opacity-100"
-                  : "pointer-events-none translate-y-2 opacity-0"
+                  : "pointer-events-none translate-y-12 opacity-0"
               }`}
               aria-hidden={!isChatOpen}
             >

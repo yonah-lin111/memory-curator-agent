@@ -30,6 +30,8 @@ export type AiChatMessage = {
   time: string;
   // 可选工具调用摘要。
   toolSteps?: AiToolStep[];
+  // 可选最终回答（整合在同一个回复中）。
+  answer?: string;
 };
 
 // AI 会话类型，描述左侧历史列表和右侧聊天主体。
@@ -67,7 +69,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
         id: "today-ai-1",
         role: "assistant",
         content: "我会先读取今天的任务、随记和日记，再归并成可回看的一条主线。",
-        time: "10:21",
+        time: "10:24",
         toolSteps: [
           {
             id: "today-step-1",
@@ -91,12 +93,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
             observation: "主线聚焦在渲染层稳定性、笔记归档和下一步验证。",
           },
         ],
-      },
-      {
-        id: "today-ai-2",
-        role: "assistant",
-        content: "今天的核心线索是：先把输入源稳定下来，再用可验证的小步推进页面体验。下一步最值得做的是补齐 AI 对话模式的静态测试。",
-        time: "10:24",
+        answer: "今天的核心线索是：先把输入源稳定下来，再用可验证的小步推进页面体验。下一步最值得做的是补齐 AI 对话模式的静态测试。",
       },
     ],
   },
@@ -117,7 +114,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
         id: "weekly-ai-1",
         role: "assistant",
         content: "我会先定位周回顾草稿，再把模糊事项压缩成具体动作。",
-        time: "09:08",
+        time: "09:12",
         toolSteps: [
           {
             id: "weekly-step-1",
@@ -134,6 +131,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
             observation: "生成 3 条明天可执行的任务，均可在 30 分钟内启动。",
           },
         ],
+        answer: "本周回顾行动拆解已完成，建议执行以下 3 个动作：\n1. 补齐今天 Today 视图的 AI 对话单元测试。\n2. 对本地隐私过滤功能模块设计进行核对与演进。\n3. 为本周 Review 提炼核心演化线索并存储至 Notes。",
       },
     ],
   },

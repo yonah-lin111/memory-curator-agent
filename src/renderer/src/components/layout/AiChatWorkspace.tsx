@@ -29,12 +29,12 @@ export const AiChatWorkspace = ({ session }: AiChatWorkspaceProps): React.JSX.El
       <div className="flex flex-shrink-0 items-center justify-between border-b border-white/5 px-4 py-3 bg-black/10">
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-white truncate">{session.title}</h3>
-            <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-[9px] font-mono font-bold tracking-wide text-white/45">
+            <h3 className="text-sm font-bold text-white truncate">{session.title}</h3>
+            <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-xs font-mono font-bold tracking-wide text-white/45">
               {session.status}
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] text-white/35 truncate">
+          <p className="mt-0.5 text-xs text-white/35 truncate">
             {session.summary}
           </p>
         </div>
@@ -42,7 +42,7 @@ export const AiChatWorkspace = ({ session }: AiChatWorkspaceProps): React.JSX.El
         {/* 工具数量统计 */}
         <div className="flex items-center gap-1.5 rounded-[6px] bg-white/[0.02] border border-white/5 px-2 py-1 flex-shrink-0">
           <Sparkles className="h-3 w-3 text-white/50" />
-          <span className="text-[10px] font-mono text-white/45 leading-none">
+          <span className="text-xs font-mono text-white/45 leading-none">
             {toolStepCount} 个工具步骤
           </span>
         </div>
@@ -64,7 +64,7 @@ export const AiChatWorkspace = ({ session }: AiChatWorkspaceProps): React.JSX.El
             placeholder="输入消息，当前为 mock 展示..."
             disabled
             aria-label="AI 对话输入框"
-            className="w-full bg-transparent text-xs text-white placeholder:text-white/20 outline-none resize-none cursor-not-allowed leading-relaxed px-1"
+            className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none cursor-not-allowed leading-relaxed px-1"
           />
 
           {/* 工具栏与发送按钮 */}

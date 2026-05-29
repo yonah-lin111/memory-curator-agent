@@ -1,5 +1,5 @@
 import type React from "react";
-import { CheckCircle2, CircleDashed, Loader2, Wrench } from "lucide-react";
+import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
 import type { AiToolStep, AiToolStepStatus } from "@renderer/components/layout/aiChatMock";
 
 // AI 工具调用块组件属性类型。
@@ -34,46 +34,42 @@ const getStatusConfig = (
  */
 export const AiToolCallBlock = ({ steps }: AiToolCallBlockProps): React.JSX.Element => {
   return (
-    <div className="my-3 rounded-[6px] border border-white/10 bg-black/25 p-3 flex flex-col gap-3">
-      {/* 头部标题与 Wrench 图标 */}
-      <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-        <Wrench className="h-3.5 w-3.5 text-white/50" />
-        <span className="text-xs font-bold tracking-wider text-white/70 font-mono">
-          ReAct 执行摘要
-        </span>
-      </div>
-
+    <div className="my-2 flex flex-col gap-3">
       {/* 步骤列表 */}
-      <div className="flex flex-col gap-3">
-        {steps.map((step) => {
+      <div className="relative flex flex-col gap-5 pl-1">
+        {steps.map((step, index) => {
           const config = getStatusConfig(step.status);
           const StatusIcon = config.icon;
 
           return (
-            <div
-              key={step.id}
-              className="flex flex-col gap-1.5 border-l-2 border-white/10 pl-3 last:border-0 last:pb-0"
-            >
-              {/* 步骤基本信息与状态 */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white/80">{step.title}</span>
-                  <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-[10px] font-mono text-white/45">
+            <div key={step.id} className="relative flex gap-3.5 items-start">
+              {/* 时间轴节点列 */}
+              <div className="relative flex flex-col items-center flex-shrink-0 w-6 self-stretch">
+                <div
+                  aria-label={config.label}
+                  className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#212121] border border-white/10"
+                >
+                  <StatusIcon className={`h-3 w-3 ${config.className}`} />
+                </div>
+                {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
+                {index < steps.length - 1 && (
+                  <div className="absolute top-3 bottom-[-32px] w-[2px] bg-white/5" />
+                )}
+              </div>
+
+              {/* 步骤详细内容 */}
+              <div className="flex-1 min-w-0 flex flex-col gap-1 pt-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-white/85">{step.title}</span>
+                  <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-xs font-mono text-white/45">
                     {step.tool}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <StatusIcon className={`h-3 w-3 ${config.className}`} />
-                  <span className={`text-[10px] font-mono leading-none ${config.className}`}>
-                    {config.label}
-                  </span>
-                </div>
-              </div>
 
-              {/* 执行结果观察摘要 */}
-              <p className="text-[11px] leading-relaxed text-white/45">
-                {step.observation}
-              </p>
+                <p className="text-xs leading-relaxed text-white/45">
+                  {step.observation}
+                </p>
+              </div>
             </div>
           );
         })}

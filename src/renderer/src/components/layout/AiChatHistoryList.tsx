@@ -13,6 +13,8 @@ type AiChatHistoryListProps = {
   onSessionChange: (sessionId: string) => void;
   // 新建 AI 会话回调。
   onNewChat: () => void;
+  // 是否隐藏
+  "aria-hidden"?: boolean;
 };
 
 /**
@@ -23,11 +25,13 @@ export const AiChatHistoryList = ({
   activeSessionId,
   onSessionChange,
   onNewChat,
+  "aria-hidden": ariaHidden,
 }: AiChatHistoryListProps): React.JSX.Element => {
   return (
     <div
       className="flex h-full w-full flex-col gap-4 select-none"
       aria-label="对话历史列表"
+      aria-hidden={ariaHidden}
     >
       {/* 顶部标题与新建按钮 */}
       <div className="flex items-center justify-between px-1">
@@ -75,7 +79,7 @@ export const AiChatHistoryList = ({
                   {session.title}
                 </span>
                 <span
-                  className={`text-[10px] font-mono leading-none ${
+                  className={`text-xs font-mono leading-none ${
                     isActive ? "text-black/55" : "text-white/30"
                   }`}
                 >
@@ -83,7 +87,7 @@ export const AiChatHistoryList = ({
                 </span>
               </div>
               <p
-                className={`text-[11px] leading-snug line-clamp-2 ${
+                className={`text-xs leading-snug line-clamp-2 ${
                   isActive ? "text-black/75" : "text-white/40"
                 }`}
               >
@@ -96,7 +100,7 @@ export const AiChatHistoryList = ({
                   }`}
                 />
                 <span
-                  className={`text-[10px] font-mono leading-none ${
+                  className={`text-xs font-mono leading-none ${
                     isActive ? "text-black/60" : "text-white/30"
                   }`}
                 >
@@ -112,11 +116,11 @@ export const AiChatHistoryList = ({
       <div className="mt-auto rounded-[6px] border border-white/5 bg-white/[0.02] p-3 flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5">
           <Bot className="h-3.5 w-3.5 text-white/60" />
-          <span className="text-[11px] font-bold text-white/60 font-mono">
+          <span className="text-xs font-bold text-white/60 font-mono">
             ReAct Mock Mode
           </span>
         </div>
-        <p className="text-[10px] leading-relaxed text-white/35">
+        <p className="text-xs leading-relaxed text-white/35">
           Plan &rarr; Tool &rarr; Observation &rarr; Answer
         </p>
       </div>
