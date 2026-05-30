@@ -77,9 +77,18 @@ export const AiChatWorkspace = ({
     >
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
-        {session.messages.map((message) => (
-          <AiChatMessageBubble key={message.id} message={message} />
-        ))}
+        {session.messages.map((message, index) => {
+          const isLast = index === session.messages.length - 1;
+          const isGenerating =
+            isLast && session.status === "运行中" && message.role === "assistant";
+          return (
+            <AiChatMessageBubble
+              key={message.id}
+              message={message}
+              isGenerating={isGenerating}
+            />
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 

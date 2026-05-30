@@ -22,6 +22,8 @@ const MARKDOWN_CODE_FENCE = "```";
 type AiChatMessageBubbleProps = {
   // 当前消息数据。
   message: AiChatMessage;
+  // 是否正在生成中。
+  isGenerating?: boolean;
 };
 
 // Markdown 预览组件属性类型。
@@ -192,7 +194,7 @@ const AiMarkdownPreview = ({
   className = "",
 }: AiMarkdownPreviewProps): React.JSX.Element => {
   return (
-    <div className={`markdown-preview-container select-text ${className}`}>
+    <div className={`markdown-preview-container select-text max-w-full ${className}`}>
       <MdPreview
         theme="dark"
         modelValue={content}
@@ -266,6 +268,7 @@ const findToolStepByPart = (
  */
 export const AiChatMessageBubble = ({
   message,
+  isGenerating = false,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
   const isProcessing = !isUser && message.content.startsWith("正在处理：");
@@ -300,14 +303,16 @@ export const AiChatMessageBubble = ({
         className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}
       >
         <div
-          className={`rounded-[6px] px-1 py-1  text-sm leading-relaxed break-words w-fit ${
-            isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "  text-white/80"
+          className={`rounded-[6px] px-1 py-1  text-sm leading-relaxed break-words w-fit max-w-full ${
+            isUser
+              ? "bg-transparent text-white font-medium whitespace-pre-wrap"
+              : "  text-white/80"
           }`}
         >
           {isUser ? (
             message.content
           ) : (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 max-w-full">
               {(() => {
                 const groupedElements: React.JSX.Element[] = [];
                 let currentToolSteps: AiToolStep[] = [];
@@ -317,7 +322,10 @@ export const AiChatMessageBubble = ({
                   if (currentToolSteps.length > 0) {
                     const key = currentToolKeys.join("-");
                     groupedElements.push(
-                      <AiToolCallBlock key={key} steps={[...currentToolSteps]} />
+                      <AiToolCallBlock
+                        key={key}
+                        steps={[...currentToolSteps]}
+                      />,
                     );
                     currentToolSteps = [];
                     currentToolKeys = [];
@@ -328,7 +336,10 @@ export const AiChatMessageBubble = ({
                   if (part.kind === "text") {
                     flushToolSteps();
                     groupedElements.push(
-                      <AiMarkdownPreview key={part.id} content={part.content} />
+                      <AiMarkdownPreview
+                        key={part.id}
+                        content={part.content}
+                      />,
                     );
                   } else {
                     const step = findToolStepByPart(message.toolSteps, part);
@@ -360,7 +371,17 @@ export const AiChatMessageBubble = ({
             isUser ? "text-right" : "text-left"
           }`}
         >
-          {message.time}
+          {isGenerating ? (
+            <span className="flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40"></span>
+              </span>
+              <span>AI 正在输出...</span>
+            </span>
+          ) : (
+            message.time
+          )}
         </span>
       </div>
     </div>
