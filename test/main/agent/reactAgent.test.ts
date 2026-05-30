@@ -219,6 +219,111 @@ describe('reactAgent', () => {
     expect(toolInputs).toEqual([{}])
   })
 
+  it('工具执行失败时把错误作为工具结果回灌并允许模型再次调用', async () => {
+    const providerInputs: ModelTurnInput[] = []
+    let toolAttempts = 0
+    const provider: ModelProvider = {
+      id: 'fake',
+      type: 'openai-compatible',
+      streamTurn: async function* (input) {
+        providerInputs.push(input)
+
+        if (providerInputs.length === 1) {
+          yield {
+            type: 'tool_call_done',
+            id: 'call-1',
+            name: 'people_query',
+            argumentsText: '{"query":"阿明"}'
+          }
+          yield {
+            type: 'done'
+          }
+          return
+        }
+
+        if (providerInputs.length === 2) {
+          expect(input.messages.at(-1)).toMatchObject({
+            role: 'tool',
+            toolCallId: 'call-1',
+            name: 'people_query'
+          })
+          expect(input.messages.at(-1)?.content).toContain('工具 people_query 执行失败')
+          expect(input.messages.at(-1)?.content).toContain('数据库暂时不可用')
+
+          yield {
+            type: 'tool_call_done',
+            id: 'call-2',
+            name: 'people_query',
+            argumentsText: '{"query":"阿明","retry":true}'
+          }
+          yield {
+            type: 'done'
+          }
+          return
+        }
+
+        yield {
+          type: 'text_delta',
+          delta: '重试后查到了阿明。'
+        }
+        yield {
+          type: 'done'
+        }
+      }
+    }
+    const peopleTool: AgentTool = {
+      name: 'people_query',
+      description: '查询 People 表',
+      parameters: {
+        type: 'object',
+        properties: {}
+      },
+      execute: async () => {
+        toolAttempts += 1
+
+        if (toolAttempts === 1) {
+          throw new Error('数据库暂时不可用')
+        }
+
+        return {
+          observation: '找到 1 位关联人物：阿明',
+          data: [{ name: '阿明' }]
+        }
+      }
+    }
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: 'fake-model',
+        messages: [
+          {
+            role: 'user',
+            content: '阿明是谁'
+          }
+        ],
+        tools: [peopleTool],
+        maxTurns: 3
+      })
+    )
+
+    expect(events.map((event) => event.type)).toEqual([
+      'run_started',
+      'tool_started',
+      'tool_failed',
+      'turn_finished',
+      'tool_started',
+      'tool_finished',
+      'turn_finished',
+      'assistant_message_started',
+      'text_delta',
+      'turn_finished',
+      'done'
+    ])
+    expect(toolAttempts).toBe(2)
+    expect(providerInputs).toHaveLength(3)
+  })
+
   it('普通闲聊不会向模型注入不相关工具', async () => {
     const providerInputs: ModelTurnInput[] = []
     const provider: ModelProvider = {

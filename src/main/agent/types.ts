@@ -261,6 +261,18 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
+      type: 'tool_failed'
+      // 工具步骤 ID。
+      id: string
+      // 工具名称。
+      name: string
+      // 工具输入。
+      input: unknown
+      // 工具错误信息。
+      error: string
+    }
+  | {
+      // 事件类型。
       type: 'turn_finished'
     }
   | {

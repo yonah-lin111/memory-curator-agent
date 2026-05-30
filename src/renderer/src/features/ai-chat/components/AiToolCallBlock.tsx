@@ -1,5 +1,5 @@
 import type React from "react";
-import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
+import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import type {
   AiToolStep,
   AiToolStepStatus,
@@ -34,6 +34,12 @@ const getStatusConfig = (
         label: "工具完成",
         icon: CheckCircle2,
         className: "text-emerald-400",
+      };
+    case "failed":
+      return {
+        label: "工具失败",
+        icon: XCircle,
+        className: "text-red-400",
       };
     case "running":
       return {

@@ -1,5 +1,5 @@
 // 工具步骤状态类型，描述 mock 工具调用当前阶段。
-export type AiToolStepStatus = "done" | "running" | "queued";
+export type AiToolStepStatus = "done" | "failed" | "running" | "queued";
 
 // 工具步骤类型，描述 ReAct 执行摘要中的单步。
 export type AiToolStep = {
@@ -170,6 +170,22 @@ export type AiChatEvent =
       observation: string;
       // 工具数据。
       data: unknown;
+    }
+  | {
+      // 事件类型。
+      type: "tool_failed";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 工具步骤 ID。
+      id: string;
+      // 工具名称。
+      name: string;
+      // 工具输入。
+      input: unknown;
+      // 工具错误信息。
+      error: string;
     }
   | {
       // 事件类型。

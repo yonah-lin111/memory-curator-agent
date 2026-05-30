@@ -61,6 +61,21 @@ const renderToolResultContent = (observation: string, data: unknown): string => 
 }
 
 /**
+ * 提取可回灌给模型的工具错误信息。
+ */
+const getToolErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
+/**
+ * 构造回灌模型的工具失败结果。
+ */
+const renderToolFailureContent = (toolName: string, error: string): string =>
+  renderToolResultContent(`工具 ${toolName} 执行失败：${error}`, {
+    error,
+    tool: toolName
+  })
+
+/**
  * 运行 Claude Code 风格的 ReAct Agent Loop。
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
@@ -137,21 +152,40 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         input: toolInput
       }
 
-      const result = await tool.execute(toolInput)
-      yield {
-        type: 'tool_finished',
-        id: toolCall.id,
-        name: toolCall.name,
-        observation: result.observation,
-        data: result.data
-      }
+      try {
+        const result = await tool.execute(toolInput)
+        yield {
+          type: 'tool_finished',
+          id: toolCall.id,
+          name: toolCall.name,
+          observation: result.observation,
+          data: result.data
+        }
 
-      messages.push({
-        role: 'tool',
-        toolCallId: toolCall.id,
-        name: toolCall.name,
-        content: renderToolResultContent(result.observation, result.data)
-      })
+        messages.push({
+          role: 'tool',
+          toolCallId: toolCall.id,
+          name: toolCall.name,
+          content: renderToolResultContent(result.observation, result.data)
+        })
+      } catch (error) {
+        const errorMessage = getToolErrorMessage(error)
+
+        yield {
+          type: 'tool_failed',
+          id: toolCall.id,
+          name: toolCall.name,
+          input: toolInput,
+          error: errorMessage
+        }
+
+        messages.push({
+          role: 'tool',
+          toolCallId: toolCall.id,
+          name: toolCall.name,
+          content: renderToolFailureContent(toolCall.name, errorMessage)
+        })
+      }
     }
 
     yield {

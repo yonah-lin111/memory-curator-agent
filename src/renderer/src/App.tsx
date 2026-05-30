@@ -286,6 +286,41 @@ export const App = (): React.JSX.Element => {
       return;
     }
 
+    if (event.type === "tool_failed") {
+      updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
+        ...message,
+        toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
+          ? (message.toolSteps ?? []).map((step) =>
+              step.id === event.id
+                ? {
+                    ...step,
+                    status: "failed",
+                    input: event.input,
+                    observation: `工具执行失败：${event.error}`,
+                    data: {
+                      error: event.error,
+                    },
+                  }
+                : step,
+            )
+          : [
+              ...(message.toolSteps ?? []),
+              {
+                id: event.id,
+                title: `工具失败：${event.name}`,
+                status: "failed",
+                tool: event.name,
+                input: event.input,
+                observation: `工具执行失败：${event.error}`,
+                data: {
+                  error: event.error,
+                },
+              },
+            ],
+      }));
+      return;
+    }
+
     if (event.type === "error") {
       updateChatSessionStatus(mapping.sessionId, "执行失败");
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
