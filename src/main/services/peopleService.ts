@@ -27,6 +27,8 @@ export type DatabaseConnection = {
 export type PeopleService = {
   // 读取全部关联人物。
   list: () => AssociatedPersonItem[]
+  // 执行只读人物 SQL 查询并返回原始行。
+  querySql: (sql: string) => unknown[]
   // 创建关联人物。
   create: (input: AssociatedPersonCreateInput) => AssociatedPersonItem
   // 更新关联人物。
@@ -114,6 +116,9 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
       .all() as AssociatedPersonRow[]
 
     return rows.map(mapPersonRow)
+  },
+  querySql: (sql) => {
+    return database.prepare(sql).all()
   },
   create: (input) => {
     validatePersonInput(input)

@@ -42,7 +42,7 @@
 
 ### Task 3: People Tool
 
-- [ ] Write failing tests for `people_list` query, relationship filtering, limit, and observation truncation.
+- [ ] Write failing tests for `people_query` query, relationship filtering, limit, conditions, controlled SQL, and full detail output.
 - [ ] Implement read-only People tool.
 - [ ] Run `pnpm test test/main/agent/peopleTool.test.ts`.
 

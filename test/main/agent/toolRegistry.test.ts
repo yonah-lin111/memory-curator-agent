@@ -4,8 +4,9 @@ import type { AgentTool } from '../../../src/main/agent/types'
 import type { PeopleService } from '../../../src/main/services/peopleService'
 
 // People 服务桩。
-const peopleService: Pick<PeopleService, 'list'> = {
-  list: () => []
+const peopleService: Pick<PeopleService, 'list' | 'querySql'> = {
+  list: () => [],
+  querySql: () => []
 }
 
 // 创建测试工具。
@@ -28,8 +29,8 @@ describe('toolRegistry', () => {
       peopleService
     })
 
-    expect(registry.ids()).toEqual(['people_list'])
-    expect(registry.get('people_list')?.description).toContain('People 表')
+    expect(registry.ids()).toEqual(['people_query'])
+    expect(registry.get('people_query')?.description).toContain('People 表')
     expect(registry.all()).toHaveLength(1)
   })
 
@@ -78,11 +79,11 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('输出要求：返回简短观察文本。')
   })
 
-  it('people_list 使用结构化 prompt 元数据', () => {
+  it('people_query 使用结构化 prompt 元数据', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const peopleTool = registry.get('people_list')
+    const peopleTool = registry.get('people_query')
     const [prepared] = prepareToolsForModel(registry.all())
 
     expect(peopleTool?.prompt?.summary).toContain('People 表')
@@ -90,7 +91,7 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('本地 People 表')
   })
 
-  it('根据用户意图筛选工具，普通闲聊不注入 people_list', () => {
+  it('根据用户意图筛选工具，普通闲聊不注入 people_query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
@@ -98,23 +99,23 @@ describe('toolRegistry', () => {
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }])).toEqual([])
   })
 
-  it('根据用户意图筛选工具，人物关系问题注入 people_list', () => {
+  it('根据用户意图筛选工具，人物关系问题注入 people_query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
-      'people_list'
+      'people_query'
     ])
   })
 
-  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_list', () => {
+  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
-      'people_list'
+      'people_query'
     ])
   })
 
@@ -132,11 +133,11 @@ describe('toolRegistry', () => {
         {
           role: 'tool',
           toolCallId: 'call-1',
-          name: 'people_list',
+          name: 'people_query',
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)
-    ).toEqual(['people_list'])
+    ).toEqual(['people_query'])
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

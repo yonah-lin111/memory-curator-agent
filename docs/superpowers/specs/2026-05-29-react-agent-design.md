@@ -16,15 +16,15 @@ Provider 层负责把统一内部消息转换为不同模型厂商格式。默�
 
 1. 将 system prompt、历史消息、可用工具定义发给 provider。
 2. provider 流式返回文本增量或工具调用片段。
-3. 若模型请求 `people_list`，主进程调用 People 服务读取 `associated_people`。
+3. 若模型请求 `people_query`，主进程调用 People 服务读取 `associated_people`。
 4. 将工具观察结果追加到消息历史。
 5. 若还有工具调用，进入下一轮；否则输出最终回答并结束。
 
-Loop 设置最大轮数，防止模型反复调用工具。首期工具白名单只有 `people_list`，不提供写入工具。
+Loop 设置最大轮数，防止模型反复调用工具。首期工具白名单只有 `people_query`，不提供写入工具。
 
 ## 工具
 
-`people_list` 返回关联人物列表，支持可选 `query`、`relationship`、`limit`。过滤在服务层完成，结果包含姓名、关系、状态、生日、联系方式、标签、详情摘要、更新时间。工具输出会被压缩为文本观察，避免把过长 Markdown 原样塞回模型。
+`people_query` 返回关联人物列表，支持可选 `query`、`relationship`、`conditions`、`sql`、`limit`。结构化条件过滤在工具层完成，受控 SQL 查询在服务层完成；结果包含姓名、关系、状态、生日、联系方式、标签、完整详情、更新时间。工具输出会被压缩为文本观察，避免把过长 Markdown 原样塞回模型。
 
 ## UI 与流式体验
 

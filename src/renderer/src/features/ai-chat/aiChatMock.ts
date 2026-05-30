@@ -15,6 +15,8 @@ export type AiToolStep = {
   input?: unknown;
   // 面向用户展示的执行观察摘要。
   observation: string;
+  // 工具返回的结构化数据。
+  data?: unknown;
 };
 
 // AI 对话启动上下文条目类型。

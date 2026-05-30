@@ -266,6 +266,7 @@ export const App = (): React.JSX.Element => {
                     status: "done",
                     input: step.input,
                     observation: event.observation,
+                    data: event.data,
                   }
                 : step,
             )
@@ -278,6 +279,7 @@ export const App = (): React.JSX.Element => {
                 tool: event.name,
                 input: {},
                 observation: event.observation,
+                data: event.data,
               },
             ],
       }));

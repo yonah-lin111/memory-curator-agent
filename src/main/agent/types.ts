@@ -274,24 +274,54 @@ export type AgentStreamEvent =
       message: string
     }
 
-// People 工具入参。
-export type PeopleListToolInput = {
+// People 条件查询入参。
+export type PeopleQueryConditions = {
+  // 姓名包含条件。
+  name?: string
+  // 性别包含条件。
+  gender?: string
+  // 关系过滤。
+  relationship?: PersonRelationship
+  // 状态包含条件。
+  status?: string
+  // 生日包含条件。
+  birthday?: string
+  // 联系方式包含条件。
+  contact?: string
+  // 标签包含条件。
+  tag?: string
+  // 详情包含条件。
+  details?: string
+  // 更新时间起始边界。
+  updatedAfter?: string
+  // 更新时间结束边界。
+  updatedBefore?: string
+}
+
+// People 查询工具入参。
+export type PeopleQueryToolInput = {
   // 搜索关键字。
   query?: string
   // 关系过滤。
   relationship?: PersonRelationship
+  // 结构化条件过滤。
+  conditions?: PeopleQueryConditions
+  // 只读 SQL 查询。
+  sql?: string
   // 返回数量上限。
   limit?: number
 }
 
-// People 工具返回项。
-export type PeopleListToolItem = Pick<
+// People 查询工具返回项。
+export type PeopleQueryToolItem = Pick<
   AssociatedPersonItem,
   'id' | 'name' | 'gender' | 'relationship' | 'status' | 'birthday' | 'contact' | 'tags' | 'details' | 'updatedAt'
 >
 
-// People 工具返回结果。
-export type PeopleListToolResult = AgentToolResult & {
+// People 查询工具返回结果。
+export type PeopleQueryToolResult = AgentToolResult & {
   // 命中的人物条目。
-  items: PeopleListToolItem[]
+  items: PeopleQueryToolItem[]
+  // SQL 查询返回的原始行。
+  rows?: unknown[]
 }

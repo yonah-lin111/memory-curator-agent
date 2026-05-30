@@ -165,18 +165,18 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:old',
           kind: 'tool',
-          title: '工具结果：people_list',
+          title: '工具结果：people_query',
           content: '旧工具结果'.repeat(80),
           createdAt: 1,
-          meta: { tool: 'people_list' }
+          meta: { tool: 'people_query' }
         }),
         createContextItem({
           key: 'tool:new',
           kind: 'tool',
-          title: '工具结果：people_list',
+          title: '工具结果：people_query',
           content: '新工具结果',
           createdAt: 2,
-          meta: { tool: 'people_list' }
+          meta: { tool: 'people_query' }
         })
       ],
       recentToolResultLimit: 1
@@ -186,13 +186,13 @@ describe('contextMessages', () => {
       role: 'assistant',
       toolCalls: [
         expect.objectContaining({
-          name: 'people_list'
+          name: 'people_query'
         })
       ]
     })
     expect(messages[2]).toMatchObject({
       role: 'tool',
-      name: 'people_list'
+      name: 'people_query'
     })
     expect(messages[2].content).toContain('[旧工具结果已省略，仅保留摘要]')
     expect(messages[2].content.length).toBeLessThan('旧工具结果'.repeat(80).length)
@@ -207,10 +207,10 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:long',
           kind: 'tool',
-          title: '工具结果：people_list',
+          title: '工具结果：people_query',
           content: `${'头部'.repeat(40)}中间${'尾部'.repeat(40)}`,
           createdAt: 1,
-          meta: { tool: 'people_list' }
+          meta: { tool: 'people_query' }
         })
       ],
       toolOutputMaxChars: 80
@@ -220,13 +220,13 @@ describe('contextMessages', () => {
       role: 'assistant',
       toolCalls: [
         expect.objectContaining({
-          name: 'people_list'
+          name: 'people_query'
         })
       ]
     })
     expect(messages[2]).toMatchObject({
       role: 'tool',
-      name: 'people_list'
+      name: 'people_query'
     })
     expect(messages[2].content).toContain('[工具结果已截断]')
     expect(messages[2].content).toContain('头部')
@@ -242,12 +242,12 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:a1:call-1',
           kind: 'tool',
-          title: '工具结果：people_list',
+          title: '工具结果：people_query',
           sourceId: 'call-1',
           content: '第一次查询结果',
           createdAt: 1,
           meta: {
-            tool: 'people_list',
+            tool: 'people_query',
             messageId: 'a1',
             inputJson: '{"relationship":"女朋友"}'
           }
@@ -255,12 +255,12 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:a2:call-1',
           kind: 'tool',
-          title: '工具结果：people_list',
+          title: '工具结果：people_query',
           sourceId: 'call-1',
           content: '第二次查询结果',
           createdAt: 2,
           meta: {
-            tool: 'people_list',
+            tool: 'people_query',
             messageId: 'a2',
             inputJson: '{"relationship":"女朋友"}'
           }
@@ -275,12 +275,12 @@ describe('contextMessages', () => {
     expect(toolResultMessages).toHaveLength(2)
     expect(assistantToolMessages[0].toolCalls?.[0]).toMatchObject({
       id: 'history-a1-call-1',
-      name: 'people_list',
+      name: 'people_query',
       argumentsText: '{"relationship":"女朋友"}'
     })
     expect(toolResultMessages[0]).toMatchObject({
       toolCallId: 'history-a1-call-1',
-      name: 'people_list',
+      name: 'people_query',
       content: '第一次查询结果'
     })
     expect(assistantToolMessages[1].toolCalls?.[0].id).toBe('history-a2-call-1')

@@ -104,6 +104,30 @@ const stringifyToolInput = (input: unknown): string => {
 };
 
 /**
+ * 序列化工具数据，失败时保留错误占位。
+ */
+const stringifyToolData = (data: unknown): string => {
+  try {
+    return JSON.stringify(data, null, 2);
+  } catch {
+    return JSON.stringify({
+      error: "工具结构化数据无法序列化",
+    });
+  }
+};
+
+/**
+ * 构造历史工具结果上下文正文。
+ */
+const buildToolContextContent = (observation: string, data: unknown): string => {
+  if (data === undefined) {
+    return observation;
+  }
+
+  return ["工具观察：", observation, "工具数据：", stringifyToolData(data)].join("\n");
+};
+
+/**
  * 从消息列表派生上下文条目。
  */
 export const buildMessageContextItems = (
@@ -139,6 +163,7 @@ export const buildMessageContextItems = (
 
     for (const [toolIndex, step] of (message.toolSteps ?? []).entries()) {
       const observation = step.observation.trim();
+      const toolContent = buildToolContextContent(observation, step.data);
       if (step.status !== "done" || !observation) {
         continue;
       }
@@ -149,9 +174,9 @@ export const buildMessageContextItems = (
         kind: "tool",
         sourceId: step.id,
         title: `工具结果：${step.tool}`,
-        summary: summarizeContextContent(observation),
-        content: observation,
-        tokens: estimateAiChatContextTokens(observation),
+        summary: summarizeContextContent(toolContent),
+        content: toolContent,
+        tokens: estimateAiChatContextTokens(toolContent),
         createdAt: createdAt + toolIndex + 1,
         meta: {
           tool: step.tool,

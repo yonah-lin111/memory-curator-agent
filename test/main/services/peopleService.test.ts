@@ -31,6 +31,22 @@ class MemoryPeopleDatabase implements DatabaseConnection {
       }
     }
 
+    if (sql.startsWith('SELECT * FROM associated_people WHERE relationship = ')) {
+      return {
+        all: () => this.rows.filter((row) => sql.includes(`'${row.relationship}'`)),
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
+    if (sql.startsWith('SELECT COUNT(*) AS count FROM associated_people')) {
+      return {
+        all: () => [{ count: this.rows.length }],
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
     if (sql.startsWith('INSERT INTO associated_people')) {
       return {
         all: () => [],
@@ -115,6 +131,40 @@ describe('peopleService', () => {
     const service = createPeopleService(sqlite)
 
     expect(service.list()).toEqual([])
+  })
+
+  it('支持只读 SQL 查询原始行', () => {
+    const service = createPeopleService(sqlite)
+
+    const created = service.create({
+      avatar: '',
+      name: '小周',
+      gender: '女',
+      relationship: '同事',
+      status: '项目协作',
+      birthday: '',
+      contact: '微信',
+      tags: ['产品'],
+      details: '# 小周'
+    })
+
+    expect(service.querySql("SELECT * FROM associated_people WHERE relationship = '同事'")).toEqual([
+      {
+        id: created.id,
+        avatar: '',
+        name: '小周',
+        gender: '女',
+        relationship: '同事',
+        status: '项目协作',
+        birthday: '',
+        contact: '微信',
+        tags: JSON.stringify(['产品']),
+        details: '# 小周',
+        created_at: created.createdAt,
+        updated_at: created.updatedAt
+      }
+    ])
+    expect(service.querySql('SELECT COUNT(*) AS count FROM associated_people')).toEqual([{ count: 1 }])
   })
 
   it('支持创建、读取、更新、删除关联人物', () => {

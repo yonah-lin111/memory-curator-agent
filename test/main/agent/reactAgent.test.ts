@@ -15,7 +15,7 @@ describe('reactAgent', () => {
           yield {
             type: 'tool_call_done',
             id: 'call-1',
-            name: 'people_list',
+            name: 'people_query',
             argumentsText: '{"query":"阿明"}'
           }
           yield {
@@ -34,7 +34,7 @@ describe('reactAgent', () => {
       }
     }
     const peopleTool: AgentTool = {
-      name: 'people_list',
+      name: 'people_query',
       description: '查询 People 表',
       parameters: {
         type: 'object',
@@ -42,7 +42,12 @@ describe('reactAgent', () => {
       },
       execute: async () => ({
         observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
-        data: []
+        data: [
+          {
+            name: '阿明',
+            details: '# 阿明\n完整详情'
+          }
+        ]
       })
     }
 
@@ -75,9 +80,10 @@ describe('reactAgent', () => {
     expect(providerInputs[1].messages.at(-1)).toMatchObject({
       role: 'tool',
       toolCallId: 'call-1',
-      name: 'people_list',
-      content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
+      name: 'people_query'
     })
+    expect(providerInputs[1].messages.at(-1)?.content).toContain('找到 1 位关联人物：阿明｜朋友｜技术狂热者')
+    expect(providerInputs[1].messages.at(-1)?.content).toContain('"details": "# 阿明\\n完整详情"')
   })
 
   it('当模型流丢失工具名且只有一个授权工具时使用唯一工具兜底', async () => {
@@ -110,7 +116,7 @@ describe('reactAgent', () => {
       }
     }
     const peopleTool: AgentTool = {
-      name: 'people_list',
+      name: 'people_query',
       description: '查询 People 表',
       parameters: {
         type: 'object',
@@ -140,9 +146,77 @@ describe('reactAgent', () => {
     expect(events).toContainEqual({
       type: 'tool_started',
       id: 'call-1',
-      name: 'people_list',
+      name: 'people_query',
       input: {}
     })
+  })
+
+  it('工具参数为空或 undefined 文本时按空对象处理', async () => {
+    const toolInputs: unknown[] = []
+    let turnCount = 0
+    const provider: ModelProvider = {
+      id: 'fake',
+      type: 'openai-compatible',
+      streamTurn: async function* () {
+        turnCount += 1
+        if (turnCount > 1) {
+          yield {
+            type: 'text_delta',
+            delta: '查询完成。'
+          }
+          yield {
+            type: 'done'
+          }
+          return
+        }
+
+        yield {
+          type: 'tool_call_done',
+          id: 'call-1',
+          name: 'people_query',
+          argumentsText: 'undefined'
+        }
+        yield {
+          type: 'done'
+        }
+      }
+    }
+    const peopleTool: AgentTool = {
+      name: 'people_query',
+      description: '查询 People 表',
+      parameters: {
+        type: 'object',
+        properties: {}
+      },
+      execute: async (input) => {
+        toolInputs.push(input)
+
+        return {
+          observation: 'SQL 查询返回 1 行。',
+          data: {
+            rows: [{ count: 2 }],
+            items: []
+          }
+        }
+      }
+    }
+
+    await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: 'fake-model',
+        messages: [
+          {
+            role: 'user',
+            content: '查询一下人物有多少个'
+          }
+        ],
+        tools: [peopleTool],
+        maxTurns: 2
+      })
+    )
+
+    expect(toolInputs).toEqual([{}])
   })
 
   it('普通闲聊不会向模型注入不相关工具', async () => {
@@ -162,7 +236,7 @@ describe('reactAgent', () => {
       }
     }
     const peopleTool: AgentTool = {
-      name: 'people_list',
+      name: 'people_query',
       description: '查询 People 表',
       prompt: {
         summary: '查询本地 People 表。',

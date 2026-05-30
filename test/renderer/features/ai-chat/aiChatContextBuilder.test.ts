@@ -117,14 +117,20 @@ describe('aiChatContextBuilder', () => {
             id: 'call-1',
             title: '查询本地 People',
             status: 'done',
-            tool: 'people_list',
-            observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
+            tool: 'people_query',
+            observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+            data: [
+              {
+                name: '阿明',
+                details: '# 阿明\n完整详情'
+              }
+            ]
           },
           {
             id: 'call-2',
             title: '等待执行',
             status: 'running',
-            tool: 'people_list',
+            tool: 'people_query',
             observation: '正在读取本地 People 表。'
           }
         ]
@@ -138,10 +144,10 @@ describe('aiChatContextBuilder', () => {
           sessionId: 's1',
           kind: 'tool',
           sourceId: 'call-1',
-          title: '工具结果：people_list',
-          content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+          title: '工具结果：people_query',
+          content: expect.stringContaining('"details": "# 阿明\\n完整详情"'),
           meta: expect.objectContaining({
-            tool: 'people_list',
+            tool: 'people_query',
             messageId: 'a1'
           })
         })

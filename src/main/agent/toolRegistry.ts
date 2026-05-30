@@ -1,11 +1,11 @@
-import { createPeopleListTool } from './peopleTool'
+import { createPeopleQueryTool } from './peopleTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from './types'
 import type { PeopleService } from '../services/peopleService'
 
 // Agent 工具注册上下文。
 export type AgentToolRegistryContext = {
   // People 服务。
-  peopleService: Pick<PeopleService, 'list'>
+  peopleService: Pick<PeopleService, 'list' | 'querySql'>
 }
 
 // Agent 工具工厂。
@@ -32,7 +32,7 @@ export type AgentToolRegistry = {
 }
 
 // 内置工具工厂列表。
-const builtinToolFactories: AgentToolFactory[] = [({ peopleService }) => createPeopleListTool(peopleService)]
+const builtinToolFactories: AgentToolFactory[] = [({ peopleService }) => createPeopleQueryTool(peopleService)]
 
 // 工具调用公共约束。
 const TOOL_CALL_GUARD = '调用约束：严格按参数 Schema 提供参数；只在确实需要该能力时调用；不要臆造工具未返回的信息。'

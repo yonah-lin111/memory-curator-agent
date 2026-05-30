@@ -14,11 +14,13 @@ const DEFAULT_MAX_TURNS = 5
  * 解析模型输出的工具参数。
  */
 const parseToolArguments = (toolCall: ModelToolCallDoneEvent): unknown => {
-  if (!toolCall.argumentsText.trim()) {
+  const argumentsText = typeof toolCall.argumentsText === 'string' ? toolCall.argumentsText.trim() : ''
+
+  if (!argumentsText || argumentsText === 'undefined') {
     return {}
   }
 
-  return JSON.parse(toolCall.argumentsText) as unknown
+  return JSON.parse(argumentsText) as unknown
 }
 
 /**
@@ -34,6 +36,28 @@ const resolveToolName = (toolCall: ModelToolCallDoneEvent, tools: AgentTool[]): 
   }
 
   return toolCall.name
+}
+
+/**
+ * 序列化工具结构化数据。
+ */
+const stringifyToolData = (data: unknown): string => {
+  try {
+    return JSON.stringify(data, null, 2)
+  } catch {
+    return JSON.stringify({
+      error: '工具结构化数据无法序列化'
+    })
+  }
+}
+
+/**
+ * 构造回灌模型的完整工具结果。
+ */
+const renderToolResultContent = (observation: string, data: unknown): string => {
+  const dataText = stringifyToolData(data)
+
+  return [`工具观察：`, observation.trim(), `工具数据：`, dataText].join('\n')
 }
 
 /**
@@ -126,7 +150,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         role: 'tool',
         toolCallId: toolCall.id,
         name: toolCall.name,
-        content: result.observation
+        content: renderToolResultContent(result.observation, result.data)
       })
     }
 
