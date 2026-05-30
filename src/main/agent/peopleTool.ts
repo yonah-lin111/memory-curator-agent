@@ -235,9 +235,11 @@ const buildStructuredWhere = (
  */
 const buildStructuredSql = (
   parsed: PeopleQueryToolInput,
-  queryTarget: 'base' | 'details'
+  queryTarget: 'base' | 'details',
+  limit: number
 ): string => {
-  const shouldSelectDetails = Boolean(parsed.conditions?.details) || queryTarget === 'details'
+  const isSingleQuery = limit === 1
+  const shouldSelectDetails = isSingleQuery || Boolean(parsed.conditions?.details) || queryTarget === 'details'
   const columns = shouldSelectDetails ? PEOPLE_COLUMNS : DEFAULT_PEOPLE_COLUMNS
 
   return `SELECT ${columns} FROM ${PEOPLE_TABLE_NAME}${buildStructuredWhere(parsed, queryTarget)} ORDER BY updated_at DESC, created_at DESC`
@@ -317,12 +319,12 @@ const queryStructuredBySql = (
   parsed: PeopleQueryToolInput,
   limit: number
 ): { items: PeopleQueryToolItem[]; rows: unknown[] } => {
-  const baseResult = queryBySql(peopleService, buildStructuredSql(parsed, 'base'), limit)
+  const baseResult = queryBySql(peopleService, buildStructuredSql(parsed, 'base', limit), limit)
   if (baseResult.rows.length > 0 || !parsed.query?.trim() || parsed.conditions?.details) {
     return baseResult
   }
 
-  return queryBySql(peopleService, buildStructuredSql(parsed, 'details'), limit)
+  return queryBySql(peopleService, buildStructuredSql(parsed, 'details', limit), limit)
 }
 
 /**
@@ -368,8 +370,8 @@ export const createPeopleQueryTool = (peopleService: Pick<PeopleService, 'queryS
     safety: [
       '只读取本地 People 表，不写入任何数据。',
       `SQL 只能是单条 SELECT，只能查询 ${PEOPLE_TABLE_NAME} 表，禁止 JOIN、UNION、注释、多语句和写入关键字。`,
-      `默认不要查询 details：优先使用 SELECT ${DEFAULT_PEOPLE_COLUMNS} FROM ${PEOPLE_TABLE_NAME} WHERE ... ORDER BY ...。`,
-      '只有姓名、性别、关系、状态、生日、联系方式、标签等字段都无法回答或没有命中时，才查询 details 字段。',
+      '单个查询（即 limit = 1）时，不受 restrictions 限制，默认包含 details 字段；批量查询（即 limit > 1）时，默认不包含 details 字段以节省传输和计算资源。',
+      '【极其重要】当用户输入的需要查询的内容没有匹配到（未命中）任何姓名、关系、状态、标签等基础字段时，或者进行单个查询（limit = 1）时，应该添加 details 这个字段。批量查询时（limit > 1）默认不加入 details，除非基础字段未匹配到任何结果。',
       '工具没有返回的人物事实不能编造。',
       '工具结果不足时直接说明信息不足。'
     ],
@@ -386,7 +388,7 @@ export const createPeopleQueryTool = (peopleService: Pick<PeopleService, 'queryS
     properties: {
       query: {
         type: 'string',
-        description: '按姓名、性别、关系、状态、生日、联系方式或标签搜索；这些字段没有命中时，工具才会兜底搜索详情'
+        description: '按姓名、性别、关系、状态、生日、联系方式或标签搜索；单个查询（limit = 1）或这些基础字段没有命中任何结果时，会自动配合/兜底包含 details 字段进行搜索。'
       },
       relationship: {
         type: 'string',
@@ -428,7 +430,7 @@ export const createPeopleQueryTool = (peopleService: Pick<PeopleService, 'queryS
           },
           details: {
             type: 'string',
-            description: '详情包含；仅在基础字段无法回答或明确需要详情时使用'
+            description: '详情包含；单个查询（limit = 1）默认可用，批量查询（limit > 1）在基础字段无法回答、没有命中匹配，或者明确需要详情时，可以使用此字段进行搜索。'
           },
           updatedAfter: {
             type: 'string',
@@ -442,7 +444,7 @@ export const createPeopleQueryTool = (peopleService: Pick<PeopleService, 'queryS
       },
       sql: {
         type: 'string',
-        description: `受控只读 SQL。只能 SELECT FROM ${PEOPLE_TABLE_NAME}，可写 WHERE、ORDER BY、LIMIT，也可用 COUNT(*) AS count 做数量统计；默认 SELECT 不要包含 details，基础字段没有命中时才查 details。`
+        description: `受控只读 SQL。只能 SELECT FROM ${PEOPLE_TABLE_NAME}，可写 WHERE、ORDER BY、LIMIT，也可用 COUNT(*) AS count 做数量统计；单个查询（limit = 1）时 SELECT 应该包含 details，批量查询（limit > 1）时默认不要包含 details，除非基础字段没有命中时才添加 details。`
       },
       limit: {
         type: 'number',

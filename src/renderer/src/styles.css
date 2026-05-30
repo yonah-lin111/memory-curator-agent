@@ -232,6 +232,7 @@ html:hover::-webkit-scrollbar-thumb,
 /* 向上调整随滚动条滚动的代码块顶部栏的 top 位置 */
 .markdown-preview-container .md-editor-code-head {
   top: -16px !important;
+  z-index: 2 !important;
 }
 
 .markdown-preview-container .md-editor-preview > *:first-child {
