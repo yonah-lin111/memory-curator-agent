@@ -29,13 +29,9 @@ export const AiChatContextBar = ({
   const [isOpen, setIsOpen] = useState(false);
   const limitLabel = budget.contextLimit ? String(budget.contextLimit) : "未知上限";
   const usageLabel = budget.usagePercent === null ? "未知占比" : `${budget.usagePercent}%`;
-  const toolOutputMaxCharsLabel = agent?.context.toolOutputMaxChars.toLocaleString("zh-CN") ?? "未知";
-  const recentToolResultLimitLabel = agent?.context.recentToolResultLimit.toLocaleString("zh-CN") ?? "未知";
   const displayItems = [...items].sort((a, b) => a.createdAt - b.createdAt);
-  const recentToolResultLimitDetail =
-    agent === null
-      ? "Agent 配置尚未加载。"
-      : `保留最近 ${recentToolResultLimitLabel} 条工具 observation 全文，超过该范围的旧工具结果在上下文中只保留占位摘要。`;
+  const toolCount = items.filter((item) => item.kind === "tool").length;
+  void agent;
 
   return (
     <div className="relative" aria-label="AI 对话上下文">
@@ -63,27 +59,14 @@ export const AiChatContextBar = ({
             <div className="text-white/35">·</div>
             <div>{items.length} 条</div>
             <div className="text-white/35">·</div>
+            <div>{toolCount} tools</div>
+            <div className="text-white/35">·</div>
             <div>
               约 {budget.totalTokens} tokens / {limitLabel}
             </div>
             <div className="ml-auto rounded-[6px] border border-white/5 px-1.5 py-0.5 font-mono text-[12px] text-white/45">
               {usageLabel}
             </div>
-          </div>
-
-          <div className="mb-2 grid gap-1.5 sm:grid-cols-2">
-            <div className="rounded-[6px] border border-white/5 bg-white/[0.02] px-2 py-1.5">
-              <div className="text-white/35">单条工具输出上限</div>
-              <div className="mt-0.5 font-mono text-white/70">{toolOutputMaxCharsLabel} chars</div>
-            </div>
-            <div className="rounded-[6px] border border-white/5 bg-white/[0.02] px-2 py-1.5">
-              <div className="text-white/35">最近完整工具结果</div>
-              <div className="mt-0.5 font-mono text-white/70">{recentToolResultLimitLabel} 条</div>
-            </div>
-          </div>
-
-          <div className="mb-2 rounded-[6px] border border-white/5 bg-white/[0.02] px-2 py-1.5 text-white/45">
-            {recentToolResultLimitDetail}
           </div>
 
           {items.length === 0 ? (

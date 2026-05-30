@@ -728,11 +728,10 @@ describe('App', () => {
     await user.click(contextButton)
 
     expect(screen.getByRole('dialog', { name: 'AI 上下文记录详情' })).toBeInTheDocument()
-    expect(screen.getByText('单条工具输出上限')).toBeInTheDocument()
-    expect(screen.getByText('4,096 chars')).toBeInTheDocument()
-    expect(screen.getByText('最近完整工具结果')).toBeInTheDocument()
-    expect(screen.getByText('3 条')).toBeInTheDocument()
-    expect(screen.getByText(/只保留占位摘要/)).toBeInTheDocument()
+    expect(screen.queryByText('单条工具输出上限')).not.toBeInTheDocument()
+    expect(screen.queryByText('4,096 chars')).not.toBeInTheDocument()
+    expect(screen.queryByText('最近完整工具结果')).not.toBeInTheDocument()
+    expect(screen.queryByText(/只保留占位摘要/)).not.toBeInTheDocument()
   })
 
   it('AI 对话模式支持切换历史会话并展示工具调用摘要', async () => {
