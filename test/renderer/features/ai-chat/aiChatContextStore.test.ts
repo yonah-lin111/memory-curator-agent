@@ -36,6 +36,28 @@ describe('aiChatContextStore', () => {
     expect(items.map((value) => value.key)).toEqual(['memory:m1', 'message:m2'])
   })
 
+  it('同步消息上下文时按消息历史替换工具上下文，避免旧工具固定在顶部', () => {
+    const store = useAiChatContextStore.getState()
+    store.addItem({ ...item, kind: 'memory', key: 'memory:m1', createdAt: 0 })
+    store.addItem({ ...item, kind: 'tool', key: 'tool:old', sourceId: 'old', createdAt: 1 })
+
+    store.syncMessageItems('s1', [
+      { ...item, key: 'message:u1', sourceId: 'u1', createdAt: 10 },
+      { ...item, kind: 'tool', key: 'tool:new-1', sourceId: 'call-1', createdAt: 11 },
+      { ...item, key: 'message:a1', sourceId: 'a1', createdAt: 12 },
+      { ...item, kind: 'tool', key: 'tool:new-2', sourceId: 'call-2', createdAt: 21 }
+    ])
+
+    const items = useAiChatContextStore.getState().getSessionItems('s1')
+    expect(items.map((value) => value.key)).toEqual([
+      'memory:m1',
+      'message:u1',
+      'tool:new-1',
+      'message:a1',
+      'tool:new-2'
+    ])
+  })
+
   it('支持删除和清空会话', () => {
     const store = useAiChatContextStore.getState()
     store.addItem(item)

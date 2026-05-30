@@ -18,7 +18,7 @@ type AiChatContextState = {
   clearSession: (sessionId: string) => void;
   // 替换指定会话全部上下文。
   replaceSessionItems: (sessionId: string, items: AiChatContextItem[]) => void;
-  // 同步消息类上下文，并保留其他来源上下文。
+  // 同步消息与工具上下文，并保留其他来源上下文。
   syncMessageItems: (sessionId: string, items: AiChatContextItem[]) => void;
   // 重置全部上下文，主要用于测试隔离。
   resetAll: () => void;
@@ -101,7 +101,7 @@ export const useAiChatContextStore = create<AiChatContextState>((set, get) => ({
   syncMessageItems: (sessionId, items) => {
     set((state) => {
       const existing = state.sessionItems[sessionId] ?? [];
-      const preserved = existing.filter((item) => item.kind !== "message");
+      const preserved = existing.filter((item) => item.kind !== "message" && item.kind !== "tool");
 
       return {
         sessionItems: setSessionItems(state.sessionItems, sessionId, mergeUniqueItems(preserved, items)),

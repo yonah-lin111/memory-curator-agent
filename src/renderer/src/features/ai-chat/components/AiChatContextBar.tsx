@@ -31,6 +31,7 @@ export const AiChatContextBar = ({
   const usageLabel = budget.usagePercent === null ? "未知占比" : `${budget.usagePercent}%`;
   const toolOutputMaxCharsLabel = agent?.context.toolOutputMaxChars.toLocaleString("zh-CN") ?? "未知";
   const recentToolResultLimitLabel = agent?.context.recentToolResultLimit.toLocaleString("zh-CN") ?? "未知";
+  const displayItems = [...items].sort((a, b) => a.createdAt - b.createdAt);
   const recentToolResultLimitDetail =
     agent === null
       ? "Agent 配置尚未加载。"
@@ -89,7 +90,7 @@ export const AiChatContextBar = ({
             <div className="text-white/35">暂无上下文</div>
           ) : (
             <div className="max-h-[360px] overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
-              {items.map((item) => (
+              {displayItems.map((item) => (
                 <div key={item.key} className="min-w-0 rounded-[6px] bg-white/[0.03] px-2 py-1.5">
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="rounded-[6px] border border-white/5 px-1.5 py-0.5 text-[12px] text-white/45">
