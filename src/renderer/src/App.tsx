@@ -27,6 +27,7 @@ import {
   AI_CHAT_SESSIONS,
   type AiAgentOption,
   type AiChatEvent,
+  type AiChatMessagePart,
   type AiChatSession,
   type AiModelProviderOption,
   type AiModelSelection,
@@ -176,6 +177,85 @@ export const App = (): React.JSX.Element => {
   };
 
   /**
+   * appendAiMessageTextPart - 追加流式文本，并同步保留 answer 兼容上下文构造。
+   */
+  const appendAiMessageTextPart = (
+    message: AiChatSession["messages"][number],
+    chunk: string,
+  ): AiChatSession["messages"][number] => {
+    const parts = message.parts ?? [];
+    const lastPart = parts[parts.length - 1];
+    const nextParts: AiChatMessagePart[] =
+      lastPart?.kind === "text"
+        ? parts.map((part) =>
+            part.id === lastPart.id && part.kind === "text"
+              ? { ...part, content: `${part.content}${chunk}` }
+              : part,
+          )
+        : [
+            ...parts,
+            {
+              id: `${message.id}-text-${parts.length}`,
+              kind: "text",
+              content: chunk,
+            },
+          ];
+
+    return {
+      ...message,
+      answer: `${message.answer ?? ""}${chunk}`,
+      parts: nextParts,
+    };
+  };
+
+  /**
+   * appendAiMessageToolPart - 追加工具片段，避免重试时工具块被整体前置。
+   */
+  const appendAiMessageToolPart = (
+    message: AiChatSession["messages"][number],
+    stepId: string,
+  ): AiChatSession["messages"][number] => {
+    if (message.parts?.some((part) => part.kind === "tool" && part.stepId === stepId)) {
+      return message;
+    }
+
+    return {
+      ...message,
+      parts: [
+        ...(message.parts ?? []),
+        {
+          id: `${message.id}-tool-${stepId}`,
+          kind: "tool",
+          stepId,
+        },
+      ],
+    };
+  };
+
+  /**
+   * flushBufferedTextImmediately - 工具事件到达前落盘文本缓冲，保留事件顺序。
+   */
+  const flushBufferedTextImmediately = (runId: string): void => {
+    const mapping = runMessageMapRef.current.get(runId);
+    const bufferedText = textBufferRef.current.get(runId) ?? "";
+    const timer = typewriterTimerRef.current.get(runId);
+
+    if (timer) {
+      clearTimeout(timer);
+      typewriterTimerRef.current.delete(runId);
+    }
+
+    if (!mapping || !bufferedText) {
+      return;
+    }
+
+    textBufferRef.current.set(runId, "");
+    updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
+      appendAiMessageTextPart(message, bufferedText),
+    );
+  };
+
+  /**
    * 刷新指定运行的文本缓冲。
    */
   const flushTypewriterBuffer = (runId: string): void => {
@@ -190,10 +270,9 @@ export const App = (): React.JSX.Element => {
     const chunk = bufferedText.slice(0, 8);
     const rest = bufferedText.slice(8);
     textBufferRef.current.set(runId, rest);
-    updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-      ...message,
-      answer: `${message.answer ?? ""}${chunk}`,
-    }));
+    updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
+      appendAiMessageTextPart(message, chunk),
+    );
 
     if (rest) {
       const timer = setTimeout(() => flushTypewriterBuffer(runId), 28);
@@ -238,8 +317,9 @@ export const App = (): React.JSX.Element => {
     }
 
     if (event.type === "tool_started") {
+      flushBufferedTextImmediately(event.runId);
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...message,
+        ...appendAiMessageToolPart(message, event.id),
         toolSteps: [
           ...(message.toolSteps ?? []),
           {
@@ -257,7 +337,7 @@ export const App = (): React.JSX.Element => {
 
     if (event.type === "tool_finished") {
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...message,
+        ...appendAiMessageToolPart(message, event.id),
         toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
           ? (message.toolSteps ?? []).map((step) =>
               step.id === event.id
@@ -288,7 +368,7 @@ export const App = (): React.JSX.Element => {
 
     if (event.type === "tool_failed") {
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...message,
+        ...appendAiMessageToolPart(message, event.id),
         toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
           ? (message.toolSteps ?? []).map((step) =>
               step.id === event.id

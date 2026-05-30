@@ -1,6 +1,10 @@
 import type React from "react";
 import { Bot, Loader2 } from "lucide-react";
-import type { AiChatMessage } from "@renderer/features/ai-chat/aiChatMock";
+import type {
+  AiChatMessage,
+  AiChatMessagePart,
+  AiToolStep,
+} from "@renderer/features/ai-chat/aiChatMock";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
@@ -20,10 +24,31 @@ type AiChatMessageBubbleProps = {
   message: AiChatMessage;
 };
 
+// Markdown 预览组件属性类型。
+type AiMarkdownPreviewProps = {
+  // Markdown 正文。
+  content: string;
+  // 附加容器类名。
+  className?: string;
+};
+
+// AI 消息片段解析参数类型。
+type ResolveAiMessagePartsParams = {
+  // 当前消息数据。
+  message: AiChatMessage;
+  // 当前是否处于处理中占位态。
+  isProcessing: boolean;
+  // 已清理后的最终回答。
+  displayAnswer: string;
+};
+
 /**
  * findFirstNonWhitespaceIndex - 查找指定位置后的第一个非空白字符。
  */
-const findFirstNonWhitespaceIndex = (source: string, startIndex: number): number => {
+const findFirstNonWhitespaceIndex = (
+  source: string,
+  startIndex: number,
+): number => {
   for (let index = startIndex; index < source.length; index += 1) {
     if (!/\s/.test(source[index])) {
       return index;
@@ -36,7 +61,10 @@ const findFirstNonWhitespaceIndex = (source: string, startIndex: number): number
 /**
  * findJsonValueEnd - 基于括号平衡查找 JSON 对象或数组的结束位置。
  */
-const findJsonValueEnd = (source: string, startIndex: number): number | null => {
+const findJsonValueEnd = (
+  source: string,
+  startIndex: number,
+): number | null => {
   const openChar = source[startIndex];
   const closeChar = openChar === "{" ? "}" : "]";
   let depth = 0;
@@ -57,14 +85,14 @@ const findJsonValueEnd = (source: string, startIndex: number): number | null => 
         continue;
       }
 
-      if (char === "\"") {
+      if (char === '"') {
         isInString = false;
       }
 
       continue;
     }
 
-    if (char === "\"") {
+    if (char === '"') {
       isInString = true;
       continue;
     }
@@ -88,13 +116,24 @@ const findJsonValueEnd = (source: string, startIndex: number): number | null => 
 /**
  * resolveToolDataSectionEnd - 解析工具数据段的结束位置。
  */
-const resolveToolDataSectionEnd = (source: string, valueStartIndex: number): number => {
-  const contentStartIndex = findFirstNonWhitespaceIndex(source, valueStartIndex);
+const resolveToolDataSectionEnd = (
+  source: string,
+  valueStartIndex: number,
+): number => {
+  const contentStartIndex = findFirstNonWhitespaceIndex(
+    source,
+    valueStartIndex,
+  );
   const firstChar = source[contentStartIndex];
 
   if (source.startsWith(MARKDOWN_CODE_FENCE, contentStartIndex)) {
-    const fenceEndIndex = source.indexOf(MARKDOWN_CODE_FENCE, contentStartIndex + MARKDOWN_CODE_FENCE.length);
-    return fenceEndIndex >= 0 ? fenceEndIndex + MARKDOWN_CODE_FENCE.length : source.length;
+    const fenceEndIndex = source.indexOf(
+      MARKDOWN_CODE_FENCE,
+      contentStartIndex + MARKDOWN_CODE_FENCE.length,
+    );
+    return fenceEndIndex >= 0
+      ? fenceEndIndex + MARKDOWN_CODE_FENCE.length
+      : source.length;
   }
 
   if (firstChar === "{" || firstChar === "[") {
@@ -124,17 +163,100 @@ const stripLeakedToolJson = (answer: string, hasToolSteps: boolean): string => {
       break;
     }
 
-    const observationLabelIndex = answer.lastIndexOf(TOOL_OBSERVATION_LABEL, dataLabelIndex);
+    const observationLabelIndex = answer.lastIndexOf(
+      TOOL_OBSERVATION_LABEL,
+      dataLabelIndex,
+    );
     const sectionStartIndex =
-      observationLabelIndex >= cursorIndex ? observationLabelIndex : dataLabelIndex;
+      observationLabelIndex >= cursorIndex
+        ? observationLabelIndex
+        : dataLabelIndex;
     const dataValueStartIndex = dataLabelIndex + TOOL_DATA_LABEL.length;
-    const sectionEndIndex = resolveToolDataSectionEnd(answer, dataValueStartIndex);
+    const sectionEndIndex = resolveToolDataSectionEnd(
+      answer,
+      dataValueStartIndex,
+    );
 
     cleanedAnswer += answer.slice(cursorIndex, sectionStartIndex);
     cursorIndex = sectionEndIndex;
   }
 
   return cleanedAnswer.replace(/\n{3,}/g, "\n\n").trim();
+};
+
+/**
+ * AiMarkdownPreview - 渲染 AI 内容 Markdown 片段。
+ */
+const AiMarkdownPreview = ({
+  content,
+  className = "",
+}: AiMarkdownPreviewProps): React.JSX.Element => {
+  return (
+    <div className={`markdown-preview-container select-text ${className}`}>
+      <MdPreview
+        theme="dark"
+        modelValue={content}
+        previewTheme="default"
+        codeTheme="atom"
+        style={{ backgroundColor: "transparent" }}
+      />
+    </div>
+  );
+};
+
+/**
+ * resolveAiMessageParts - 优先使用真实流式顺序，旧数据降级为 content/tools/answer。
+ */
+const resolveAiMessageParts = ({
+  message,
+  isProcessing,
+  displayAnswer,
+}: ResolveAiMessagePartsParams): AiChatMessagePart[] => {
+  if (message.parts?.length) {
+    return message.parts;
+  }
+
+  const fallbackParts: AiChatMessagePart[] = [];
+
+  if (!isProcessing && message.content) {
+    fallbackParts.push({
+      id: `${message.id}-content`,
+      kind: "text",
+      content: message.content,
+    });
+  }
+
+  for (const step of message.toolSteps ?? []) {
+    fallbackParts.push({
+      id: `${message.id}-tool-${step.id}`,
+      kind: "tool",
+      stepId: step.id,
+    });
+  }
+
+  if (displayAnswer) {
+    fallbackParts.push({
+      id: `${message.id}-answer`,
+      kind: "text",
+      content: displayAnswer,
+    });
+  }
+
+  return fallbackParts;
+};
+
+/**
+ * findToolStepByPart - 根据顺序片段查找对应工具步骤。
+ */
+const findToolStepByPart = (
+  steps: AiToolStep[] | undefined,
+  part: AiChatMessagePart,
+): AiToolStep | null => {
+  if (part.kind !== "tool") {
+    return null;
+  }
+
+  return steps?.find((step) => step.id === part.stepId) ?? null;
 };
 
 /**
@@ -147,7 +269,16 @@ export const AiChatMessageBubble = ({
   const isProcessing = !isUser && message.content.startsWith("正在处理：");
   const hasToolSteps = Boolean(message.toolSteps?.length);
   const displayAnswer =
-    !isUser && message.answer ? stripLeakedToolJson(message.answer, hasToolSteps) : "";
+    !isUser && message.answer
+      ? stripLeakedToolJson(message.answer, hasToolSteps)
+      : "";
+  const messageParts = !isUser
+    ? resolveAiMessageParts({
+        message,
+        isProcessing,
+        displayAnswer,
+      })
+    : [];
 
   return (
     <div
@@ -157,9 +288,7 @@ export const AiChatMessageBubble = ({
     >
       {/* 角色头像 */}
       {!isUser && (
-        <div
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/5 bg-white text-black"
-        >
+        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/5 bg-white text-black">
           <Bot className="h-3.5 w-3.5" />
         </div>
       )}
@@ -168,51 +297,57 @@ export const AiChatMessageBubble = ({
       <div
         className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}
       >
-        {/* 如果有工具执行步骤，则在边框外面（气泡上方）渲染工具调用块 */}
-        {!isUser && hasToolSteps && message.toolSteps && (
-          <div className="mb-2 w-full">
-            <AiToolCallBlock steps={message.toolSteps} />
-          </div>
-        )}
-
         <div
-          className={`rounded-[6px] px-3.5 py-2.5 text-sm leading-relaxed break-words w-fit ${
-            isUser
-              ? "bg-transparent text-white font-medium"
-              : "bg-white/[0.03] border border-white/5 text-white/80"
+          className={`rounded-[6px] px-1 py-1  text-sm leading-relaxed break-words w-fit ${
+            isUser ? "bg-transparent text-white font-medium" : "  text-white/80"
           }`}
         >
           {isUser ? (
             message.content
           ) : (
-            <>
-              {/* 仅在非正在处理时渲染首句 content */}
-              {!isProcessing && message.content && (
-                <div className="text-white/80">
-                  {message.content}
-                </div>
-              )}
+            <div className="flex flex-col gap-1.5">
+              {(() => {
+                const groupedElements: React.JSX.Element[] = [];
+                let currentToolSteps: AiToolStep[] = [];
+                let currentToolKeys: string[] = [];
+
+                const flushToolSteps = (): void => {
+                  if (currentToolSteps.length > 0) {
+                    const key = currentToolKeys.join("-");
+                    groupedElements.push(
+                      <AiToolCallBlock key={key} steps={[...currentToolSteps]} />
+                    );
+                    currentToolSteps = [];
+                    currentToolKeys = [];
+                  }
+                };
+
+                for (const part of messageParts) {
+                  if (part.kind === "text") {
+                    flushToolSteps();
+                    groupedElements.push(
+                      <AiMarkdownPreview key={part.id} content={part.content} />
+                    );
+                  } else {
+                    const step = findToolStepByPart(message.toolSteps, part);
+                    if (step) {
+                      currentToolSteps.push(step);
+                      currentToolKeys.push(part.id);
+                    }
+                  }
+                }
+                flushToolSteps();
+
+                return groupedElements;
+              })()}
 
               {/* 正在处理且无最终回答时，渲染 loading 替代 */}
-              {isProcessing && !displayAnswer && (
+              {isProcessing && messageParts.length === 0 && (
                 <div className="flex items-center gap-2 text-white/50 py-0.5">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span className="text-xs font-medium">正在处理...</span>
                 </div>
               )}
-            </>
-          )}
-
-          {/* 如果有最终回答，则展示最终回答 */}
-          {!isUser && displayAnswer && (
-            <div className={`markdown-preview-container select-text ${!isProcessing && message.content ? "mt-3 pt-3 border-t border-white/5" : ""}`}>
-              <MdPreview
-                theme="dark"
-                modelValue={displayAnswer}
-                previewTheme="default"
-                codeTheme="atom"
-                style={{ backgroundColor: "transparent" }}
-              />
             </div>
           )}
         </div>

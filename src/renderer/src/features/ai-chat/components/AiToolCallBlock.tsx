@@ -9,7 +9,8 @@ import type {
 const TOOL_OBSERVATION_MAX_LENGTH = 96;
 
 // SQL 原始行观察文本匹配规则。
-const SQL_RAW_ROWS_OBSERVATION_PATTERN = /^SQL 查询返回 (\d+) 行[：:].*[\[{].*[\]}]/s;
+const SQL_RAW_ROWS_OBSERVATION_PATTERN =
+  /^SQL 查询返回 (\d+) 行[：:].*[\[{].*[\]}]/s;
 
 // AI 工具调用块组件属性类型。
 type AiToolCallBlockProps = {
@@ -61,7 +62,9 @@ const getStatusConfig = (
  */
 const formatToolObservation = (observation: string): string => {
   const normalizedObservation = observation.trim();
-  const sqlRowsMatch = normalizedObservation.match(SQL_RAW_ROWS_OBSERVATION_PATTERN);
+  const sqlRowsMatch = normalizedObservation.match(
+    SQL_RAW_ROWS_OBSERVATION_PATTERN,
+  );
 
   if (sqlRowsMatch) {
     return `SQL 查询返回 ${sqlRowsMatch[1]} 行，已整理为结构化结果。`;
@@ -81,16 +84,16 @@ export const AiToolCallBlock = ({
   steps,
 }: AiToolCallBlockProps): React.JSX.Element => {
   return (
-    <div className="my-2 flex flex-col gap-3">
+    <div className="my-0.5 flex flex-col gap-2">
       {/* 步骤列表 */}
-      <div className="relative flex flex-col gap-5 pl-1">
+      <div className="relative flex flex-col gap-3 pl-1">
         {steps.map((step, index) => {
           const config = getStatusConfig(step.status);
           const StatusIcon = config.icon;
           const displayObservation = formatToolObservation(step.observation);
 
           return (
-            <div key={step.id} className="relative flex gap-3.5 items-start">
+            <div key={step.id} className="relative flex gap-2.5 items-start">
               {/* 时间轴节点列 */}
               <div className="relative flex flex-col items-center flex-shrink-0 w-6 self-stretch">
                 <div
@@ -101,12 +104,12 @@ export const AiToolCallBlock = ({
                 </div>
                 {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
                 {index < steps.length - 1 && (
-                  <div className="absolute top-3 bottom-[-32px] w-[2px] bg-white/5" />
+                  <div className="absolute top-3 bottom-[-24px] w-[2px] bg-white/5" />
                 )}
               </div>
 
               {/* 步骤详细内容 */}
-              <div className="flex-1 min-w-0 flex flex-col gap-1 pt-0.5">
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5 ">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-xs font-bold text-white/85">
                     {step.title}
@@ -116,9 +119,19 @@ export const AiToolCallBlock = ({
                   </span>
                 </div>
 
-                <p className="text-xs leading-relaxed text-white/45">
-                  {displayObservation}
-                </p>
+                <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
+                  <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
+                    <svg className="w-3 h-3 stroke-current" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M3 1v5h7"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="flex-1">{displayObservation}</span>
+                </div>
               </div>
             </div>
           );

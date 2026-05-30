@@ -70,10 +70,16 @@ const getToolErrorMessage = (error: unknown): string =>
  * 构造回灌模型的工具失败结果。
  */
 const renderToolFailureContent = (toolName: string, error: string): string =>
-  renderToolResultContent(`工具 ${toolName} 执行失败：${error}`, {
+  renderToolResultContent(
+    [
+      `工具 ${toolName} 执行失败：${error}`,
+      '这不是最终答案。必须先根据错误信息修正参数并重新调用工具；只有确认错误不可恢复时，才向用户说明失败原因。'
+    ].join('\n'),
+    {
     error,
     tool: toolName
-  })
+    }
+  )
 
 /**
  * 运行 Claude Code 风格的 ReAct Agent Loop。

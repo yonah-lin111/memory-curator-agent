@@ -72,4 +72,73 @@ describe('AiChatMessageBubble', () => {
     expect(screen.queryByText(/"id"/)).not.toBeInTheDocument()
     expect(screen.queryByText(/黄酥梨.*details/)).not.toBeInTheDocument()
   })
+
+  it('按流式片段顺序交错展示 AI 内容和工具重试', () => {
+    const message: AiChatMessage = {
+      id: 'a3',
+      role: 'assistant',
+      content: '正在处理：“测试工具重试”',
+      time: '15:18',
+      parts: [
+        {
+          id: 'part-1',
+          kind: 'text',
+          content: '我会先传递错误参数。'
+        },
+        {
+          id: 'part-2',
+          kind: 'tool',
+          stepId: 'tool-1'
+        },
+        {
+          id: 'part-3',
+          kind: 'text',
+          content: '工具报错了，现在修正参数重试。'
+        },
+        {
+          id: 'part-4',
+          kind: 'tool',
+          stepId: 'tool-2'
+        },
+        {
+          id: 'part-5',
+          kind: 'text',
+          content: '测试完成。'
+        }
+      ],
+      toolSteps: [
+        {
+          id: 'tool-1',
+          title: '查询本地 People',
+          status: 'failed',
+          tool: 'people_query',
+          observation: '工具执行失败：People SQL 只能查询 associated_people 表'
+        },
+        {
+          id: 'tool-2',
+          title: '查询本地 People',
+          status: 'done',
+          tool: 'people_query',
+          observation: 'SQL 查询没有返回数据。'
+        }
+      ],
+      answer: '我会先传递错误参数。工具报错了，现在修正参数重试。测试完成。'
+    }
+
+    const { container } = render(<AiChatMessageBubble message={message} />)
+    const renderedText = container.textContent ?? ''
+
+    expect(renderedText.indexOf('我会先传递错误参数。')).toBeLessThan(
+      renderedText.indexOf('工具执行失败：People SQL 只能查询 associated_people 表')
+    )
+    expect(renderedText.indexOf('工具执行失败：People SQL 只能查询 associated_people 表')).toBeLessThan(
+      renderedText.indexOf('工具报错了，现在修正参数重试。')
+    )
+    expect(renderedText.indexOf('工具报错了，现在修正参数重试。')).toBeLessThan(
+      renderedText.indexOf('SQL 查询没有返回数据。')
+    )
+    expect(renderedText.indexOf('SQL 查询没有返回数据。')).toBeLessThan(
+      renderedText.indexOf('测试完成。')
+    )
+  })
 })

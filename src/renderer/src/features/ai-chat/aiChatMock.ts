@@ -201,6 +201,25 @@ export type AiChatEvent =
 // 消息发送者类型，描述消息归属。
 export type AiChatMessageRole = "user" | "assistant";
 
+// AI 消息片段类型，用于保留文本与工具调用的真实交错顺序。
+export type AiChatMessagePart =
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "text";
+      // Markdown 文本内容。
+      content: string;
+    }
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "tool";
+      // 对应工具步骤 ID。
+      stepId: string;
+    };
+
 // AI 对话消息类型，描述聊天气泡所需数据。
 export type AiChatMessage = {
   // 消息唯一标识。
@@ -215,6 +234,8 @@ export type AiChatMessage = {
   toolSteps?: AiToolStep[];
   // 可选最终回答（整合在同一个回复中）。
   answer?: string;
+  // 可选顺序片段，保留流式文本和工具调用的真实出现顺序。
+  parts?: AiChatMessagePart[];
 };
 
 // AI 会话类型，描述左侧历史列表和右侧聊天主体。
