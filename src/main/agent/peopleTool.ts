@@ -112,18 +112,6 @@ const sqlRowToToolItem = (row: PeopleSqlRow): PeopleQueryToolItem =>
   })
 
 /**
- * 渲染 SQL 原始行摘要，避免 observation 过长。
- */
-const renderSqlRowsSummary = (rows: unknown[]): string => {
-  const summary = JSON.stringify(rows.slice(0, 3))
-  if (!summary) {
-    return ''
-  }
-
-  return summary.length > 240 ? `${summary.slice(0, 240)}...` : summary
-}
-
-/**
  * 解析字符串字段。
  */
 const parseString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
@@ -318,7 +306,7 @@ const renderSqlObservation = (rows: unknown[]): string => {
     return 'SQL 查询没有返回数据。'
   }
 
-  return `SQL 查询返回 ${rows.length} 行：${renderSqlRowsSummary(rows)}`
+  return `SQL 查询返回 ${rows.length} 行，结构化数据已回传。`
 }
 
 /**

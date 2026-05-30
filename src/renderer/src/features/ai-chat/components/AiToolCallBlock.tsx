@@ -5,6 +5,12 @@ import type {
   AiToolStepStatus,
 } from "@renderer/features/ai-chat/aiChatMock";
 
+// 工具观察文本最大展示长度。
+const TOOL_OBSERVATION_MAX_LENGTH = 96;
+
+// SQL 原始行观察文本匹配规则。
+const SQL_RAW_ROWS_OBSERVATION_PATTERN = /^SQL 查询返回 (\d+) 行[：:].*[\[{].*[\]}]/s;
+
 // AI 工具调用块组件属性类型。
 type AiToolCallBlockProps = {
   // 工具执行步骤列表。
@@ -45,6 +51,24 @@ const getStatusConfig = (
 };
 
 /**
+ * formatToolObservation - 将工具原始观察压缩成用户可读摘要。
+ */
+const formatToolObservation = (observation: string): string => {
+  const normalizedObservation = observation.trim();
+  const sqlRowsMatch = normalizedObservation.match(SQL_RAW_ROWS_OBSERVATION_PATTERN);
+
+  if (sqlRowsMatch) {
+    return `SQL 查询返回 ${sqlRowsMatch[1]} 行，已整理为结构化结果。`;
+  }
+
+  if (normalizedObservation.length <= TOOL_OBSERVATION_MAX_LENGTH) {
+    return normalizedObservation;
+  }
+
+  return `${normalizedObservation.slice(0, TOOL_OBSERVATION_MAX_LENGTH)}...`;
+};
+
+/**
  * AiToolCallBlock - 渲染 ReAct 风格的工具执行摘要
  */
 export const AiToolCallBlock = ({
@@ -57,6 +81,7 @@ export const AiToolCallBlock = ({
         {steps.map((step, index) => {
           const config = getStatusConfig(step.status);
           const StatusIcon = config.icon;
+          const displayObservation = formatToolObservation(step.observation);
 
           return (
             <div key={step.id} className="relative flex gap-3.5 items-start">
@@ -86,7 +111,7 @@ export const AiToolCallBlock = ({
                 </div>
 
                 <p className="text-xs leading-relaxed text-white/45">
-                  {step.observation}
+                  {displayObservation}
                 </p>
               </div>
             </div>

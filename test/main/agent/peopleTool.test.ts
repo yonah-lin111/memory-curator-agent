@@ -109,8 +109,8 @@ describe('peopleTool', () => {
 
     expect(result.items.map((item) => item.name)).toEqual(['小林'])
     expect(result.items[0].details).toBe('')
-    expect(result.observation).toContain('SQL 查询返回 1 行')
-    expect(result.observation).toContain('小林')
+    expect(result.observation).toBe('SQL 查询返回 1 行，结构化数据已回传。')
+    expect(result.observation).not.toContain('小林')
   })
 
   it('query 基础字段无命中时才兜底查询 details', async () => {
@@ -122,7 +122,8 @@ describe('peopleTool', () => {
 
     expect(result.items.map((item) => item.name)).toEqual(['阿明', '小林'])
     expect(result.items[0].details).toContain('本地优先工具')
-    expect(result.observation).toContain('阿明')
+    expect(result.observation).toBe('SQL 查询返回 2 行，结构化数据已回传。')
+    expect(result.observation).not.toContain('阿明')
   })
 
   it('返回完整详情，不截断查询内容', async () => {
@@ -203,7 +204,7 @@ describe('peopleTool', () => {
       rows: [{ count: 3 }],
       items: []
     })
-    expect(result.observation).toBe('SQL 查询返回 1 行：[{"count":3}]')
+    expect(result.observation).toBe('SQL 查询返回 1 行，结构化数据已回传。')
   })
 
   it('拒绝危险 SQL', async () => {
