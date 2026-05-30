@@ -1,4 +1,5 @@
 import { createPeopleQueryTool } from './peopleTool'
+import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from './commonInfoTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from './types'
 import type { PeopleService } from '../services/peopleService'
 
@@ -32,7 +33,12 @@ export type AgentToolRegistry = {
 }
 
 // 内置工具工厂列表。
-const builtinToolFactories: AgentToolFactory[] = [({ peopleService }) => createPeopleQueryTool(peopleService)]
+const builtinToolFactories: AgentToolFactory[] = [
+  ({ peopleService }) => createPeopleQueryTool(peopleService),
+  () => createTimeNowTool(),
+  () => createDateOffsetTool(),
+  () => createRuntimeInfoTool()
+]
 
 // 工具调用公共约束。
 const TOOL_CALL_GUARD = '调用约束：严格按参数 Schema 提供参数；只在确实需要该能力时调用；不要臆造工具未返回的信息。'

@@ -29,9 +29,12 @@ describe('toolRegistry', () => {
       peopleService
     })
 
-    expect(registry.ids()).toEqual(['people_query'])
+    expect(registry.ids()).toEqual(['people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
     expect(registry.get('people_query')?.description).toContain('People 表')
-    expect(registry.all()).toHaveLength(1)
+    expect(registry.get('common_time_now')?.description).toContain('当前日期')
+    expect(registry.get('common_date_offset')?.description).toContain('日期偏移')
+    expect(registry.get('common_runtime_info')?.description).toContain('运行环境')
+    expect(registry.all()).toHaveLength(4)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -99,6 +102,36 @@ describe('toolRegistry', () => {
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }])).toEqual([])
   })
 
+  it('根据当前时间意图筛选工具，注入 common_time_now', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual([
+      'common_time_now'
+    ])
+  })
+
+  it('根据日期偏移意图筛选工具，注入 common_date_offset', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual([
+      'common_date_offset'
+    ])
+  })
+
+  it('根据运行环境意图筛选工具，注入 common_runtime_info', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '当前系统信息是什么？' }]).map((tool) => tool.name)).toEqual([
+      'common_runtime_info'
+    ])
+  })
+
   it('根据用户意图筛选工具，人物关系问题注入 people_query', () => {
     const registry = createAgentToolRegistry({
       peopleService
@@ -137,7 +170,7 @@ describe('toolRegistry', () => {
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)
-    ).toEqual(['people_query'])
+    ).toEqual(['people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

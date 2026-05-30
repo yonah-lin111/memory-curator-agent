@@ -372,12 +372,9 @@ export const AiChatMessageBubble = ({
           }`}
         >
           {isGenerating ? (
-            <span className="flex items-center gap-1.5">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/30 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/40"></span>
-              </span>
-              <span>AI 正在输出...</span>
+            <span className="relative flex h-1.5 w-1.5 my-1 ml-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/40 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50"></span>
             </span>
           ) : (
             message.time
