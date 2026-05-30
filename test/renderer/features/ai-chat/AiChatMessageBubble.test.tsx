@@ -37,7 +37,7 @@ describe('AiChatMessageBubble', () => {
 
     render(<AiChatMessageBubble message={message} />)
 
-    expect(screen.getByText('查询本地 People')).toBeInTheDocument()
+    expect(screen.getByText('people_query')).toBeInTheDocument()
     expect(screen.getByText('找到 1 位关联人物：阿明')).toBeInTheDocument()
     expect(screen.getByText('阿明是你本地 People 中的朋友。')).toBeInTheDocument()
     expect(screen.queryByText(/工具数据/)).not.toBeInTheDocument()
@@ -66,7 +66,6 @@ describe('AiChatMessageBubble', () => {
 
     render(<AiChatMessageBubble message={message} />)
 
-    expect(screen.getByText('查询本地 People')).toBeInTheDocument()
     expect(screen.getByText('people_query')).toBeInTheDocument()
     expect(screen.getByText('SQL 查询返回 1 行，已整理为结构化结果。')).toBeInTheDocument()
     expect(screen.queryByText(/"id"/)).not.toBeInTheDocument()

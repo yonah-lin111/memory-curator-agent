@@ -745,7 +745,7 @@ describe('App', () => {
     const chatMain = screen.getByLabelText('AI 对话主体')
     const banner = screen.getByRole('banner')
     expect(within(banner).getByText('周回顾行动拆解')).toBeInTheDocument()
-    expect(within(chatMain).getByText('读取 weekly review 草稿')).toBeInTheDocument()
+    expect(within(chatMain).getByText('weekly_review.load')).toBeInTheDocument()
     expect(screen.getAllByLabelText('工具完成').length).toBeGreaterThan(0)
   })
 })

@@ -367,6 +367,19 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
           },
         ],
       },
+      {
+        id: "people-user-2",
+        role: "user",
+        content: "能写一个经典的贪吃蛇游戏代码吗？我想测试一下代码块展示。",
+        time: "昨天",
+      },
+      {
+        id: "people-ai-2",
+        role: "assistant",
+        content: "当然可以！这是一个基于 HTML5 Canvas 和纯 JavaScript 实现的经典贪吃蛇小游戏代码。",
+        time: "昨天",
+        answer: "当然可以！这里有一个使用 HTML5 Canvas 编写的经典贪吃蛇小游戏代码，你可以直接保存为 `.html` 文件并在浏览器中运行：\n\n```html\n<!DOCTYPE html>\n<html>\n<head>\n  <title>Snake Game</title>\n  <style>\n    canvas {\n      border: 1px solid white;\n      background: black;\n      display: block;\n      margin: 0 auto;\n    }\n    body {\n      background: #111;\n      color: white;\n      text-align: center;\n      font-family: sans-serif;\n    }\n  </style>\n</head>\n<body>\n  <h1>Snake Game</h1>\n  <canvas id=\"game\" width=\"400\" height=\"400\"></canvas>\n  <p>使用方向键控制蛇移动</p>\n  <script>\n    const canvas = document.getElementById('game');\n    const context = canvas.getContext('2d');\n    const grid = 16;\n    let count = 0;\n    let snake = { x: 160, y: 160, dx: grid, dy: 0, cells: [], maxCells: 4 };\n    let apple = { x: 320, y: 320 };\n\n    function getRandomInt(min, max) {\n      return Math.floor(Math.random() * (max - min)) + min;\n    }\n\n    function loop() {\n      requestAnimationFrame(loop);\n      if (++count < 4) return;\n      count = 0;\n      context.clearRect(0,0,canvas.width,canvas.height);\n      snake.x += snake.dx;\n      snake.y += snake.dy;\n      if (snake.x < 0) snake.x = canvas.width - grid;\n      else if (snake.x >= canvas.width) snake.x = 0;\n      if (snake.y < 0) snake.y = canvas.height - grid;\n      else if (snake.y >= canvas.height) snake.y = 0;\n      snake.cells.unshift({x: snake.x, y: snake.y});\n      if (snake.cells.length > snake.maxCells) snake.cells.pop();\n      context.fillStyle = 'red';\n      context.fillRect(apple.x, apple.y, grid-1, grid-1);\n      context.fillStyle = 'green';\n      snake.cells.forEach(function(cell, index) {\n        context.fillRect(cell.x, cell.y, grid-1, grid-1);\n        if (cell.x === apple.x && cell.y === apple.y) {\n          snake.maxCells++;\n          apple.x = getRandomInt(0, 25) * grid;\n          apple.y = getRandomInt(0, 25) * grid;\n        }\n        for (let i = index + 1; i < snake.cells.length; i++) {\n          if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {\n            snake.x = 160; snake.y = 160; snake.cells = []; snake.maxCells = 4;\n            snake.dx = grid; snake.dy = 0;\n            apple.x = getRandomInt(0, 25) * grid;\n            apple.y = getRandomInt(0, 25) * grid;\n          }\n        }\n      });\n    }\n\n    document.addEventListener('keydown', function(e) {\n      if (e.which === 37 && snake.dx === 0) { snake.dx = -grid; snake.dy = 0; }\n      else if (e.which === 38 && snake.dy === 0) { snake.dy = -grid; snake.dx = 0; }\n      else if (e.which === 39 && snake.dx === 0) { snake.dx = grid; snake.dy = 0; }\n      else if (e.which === 40 && snake.dy === 0) { snake.dy = grid; snake.dx = 0; }\n    });\n    requestAnimationFrame(loop);\n  </script>\n</body>\n</html>\n```\n\n你可以把上述代码保存，双击打开即可愉快地玩耍了！",
+      },
     ],
   },
 ];

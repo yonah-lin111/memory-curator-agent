@@ -111,10 +111,7 @@ export const AiToolCallBlock = ({
               {/* 步骤详细内容 */}
               <div className="flex-1 min-w-0 flex flex-col gap-0.5 ">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-white/85">
-                    {step.title}
-                  </span>
-                  <span className="rounded-[6px] border border-white/5 bg-white/[0.02] px-1.5 py-0.5 text-xs font-mono text-white/45">
+                  <span className="text-xs font-bold text-white/85 font-mono">
                     {step.tool}
                   </span>
                 </div>

@@ -199,6 +199,8 @@ const AiMarkdownPreview = ({
         previewTheme="default"
         codeTheme="atom"
         style={{ backgroundColor: "transparent" }}
+        codeFoldable={false}
+        showCodeRowNumber={false}
       />
     </div>
   );
@@ -299,7 +301,7 @@ export const AiChatMessageBubble = ({
       >
         <div
           className={`rounded-[6px] px-1 py-1  text-sm leading-relaxed break-words w-fit ${
-            isUser ? "bg-transparent text-white font-medium" : "  text-white/80"
+            isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "  text-white/80"
           }`}
         >
           {isUser ? (
