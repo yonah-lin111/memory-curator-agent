@@ -88,6 +88,8 @@ describe('AiChatWorkspace', () => {
     await waitFor(() => {
       expect(useAiChatContextStore.getState().getSessionItems('s1')).toHaveLength(2)
     })
+    expect(screen.getByText('MiniMax-M2.5')).toBeInTheDocument()
+    expect(screen.getByLabelText(/上下文使用 0% · 约 \d+ tokens \/ 204,800/)).toBeInTheDocument()
     expect(screen.queryByLabelText('AI 对话上下文')).not.toBeInTheDocument()
   })
 })

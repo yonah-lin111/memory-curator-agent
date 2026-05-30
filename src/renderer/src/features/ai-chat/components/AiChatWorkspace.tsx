@@ -7,8 +7,15 @@ import type {
 } from "@renderer/features/ai-chat/aiChatMock";
 import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
 import { AiChatInput } from "@renderer/features/ai-chat/components/AiChatInput";
-import { buildMessageContextItems } from "@renderer/features/ai-chat/aiChatContextBuilder";
+import {
+  buildMessageContextItems,
+  getAiChatContextBudget,
+  type AiChatContextItem,
+} from "@renderer/features/ai-chat/aiChatContextBuilder";
 import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
+
+// 空上下文数组，避免 Zustand selector 在空态返回新引用。
+const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
@@ -36,9 +43,21 @@ export const AiChatWorkspace = ({
 }: AiChatWorkspaceProps): React.JSX.Element => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const syncMessageItems = useAiChatContextStore((state) => state.syncMessageItems);
+  const contextItems = useAiChatContextStore(
+    (state) => state.sessionItems[session.id] ?? EMPTY_CONTEXT_ITEMS,
+  );
   const messageContextItems = useMemo(
     () => buildMessageContextItems(session.id, session.messages),
     [session.id, session.messages],
+  );
+  const contextBudget = useMemo(
+    () =>
+      getAiChatContextBudget({
+        items: contextItems,
+        modelOptions,
+        selectedModel,
+      }),
+    [contextItems, modelOptions, selectedModel],
   );
 
   // 当消息列表更新时，平滑滚动至最底部。
@@ -68,6 +87,9 @@ export const AiChatWorkspace = ({
       <AiChatInput
         modelOptions={modelOptions}
         selectedModel={selectedModel}
+        contextUsagePercent={contextBudget.usagePercent}
+        contextTokens={contextBudget.totalTokens}
+        contextLimit={contextBudget.contextLimit}
         onSendMessage={onSendMessage}
         onModelChange={onModelChange}
       />

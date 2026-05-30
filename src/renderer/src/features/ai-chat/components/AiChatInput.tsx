@@ -14,6 +14,12 @@ export type AiChatInputProps = {
   modelOptions: AiModelProviderOption[];
   // 当前选中的 AI provider 与模型。
   selectedModel: AiModelSelection | null;
+  // 当前模型上下文使用百分比。
+  contextUsagePercent: number | null;
+  // 当前上下文 token 估算。
+  contextTokens: number;
+  // 当前模型上下文窗口上限。
+  contextLimit?: number;
   // 发送消息回调。
   onSendMessage: (text: string) => void;
   // AI 模型切换回调。
@@ -26,6 +32,9 @@ export type AiChatInputProps = {
 export const AiChatInput = ({
   modelOptions,
   selectedModel,
+  contextUsagePercent,
+  contextTokens,
+  contextLimit,
   onSendMessage,
   onModelChange,
 }: AiChatInputProps): React.JSX.Element => {
@@ -34,6 +43,19 @@ export const AiChatInput = ({
     ? `${selectedModel.provider}::${selectedModel.model}`
     : "";
   const hasModelOptions = modelOptions.some((provider) => provider.models.length > 0);
+  const contextUsageValue = contextUsagePercent === null ? null : Math.min(Math.max(contextUsagePercent, 0), 100);
+  const contextUsageLabel = contextUsageValue === null ? "上下文使用未知" : `上下文使用 ${contextUsageValue}%`;
+  const contextTokenLabel =
+    contextLimit === undefined
+      ? `约 ${contextTokens.toLocaleString("zh-CN")} tokens / 未知上限`
+      : `约 ${contextTokens.toLocaleString("zh-CN")} tokens / ${contextLimit.toLocaleString("zh-CN")}`;
+  const contextTooltipLabel = `${contextUsageLabel} · ${contextTokenLabel}`;
+  const circleRadius = 8;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const circleDashOffset =
+    contextUsageValue === null
+      ? circleCircumference
+      : circleCircumference * (1 - contextUsageValue / 100);
 
   // 构造供 Select 组件使用的选项列表，支持 provider 分组。
   const selectOptions = hasModelOptions
@@ -41,7 +63,7 @@ export const AiChatInput = ({
         label: provider.name,
         options: provider.models.map((model) => ({
           value: `${provider.id}::${model.id}`,
-          label: model.name, // 仅使用模型名，不需要包含 provider 前缀
+          label: model.name,
         })),
       }))
     : [{ value: "", label: "无可用模型" }];
@@ -101,6 +123,41 @@ export const AiChatInput = ({
               disabled={!hasModelOptions}
               className="!w-fit max-w-[220px]"
             />
+            <div
+              aria-label={contextTooltipLabel}
+              className="group relative flex h-6 w-6 shrink-0 items-center justify-center text-white/50"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="-rotate-90 h-5 w-5"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r={circleRadius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-white/10"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r={circleRadius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={circleCircumference}
+                  strokeDashoffset={circleDashOffset}
+                  className="text-white/80 transition-[stroke-dashoffset] duration-200"
+                />
+              </svg>
+              <div className="pointer-events-none absolute bottom-8 left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded-[6px] border border-white/10 bg-black px-2 py-1 text-[12px] text-white/70 shadow-lg group-hover:block">
+                {contextTooltipLabel}
+              </div>
+            </div>
             <IconButton
               aria-label="添加附件"
               disabled
