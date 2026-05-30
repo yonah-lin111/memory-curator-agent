@@ -93,6 +93,17 @@ const getMessageContextContent = (message: AiChatMessage): string => {
 };
 
 /**
+ * 序列化工具输入，失败时保留空对象，避免破坏上下文构造。
+ */
+const stringifyToolInput = (input: unknown): string => {
+  try {
+    return JSON.stringify(input ?? {});
+  } catch {
+    return "{}";
+  }
+};
+
+/**
  * 从消息列表派生上下文条目。
  */
 export const buildMessageContextItems = (
@@ -101,12 +112,11 @@ export const buildMessageContextItems = (
 ): AiChatContextItem[] => {
   return messages.flatMap((message, index) => {
     const content = getMessageContextContent(message);
-    if (!content) {
-      return [];
-    }
+    const createdAt = index * 1000;
+    const items: AiChatContextItem[] = [];
 
-    return [
-      {
+    if (message.role === "user" && content) {
+      items.push({
         key: `message:${message.id}`,
         sessionId,
         kind: "message",
@@ -115,13 +125,61 @@ export const buildMessageContextItems = (
         summary: summarizeContextContent(content),
         content,
         tokens: estimateAiChatContextTokens(content),
-        createdAt: index,
+        createdAt,
         meta: {
           role: message.role,
           time: message.time,
         },
-      },
-    ];
+      });
+    }
+
+    if (message.role !== "assistant") {
+      return items;
+    }
+
+    for (const [toolIndex, step] of (message.toolSteps ?? []).entries()) {
+      const observation = step.observation.trim();
+      if (step.status !== "done" || !observation) {
+        continue;
+      }
+
+      items.push({
+        key: `tool:${message.id}:${step.id}`,
+        sessionId,
+        kind: "tool",
+        sourceId: step.id,
+        title: `工具结果：${step.tool}`,
+        summary: summarizeContextContent(observation),
+        content: observation,
+        tokens: estimateAiChatContextTokens(observation),
+        createdAt: createdAt + toolIndex + 1,
+        meta: {
+          tool: step.tool,
+          messageId: message.id,
+          inputJson: stringifyToolInput(step.input),
+        },
+      });
+    }
+
+    if (content) {
+      items.push({
+        key: `message:${message.id}`,
+        sessionId,
+        kind: "message",
+        sourceId: message.id,
+        title: "助手回答",
+        summary: summarizeContextContent(content),
+        content,
+        tokens: estimateAiChatContextTokens(content),
+        createdAt: createdAt + 500,
+        meta: {
+          role: message.role,
+          time: message.time,
+        },
+      });
+    }
+
+    return items;
   });
 };
 

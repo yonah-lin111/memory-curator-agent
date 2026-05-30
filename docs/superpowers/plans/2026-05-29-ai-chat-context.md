@@ -126,6 +126,35 @@ Run: `pnpm test test/renderer/features/ai-chat/aiChatContextBuilder.test.ts`
 
 Expected: PASS.
 
+## Task 9: Tool Observation Context
+
+- [x] **Step 1: Write failing tool context builder test**
+
+Update `test/renderer/features/ai-chat/aiChatContextBuilder.test.ts` to prove a tool completion payload becomes a stable `tool` context item with key `tool:${runId}:${toolCallId}` and content from `observation`.
+
+- [x] **Step 2: Write failing renderer payload regression test**
+
+Update `test/renderer/App.test.tsx` to simulate `tool_finished`, send a second message, and assert the second `startChat` payload includes the `tool` context item.
+
+- [x] **Step 3: Implement tool context construction**
+
+Update `src/renderer/src/features/ai-chat/aiChatContextBuilder.ts` with `buildToolContextItem()`.
+
+- [x] **Step 4: Persist tool context on tool completion**
+
+Update `src/renderer/src/App.tsx` so `tool_finished` writes the generated tool context item into `useAiChatContextStore`.
+
+- [x] **Step 5: Verify targeted tests**
+
+Run:
+
+```bash
+pnpm vitest run test/renderer/features/ai-chat/aiChatContextBuilder.test.ts -t "从工具完成事件派生可复用上下文条目"
+pnpm vitest run test/renderer/App.test.tsx -t "AI 对话第二轮发送时携带上一轮工具查询上下文"
+```
+
+Expected: PASS.
+
 ## Task 2: Store Red-Green
 
 - [ ] **Step 1: Write failing store tests**

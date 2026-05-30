@@ -103,4 +103,56 @@ describe('aiChatContextBuilder', () => {
       })
     ).toMatchObject({ totalTokens: 2, contextLimit: 204800, usagePercent: 0 })
   })
+
+  it('从助手消息的 toolSteps 派生工具上下文条目', () => {
+    const items = buildMessageContextItems('s1', [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '处理中',
+        answer: '阿明是朋友。',
+        time: '10:01',
+        toolSteps: [
+          {
+            id: 'call-1',
+            title: '查询本地 People',
+            status: 'done',
+            tool: 'people_list',
+            observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
+          },
+          {
+            id: 'call-2',
+            title: '等待执行',
+            status: 'running',
+            tool: 'people_list',
+            observation: '正在读取本地 People 表。'
+          }
+        ]
+      }
+    ])
+
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'tool:a1:call-1',
+          sessionId: 's1',
+          kind: 'tool',
+          sourceId: 'call-1',
+          title: '工具结果：people_list',
+          content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+          meta: expect.objectContaining({
+            tool: 'people_list',
+            messageId: 'a1'
+          })
+        })
+      ])
+    )
+    expect(items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'tool:a1:call-2'
+        })
+      ])
+    )
+  })
 })

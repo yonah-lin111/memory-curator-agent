@@ -48,6 +48,54 @@ describe('providerConfig', () => {
     expect(config.defaultModel).toBe('MiniMax-M2.5')
     expect(config.providers.bailian.type).toBe('openai-compatible')
     expect(config.providers.bailian.options.baseURL).toBe('https://example.com/v1')
+    expect(config.agent.context).toEqual({
+      toolOutputMaxChars: 8000,
+      recentToolResultLimit: 6
+    })
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  it('读取 ai.agent.context 工具上下文治理配置', () => {
+    const directory = join(tmpdir(), `mc-config-agent-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          agent: {
+            context: {
+              toolOutputMaxChars: 4096,
+              recentToolResultLimit: 3
+            }
+          },
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(config.agent.context).toEqual({
+      toolOutputMaxChars: 4096,
+      recentToolResultLimit: 3
+    })
 
     rmSync(directory, { recursive: true, force: true })
   })

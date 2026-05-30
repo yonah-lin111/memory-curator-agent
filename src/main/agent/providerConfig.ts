@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type {
+  AgentConfig,
   ModelConfig,
   NormalizedAiConfig,
   NormalizedProviderConfig,
@@ -10,6 +11,14 @@ import type {
 
 // 默认配置路径。
 export const DEFAULT_MC_CONFIG_PATH = join(homedir(), '.mc', 'config.json')
+
+// 默认 Agent 配置。
+export const DEFAULT_AGENT_CONFIG: AgentConfig = {
+  context: {
+    toolOutputMaxChars: 8000,
+    recentToolResultLimit: 6
+  }
+}
 
 // 原始 provider 配置形状。
 type RawProviderConfig = {
@@ -30,6 +39,17 @@ type RawProviderConfig = {
   models?: Record<string, ModelConfig>
 }
 
+// 原始 Agent 配置形状。
+type RawAgentConfig = {
+  // 上下文治理配置。
+  context?: {
+    // 单条工具 observation 最大字符数。
+    toolOutputMaxChars?: number
+    // 最近保留完整工具结果的数量。
+    recentToolResultLimit?: number
+  }
+}
+
 // 原始配置文件形状。
 type RawConfigFile = {
   // 新版 AI 配置。
@@ -42,6 +62,8 @@ type RawConfigFile = {
     enabled_providers?: string[]
     // Provider 配置表。
     providers?: Record<string, RawProviderConfig>
+    // Agent 行为配置。
+    agent?: RawAgentConfig
   }
   // 兼容顶层 provider 配置。
   [key: string]: unknown
@@ -96,6 +118,29 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): NormalizedP
 }
 
 /**
+ * 归一化正整数配置，非法值回落到默认值。
+ */
+const normalizePositiveInteger = (value: unknown, fallback: number): number => {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback
+}
+
+/**
+ * 归一化 Agent 配置。
+ */
+const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig => ({
+  context: {
+    toolOutputMaxChars: normalizePositiveInteger(
+      agent?.context?.toolOutputMaxChars,
+      DEFAULT_AGENT_CONFIG.context.toolOutputMaxChars
+    ),
+    recentToolResultLimit: normalizePositiveInteger(
+      agent?.context?.recentToolResultLimit,
+      DEFAULT_AGENT_CONFIG.context.recentToolResultLimit
+    )
+  }
+})
+
+/**
  * 读取并归一化模型 provider 配置。
  */
 export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): NormalizedAiConfig => {
@@ -140,6 +185,7 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     defaultProvider,
     defaultModel,
     enabledProviders: providerIds,
-    providers
+    providers,
+    agent: normalizeAgentConfig(rawConfig.ai?.agent)
   }
 }

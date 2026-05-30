@@ -29,6 +29,20 @@ export type ModelConfig = {
   modalities?: ModelModalities
 }
 
+// Agent 上下文治理配置。
+export type AgentContextPolicyConfig = {
+  // 单条工具 observation 最大字符数。
+  toolOutputMaxChars: number
+  // 最近保留完整工具结果的数量。
+  recentToolResultLimit: number
+}
+
+// Agent 配置。
+export type AgentConfig = {
+  // 上下文治理配置。
+  context: AgentContextPolicyConfig
+}
+
 // Provider 连接参数。
 export type ProviderOptions = {
   // API Key。
@@ -63,6 +77,8 @@ export type NormalizedAiConfig = {
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, NormalizedProviderConfig>
+  // Agent 行为配置。
+  agent: AgentConfig
 }
 
 // Agent 消息角色。

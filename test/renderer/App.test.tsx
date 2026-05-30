@@ -7,12 +7,14 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '@renderer/App'
 import type { AiChatEvent, AiChatStartPayload } from '@renderer/features/ai-chat/aiChatMock'
+import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
 
 describe('App', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
     vi.useRealTimers()
+    useAiChatContextStore.getState().resetAll()
     window.history.replaceState({}, '', '/')
   })
 
@@ -331,6 +333,12 @@ describe('App', () => {
         getModelOptions: vi.fn(async () => ({
           defaultProvider: 'bailian',
           defaultModel: 'MiniMax-M2.5',
+          agent: {
+            context: {
+              toolOutputMaxChars: 4096,
+              recentToolResultLimit: 3
+            }
+          },
           providers: [
             {
               id: 'bailian',
@@ -443,6 +451,75 @@ describe('App', () => {
           content: '第一个问题是关于上下文。',
           meta: expect.objectContaining({
             role: 'assistant'
+          })
+        })
+      ])
+    )
+  })
+
+  it('AI 对话第二轮发送时携带上一轮工具查询上下文', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+      runId: payload.runId ?? 'run-test'
+    }))
+
+    window.api = {
+      ai: {
+        startChat,
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.type(screen.getByLabelText('AI 对话输入框'), '查一下阿明')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledTimes(1)
+    })
+
+    const firstPayload = startChat.mock.calls[0][0]
+
+    act(() => {
+      listeners.forEach((listener) =>
+        listener({
+          type: 'tool_finished',
+          runId: firstPayload.runId!,
+          sessionId: firstPayload.sessionId,
+          id: 'call-1',
+          name: 'people_list',
+          observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+          data: []
+        })
+      )
+    })
+    await waitFor(() => {
+      expect(screen.getByText('找到 1 位关联人物：阿明｜朋友｜技术狂热者')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByLabelText('AI 对话输入框'), '刚才工具查到了什么')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledTimes(2)
+    })
+
+    expect(startChat.mock.calls[1][0].context).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: expect.stringMatching(/^tool:.*:call-1$/),
+          kind: 'tool',
+          title: '工具结果：people_list',
+          content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
+          meta: expect.objectContaining({
+            tool: 'people_list',
+            messageId: expect.any(String)
           })
         })
       ])
@@ -603,6 +680,59 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: '打开聊天' })).toBeInTheDocument()
     expect(screen.getByLabelText('侧边栏主导航')).toBeInTheDocument()
     expect(screen.getByLabelText('对话历史列表')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('Header 聊天按钮左侧展示上下文记录 tooltip 按钮和工具策略详情', async () => {
+    const user = userEvent.setup()
+
+    window.api = {
+      ai: {
+        getModelOptions: vi.fn(async () => ({
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          agent: {
+            context: {
+              toolOutputMaxChars: 4096,
+              recentToolResultLimit: 3
+            }
+          },
+          providers: [
+            {
+              id: 'bailian',
+              name: 'Bailian',
+              models: [
+                {
+                  id: 'MiniMax-M2.5',
+                  name: 'MiniMax-M2.5',
+                  limit: {
+                    context: 204800,
+                    output: 131072
+                  }
+                }
+              ]
+            }
+          ]
+        })),
+        onChatEvent: () => () => undefined
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+
+    const contextButton = await screen.findByRole('button', { name: '查看 AI 上下文记录' })
+    const chatButton = screen.getByRole('button', { name: '关闭聊天' })
+    expect(contextButton.compareDocumentPosition(chatButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await user.click(contextButton)
+
+    expect(screen.getByRole('dialog', { name: 'AI 上下文记录详情' })).toBeInTheDocument()
+    expect(screen.getByText('单条工具输出上限')).toBeInTheDocument()
+    expect(screen.getByText('4,096 chars')).toBeInTheDocument()
+    expect(screen.getByText('最近完整工具结果')).toBeInTheDocument()
+    expect(screen.getByText('3 条')).toBeInTheDocument()
+    expect(screen.getByText(/只保留占位摘要/)).toBeInTheDocument()
   })
 
   it('AI 对话模式支持切换历史会话并展示工具调用摘要', async () => {

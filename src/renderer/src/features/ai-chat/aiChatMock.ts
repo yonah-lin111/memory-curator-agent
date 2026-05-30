@@ -11,6 +11,8 @@ export type AiToolStep = {
   status: AiToolStepStatus;
   // 工具名称或执行阶段名称。
   tool: string;
+  // 工具输入参数。
+  input?: unknown;
   // 面向用户展示的执行观察摘要。
   observation: string;
 };
@@ -23,6 +25,8 @@ export type AiChatStartContextItem = {
   kind: "message" | "memory" | "page" | "file" | "tool" | "agent";
   // 展示标题。
   title: string;
+  // 来源对象标识。
+  sourceId?: string;
   // 参与模型请求的正文。
   content: string;
   // 估算 token 数。
@@ -89,6 +93,20 @@ export type AiModelProviderOption = {
   models: AiModelOption[];
 };
 
+// AI Agent 上下文治理选项。
+export type AiAgentContextPolicyOption = {
+  // 单条工具 observation 最大字符数。
+  toolOutputMaxChars: number;
+  // 最近保留完整工具结果的数量。
+  recentToolResultLimit: number;
+};
+
+// AI Agent 选项。
+export type AiAgentOption = {
+  // 上下文治理选项。
+  context: AiAgentContextPolicyOption;
+};
+
 // AI 模型配置响应。
 export type AiModelOptionsResponse = {
   // 默认 provider 标识。
@@ -97,6 +115,8 @@ export type AiModelOptionsResponse = {
   defaultModel: string;
   // 已启用 provider 与模型。
   providers: AiModelProviderOption[];
+  // Agent 非密钥行为配置。
+  agent: AiAgentOption;
 };
 
 // AI 对话流式事件类型。

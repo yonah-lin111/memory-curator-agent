@@ -16,6 +16,12 @@ vi.mock('../../../src/main/agent/providerConfig', () => ({
     defaultProvider: 'bailian',
     defaultModel: 'MiniMax-M2.5',
     enabledProviders: ['bailian'],
+    agent: {
+      context: {
+        toolOutputMaxChars: 4096,
+        recentToolResultLimit: 3
+      }
+    },
     providers: {
       bailian: {
         id: 'bailian',
@@ -64,6 +70,10 @@ describe('aiHandlers', () => {
         input: ['text'],
         output: ['text']
       }
+    })
+    expect(response.agent.context).toEqual({
+      toolOutputMaxChars: 4096,
+      recentToolResultLimit: 3
     })
     expect(JSON.stringify(response)).not.toContain('secret-key')
     expect(JSON.stringify(response)).not.toContain('baseURL')

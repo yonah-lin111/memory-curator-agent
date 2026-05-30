@@ -14,6 +14,8 @@ export type AgentContextPayloadItem = {
   kind: AgentContextKind
   // 展示标题。
   title: string
+  // 来源对象标识。
+  sourceId?: string
   // 参与模型请求的正文。
   content: string
   // 渲染层估算 token 数。
@@ -36,6 +38,10 @@ type BuildContextAgentMessagesInput = {
   contextLimit?: number
   // 当前模型输出 token 上限。
   outputLimit?: number
+  // 单条工具 observation 最大字符数。
+  toolOutputMaxChars?: number
+  // 最近保留完整工具结果的数量。
+  recentToolResultLimit?: number
 }
 
 // 可进入模型的上下文条目。
@@ -61,6 +67,12 @@ const DEFAULT_OUTPUT_RESERVE = 4096
 
 // 单条压缩后最少保留 token。
 const MIN_COMPRESSED_TOKENS = 8
+
+// 默认单条工具结果最大字符数。
+const DEFAULT_TOOL_OUTPUT_MAX_CHARS = 8000
+
+// 默认保留完整工具结果数量。
+const DEFAULT_RECENT_TOOL_RESULT_LIMIT = 6
 
 /**
  * 估算文本 token 数，主进程不信任渲染层 token 字段。
@@ -96,6 +108,38 @@ const compressContent = (content: string, tokenBudget: number): string => {
 }
 
 /**
+ * 截断单条工具输出，避免单次 observation 吃掉整个上下文窗口。
+ */
+const truncateToolOutput = (content: string, maxChars: number): string => {
+  const trimmed = content.trim()
+  if (trimmed.length <= maxChars) {
+    return trimmed
+  }
+
+  if (maxChars <= 32) {
+    return trimmed.slice(0, Math.max(maxChars, 0))
+  }
+
+  const marker = '\n...[工具结果已截断]...\n'
+  const headChars = Math.max(Math.floor((maxChars - marker.length) * 0.7), 1)
+  const tailChars = Math.max(maxChars - marker.length - headChars, 1)
+
+  return `${trimmed.slice(0, headChars)}${marker}${trimmed.slice(-tailChars)}`
+}
+
+/**
+ * 生成旧工具结果占位摘要，旧 observation 不长期全量进入上下文。
+ */
+const summarizeOldToolOutput = (item: AgentContextPayloadItem): string => {
+  const summary = item.content.trim().replace(/\s+/g, ' ').slice(0, 160)
+  const suffix = item.content.trim().length > summary.length ? '...' : ''
+
+  return summary
+    ? `[旧工具结果已省略，仅保留摘要]\n${summary}${suffix}`
+    : '[旧工具结果已省略]'
+}
+
+/**
  * 读取消息上下文中的原始角色。
  */
 const resolveContextRole = (item: AgentContextPayloadItem): AgentMessageRole => {
@@ -109,13 +153,117 @@ const resolveContextRole = (item: AgentContextPayloadItem): AgentMessageRole => 
 /**
  * 归一化上下文正文，非消息来源带上标题边界。
  */
-const normalizeContextContent = (item: AgentContextPayloadItem): string => {
+const normalizeContextContent = (
+  item: AgentContextPayloadItem,
+  toolOutputMaxChars: number
+): string => {
   const content = item.content.trim()
   if (item.kind === 'message') {
     return content
   }
 
+  if (item.kind === 'tool') {
+    return truncateToolOutput(content, toolOutputMaxChars)
+  }
+
   return `上下文：${item.title.trim() || item.kind}\n${content}`
+}
+
+/**
+ * 读取字符串元信息。
+ */
+const getStringMeta = (item: AgentContextPayloadItem, key: string): string | undefined => {
+  const value = item.meta?.[key]
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
+/**
+ * 为历史工具调用生成稳定且唯一的模型工具调用 ID。
+ */
+const buildHistoricalToolCallId = (item: AgentContextPayloadItem): string => {
+  const messageId = getStringMeta(item, 'messageId') ?? 'message'
+  return `history-${messageId}-${item.sourceId ?? item.key}`
+}
+
+/**
+ * 读取工具入参 JSON 文本。
+ */
+const resolveToolArgumentsText = (item: AgentContextPayloadItem): string => {
+  const inputJson = getStringMeta(item, 'inputJson')
+  if (!inputJson) {
+    return '{}'
+  }
+
+  try {
+    JSON.parse(inputJson)
+    return inputJson
+  } catch {
+    return '{}'
+  }
+}
+
+/**
+ * 把已选上下文条目转换为模型消息。
+ */
+const toContextAgentMessages = (item: SelectedContextItem): AgentMessage[] => {
+  if (item.kind !== 'tool') {
+    return [
+      {
+        role: resolveContextRole(item),
+        content: item.content
+      }
+    ]
+  }
+
+  const toolName = getStringMeta(item, 'tool') ?? item.title.replace(/^工具结果：/, '').trim()
+  const toolCallId = buildHistoricalToolCallId(item)
+
+  return [
+    {
+      role: 'assistant',
+      content: '',
+      toolCalls: [
+        {
+          type: 'tool_call_done',
+          id: toolCallId,
+          name: toolName,
+          argumentsText: resolveToolArgumentsText(item)
+        }
+      ]
+    },
+    {
+      role: 'tool',
+      toolCallId,
+      name: toolName,
+      content: item.content
+    }
+  ]
+}
+
+/**
+ * 按 opencode 风格限制历史工具结果：最近 N 条保留，旧结果替换为占位摘要。
+ */
+const applyToolHistoryPolicy = (
+  contextItems: AgentContextPayloadItem[],
+  recentToolResultLimit: number
+): AgentContextPayloadItem[] => {
+  const toolItems = contextItems
+    .filter((item) => item.kind === 'tool')
+    .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
+  const fullToolKeys = new Set(
+    toolItems.slice(Math.max(toolItems.length - recentToolResultLimit, 0)).map((item) => item.key)
+  )
+
+  return contextItems.map((item) => {
+    if (item.kind !== 'tool' || fullToolKeys.has(item.key)) {
+      return item
+    }
+
+    return {
+      ...item,
+      content: summarizeOldToolOutput(item)
+    }
+  })
 }
 
 /**
@@ -196,13 +344,15 @@ const compressGroupItems = (
  */
 const selectContextItems = (
   contextItems: AgentContextPayloadItem[],
-  availableTokens: number | null
+  availableTokens: number | null,
+  toolOutputMaxChars: number,
+  recentToolResultLimit: number
 ): SelectedContextItem[] => {
-  const normalizedItems = contextItems
+  const normalizedItems = applyToolHistoryPolicy(contextItems, recentToolResultLimit)
     .map((item, index) => ({
       ...item,
       createdAt: item.createdAt ?? index,
-      content: normalizeContextContent(item)
+      content: normalizeContextContent(item, toolOutputMaxChars)
     }))
     .filter((item) => item.content.trim())
     .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
@@ -254,18 +404,22 @@ export const buildContextAgentMessages = ({
   userMessage,
   contextItems = [],
   contextLimit,
-  outputLimit
+  outputLimit,
+  toolOutputMaxChars = DEFAULT_TOOL_OUTPUT_MAX_CHARS,
+  recentToolResultLimit = DEFAULT_RECENT_TOOL_RESULT_LIMIT
 }: BuildContextAgentMessagesInput): AgentMessage[] => {
   const baseTokens = estimateTokens(systemMessage.content) + estimateTokens(userMessage)
   const availableTokens =
     typeof contextLimit === 'number'
       ? Math.max(contextLimit - (outputLimit ?? DEFAULT_OUTPUT_RESERVE) - baseTokens, 0)
       : null
-  const selectedItems = selectContextItems(contextItems, availableTokens)
-  const contextMessages = selectedItems.map<AgentMessage>((item) => ({
-    role: resolveContextRole(item),
-    content: item.content
-  }))
+  const selectedItems = selectContextItems(
+    contextItems,
+    availableTokens,
+    toolOutputMaxChars,
+    recentToolResultLimit
+  )
+  const contextMessages = selectedItems.flatMap(toContextAgentMessages)
 
   return [
     systemMessage,

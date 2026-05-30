@@ -65,6 +65,16 @@ type AiModelOptionsResponse = {
   defaultModel: string
   // 已启用 provider 与模型。
   providers: AiModelProviderOption[]
+  // Agent 非密钥行为配置。
+  agent: {
+    // 上下文治理配置。
+    context: {
+      // 单条工具 observation 最大字符数。
+      toolOutputMaxChars: number
+      // 最近保留完整工具结果的数量。
+      recentToolResultLimit: number
+    }
+  }
 }
 
 // AI 对话事件载荷。
@@ -93,6 +103,7 @@ export const createModelOptionsResponse = (): AiModelOptionsResponse => {
   return {
     defaultProvider: config.defaultProvider,
     defaultModel: config.defaultModel,
+    agent: config.agent,
     providers: Object.values(config.providers).map((provider) => ({
       id: provider.id,
       name: provider.name,
@@ -163,7 +174,9 @@ export const registerAiHandlers = (): void => {
             userMessage: payload.message,
             contextItems: payload.context,
             contextLimit: modelConfig.limit?.context,
-            outputLimit: modelConfig.limit?.output
+            outputLimit: modelConfig.limit?.output,
+            toolOutputMaxChars: config.agent.context.toolOutputMaxChars,
+            recentToolResultLimit: config.agent.context.recentToolResultLimit
           }),
           tools
         })) {

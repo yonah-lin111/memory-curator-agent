@@ -74,7 +74,7 @@ describe('AiChatWorkspace', () => {
     cleanup()
   })
 
-  it('展示当前会话的全局上下文和模型上下文窗口', async () => {
+  it('同步当前会话消息上下文且不在消息区渲染记录栏', async () => {
     render(
       <AiChatWorkspace
         session={session}
@@ -85,11 +85,9 @@ describe('AiChatWorkspace', () => {
       />
     )
 
-    expect(await screen.findByLabelText('AI 对话上下文')).toBeInTheDocument()
     await waitFor(() => {
       expect(useAiChatContextStore.getState().getSessionItems('s1')).toHaveLength(2)
     })
-    expect(screen.getByText(/2 条/)).toBeInTheDocument()
-    expect(screen.getByText(/204800/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('AI 对话上下文')).not.toBeInTheDocument()
   })
 })

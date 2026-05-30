@@ -20,6 +20,7 @@ const createContextItem = (
   key: override.key ?? 'message:u1',
   kind: override.kind ?? 'message',
   title: override.title ?? '用户消息',
+  sourceId: override.sourceId,
   content: override.content ?? '第一轮问题是什么',
   tokens: override.tokens ?? 5,
   createdAt: override.createdAt ?? 1,
@@ -154,5 +155,135 @@ describe('contextMessages', () => {
         content: '上一个问题是什么'
       }
     ])
+  })
+
+  it('工具上下文只保留最近结果全文，旧结果替换为占位摘要', () => {
+    const messages = buildContextAgentMessages({
+      systemMessage,
+      userMessage: '继续',
+      contextItems: [
+        createContextItem({
+          key: 'tool:old',
+          kind: 'tool',
+          title: '工具结果：people_list',
+          content: '旧工具结果'.repeat(80),
+          createdAt: 1,
+          meta: { tool: 'people_list' }
+        }),
+        createContextItem({
+          key: 'tool:new',
+          kind: 'tool',
+          title: '工具结果：people_list',
+          content: '新工具结果',
+          createdAt: 2,
+          meta: { tool: 'people_list' }
+        })
+      ],
+      recentToolResultLimit: 1
+    })
+
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      toolCalls: [
+        expect.objectContaining({
+          name: 'people_list'
+        })
+      ]
+    })
+    expect(messages[2]).toMatchObject({
+      role: 'tool',
+      name: 'people_list'
+    })
+    expect(messages[2].content).toContain('[旧工具结果已省略，仅保留摘要]')
+    expect(messages[2].content.length).toBeLessThan('旧工具结果'.repeat(80).length)
+    expect(messages[4].content).toContain('新工具结果')
+  })
+
+  it('单条工具 observation 按 toolOutputMaxChars 截断', () => {
+    const messages = buildContextAgentMessages({
+      systemMessage,
+      userMessage: '继续',
+      contextItems: [
+        createContextItem({
+          key: 'tool:long',
+          kind: 'tool',
+          title: '工具结果：people_list',
+          content: `${'头部'.repeat(40)}中间${'尾部'.repeat(40)}`,
+          createdAt: 1,
+          meta: { tool: 'people_list' }
+        })
+      ],
+      toolOutputMaxChars: 80
+    })
+
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      toolCalls: [
+        expect.objectContaining({
+          name: 'people_list'
+        })
+      ]
+    })
+    expect(messages[2]).toMatchObject({
+      role: 'tool',
+      name: 'people_list'
+    })
+    expect(messages[2].content).toContain('[工具结果已截断]')
+    expect(messages[2].content).toContain('头部')
+    expect(messages[2].content).toContain('尾部')
+    expect(messages[2].content.length).toBeLessThan(`${'头部'.repeat(40)}中间${'尾部'.repeat(40)}`.length)
+  })
+
+  it('把多次历史工具结果还原为 assistant/tool 消息对', () => {
+    const messages = buildContextAgentMessages({
+      systemMessage,
+      userMessage: '你调用了几次工具了？',
+      contextItems: [
+        createContextItem({
+          key: 'tool:a1:call-1',
+          kind: 'tool',
+          title: '工具结果：people_list',
+          sourceId: 'call-1',
+          content: '第一次查询结果',
+          createdAt: 1,
+          meta: {
+            tool: 'people_list',
+            messageId: 'a1',
+            inputJson: '{"relationship":"女朋友"}'
+          }
+        }),
+        createContextItem({
+          key: 'tool:a2:call-1',
+          kind: 'tool',
+          title: '工具结果：people_list',
+          sourceId: 'call-1',
+          content: '第二次查询结果',
+          createdAt: 2,
+          meta: {
+            tool: 'people_list',
+            messageId: 'a2',
+            inputJson: '{"relationship":"女朋友"}'
+          }
+        })
+      ]
+    })
+
+    const assistantToolMessages = messages.filter((message) => message.role === 'assistant' && message.toolCalls?.length)
+    const toolResultMessages = messages.filter((message) => message.role === 'tool')
+
+    expect(assistantToolMessages).toHaveLength(2)
+    expect(toolResultMessages).toHaveLength(2)
+    expect(assistantToolMessages[0].toolCalls?.[0]).toMatchObject({
+      id: 'history-a1-call-1',
+      name: 'people_list',
+      argumentsText: '{"relationship":"女朋友"}'
+    })
+    expect(toolResultMessages[0]).toMatchObject({
+      toolCallId: 'history-a1-call-1',
+      name: 'people_list',
+      content: '第一次查询结果'
+    })
+    expect(assistantToolMessages[1].toolCalls?.[0].id).toBe('history-a2-call-1')
+    expect(toolResultMessages[1].toolCallId).toBe('history-a2-call-1')
   })
 })

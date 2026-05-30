@@ -14,6 +14,8 @@ export interface HeaderProps {
   onChatToggle?: () => void;
   // 当前激活的 AI 会话标题
   chatTitle?: string;
+  // 聊天按钮左侧扩展动作
+  chatLeadingAction?: React.ReactNode;
 }
 
 /**
@@ -25,6 +27,7 @@ export const Header = ({
   isChatOpen = false,
   onChatToggle,
   chatTitle,
+  chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10">
@@ -42,14 +45,17 @@ export const Header = ({
           </>
         )}
       </div>
-      <IconButton
-        aria-label={isChatOpen ? "关闭聊天" : "打开聊天"}
-        highlighted={isChatOpen}
-        onClick={onChatToggle}
-        className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-      </IconButton>
+      <div className="flex items-center gap-1.5">
+        {chatLeadingAction}
+        <IconButton
+          aria-label={isChatOpen ? "关闭聊天" : "打开聊天"}
+          highlighted={isChatOpen}
+          onClick={onChatToggle}
+          className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+        </IconButton>
+      </div>
     </header>
   );
 };

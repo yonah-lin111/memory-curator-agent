@@ -16,18 +16,24 @@ import { Header } from "@renderer/components/layout/Header";
 import { TodayPage } from "@renderer/pages/today/TodayPage";
 import { ToastProvider } from "@renderer/components/ui/Toast";
 import { AiChatWorkspace } from "@renderer/features/ai-chat/components/AiChatWorkspace";
+import { AiChatContextBar } from "@renderer/features/ai-chat/components/AiChatContextBar";
 import {
   buildMessageContextItems,
+  getAiChatContextBudget,
   type AiChatContextItem,
 } from "@renderer/features/ai-chat/aiChatContextBuilder";
 import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
 import {
   AI_CHAT_SESSIONS,
+  type AiAgentOption,
   type AiChatEvent,
   type AiChatSession,
   type AiModelProviderOption,
   type AiModelSelection,
 } from "@renderer/features/ai-chat/aiChatMock";
+
+// 空上下文数组，避免 Zustand selector 在空态返回新引用。
+const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
 /**
  * 记忆策展 Agent 的主应用布局。
@@ -49,6 +55,9 @@ export const App = (): React.JSX.Element => {
   // 已启用的 AI provider 与模型选项。
   const [aiModelOptions, setAiModelOptions] = useState<AiModelProviderOption[]>([]);
 
+  // AI Agent 非密钥行为配置。
+  const [aiAgentOption, setAiAgentOption] = useState<AiAgentOption | null>(null);
+
   // 当前选中的 AI provider 与模型。
   const [selectedAiModel, setSelectedAiModel] = useState<AiModelSelection | null>(null);
 
@@ -65,6 +74,14 @@ export const App = (): React.JSX.Element => {
   const activeChatSession =
     chatSessions.find((session) => session.id === activeChatId) ??
     chatSessions[0];
+  const activeChatContextItems = useAiChatContextStore(
+    (state) => state.sessionItems[activeChatId] ?? EMPTY_AI_CHAT_CONTEXT_ITEMS,
+  );
+  const activeChatContextBudget = getAiChatContextBudget({
+    items: activeChatContextItems,
+    modelOptions: aiModelOptions,
+    selectedModel: selectedAiModel,
+  });
 
   /**
    * 从启用模型列表中解析默认选择。
@@ -230,6 +247,7 @@ export const App = (): React.JSX.Element => {
             title: "查询本地 People",
             status: "running",
             tool: event.name,
+            input: event.input,
             observation: "正在读取本地 People 表。",
           },
         ],
@@ -240,15 +258,28 @@ export const App = (): React.JSX.Element => {
     if (event.type === "tool_finished") {
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
         ...message,
-        toolSteps: (message.toolSteps ?? []).map((step) =>
-          step.id === event.id
-            ? {
-                ...step,
+        toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
+          ? (message.toolSteps ?? []).map((step) =>
+              step.id === event.id
+                ? {
+                    ...step,
+                    status: "done",
+                    input: step.input,
+                    observation: event.observation,
+                  }
+                : step,
+            )
+          : [
+              ...(message.toolSteps ?? []),
+              {
+                id: event.id,
+                title: `工具结果：${event.name}`,
                 status: "done",
+                tool: event.name,
+                input: {},
                 observation: event.observation,
-              }
-            : step,
-        ),
+              },
+            ],
       }));
       return;
     }
@@ -284,6 +315,7 @@ export const App = (): React.JSX.Element => {
       .then((options) => {
         if (!isMounted) return;
         setAiModelOptions(options.providers);
+        setAiAgentOption(options.agent);
         setSelectedAiModel(
           resolveDefaultAiModel(options.providers, options.defaultProvider, options.defaultModel),
         );
@@ -291,6 +323,7 @@ export const App = (): React.JSX.Element => {
       .catch(() => {
         if (!isMounted) return;
         setAiModelOptions([]);
+        setAiAgentOption(null);
         setSelectedAiModel(null);
       });
 
@@ -305,7 +338,7 @@ export const App = (): React.JSX.Element => {
   const buildStartContextItems = (sessionId: string): AiChatContextItem[] => {
     const session = chatSessions.find((item) => item.id === sessionId);
     const storeItems = useAiChatContextStore.getState().getSessionItems(sessionId);
-    const preservedItems = storeItems.filter((item) => item.kind !== "message");
+    const preservedItems = storeItems.filter((item) => item.kind !== "message" && item.kind !== "tool");
     const messageItems = buildMessageContextItems(sessionId, session?.messages ?? []);
     const itemsByKey = new Map<string, AiChatContextItem>();
 
@@ -508,6 +541,15 @@ export const App = (): React.JSX.Element => {
             isChatOpen={isChatOpen}
             onChatToggle={handleChatToggle}
             chatTitle={activeChatSession.title}
+            chatLeadingAction={
+              isChatOpen ? (
+                <AiChatContextBar
+                  items={activeChatContextItems}
+                  budget={activeChatContextBudget}
+                  agent={aiAgentOption}
+                />
+              ) : null
+            }
           />
 
           <div className="flex-1 min-h-0 relative overflow-hidden">

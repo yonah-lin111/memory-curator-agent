@@ -119,6 +119,8 @@ type AiChatStartPayload = {
     kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
     // 展示标题。
     title: string
+    // 来源对象标识。
+    sourceId?: string
     // 参与模型请求的正文。
     content: string
     // 估算 token 数。
@@ -162,6 +164,20 @@ type AiModelProviderOption = {
   models: AiModelOption[]
 }
 
+// AI Agent 上下文治理选项。
+type AiAgentContextPolicyOption = {
+  // 单条工具 observation 最大字符数。
+  toolOutputMaxChars: number
+  // 最近保留完整工具结果的数量。
+  recentToolResultLimit: number
+}
+
+// AI Agent 选项。
+type AiAgentOption = {
+  // 上下文治理选项。
+  context: AiAgentContextPolicyOption
+}
+
 // AI 模型配置响应。
 type AiModelOptionsResponse = {
   // 默认 provider 标识。
@@ -170,6 +186,8 @@ type AiModelOptionsResponse = {
   defaultModel: string
   // 已启用 provider 与模型。
   providers: AiModelProviderOption[]
+  // Agent 非密钥行为配置。
+  agent: AiAgentOption
 }
 
 // AI 工具步骤事件状态。

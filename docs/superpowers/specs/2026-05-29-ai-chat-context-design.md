@@ -22,7 +22,7 @@
 - `aiHandlers.ts`、`preload/index.ts`、`env.d.ts`、`aiChatMock.ts`：扩展模型选项类型，把模型 limit/modalities 从主进程安全透传到渲染层。
 - `contextMessages.ts`：参考 opencode 的请求构造边界，在主进程统一把上下文条目转换为 Agent 消息，并负责去空、排序、按预算选择、压缩。
 
-第一版只把消息列表同步为真实 context 来源。`memory/page/file/tool/agent` 作为类型能力预留，但不伪造数据、不接入未存在的来源。
+第一版把消息列表和工具观察结果同步为真实 context 来源。`memory/page/file/agent` 作为类型能力预留，但不伪造数据、不接入未存在的来源。
 
 ## Data Model
 
@@ -43,7 +43,12 @@
 
 - 用户消息：标题为“用户消息”，内容取 `content`。
 - 助手消息：标题为“助手回答”，内容优先取 `answer`，否则取 `content`。
-- 工具步骤：第一版不拆成独立 item，只在助手消息摘要中体现；后续可用 `tool` 类型拆分。
+`tool` 类型从 `tool_finished` 事件派生：
+
+- key 为 `tool:${runId}:${toolCallId}`，避免同一次工具调用重复写入。
+- 标题为 `工具结果：${toolName}`。
+- 内容使用工具返回给模型的 `observation`，不直接展开未知结构的 `data`。
+- `meta` 记录 `tool`、`runId`、`messageId`，方便 UI 和后续审计定位来源。
 
 ## Store Behavior
 
@@ -63,6 +68,7 @@
 - 预算选择以轮次为单位，从最新轮次向旧轮次选择；旧轮次不会被拆散成只剩问题或只剩回答。
 - 如果最新轮次本身超过剩余预算，才对该轮次做确定性首尾压缩；已经落选的旧轮次不再通过压缩重新进入窗口。
 - 非消息类上下文是单独分组，进入模型时包装为 `上下文：标题\n正文`，方便后续文件、记忆、页面选区接入。
+- 工具上下文属于非消息类上下文，跨轮进入模型时会包装为 `上下文：工具结果：工具名\n工具观察结果`。
 
 ## Model Budget
 
@@ -106,6 +112,7 @@ TDD 顺序：
 4. `AiChatWorkspace.test.tsx`：验证当前会话上下文条可见，切换模型后预算使用对应 limit。
 5. `contextMessages.test.ts`：验证主进程把上下文条目转成真实 `AgentMessage`，并按模型预算保留最近上下文、压缩超长条目、预算紧张时不拆散最近问答轮次。
 6. `App.test.tsx`：验证第二轮发送时 payload 携带上一轮用户消息和助手回答。
+7. `aiChatContextBuilder.test.ts` 和 `App.test.tsx`：验证工具完成事件会生成 `tool` 上下文，并在下一轮 payload 中发送。
 
 最终验证：
 
