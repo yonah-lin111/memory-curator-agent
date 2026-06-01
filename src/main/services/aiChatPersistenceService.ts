@@ -25,6 +25,8 @@ export type DatabaseStatement = {
 export type DatabaseConnection = {
   // 准备 SQL 语句。
   prepare: (sql: string) => DatabaseStatement
+  // 执行事务。
+  transaction?: <T>(operation: () => T) => () => T
 }
 
 // 创建或更新会话输入。
@@ -135,6 +137,31 @@ export type UpsertToolCallInput = {
   timestamp: string
 }
 
+// 创建聊天 run 与初始消息输入。
+export type CreateRunWithMessagesInput = {
+  // 会话写入输入。
+  session: EnsureSessionInput
+  // 用户消息写入输入。
+  userMessage: AppendMessageInput
+  // 助手占位消息写入输入。
+  assistantMessage: AppendMessageInput
+  // Agent run 写入输入。
+  run: StartRunInput
+}
+
+// 失败 run 收尾输入。
+export type FailRunWithAssistantMessageInput = {
+  // 会话状态写入输入。
+  session: EnsureSessionInput
+  // Agent run 失败写入输入。
+  run: FinishRunInput & {
+    // 失败状态。
+    status: 'failed'
+  }
+  // 助手错误消息写入输入。
+  assistantMessage: UpdateAssistantMessageInput
+}
+
 // 持久化 Agent run。
 export type PersistedRun = {
   // Agent run 唯一标识。
@@ -215,8 +242,12 @@ export type AiChatPersistenceService = {
   updateAssistantMessage: (input: UpdateAssistantMessageInput) => void
   // 创建 Agent run。
   startRun: (input: StartRunInput) => void
+  // 原子创建会话、初始消息和 Agent run。
+  createRunWithMessages: (input: CreateRunWithMessagesInput) => void
   // 结束 Agent run。
   finishRun: (input: FinishRunInput) => void
+  // 原子标记失败 run、会话状态和助手错误消息。
+  failRunWithAssistantMessage: (input: FailRunWithAssistantMessageInput) => void
   // 读取 Agent run，供测试和审计使用。
   getRun: (runId: string) => PersistedRun | null
   // 写入或更新工具调用。
@@ -399,6 +430,15 @@ const mapContextSnapshotRow = (row: AiAgentContextSnapshotRow): PersistedContext
   createdOrder: row.created_order,
   meta: parseJson(row.meta_json)
 })
+
+/**
+ * 使用数据库事务执行操作；测试替身没有事务时退化为直接执行。
+ */
+const runTransaction = <T>(database: DatabaseConnection, operation: () => T): T => {
+  const transaction = database.transaction?.(operation)
+
+  return transaction ? transaction() : operation()
+}
 
 /**
  * 创建 AI 对话持久化服务。
@@ -620,6 +660,23 @@ export const createAiChatPersistenceService = (
       .run(input.status, input.error ?? null, input.timestamp, input.id)
   }
 
+  const createRunWithMessages = (input: CreateRunWithMessagesInput): void => {
+    runTransaction(database, () => {
+      ensureSession(input.session)
+      appendMessage(input.userMessage)
+      appendMessage(input.assistantMessage)
+      startRun(input.run)
+    })
+  }
+
+  const failRunWithAssistantMessage = (input: FailRunWithAssistantMessageInput): void => {
+    runTransaction(database, () => {
+      finishRun(input.run)
+      ensureSession(input.session)
+      updateAssistantMessage(input.assistantMessage)
+    })
+  }
+
   const getRun = (runId: string): PersistedRun | null => {
     const row = database
       .prepare(
@@ -715,7 +772,9 @@ export const createAiChatPersistenceService = (
     appendMessage,
     updateAssistantMessage,
     startRun,
+    createRunWithMessages,
     finishRun,
+    failRunWithAssistantMessage,
     getRun,
     upsertToolCall,
     listToolCalls,

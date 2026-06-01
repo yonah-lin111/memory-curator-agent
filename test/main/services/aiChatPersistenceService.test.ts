@@ -173,4 +173,129 @@ describe('aiChatPersistenceService', () => {
       }
     ])
   })
+
+  it('rolls back chat run creation when any startup write fails', () => {
+    const service = createService()
+
+    expect(() =>
+      service.createRunWithMessages({
+        session: {
+          id: 's-rollback',
+          title: '回滚会话',
+          summary: '测试回滚',
+          status: '运行中',
+          timestamp: '2026-05-31 10:00'
+        },
+        userMessage: {
+          id: 'duplicate-message',
+          sessionId: 's-rollback',
+          role: 'user',
+          content: '触发失败',
+          time: '10:00',
+          timestamp: '2026-05-31 10:00'
+        },
+        assistantMessage: {
+          id: 'duplicate-message',
+          sessionId: 's-rollback',
+          role: 'assistant',
+          content: '这条写入会失败',
+          answer: '',
+          parts: [],
+          toolSteps: [],
+          time: '10:00',
+          timestamp: '2026-05-31 10:00'
+        },
+        run: {
+          id: 'run-rollback',
+          sessionId: 's-rollback',
+          assistantMessageId: 'duplicate-message',
+          provider: 'bailian',
+          model: 'MiniMax-M2.5',
+          context: [],
+          timestamp: '2026-05-31 10:00'
+        }
+      })
+    ).toThrow(/UNIQUE|constraint/i)
+
+    expect(service.listSessions()).toHaveLength(0)
+    expect(service.getRun('run-rollback')).toBeNull()
+  })
+
+  it('finishes failed run and assistant error message in one service call', () => {
+    const service = createService()
+
+    service.createRunWithMessages({
+      session: {
+        id: 's-fail',
+        title: '失败会话',
+        summary: '测试失败',
+        status: '运行中',
+        timestamp: '2026-05-31 10:00'
+      },
+      userMessage: {
+        id: 'm-user',
+        sessionId: 's-fail',
+        role: 'user',
+        content: '触发失败',
+        time: '10:00',
+        timestamp: '2026-05-31 10:00'
+      },
+      assistantMessage: {
+        id: 'm-ai',
+        sessionId: 's-fail',
+        role: 'assistant',
+        content: '正在处理',
+        answer: '',
+        parts: [],
+        toolSteps: [],
+        time: '10:00',
+        timestamp: '2026-05-31 10:00'
+      },
+      run: {
+        id: 'run-fail',
+        sessionId: 's-fail',
+        assistantMessageId: 'm-ai',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: [],
+        timestamp: '2026-05-31 10:00'
+      }
+    })
+
+    service.failRunWithAssistantMessage({
+      session: {
+        id: 's-fail',
+        title: '失败会话',
+        summary: '测试失败',
+        status: '执行失败',
+        timestamp: '2026-05-31 10:01'
+      },
+      run: {
+        id: 'run-fail',
+        status: 'failed',
+        error: '模型失败',
+        timestamp: '2026-05-31 10:01'
+      },
+      assistantMessage: {
+        messageId: 'm-ai',
+        content: 'AI 对话执行失败',
+        answer: '模型失败',
+        parts: [],
+        toolSteps: [],
+        timestamp: '2026-05-31 10:01'
+      }
+    })
+
+    expect(service.getRun('run-fail')).toMatchObject({
+      status: 'failed',
+      error: '模型失败'
+    })
+    expect(service.getSession('s-fail')).toMatchObject({
+      status: '执行失败',
+      messages: [
+        { id: 'm-user', role: 'user' },
+        { id: 'm-ai', role: 'assistant', content: 'AI 对话执行失败', answer: '模型失败' }
+      ]
+    })
+  })
 })

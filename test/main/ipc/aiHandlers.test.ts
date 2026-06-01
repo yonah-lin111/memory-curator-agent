@@ -137,7 +137,9 @@ describe('aiHandlers', () => {
       ensureSession: vi.fn(),
       appendMessage: vi.fn(),
       startRun: vi.fn(),
+      createRunWithMessages: vi.fn(),
       finishRun: vi.fn(),
+      failRunWithAssistantMessage: vi.fn(),
       updateAssistantMessage: vi.fn(),
       upsertToolCall: vi.fn()
     }
@@ -176,9 +178,12 @@ describe('aiHandlers', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(result).toEqual({ runId: 'run-1' })
-    expect(service.ensureSession).toHaveBeenCalledWith(expect.objectContaining({ id: 's1', status: '运行中' }))
-    expect(service.appendMessage).toHaveBeenCalledTimes(2)
-    expect(service.startRun).toHaveBeenCalledWith(expect.objectContaining({ id: 'run-1', sessionId: 's1' }))
+    expect(service.createRunWithMessages).toHaveBeenCalledWith({
+      session: expect.objectContaining({ id: 's1', status: '运行中' }),
+      userMessage: expect.objectContaining({ id: 'run-1-user', role: 'user' }),
+      assistantMessage: expect.objectContaining({ id: 'run-1-assistant', role: 'assistant' }),
+      run: expect.objectContaining({ id: 'run-1', sessionId: 's1' })
+    })
     expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'running' }))
     expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'done' }))
     expect(service.updateAssistantMessage).toHaveBeenCalledWith(

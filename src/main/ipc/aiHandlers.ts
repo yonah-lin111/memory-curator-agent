@@ -238,40 +238,42 @@ export const registerAiHandlers = (): void => {
     const assistantMessageId = `${runId}-assistant`
     const sessionTitle = createSessionTitle(payload.message)
 
-    aiChatService.ensureSession({
-      id: payload.sessionId,
-      title: sessionTitle,
-      summary: payload.message,
-      status: '运行中',
-      timestamp
-    })
-    aiChatService.appendMessage({
-      id: userMessageId,
-      sessionId: payload.sessionId,
-      role: 'user',
-      content: payload.message,
-      time: userTime,
-      timestamp
-    })
-    aiChatService.appendMessage({
-      id: assistantMessageId,
-      sessionId: payload.sessionId,
-      role: 'assistant',
-      content: `正在处理：“${payload.message}”`,
-      answer: '',
-      parts: [],
-      toolSteps: [],
-      time: userTime,
-      timestamp
-    })
-    aiChatService.startRun({
-      id: runId,
-      sessionId: payload.sessionId,
-      assistantMessageId,
-      provider: providerId,
-      model: modelId,
-      context: payload.context ?? [],
-      timestamp
+    aiChatService.createRunWithMessages({
+      session: {
+        id: payload.sessionId,
+        title: sessionTitle,
+        summary: payload.message,
+        status: '运行中',
+        timestamp
+      },
+      userMessage: {
+        id: userMessageId,
+        sessionId: payload.sessionId,
+        role: 'user',
+        content: payload.message,
+        time: userTime,
+        timestamp
+      },
+      assistantMessage: {
+        id: assistantMessageId,
+        sessionId: payload.sessionId,
+        role: 'assistant',
+        content: `正在处理：“${payload.message}”`,
+        answer: '',
+        parts: [],
+        toolSteps: [],
+        time: userTime,
+        timestamp
+      },
+      run: {
+        id: runId,
+        sessionId: payload.sessionId,
+        assistantMessageId,
+        provider: providerId,
+        model: modelId,
+        context: payload.context ?? [],
+        timestamp
+      }
     })
 
     const sendEvent = (agentEvent: AgentStreamEvent): void => {
@@ -436,26 +438,29 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'error') {
-            aiChatService.finishRun({
-              id: runId,
-              status: 'failed',
-              error: agentEvent.message,
-              timestamp: createTimestamp()
-            })
-            aiChatService.ensureSession({
-              id: payload.sessionId,
-              title: sessionTitle,
-              summary: payload.message,
-              status: '执行失败',
-              timestamp: createTimestamp()
-            })
-            aiChatService.updateAssistantMessage({
-              messageId: assistantMessageId,
-              content: 'AI 对话执行失败',
-              answer: agentEvent.message,
-              parts: assistantParts,
-              toolSteps: assistantToolSteps,
-              timestamp: createTimestamp()
+            const failedTimestamp = createTimestamp()
+            aiChatService.failRunWithAssistantMessage({
+              run: {
+                id: runId,
+                status: 'failed',
+                error: agentEvent.message,
+                timestamp: failedTimestamp
+              },
+              session: {
+                id: payload.sessionId,
+                title: sessionTitle,
+                summary: payload.message,
+                status: '执行失败',
+                timestamp: failedTimestamp
+              },
+              assistantMessage: {
+                messageId: assistantMessageId,
+                content: 'AI 对话执行失败',
+                answer: agentEvent.message,
+                parts: assistantParts,
+                toolSteps: assistantToolSteps,
+                timestamp: failedTimestamp
+              }
             })
           }
 
@@ -478,26 +483,29 @@ export const registerAiHandlers = (): void => {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'AI 对话执行失败'
-        aiChatService.finishRun({
-          id: runId,
-          status: 'failed',
-          error: message,
-          timestamp: createTimestamp()
-        })
-        aiChatService.ensureSession({
-          id: payload.sessionId,
-          title: sessionTitle,
-          summary: payload.message,
-          status: '执行失败',
-          timestamp: createTimestamp()
-        })
-        aiChatService.updateAssistantMessage({
-          messageId: assistantMessageId,
-          content: 'AI 对话执行失败',
-          answer: message,
-          parts: assistantParts,
-          toolSteps: assistantToolSteps,
-          timestamp: createTimestamp()
+        const failedTimestamp = createTimestamp()
+        aiChatService.failRunWithAssistantMessage({
+          run: {
+            id: runId,
+            status: 'failed',
+            error: message,
+            timestamp: failedTimestamp
+          },
+          session: {
+            id: payload.sessionId,
+            title: sessionTitle,
+            summary: payload.message,
+            status: '执行失败',
+            timestamp: failedTimestamp
+          },
+          assistantMessage: {
+            messageId: assistantMessageId,
+            content: 'AI 对话执行失败',
+            answer: message,
+            parts: assistantParts,
+            toolSteps: assistantToolSteps,
+            timestamp: failedTimestamp
+          }
         })
         sendEvent({
           type: 'error',
