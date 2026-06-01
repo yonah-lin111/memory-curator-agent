@@ -184,10 +184,10 @@ export const Sidebar = ({
           shouldUseCollapsedLayout ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
         }`}
       >
-        {/* 导航与设置面板主体（带覆盖式滑出过渡） */}
+        {/* 导航与设置面板主体（无延迟切换动画） */}
         <div
           aria-hidden={mode !== "navigation"}
-          className={`w-full flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
+          className={`w-full flex-1 flex flex-col justify-between ${
             mode === "navigation"
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
@@ -237,7 +237,7 @@ export const Sidebar = ({
                           aria-current={isActive ? "page" : undefined}
                           aria-label={shouldUseCollapsedLayout ? item.label : undefined}
                           onClick={() => onPageChange(item.id)}
-                          className={`flex w-full items-center rounded-[6px] transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+                           className={`flex w-full items-center rounded-[6px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                             shouldUseCollapsedLayout
                               ? "justify-center px-0 py-2.5"
                               : "gap-3 px-3 py-2.5"
@@ -296,10 +296,10 @@ export const Sidebar = ({
           </div>
         </div>
 
-        {/* 聊天历史栏（带从左到右滑出的覆盖过渡动画） */}
+        {/* 聊天历史栏（无延迟切换动画） */}
         <div
           aria-hidden={mode !== "chat"}
-          className={`absolute inset-4 transition-opacity duration-300 ease-out flex flex-col ${
+          className={`absolute inset-4 flex flex-col ${
             mode === "chat"
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"

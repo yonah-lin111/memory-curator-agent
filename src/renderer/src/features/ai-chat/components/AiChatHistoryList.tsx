@@ -68,7 +68,7 @@ export const AiChatHistoryList = ({
               type="button"
               aria-current={isActive ? "true" : undefined}
               onClick={() => onSessionChange(session.id)}
-              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                 isActive
                   ? "bg-white text-black font-semibold"
                   : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
