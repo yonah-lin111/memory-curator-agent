@@ -1,4 +1,4 @@
-import type { AgentContextPayloadItem } from '../agent/contextMessages'
+import type { AgentContextPayloadItem } from '../agent/core/contextMessages'
 import type {
   AiAgentRunStatus,
   AiAgentToolCallStatus,

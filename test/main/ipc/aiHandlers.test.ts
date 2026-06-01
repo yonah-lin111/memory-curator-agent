@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { runReactAgent } from '../../../src/main/agent/reactAgent'
-import { createModelProvider } from '../../../src/main/agent/providerFactory'
+import { runReactAgent } from '../../../src/main/agent/core/reactAgent'
+import { createModelProvider } from '../../../src/main/agent/providers/providerFactory'
 import { getDatabase } from '../../../src/main/db'
 import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '../../../src/main/ipc/aiHandlers'
 import { createAiChatPersistenceService } from '../../../src/main/services/aiChatPersistenceService'
@@ -20,15 +20,15 @@ vi.mock('../../../src/main/services/aiChatPersistenceService', () => ({
   createAiChatPersistenceService: vi.fn()
 }))
 
-vi.mock('../../../src/main/agent/providerFactory', () => ({
+vi.mock('../../../src/main/agent/providers/providerFactory', () => ({
   createModelProvider: vi.fn()
 }))
 
-vi.mock('../../../src/main/agent/reactAgent', () => ({
+vi.mock('../../../src/main/agent/core/reactAgent', () => ({
   runReactAgent: vi.fn()
 }))
 
-vi.mock('../../../src/main/agent/providerConfig', () => ({
+vi.mock('../../../src/main/agent/providers/providerConfig', () => ({
   loadProviderConfig: vi.fn(() => ({
     defaultProvider: 'bailian',
     defaultModel: 'MiniMax-M2.5',

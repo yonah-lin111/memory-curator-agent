@@ -1,12 +1,12 @@
-import type { AssociatedPersonItem, PersonRelationship } from '../db/schema'
-import type { PeopleService } from '../services/peopleService'
+import type { AssociatedPersonItem, PersonRelationship } from '../../db/schema'
+import type { PeopleService } from '../../services/peopleService'
 import type {
   AgentTool,
   PeopleQueryConditions,
   PeopleQueryToolInput,
   PeopleQueryToolItem,
   PeopleQueryToolResult
-} from './types'
+} from '../types'
 
 // People 查询工具类型。
 type PeopleQueryTool = Omit<AgentTool, 'execute'> & {

@@ -8,7 +8,7 @@ import {
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
-} from '../markdownImages'
+} from './markdownImages'
 
 /**
  * 判断文件是否存在。

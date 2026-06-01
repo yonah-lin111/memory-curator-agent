@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { AssociatedPersonItem } from '../../../src/main/db/schema'
-import { createPeopleQueryTool } from '../../../src/main/agent/peopleTool'
-import type { PeopleService } from '../../../src/main/services/peopleService'
+import type { AssociatedPersonItem } from '../../../../src/main/db/schema'
+import { createPeopleQueryTool } from '../../../../src/main/agent/tools/peopleTool'
+import type { PeopleService } from '../../../../src/main/services/peopleService'
 
 const people: AssociatedPersonItem[] = [
   {

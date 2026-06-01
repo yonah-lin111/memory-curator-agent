@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createAiSdkModelProvider } from '../../../src/main/agent/aiSdkProvider'
-import type { NormalizedProviderConfig } from '../../../src/main/agent/types'
+import { createAiSdkModelProvider } from '../../../../src/main/agent/providers/aiSdkProvider'
+import type { NormalizedProviderConfig } from '../../../../src/main/agent/types'
 
 describe('aiSdkProvider', () => {
   it('通过配置 npm 字段加载 provider 工厂并转发 AI SDK 流式事件', async () => {

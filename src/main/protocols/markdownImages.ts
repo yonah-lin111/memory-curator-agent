@@ -1,5 +1,5 @@
 import { basename, join } from 'node:path'
-import { getMarkdownImageDir, getPeopleAvatarDir } from './paths'
+import { getMarkdownImageDir, getPeopleAvatarDir } from '../paths'
 
 // Markdown 图片协议。
 export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'

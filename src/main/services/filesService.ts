@@ -2,7 +2,7 @@ import { access, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promise
 import { basename, extname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir } from '../paths'
-import { createMarkdownImageUrl, createPeopleAvatarUrl } from '../markdownImages'
+import { createMarkdownImageUrl, createPeopleAvatarUrl } from '../protocols/markdownImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {

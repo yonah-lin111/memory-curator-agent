@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from '../../../src/main/agent/commonInfoTool'
+import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from '../../../../src/main/agent/tools/commonInfoTool'
 
 // 固定当前时间，避免测试依赖真实时钟。
 const fixedNow = (): Date => new Date('2026-05-30T04:03:04.000Z')

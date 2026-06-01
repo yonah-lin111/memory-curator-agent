@@ -6,11 +6,11 @@ import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection
 } from '../services/aiChatPersistenceService'
-import { loadProviderConfig } from '../agent/providerConfig'
-import { createModelProvider } from '../agent/providerFactory'
-import { runReactAgent } from '../agent/reactAgent'
-import { createAgentToolRegistry } from '../agent/toolRegistry'
-import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/contextMessages'
+import { loadProviderConfig } from '../agent/providers/providerConfig'
+import { createModelProvider } from '../agent/providers/providerFactory'
+import { runReactAgent } from '../agent/core/reactAgent'
+import { createAgentToolRegistry } from '../agent/tools/toolRegistry'
+import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/core/contextMessages'
 import type { AgentMessage, AgentStreamEvent } from '../agent/types'
 import type { AiChatMessagePart, AiToolStep } from '../db/schema'
 

@@ -7,7 +7,7 @@ import type {
   NormalizedAiConfig,
   NormalizedProviderConfig,
   ProviderTransportType
-} from './types'
+} from '../types'
 
 // 默认配置路径。
 export const DEFAULT_MC_CONFIG_PATH = join(homedir(), '.mc', 'config.json')

@@ -4,8 +4,8 @@ import type {
   AgentTool,
   ModelToolCallDoneEvent,
   ReactAgentRunInput
-} from './types'
-import { prepareToolsForModel, selectToolsForTurn } from './toolRegistry'
+} from '../types'
+import { prepareToolsForModel, selectToolsForTurn } from '../tools/toolRegistry'
 
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5

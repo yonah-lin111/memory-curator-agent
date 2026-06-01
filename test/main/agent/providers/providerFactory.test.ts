@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createModelProvider } from '../../../src/main/agent/providerFactory'
-import type { NormalizedProviderConfig } from '../../../src/main/agent/types'
+import { createModelProvider } from '../../../../src/main/agent/providers/providerFactory'
+import type { NormalizedProviderConfig } from '../../../../src/main/agent/types'
 
 describe('providerFactory', () => {
   it('按配置类型创建 OpenAI compatible provider', async () => {

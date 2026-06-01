@@ -6,8 +6,8 @@ import type {
   ModelStreamEvent,
   ModelTurnInput,
   NormalizedProviderConfig
-} from './types'
-import { prepareToolsForModel } from './toolRegistry'
+} from '../types'
+import { prepareToolsForModel } from '../tools/toolRegistry'
 
 // AI SDK provider 模块。
 type AiSdkProviderModule = Record<string, unknown>

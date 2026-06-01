@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { runReactAgent } from '../../../src/main/agent/reactAgent'
-import type { AgentTool, ModelProvider, ModelTurnInput } from '../../../src/main/agent/types'
+import { runReactAgent } from '../../../../src/main/agent/core/reactAgent'
+import type { AgentTool, ModelProvider, ModelTurnInput } from '../../../../src/main/agent/types'
 
 describe('reactAgent', () => {
   it('执行模型请求的工具并把观察结果回灌到下一轮', async () => {

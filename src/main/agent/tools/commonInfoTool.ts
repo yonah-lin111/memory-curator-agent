@@ -1,5 +1,5 @@
 import { arch, platform, release, type } from 'node:os'
-import type { AgentTool, AgentToolResult } from './types'
+import type { AgentTool, AgentToolResult } from '../types'
 
 // 当前时间工具入参。
 type TimeNowToolInput = {
