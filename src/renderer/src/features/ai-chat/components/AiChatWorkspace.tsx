@@ -184,7 +184,7 @@ export const AiChatWorkspace = ({
           const isLast = index === session.messages.length - 1;
           const isGenerating =
             isLast &&
-            (session.status === "running" || session.status === "运行中") &&
+            session.status === "running" &&
             message.role === "assistant";
           const shouldPinToTop = message.id === topPinnedAssistantId;
           return (

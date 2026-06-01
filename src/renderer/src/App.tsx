@@ -29,6 +29,7 @@ import {
   type AiChatEvent,
   type AiChatMessagePart,
   type AiChatSession,
+  type AiChatSessionStatus,
   type AiModelProviderOption,
   type AiModelSelection,
 } from "@renderer/features/ai-chat/aiChatMock";
@@ -223,7 +224,7 @@ export const App = (): React.JSX.Element => {
   /**
    * 更新指定 AI 会话状态。
    */
-  const updateChatSessionStatus = (sessionId: string, status: string): void => {
+  const updateChatSessionStatus = (sessionId: string, status: AiChatSessionStatus): void => {
     setChatSessions((prevSessions) =>
       prevSessions.map((session) => (session.id === sessionId ? { ...session, status } : session)),
     );

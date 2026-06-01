@@ -86,13 +86,18 @@ describe('AiChatHistoryList', () => {
     })
   })
 
-  it('点击删除聊天后调用删除回调', async () => {
+  it('点击删除聊天后先进入确认态，再次点击才调用删除回调', async () => {
     const user = userEvent.setup()
     const onDeleteChat = vi.fn(async () => true)
     renderHistoryList({ onDeleteChat })
 
     fireEvent.contextMenu(screen.getByText('第二会话'))
     await user.click(screen.getByRole('menuitem', { name: /删除聊天/ }))
+
+    expect(onDeleteChat).not.toHaveBeenCalled()
+    expect(screen.getByRole('menuitem', { name: /确认删除/ })).toHaveClass('bg-rose-600')
+
+    await user.click(screen.getByRole('menuitem', { name: /确认删除/ }))
 
     await waitFor(() => {
       expect(onDeleteChat).toHaveBeenCalledWith('s2')

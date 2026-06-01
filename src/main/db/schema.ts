@@ -195,6 +195,9 @@ export type AiChatMessageRole = 'user' | 'assistant'
 // AI Agent run 状态。
 export type AiAgentRunStatus = 'running' | 'completed' | 'failed'
 
+// AI 对话会话状态。
+export type AiChatSessionStatus = 'idle' | AiAgentRunStatus
+
 // AI 工具调用状态。
 export type AiAgentToolCallStatus = 'running' | 'done' | 'failed'
 
@@ -245,8 +248,8 @@ export type AiChatSessionItem = {
   summary: string
   // 会话时间。
   time: string
-  // 会话状态文案。
-  status: string
+  // 会话状态。
+  status: AiChatSessionStatus
   // 会话消息列表。
   messages: AiChatMessageItem[]
 }
@@ -328,7 +331,7 @@ export type AiChatSessionRow = {
   // 会话摘要。
   summary: string
   // 会话状态。
-  status: string
+  status: AiChatSessionStatus
   // 创建时间。
   created_at: string
   // 更新时间。

@@ -306,6 +306,9 @@ type AiChatEvent =
 // AI 工具步骤状态类型。
 type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued'
 
+// AI 对话会话状态类型。
+type AiChatSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
+
 // AI 工具步骤类型。
 type AiToolStep = {
   // 工具步骤唯一标识。
@@ -371,8 +374,8 @@ type AiChatSession = {
   summary: string
   // 会话时间。
   time: string
-  // 会话状态文案。
-  status: string
+  // 会话状态。
+  status: AiChatSessionStatus
   // 会话消息列表。
   messages: AiChatMessage[]
 }

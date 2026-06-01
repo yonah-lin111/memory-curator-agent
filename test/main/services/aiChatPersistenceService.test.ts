@@ -13,6 +13,40 @@ const createService = () => {
 }
 
 describe('aiChatPersistenceService', () => {
+  it('migrates legacy Chinese session status values to English', () => {
+    const database = new Database(':memory:')
+
+    database.exec(`
+      CREATE TABLE ai_chat_sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_at TEXT NOT NULL
+      );
+
+      INSERT INTO ai_chat_sessions (id, title, summary, status, created_at, updated_at, last_message_at)
+      VALUES
+        ('s-running', '运行会话', '摘要', '运行中', '2026-05-31 10:00', '2026-05-31 10:00', '2026-05-31 10:00'),
+        ('s-completed', '完成会话', '摘要', '运行完成', '2026-05-31 10:01', '2026-05-31 10:01', '2026-05-31 10:01'),
+        ('s-failed', '失败会话', '摘要', '运行失败', '2026-05-31 10:02', '2026-05-31 10:02', '2026-05-31 10:02');
+    `)
+
+    createAiChatPersistenceTables(database)
+
+    expect(
+      database
+        .prepare('SELECT id, status FROM ai_chat_sessions ORDER BY id ASC')
+        .all()
+    ).toEqual([
+      { id: 's-completed', status: 'completed' },
+      { id: 's-failed', status: 'failed' },
+      { id: 's-running', status: 'running' }
+    ])
+  })
+
   it('creates a session, appends messages, and reads the session detail', () => {
     const service = createService()
 
@@ -271,7 +305,7 @@ describe('aiChatPersistenceService', () => {
           id: 's-rollback',
           title: '回滚会话',
           summary: '测试回滚',
-      status: 'running',
+          status: 'running',
           timestamp: '2026-05-31 10:00'
         },
         userMessage: {

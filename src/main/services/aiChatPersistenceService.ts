@@ -8,6 +8,7 @@ import type {
   AiChatMessageRow,
   AiChatSessionItem,
   AiChatSessionRow,
+  AiChatSessionStatus,
   AiToolStep
 } from '../db/schema'
 
@@ -37,8 +38,8 @@ export type EnsureSessionInput = {
   title: string
   // 会话摘要。
   summary: string
-  // 会话状态文案。
-  status: string
+  // 会话状态。
+  status: AiChatSessionStatus
   // 写入时间。
   timestamp: string
 }
@@ -363,6 +364,34 @@ const parseJson = (value: string): unknown => {
 }
 
 /**
+ * 归一化历史会话状态，数据库内部只保留英文枚举。
+ */
+const normalizeSessionStatus = (status: string): AiChatSessionStatus => {
+  if (
+    status === 'idle' ||
+    status === 'running' ||
+    status === 'completed' ||
+    status === 'failed'
+  ) {
+    return status
+  }
+
+  if (status === '运行中') {
+    return 'running'
+  }
+
+  if (status === '运行完成' || status === '已完成') {
+    return 'completed'
+  }
+
+  if (status === '运行失败' || status === '失败') {
+    return 'failed'
+  }
+
+  return 'idle'
+}
+
+/**
  * 映射消息数据库行。
  */
 const mapMessageRow = (row: AiChatMessageRow): AiChatMessageItem => ({
@@ -385,7 +414,7 @@ const mapSessionRow = (
   id: row.id,
   title: row.title,
   summary: row.summary,
-  status: row.status,
+  status: normalizeSessionStatus(row.status),
   time: row.last_message_at.slice(11, 16) || row.last_message_at,
   messages
 })
@@ -546,7 +575,7 @@ export const createAiChatPersistenceService = (
         input.id,
         input.title,
         input.summary,
-        input.status,
+        normalizeSessionStatus(input.status),
         input.timestamp,
         input.timestamp,
         input.timestamp

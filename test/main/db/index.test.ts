@@ -152,6 +152,11 @@ class MemoryMigrationDatabase {
           return
         }
 
+        if (statement.startsWith('UPDATE ai_chat_sessions')) {
+          this.normalizeAiChatSessionStatuses()
+          return
+        }
+
         if (statement.startsWith('DROP TABLE')) {
           const tableName = statement.replace('DROP TABLE', '').trim()
           this.tables.delete(tableName)
@@ -246,6 +251,30 @@ class MemoryMigrationDatabase {
       }
 
       return nextRow
+    })
+  }
+
+  /**
+   * 模拟会话状态历史值迁移。
+   */
+  private normalizeAiChatSessionStatuses = (): void => {
+    const table = this.tables.get('ai_chat_sessions')
+
+    if (!table) {
+      return
+    }
+
+    const statusMap: Record<string, string> = {
+      运行中: 'running',
+      运行完成: 'completed',
+      已完成: 'completed',
+      运行失败: 'failed',
+      失败: 'failed'
+    }
+
+    table.rows = table.rows.map((row) => {
+      const status = typeof row.status === 'string' ? statusMap[row.status] : undefined
+      return status ? { ...row, status } : row
     })
   }
 }

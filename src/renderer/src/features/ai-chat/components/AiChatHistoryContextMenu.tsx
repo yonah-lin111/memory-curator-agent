@@ -1,4 +1,5 @@
 import type React from "react";
+import { useEffect, useState } from "react";
 import { Edit3, Trash2 } from "lucide-react";
 
 // 右键菜单组件属性类型。
@@ -47,13 +48,32 @@ export const AiChatHistoryContextMenu = ({
   onEditTitle,
   onDeleteChat,
 }: AiChatHistoryContextMenuProps): React.JSX.Element => {
+  // 是否已进入删除二次确认态。
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
   const position = getMenuPosition(x, y);
+
+  useEffect(() => {
+    setIsConfirmingDelete(false);
+  }, [sessionTitle]);
+
+  /**
+   * 第一次点击进入确认态，第二次点击才真正删除。
+   */
+  const handleDeleteClick = (): void => {
+    if (!isConfirmingDelete) {
+      setIsConfirmingDelete(true);
+      return;
+    }
+
+    onDeleteChat();
+  };
 
   return (
     <div
       aria-label={`${sessionTitle} 操作菜单`}
       className="fixed z-50 w-[156px] rounded-[6px] border border-white/10 bg-[#000000] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
       role="menu"
+      onClick={(event) => event.stopPropagation()}
       style={{
         left: position.left,
         top: position.top,
@@ -69,13 +89,21 @@ export const AiChatHistoryContextMenu = ({
         <span>编辑标题</span>
       </button>
       <button
-        className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-rose-300/85 transition-colors hover:bg-rose-500/10 hover:text-rose-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-300/45"
+        className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-300/45 ${
+          isConfirmingDelete
+            ? "bg-rose-600 text-white hover:bg-rose-500"
+            : "text-rose-300/85 hover:bg-rose-500/10 hover:text-rose-200"
+        }`}
         role="menuitem"
         type="button"
-        onClick={onDeleteChat}
+        onClick={handleDeleteClick}
       >
-        <Trash2 className="h-3.5 w-3.5 text-rose-300/70" />
-        <span>删除聊天</span>
+        <Trash2
+          className={`h-3.5 w-3.5 ${
+            isConfirmingDelete ? "text-white" : "text-rose-300/70"
+          }`}
+        />
+        <span>{isConfirmingDelete ? "确认删除" : "删除聊天"}</span>
       </button>
     </div>
   );

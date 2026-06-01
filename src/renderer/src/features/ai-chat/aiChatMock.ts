@@ -1,6 +1,9 @@
 // 工具步骤状态类型，描述 mock 工具调用当前阶段。
 export type AiToolStepStatus = "done" | "failed" | "running" | "queued";
 
+// AI 对话会话状态。
+export type AiChatSessionStatus = "idle" | "running" | "completed" | "failed";
+
 // 工具步骤类型，描述 ReAct 执行摘要中的单步。
 export type AiToolStep = {
   // 工具步骤唯一标识。
@@ -248,8 +251,8 @@ export type AiChatSession = {
   summary: string;
   // 会话时间。
   time: string;
-  // 会话状态文案。
-  status: string;
+  // 会话状态。
+  status: AiChatSessionStatus;
   // 会话消息列表。
   messages: AiChatMessage[];
 };

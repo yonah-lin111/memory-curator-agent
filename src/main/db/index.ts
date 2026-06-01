@@ -328,6 +328,19 @@ export const createAiChatPersistenceTables = (database: Database.Database): void
     CREATE INDEX IF NOT EXISTS idx_ai_agent_context_snapshots_run_order
     ON ai_agent_context_snapshots(run_id, created_order ASC);
   `)
+
+  database.exec(`
+    UPDATE ai_chat_sessions
+    SET status = CASE status
+      WHEN '运行中' THEN 'running'
+      WHEN '运行完成' THEN 'completed'
+      WHEN '已完成' THEN 'completed'
+      WHEN '运行失败' THEN 'failed'
+      WHEN '失败' THEN 'failed'
+      ELSE status
+    END
+    WHERE status IN ('运行中', '运行完成', '已完成', '运行失败', '失败');
+  `)
 }
 
 /**
