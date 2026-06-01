@@ -60,10 +60,39 @@ export const AiChatWorkspace = ({
     [contextItems, modelOptions, selectedModel],
   );
 
-  // 当消息列表更新时，平滑滚动至最底部。
+  // 记录上一次的 session.id 与消息长度。
+  const prevSessionIdRef = useRef(session.id);
+  const prevMessagesLengthRef = useRef(session.messages.length);
+
+  // 当切换会话（session.id 变化）时，立即跳转至底部。
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
-  }, [session.messages]);
+    messagesEndRef.current?.scrollIntoView?.({ behavior: "auto" });
+  }, [session.id]);
+
+  // 当用户在当前会话发送新消息时，平滑滚动至最底部。
+  useEffect(() => {
+    const prevSessionId = prevSessionIdRef.current;
+    const prevLength = prevMessagesLengthRef.current;
+    const currentLength = session.messages.length;
+
+    // 更新 ref 状态值
+    prevSessionIdRef.current = session.id;
+    prevMessagesLengthRef.current = currentLength;
+
+    // 如果 session.id 发生改变（切换会话），则在此不处理滚动，已由切换会话的 useEffect 处理。
+    if (session.id !== prevSessionId) {
+      return;
+    }
+
+    // 仅在当前会话的新增消息中包含用户消息时，触发平滑滚动。
+    if (currentLength > prevLength) {
+      const addedMessages = session.messages.slice(prevLength);
+      const hasNewUserMessage = addedMessages.some((msg) => msg.role === "user");
+      if (hasNewUserMessage) {
+        messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      }
+    }
+  }, [session.messages, session.id]);
 
   // 将当前消息列表同步为全局上下文中的 message 来源。
   useEffect(() => {
