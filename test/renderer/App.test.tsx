@@ -6,7 +6,11 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '@renderer/App'
-import type { AiChatEvent, AiChatStartPayload } from '@renderer/features/ai-chat/aiChatMock'
+import type {
+  AiChatEvent,
+  AiChatSession,
+  AiChatStartPayload
+} from '@renderer/features/ai-chat/aiChatMock'
 import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
 
 describe('App', () => {
@@ -889,5 +893,57 @@ describe('App', () => {
     expect(within(banner).getByText('周回顾行动拆解')).toBeInTheDocument()
     expect(within(chatMain).getByText('weekly_review.load')).toBeInTheDocument()
     expect(screen.getAllByLabelText('工具完成').length).toBeGreaterThan(0)
+  })
+
+  it('首次加载持久化历史摘要后点击新建对话直接创建空白会话', async () => {
+    const user = userEvent.setup()
+    const persistedSessions: AiChatSession[] = [
+      {
+        id: 'persisted-one',
+        title: '历史一',
+        summary: '历史一摘要',
+        time: '10:00',
+        status: 'completed',
+        messages: []
+      },
+      {
+        id: 'persisted-two',
+        title: '历史二',
+        summary: '历史二摘要',
+        time: '11:00',
+        status: 'completed',
+        messages: []
+      }
+    ]
+
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => persistedSessions),
+        getSession: vi.fn(async (sessionId: string) => ({
+          ...persistedSessions.find((session) => session.id === sessionId)!,
+          messages: [
+            {
+              id: `${sessionId}-user`,
+              role: 'user',
+              content: '已有消息',
+              time: '10:00'
+            }
+          ]
+        })),
+        onChatEvent: () => () => undefined
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    const historyList = screen.getByLabelText('对话历史列表')
+    await within(historyList).findByText('历史一')
+
+    await user.click(screen.getByRole('button', { name: '新建对话' }))
+
+    const banner = screen.getByRole('banner')
+    expect(within(banner).getByText('新建对话')).toBeInTheDocument()
+    expect(within(historyList).getByText('新建对话').closest('[aria-current="true"]')).toBeInTheDocument()
   })
 })

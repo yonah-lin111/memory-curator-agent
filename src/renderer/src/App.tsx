@@ -58,6 +58,12 @@ const createEmptyAiChatSession = (): AiChatSession => {
 };
 
 /**
+ * 判断会话是否为可复用的空白草稿。
+ */
+const isEmptyAiChatDraftSession = (session: AiChatSession): boolean =>
+  session.title === "新建对话" && session.messages.length === 0;
+
+/**
  * 记忆策展 Agent 的主应用布局。
  * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
@@ -144,7 +150,7 @@ export const App = (): React.JSX.Element => {
    * 保证新创建的空白对话仅存在一个，若已存在空白对话则直接激活该对话，避免重复创建。
    */
   const handleNewChat = (): void => {
-    const existingEmptySession = chatSessions.find((session) => session.messages.length === 0);
+    const existingEmptySession = chatSessions.find(isEmptyAiChatDraftSession);
     if (existingEmptySession) {
       setActiveChatId(existingEmptySession.id);
       return;

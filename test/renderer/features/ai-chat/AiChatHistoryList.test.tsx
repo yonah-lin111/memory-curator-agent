@@ -51,6 +51,12 @@ describe('AiChatHistoryList', () => {
     vi.restoreAllMocks()
   })
 
+  it('历史项切换高亮时不使用颜色过渡，避免旧高亮项闪烁', () => {
+    renderHistoryList()
+
+    expect(screen.getByText('第一会话').closest('[role="button"]')).not.toHaveClass('transition-colors')
+  })
+
   it('右键打开历史项菜单，且视口内同一时间只渲染一个菜单', () => {
     renderHistoryList()
 

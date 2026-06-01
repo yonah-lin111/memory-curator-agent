@@ -20,6 +20,9 @@ const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
 // 最新 AI 回答贴近视口顶部时保留的视觉间距。
 const LATEST_ASSISTANT_TOP_OFFSET = 4;
 
+// 加速滚动动画时长，放慢末段滚动避免突兀冲刺。
+const ACCELERATED_SCROLL_DURATION_MS = 250;
+
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
   // 当前激活的 AI 会话。
@@ -51,8 +54,12 @@ export const AiChatWorkspace = ({
   // 最新 AI 消息外层节点引用。
   const latestAssistantMessageRef = useRef<HTMLDivElement>(null);
   // 需要置顶显示的最新 AI 消息标识。
-  const [topPinnedAssistantId, setTopPinnedAssistantId] = useState<string | null>(null);
-  const syncMessageItems = useAiChatContextStore((state) => state.syncMessageItems);
+  const [topPinnedAssistantId, setTopPinnedAssistantId] = useState<
+    string | null
+  >(null);
+  const syncMessageItems = useAiChatContextStore(
+    (state) => state.syncMessageItems,
+  );
   const contextItems = useAiChatContextStore(
     (state) => state.sessionItems[session.id] ?? EMPTY_CONTEXT_ITEMS,
   );
@@ -73,6 +80,8 @@ export const AiChatWorkspace = ({
   // 记录上一次的 session.id 与消息长度。
   const prevSessionIdRef = useRef(session.id);
   const prevMessagesLengthRef = useRef(session.messages.length);
+  // 当前加速滚动动画帧。
+  const acceleratedScrollFrameRef = useRef<number | null>(null);
 
   /**
    * 获取当前消息列表中最后一条 AI 消息标识。
@@ -89,6 +98,96 @@ export const AiChatWorkspace = ({
   };
 
   /**
+   * 取消未完成的加速滚动，避免连续切换会话时动画互相抢滚动条。
+   */
+  const cancelAcceleratedScroll = (): void => {
+    if (acceleratedScrollFrameRef.current === null) {
+      return;
+    }
+
+    cancelAnimationFrame(acceleratedScrollFrameRef.current);
+    acceleratedScrollFrameRef.current = null;
+  };
+
+  /**
+   * 用原生瞬时滚动写入指定位置，动画曲线由组件自行控制。
+   */
+  const setMessagesScrollTop = (
+    container: HTMLDivElement,
+    top: number,
+  ): void => {
+    if (typeof container.scrollTo === "function") {
+      container.scrollTo({
+        top,
+        behavior: "auto",
+      });
+      return;
+    }
+
+    container.scrollTop = top;
+  };
+
+  /**
+   * 将消息容器滚到指定位置；smooth 模式使用速度递增的 ease-in 曲线。
+   */
+  const scrollMessagesToPosition = (
+    targetTop: number,
+    behavior: ScrollBehavior,
+  ): void => {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    cancelAcceleratedScroll();
+
+    if (behavior !== "smooth") {
+      setMessagesScrollTop(container, targetTop);
+      return;
+    }
+
+    const startTop = container.scrollTop;
+    const distance = targetTop - startTop;
+    let startedAt: number | null = null;
+
+    /**
+     * 每一帧按二次方缓入推进，距离增量会逐帧变大。
+     */
+    const animate = (timestamp: number): void => {
+      if (startedAt === null) {
+        startedAt = timestamp;
+      }
+
+      const elapsed = Math.max(timestamp - startedAt, 0);
+      const progress = Math.min(elapsed / ACCELERATED_SCROLL_DURATION_MS, 1);
+      const easedProgress = progress ** 2;
+      const nextTop = startTop + distance * easedProgress;
+      setMessagesScrollTop(container, nextTop);
+
+      if (progress < 1) {
+        acceleratedScrollFrameRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      acceleratedScrollFrameRef.current = null;
+    };
+
+    acceleratedScrollFrameRef.current = requestAnimationFrame(animate);
+  };
+
+  /**
+   * 将消息容器滚动到底部。
+   */
+  const scrollMessagesToBottom = (behavior: ScrollBehavior): void => {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    scrollMessagesToPosition(container.scrollHeight, behavior);
+  };
+
+  /**
    * 将最新 AI 回答滚动到消息视口顶部。
    */
   const scrollLatestAssistantToTop = (behavior: ScrollBehavior): void => {
@@ -102,21 +201,26 @@ export const AiChatWorkspace = ({
       assistantMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
       0,
     );
-    if (typeof container.scrollTo === "function") {
-      container.scrollTo({
-        top: targetTop,
-        behavior,
-      });
-      return;
-    }
-
-    container.scrollTop = targetTop;
+    scrollMessagesToPosition(targetTop, behavior);
   };
 
-  // 当切换会话（session.id 变化）时，立即跳转至底部。
+  // 当切换会话（session.id 变化）时，复用发送消息后的最新 AI 回答定位效果。
   useEffect(() => {
+    const latestAssistantMessageId = getLatestAssistantMessageId();
+    if (latestAssistantMessageId) {
+      setTopPinnedAssistantId(latestAssistantMessageId);
+      return undefined;
+    }
+
     setTopPinnedAssistantId(null);
-    messagesEndRef.current?.scrollIntoView?.({ behavior: "auto" });
+    const animationFrame = requestAnimationFrame(() => {
+      scrollMessagesToBottom("smooth");
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      cancelAcceleratedScroll();
+    };
   }, [session.id]);
 
   // 当用户在当前会话发送新消息时，优先将最新 AI 回答置顶显示。
@@ -137,7 +241,9 @@ export const AiChatWorkspace = ({
     // 仅在当前会话的新增消息中包含用户消息时，触发对话定位。
     if (currentLength > prevLength) {
       const addedMessages = session.messages.slice(prevLength);
-      const hasNewUserMessage = addedMessages.some((msg) => msg.role === "user");
+      const hasNewUserMessage = addedMessages.some(
+        (msg) => msg.role === "user",
+      );
       if (hasNewUserMessage) {
         const latestAssistantMessageId = getLatestAssistantMessageId();
         if (latestAssistantMessageId) {
@@ -162,6 +268,7 @@ export const AiChatWorkspace = ({
 
     return () => {
       cancelAnimationFrame(animationFrame);
+      cancelAcceleratedScroll();
     };
   }, [topPinnedAssistantId, session.messages.length]);
 
