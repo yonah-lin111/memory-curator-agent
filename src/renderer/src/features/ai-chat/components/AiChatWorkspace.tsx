@@ -21,7 +21,7 @@ const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
 const LATEST_ASSISTANT_TOP_OFFSET = 4;
 
 // 加速滚动动画时长，放慢末段滚动避免突兀冲刺。
-const ACCELERATED_SCROLL_DURATION_MS = 250;
+const ACCELERATED_SCROLL_DURATION_MS = 360;
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
@@ -82,6 +82,8 @@ export const AiChatWorkspace = ({
   const prevMessagesLengthRef = useRef(session.messages.length);
   // 当前加速滚动动画帧。
   const acceleratedScrollFrameRef = useRef<number | null>(null);
+  // 下一次 AI 回答置顶定位的滚动行为。
+  const nextAssistantPinBehaviorRef = useRef<ScrollBehavior>("smooth");
 
   /**
    * 获取当前消息列表中最后一条 AI 消息标识。
@@ -148,6 +150,10 @@ export const AiChatWorkspace = ({
 
     const startTop = container.scrollTop;
     const distance = targetTop - startTop;
+    if (distance === 0) {
+      return;
+    }
+
     let startedAt: number | null = null;
 
     /**
@@ -247,11 +253,12 @@ export const AiChatWorkspace = ({
       if (hasNewUserMessage) {
         const latestAssistantMessageId = getLatestAssistantMessageId();
         if (latestAssistantMessageId) {
+          nextAssistantPinBehaviorRef.current = "auto";
           setTopPinnedAssistantId(latestAssistantMessageId);
           return;
         }
 
-        messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView?.({ behavior: "auto" });
       }
     }
   }, [session.messages, session.id]);
@@ -263,7 +270,8 @@ export const AiChatWorkspace = ({
     }
 
     const animationFrame = requestAnimationFrame(() => {
-      scrollLatestAssistantToTop("smooth");
+      scrollLatestAssistantToTop(nextAssistantPinBehaviorRef.current);
+      nextAssistantPinBehaviorRef.current = "smooth";
     });
 
     return () => {
