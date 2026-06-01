@@ -449,6 +449,60 @@ export const App = (): React.JSX.Element => {
     };
   }, []);
 
+  // 启动时读取真实持久化会话；没有历史时继续保留静态示例。
+  useEffect(() => {
+    let isMounted = true;
+
+    void window.api?.ai?.listSessions?.()
+      .then((sessions) => {
+        if (!isMounted || sessions.length === 0) {
+          return;
+        }
+
+        setChatSessions(sessions);
+        setActiveChatId(sessions[0].id);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 会话切换时按需补全消息详情，列表读取失败不阻塞现有对话。
+  useEffect(() => {
+    if (!window.api?.ai?.getSession) {
+      return;
+    }
+
+    let isMounted = true;
+
+    void window.api.ai
+      .getSession(activeChatId)
+      .then((session) => {
+        if (!isMounted || !session) {
+          return;
+        }
+
+        setChatSessions((prevSessions) =>
+          prevSessions.map((item) => (item.id === session.id ? session : item)),
+        );
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeChatId]);
+
   /**
    * 构造发送给主进程的上下文，优先使用当前 React 状态中的消息避免 store 同步延迟。
    */

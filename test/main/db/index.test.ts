@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createAssociatedPeopleTable,
+  createAiChatPersistenceTables,
   createJournalsTable,
   createNotesTable,
   createSnippetsTable,
@@ -177,7 +178,14 @@ class MemoryMigrationDatabase {
       .map((column) => column.trim())
       .filter(Boolean)
       .reduce<Record<string, string>>((currentColumns, columnDefinition) => {
+        if (/^(UNIQUE|PRIMARY|FOREIGN|CHECK)\b/i.test(columnDefinition)) {
+          return currentColumns
+        }
+
         const [columnName, columnType] = columnDefinition.split(/\s+/)
+        if (!columnType) {
+          return currentColumns
+        }
 
         currentColumns[columnName] = columnType.toUpperCase()
         return currentColumns
@@ -316,6 +324,7 @@ describe('db schema migration', () => {
     createSnippetsTable(database as never)
     createJournalsTable(database as never)
     createAssociatedPeopleTable(database as never)
+    createAiChatPersistenceTables(database as never)
 
     const notesIdType = database.prepare("SELECT type FROM pragma_table_info('notes') WHERE name = 'id'").get('id') as {
       type: string
@@ -333,6 +342,12 @@ describe('db schema migration', () => {
       .get('id') as {
       type: string
     }
+    const aiSessionIdType = database
+      .prepare("SELECT type FROM pragma_table_info('ai_chat_sessions') WHERE name = 'id'")
+      .get('id') as { type: string }
+    const aiMessageSessionIdType = database
+      .prepare("SELECT type FROM pragma_table_info('ai_chat_messages') WHERE name = 'session_id'")
+      .get('session_id') as { type: string }
     const migratedNote = database.prepare('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes').get() as {
       id: number
       title: string
@@ -371,6 +386,8 @@ describe('db schema migration', () => {
     expect(todosIdType.type).toBe('INTEGER')
     expect(snippetsIdType.type).toBe('INTEGER')
     expect(associatedPeopleIdType.type).toBe('TEXT')
+    expect(aiSessionIdType.type).toBe('TEXT')
+    expect(aiMessageSessionIdType.type).toBe('TEXT')
     expect(migratedNote).toMatchObject({
       id: 1,
       title: '旧笔记',

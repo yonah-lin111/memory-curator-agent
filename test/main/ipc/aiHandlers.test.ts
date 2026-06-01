@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
-import { createModelOptionsResponse, createSystemPrompt } from '../../../src/main/ipc/aiHandlers'
+import { ipcMain } from 'electron'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { runReactAgent } from '../../../src/main/agent/reactAgent'
+import { createModelProvider } from '../../../src/main/agent/providerFactory'
+import { getDatabase } from '../../../src/main/db'
+import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '../../../src/main/ipc/aiHandlers'
+import { createAiChatPersistenceService } from '../../../src/main/services/aiChatPersistenceService'
 
 vi.mock('electron', () => ({
   ipcMain: {
@@ -9,6 +14,18 @@ vi.mock('electron', () => ({
 
 vi.mock('../../../src/main/db', () => ({
   getDatabase: vi.fn()
+}))
+
+vi.mock('../../../src/main/services/aiChatPersistenceService', () => ({
+  createAiChatPersistenceService: vi.fn()
+}))
+
+vi.mock('../../../src/main/agent/providerFactory', () => ({
+  createModelProvider: vi.fn()
+}))
+
+vi.mock('../../../src/main/agent/reactAgent', () => ({
+  runReactAgent: vi.fn()
 }))
 
 vi.mock('../../../src/main/agent/providerConfig', () => ({
@@ -51,6 +68,13 @@ vi.mock('../../../src/main/agent/providerConfig', () => ({
 }))
 
 describe('aiHandlers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(getDatabase).mockReturnValue({} as never)
+    vi.mocked(createModelProvider).mockResolvedValue({} as never)
+    vi.mocked(runReactAgent).mockImplementation(async function* () {})
+  })
+
   it('system prompt 不硬编码具体工具名，避免工具被筛掉时诱导伪调用', () => {
     expect(createSystemPrompt().content).not.toContain('people_query')
     expect(createSystemPrompt().content).toContain('已授权工具')
@@ -78,5 +102,93 @@ describe('aiHandlers', () => {
     expect(JSON.stringify(response)).not.toContain('secret-key')
     expect(JSON.stringify(response)).not.toContain('baseURL')
     expect(JSON.stringify(response)).not.toContain('options')
+  })
+
+  it('registers AI history handlers through persistence service', async () => {
+    const service = {
+      listSessions: vi.fn(() => [
+        { id: 's1', title: '历史', summary: '摘要', time: '10:00', status: '运行完成', messages: [] }
+      ]),
+      getSession: vi.fn((sessionId: string) => ({
+        id: sessionId,
+        title: '历史',
+        summary: '摘要',
+        time: '10:00',
+        status: '运行完成',
+        messages: []
+      }))
+    }
+    vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
+
+    registerAiHandlers()
+
+    const calls = vi.mocked(ipcMain.handle).mock.calls
+    const listHandler = calls.find(([channel]) => channel === 'ai:sessions:list')?.[1]
+    const getHandler = calls.find(([channel]) => channel === 'ai:session:get')?.[1]
+
+    expect(await listHandler?.({} as never)).toEqual(service.listSessions())
+    expect(await getHandler?.({} as never, 's1')).toEqual(service.getSession('s1'))
+  })
+
+  it('persists chat start lifecycle and stream updates', async () => {
+    const service = {
+      listSessions: vi.fn(),
+      getSession: vi.fn(),
+      ensureSession: vi.fn(),
+      appendMessage: vi.fn(),
+      startRun: vi.fn(),
+      finishRun: vi.fn(),
+      updateAssistantMessage: vi.fn(),
+      upsertToolCall: vi.fn()
+    }
+    const send = vi.fn()
+    vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
+    vi.mocked(runReactAgent).mockImplementation(async function* () {
+      yield { type: 'text_delta', delta: '你好' } as never
+      yield { type: 'tool_started', id: 'call-1', name: 'people_query', input: { query: '阿明' } } as never
+      yield {
+        type: 'tool_finished',
+        id: 'call-1',
+        name: 'people_query',
+        observation: '找到 1 位关联人物',
+        data: [{ name: '阿明' }]
+      } as never
+      yield { type: 'done' } as never
+    })
+
+    registerAiHandlers()
+
+    const startHandler = vi
+      .mocked(ipcMain.handle)
+      .mock.calls.find(([channel]) => channel === 'ai:chat:start')?.[1]
+    const result = await startHandler?.(
+      { sender: { send } } as never,
+      {
+        runId: 'run-1',
+        sessionId: 's1',
+        message: '找阿明',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: []
+      }
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(result).toEqual({ runId: 'run-1' })
+    expect(service.ensureSession).toHaveBeenCalledWith(expect.objectContaining({ id: 's1', status: '运行中' }))
+    expect(service.appendMessage).toHaveBeenCalledTimes(2)
+    expect(service.startRun).toHaveBeenCalledWith(expect.objectContaining({ id: 'run-1', sessionId: 's1' }))
+    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'running' }))
+    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'done' }))
+    expect(service.updateAssistantMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: 'run-1-assistant',
+        answer: '你好',
+        toolSteps: [expect.objectContaining({ id: 'call-1', status: 'done' })]
+      })
+    )
+    expect(service.finishRun).toHaveBeenCalledWith(expect.objectContaining({ id: 'run-1', status: 'completed' }))
+    expect(send).toHaveBeenCalledWith('ai:chat:event', expect.objectContaining({ type: 'done', runId: 'run-1', sessionId: 's1' }))
   })
 })

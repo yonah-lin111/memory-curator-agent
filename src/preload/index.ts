@@ -267,6 +267,80 @@ type AiChatEvent =
       message: string
     }
 
+// AI 工具步骤状态类型。
+type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued'
+
+// AI 工具步骤类型。
+type AiToolStep = {
+  // 工具步骤唯一标识。
+  id: string
+  // 工具步骤标题。
+  title: string
+  // 工具步骤状态。
+  status: AiToolStepStatus
+  // 工具名称。
+  tool: string
+  // 工具输入参数。
+  input?: unknown
+  // 面向用户展示的执行观察摘要。
+  observation: string
+  // 工具返回的结构化数据。
+  data?: unknown
+}
+
+// AI 消息片段类型。
+type AiChatMessagePart =
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'text'
+      // Markdown 文本内容。
+      content: string
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'tool'
+      // 对应工具步骤 ID。
+      stepId: string
+    }
+
+// AI 对话消息类型。
+type AiChatMessage = {
+  // 消息唯一标识。
+  id: string
+  // 消息发送者。
+  role: 'user' | 'assistant'
+  // 消息正文。
+  content: string
+  // 消息显示时间。
+  time: string
+  // 工具调用摘要。
+  toolSteps?: AiToolStep[]
+  // 最终回答。
+  answer?: string
+  // 顺序片段。
+  parts?: AiChatMessagePart[]
+}
+
+// AI 对话会话类型。
+type AiChatSession = {
+  // 会话唯一标识。
+  id: string
+  // 会话标题。
+  title: string
+  // 会话摘要。
+  summary: string
+  // 会话时间。
+  time: string
+  // 会话状态文案。
+  status: string
+  // 会话消息列表。
+  messages: AiChatMessage[]
+}
+
 // Markdown 图片保存载荷类型。
 type MarkdownImageSavePayload = {
   // 原始文件名。
@@ -345,6 +419,9 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('people:delete', id)
   },
   ai: {
+    listSessions: (): Promise<AiChatSession[]> => ipcRenderer.invoke('ai:sessions:list'),
+    getSession: (sessionId: string): Promise<AiChatSession | null> =>
+      ipcRenderer.invoke('ai:session:get', sessionId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>

@@ -189,6 +189,86 @@ export type AssociatedPersonItem = AssociatedPersonCreateInput & {
   updatedAt: string
 }
 
+// AI 对话消息角色。
+export type AiChatMessageRole = 'user' | 'assistant'
+
+// AI Agent run 状态。
+export type AiAgentRunStatus = 'running' | 'completed' | 'failed'
+
+// AI 工具调用状态。
+export type AiAgentToolCallStatus = 'running' | 'done' | 'failed'
+
+// AI 消息片段类型。
+export type AiChatMessagePart =
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'text'
+      // Markdown 文本内容。
+      content: string
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'tool'
+      // 对应工具步骤 ID。
+      stepId: string
+    }
+
+// AI 工具步骤类型。
+export type AiToolStep = {
+  // 工具步骤唯一标识。
+  id: string
+  // 工具步骤标题。
+  title: string
+  // 工具步骤状态。
+  status: AiAgentToolCallStatus
+  // 工具名称。
+  tool: string
+  // 工具输入参数。
+  input?: unknown
+  // 面向用户展示的执行观察摘要。
+  observation: string
+  // 工具返回的结构化数据。
+  data?: unknown
+}
+
+// AI 对话会话类型。
+export type AiChatSessionItem = {
+  // 会话唯一标识。
+  id: string
+  // 会话标题。
+  title: string
+  // 会话摘要。
+  summary: string
+  // 会话时间。
+  time: string
+  // 会话状态文案。
+  status: string
+  // 会话消息列表。
+  messages: AiChatMessageItem[]
+}
+
+// AI 对话消息类型。
+export type AiChatMessageItem = {
+  // 消息唯一标识。
+  id: string
+  // 消息发送者。
+  role: AiChatMessageRole
+  // 消息正文。
+  content: string
+  // 消息显示时间。
+  time: string
+  // 工具调用摘要。
+  toolSteps?: AiToolStep[]
+  // 最终回答。
+  answer?: string
+  // 顺序片段。
+  parts?: AiChatMessagePart[]
+}
+
 // 单日数据类型。
 export type DayData = {
   // 当日待办列表。
@@ -237,6 +317,48 @@ export type NoteRow = {
   is_curated: number
   // 主题线索提示。
   clue: string | null
+}
+
+// AI 对话会话数据库行。
+export type AiChatSessionRow = {
+  // 会话唯一标识。
+  id: string
+  // 会话标题。
+  title: string
+  // 会话摘要。
+  summary: string
+  // 会话状态。
+  status: string
+  // 创建时间。
+  created_at: string
+  // 更新时间。
+  updated_at: string
+  // 最近消息时间。
+  last_message_at: string
+}
+
+// AI 对话消息数据库行。
+export type AiChatMessageRow = {
+  // 消息唯一标识。
+  id: string
+  // 所属会话标识。
+  session_id: string
+  // 消息角色。
+  role: AiChatMessageRole
+  // 消息正文。
+  content: string
+  // 助手最终回答。
+  answer: string | null
+  // 顺序片段 JSON。
+  parts_json: string
+  // 工具步骤 JSON。
+  tool_steps_json: string
+  // 展示时间。
+  time: string
+  // 创建时间。
+  created_at: string
+  // 更新时间。
+  updated_at: string
 }
 
 // 待办数据库行类型。

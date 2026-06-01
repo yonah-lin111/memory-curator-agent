@@ -322,6 +322,59 @@ describe('App', () => {
     })
   })
 
+  it('启动时优先使用持久化 AI 会话', async () => {
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => [
+          {
+            id: 'persisted-s1',
+            title: '持久化会话',
+            summary: '从 SQLite 恢复',
+            time: '10:00',
+            status: '运行完成',
+            messages: [
+              {
+                id: 'persisted-m1',
+                role: 'user',
+                content: '恢复一条历史',
+                time: '10:00'
+              }
+            ]
+          }
+        ]),
+        getSession: vi.fn(async (sessionId: string) => ({
+          id: sessionId,
+          title: '持久化会话',
+          summary: '从 SQLite 恢复',
+          time: '10:00',
+          status: '运行完成',
+          messages: [
+            {
+              id: 'persisted-m1',
+              role: 'user',
+              content: '恢复一条历史',
+              time: '10:00'
+            }
+          ]
+        })),
+        getModelOptions: vi.fn(async () => ({
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          providers: [],
+          agent: { context: { toolOutputMaxChars: 4096, recentToolResultLimit: 3 } }
+        })),
+        startChat: vi.fn(),
+        onChatEvent: vi.fn(() => () => undefined)
+      }
+    } as never
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('持久化会话')).toBeInTheDocument()
+    })
+  })
+
   it('AI 对话发送时使用当前选择的模型', async () => {
     const user = userEvent.setup()
     const startChat = vi.fn(async (payload: AiChatStartPayload) => ({

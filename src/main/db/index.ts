@@ -238,6 +238,99 @@ export const createAssociatedPeopleTable = (database: Database.Database): void =
 }
 
 /**
+ * 创建 AI Agent 持久化表与索引。
+ */
+export const createAiChatPersistenceTables = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_message_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_last_message_at
+    ON ai_chat_sessions(last_message_at DESC);
+
+    CREATE TABLE IF NOT EXISTS ai_chat_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      answer TEXT,
+      parts_json TEXT NOT NULL,
+      tool_steps_json TEXT NOT NULL,
+      time TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_session_created_at
+    ON ai_chat_messages(session_id, created_at ASC);
+
+    CREATE TABLE IF NOT EXISTS ai_agent_runs (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      assistant_message_id TEXT NOT NULL,
+      provider TEXT,
+      model TEXT,
+      status TEXT NOT NULL,
+      error TEXT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_agent_runs_session_started_at
+    ON ai_agent_runs(session_id, started_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_ai_agent_runs_assistant_message_id
+    ON ai_agent_runs(assistant_message_id);
+
+    CREATE TABLE IF NOT EXISTS ai_agent_tool_calls (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      tool_call_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      input_json TEXT NOT NULL,
+      observation TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(run_id, tool_call_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_agent_tool_calls_run_created_at
+    ON ai_agent_tool_calls(run_id, created_at ASC);
+
+    CREATE INDEX IF NOT EXISTS idx_ai_agent_tool_calls_message_id
+    ON ai_agent_tool_calls(message_id);
+
+    CREATE TABLE IF NOT EXISTS ai_agent_context_snapshots (
+      id INTEGER PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      context_key TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL,
+      source_id TEXT,
+      content TEXT NOT NULL,
+      tokens INTEGER,
+      created_order INTEGER NOT NULL,
+      meta_json TEXT NOT NULL,
+      UNIQUE(run_id, context_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ai_agent_context_snapshots_run_order
+    ON ai_agent_context_snapshots(run_id, created_order ASC);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -253,6 +346,7 @@ export const initDatabase = (): Database.Database => {
   createSnippetsTable(sqlite)
   createJournalsTable(sqlite)
   createAssociatedPeopleTable(sqlite)
+  createAiChatPersistenceTables(sqlite)
 
   return sqlite
 }
