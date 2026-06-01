@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select } from "@renderer/components/ui/Select";
@@ -26,6 +26,18 @@ export type AiChatInputProps = {
   onModelChange: (selection: AiModelSelection) => void;
 };
 
+// 输入框最小显示行数。
+const TEXTAREA_MIN_ROWS = 2;
+
+// 输入框最大显示行数。
+const TEXTAREA_MAX_ROWS = 6;
+
+// 测不到 CSS line-height 时的兜底行高。
+const FALLBACK_LINE_HEIGHT = 21;
+
+// 容器点击时不抢焦点的交互元素。
+const INTERACTIVE_SELECTOR = "button, select, input, textarea, a, [role='button'], [role='listbox'], [role='option']";
+
 /**
  * AiChatInput - AI 对话底部输入区域组件，包含模型切换、文本输入与辅助功能。
  */
@@ -38,6 +50,7 @@ export const AiChatInput = ({
   onSendMessage,
   onModelChange,
 }: AiChatInputProps): React.JSX.Element => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [inputText, setInputText] = useState("");
   const selectedModelValue = selectedModel
     ? `${selectedModel.provider}::${selectedModel.model}`
@@ -57,6 +70,38 @@ export const AiChatInput = ({
       ? circleCircumference
       : circleCircumference * (1 - contextUsageValue / 100);
 
+  /**
+   * 根据内容真实高度调整输入框高度，最多显示 6 行，超过后内部滚动。
+   */
+  const adjustTextareaHeight = useCallback((): void => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight);
+    const lineHeight = Number.isNaN(parsedLineHeight)
+      ? FALLBACK_LINE_HEIGHT
+      : parsedLineHeight;
+    const verticalPadding =
+      Number.parseFloat(computedStyle.paddingTop || "0") +
+      Number.parseFloat(computedStyle.paddingBottom || "0");
+    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding;
+    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding;
+
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(
+      Math.max(textarea.scrollHeight, minHeight),
+      maxHeight
+    );
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight, inputText]);
+
   // 构造供 Select 组件使用的选项列表，支持 provider 分组。
   const selectOptions = hasModelOptions
     ? modelOptions.map((provider) => ({
@@ -75,6 +120,20 @@ export const AiChatInput = ({
     if (!inputText.trim()) return;
     onSendMessage(inputText.trim());
     setInputText("");
+  };
+
+  /**
+   * 处理输入区域点击，空白区域点击时聚焦文本框。
+   */
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    const target = e.target as HTMLElement;
+    if (
+      target !== textareaRef.current &&
+      target.closest(INTERACTIVE_SELECTOR)
+    ) {
+      return;
+    }
+    textareaRef.current?.focus();
   };
 
   /**
@@ -101,16 +160,21 @@ export const AiChatInput = ({
 
   return (
     <div className="flex-shrink-0 border-t border-white/5 p-3 bg-black/5">
-      <div className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2">
+      <div
+        data-testid="ai-chat-input-container"
+        onClick={handleContainerClick}
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2"
+      >
         {/* 输入框 */}
         <textarea
-          rows={2}
+          ref={textareaRef}
+          rows={TEXTAREA_MIN_ROWS}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="输入您的问题..."
           aria-label="AI 对话输入框"
-          className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1"
+          className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
         />
 
         {/* 工具栏与发送按钮 */}
