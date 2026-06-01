@@ -178,7 +178,7 @@ export const AiChatWorkspace = ({
       {/* 消息列表 */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4"
+        className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4"
       >
         {session.messages.map((message, index) => {
           const isLast = index === session.messages.length - 1;
