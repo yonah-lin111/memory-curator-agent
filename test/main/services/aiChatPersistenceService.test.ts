@@ -101,6 +101,94 @@ describe('aiChatPersistenceService', () => {
     })
   })
 
+  it('updates session title without touching messages', () => {
+    const service = createService()
+
+    service.ensureSession({
+      id: 's-title',
+      title: '旧标题',
+      summary: '摘要',
+      status: 'idle',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.appendMessage({
+      id: 'm-user',
+      sessionId: 's-title',
+      role: 'user',
+      content: '原消息',
+      time: '10:00',
+      timestamp: '2026-05-31 10:00'
+    })
+
+    service.updateSessionTitle('s-title', '新标题', '2026-05-31 10:01')
+
+    expect(service.getSession('s-title')).toMatchObject({
+      id: 's-title',
+      title: '新标题',
+      messages: [{ id: 'm-user', content: '原消息' }]
+    })
+  })
+
+  it('deletes session and related chat run data', () => {
+    const service = createService()
+
+    service.ensureSession({
+      id: 's-delete',
+      title: '待删除',
+      summary: '摘要',
+      status: 'running',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.appendMessage({
+      id: 'm-ai',
+      sessionId: 's-delete',
+      role: 'assistant',
+      content: '正在处理',
+      answer: '',
+      parts: [],
+      toolSteps: [],
+      time: '10:00',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.startRun({
+      id: 'run-delete',
+      sessionId: 's-delete',
+      assistantMessageId: 'm-ai',
+      provider: 'bailian',
+      model: 'MiniMax-M2.5',
+      context: [
+        {
+          key: 'message:m-ai',
+          kind: 'message',
+          title: '助手回答',
+          sourceId: 'm-ai',
+          content: '正在处理'
+        }
+      ],
+      timestamp: '2026-05-31 10:00'
+    })
+    service.upsertToolCall({
+      id: 'tool-delete',
+      runId: 'run-delete',
+      messageId: 'm-ai',
+      toolCallId: 'call-delete',
+      name: 'people_query',
+      status: 'done',
+      input: {},
+      observation: '完成',
+      data: null,
+      timestamp: '2026-05-31 10:01'
+    })
+
+    service.deleteSession('s-delete')
+
+    expect(service.listSessions()).toHaveLength(0)
+    expect(service.getSession('s-delete')).toBeNull()
+    expect(service.getRun('run-delete')).toBeNull()
+    expect(service.listToolCalls('run-delete')).toEqual([])
+    expect(service.listContextSnapshots('run-delete')).toEqual([])
+  })
+
   it('persists run, tool call, and context snapshots', () => {
     const service = createService()
 

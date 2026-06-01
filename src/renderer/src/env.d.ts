@@ -531,6 +531,10 @@ type AppAPI = {
     listSessions?: () => Promise<AiChatSession[]>
     // 读取持久化 AI 会话详情。
     getSession?: (sessionId: string) => Promise<AiChatSession | null>
+    // 更新持久化 AI 会话标题。
+    updateSessionTitle?: (sessionId: string, title: string) => Promise<void>
+    // 删除持久化 AI 会话。
+    deleteSession?: (sessionId: string) => Promise<void>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
     // 启动 AI 对话。

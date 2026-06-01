@@ -116,7 +116,9 @@ describe('aiHandlers', () => {
         time: '10:00',
         status: 'completed',
         messages: []
-      }))
+      })),
+      updateSessionTitle: vi.fn(),
+      deleteSession: vi.fn()
     }
     vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
 
@@ -125,15 +127,23 @@ describe('aiHandlers', () => {
     const calls = vi.mocked(ipcMain.handle).mock.calls
     const listHandler = calls.find(([channel]) => channel === 'ai:sessions:list')?.[1]
     const getHandler = calls.find(([channel]) => channel === 'ai:session:get')?.[1]
+    const updateTitleHandler = calls.find(([channel]) => channel === 'ai:session:title:update')?.[1]
+    const deleteHandler = calls.find(([channel]) => channel === 'ai:session:delete')?.[1]
 
     expect(await listHandler?.({} as never)).toEqual(service.listSessions())
     expect(await getHandler?.({} as never, 's1')).toEqual(service.getSession('s1'))
+    await updateTitleHandler?.({} as never, 's1', '新标题')
+    await deleteHandler?.({} as never, 's1')
+    expect(service.updateSessionTitle).toHaveBeenCalledWith('s1', '新标题', expect.any(String))
+    expect(service.deleteSession).toHaveBeenCalledWith('s1')
   })
 
   it('persists chat start lifecycle and stream updates', async () => {
     const service = {
       listSessions: vi.fn(),
       getSession: vi.fn(),
+      updateSessionTitle: vi.fn(),
+      deleteSession: vi.fn(),
       ensureSession: vi.fn(),
       appendMessage: vi.fn(),
       startRun: vi.fn(),

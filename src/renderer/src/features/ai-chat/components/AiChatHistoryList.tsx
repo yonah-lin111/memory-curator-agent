@@ -1,7 +1,9 @@
 import type React from "react";
+import { useEffect, useState } from "react";
 import { Bot, Plus, Search } from "lucide-react";
 import type { AiChatSession } from "@renderer/features/ai-chat/aiChatMock";
 import { IconButton } from "@renderer/components/ui/IconButton";
+import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
 
 // AI 对话历史列表组件属性类型。
 type AiChatHistoryListProps = {
@@ -13,8 +15,30 @@ type AiChatHistoryListProps = {
   onSessionChange: (sessionId: string) => void;
   // 新建 AI 会话回调。
   onNewChat: () => void;
+  // 重命名 AI 会话回调。
+  onRenameChat: (sessionId: string, title: string) => Promise<boolean>;
+  // 删除 AI 会话回调。
+  onDeleteChat: (sessionId: string) => Promise<boolean>;
   // 是否隐藏
   "aria-hidden"?: boolean;
+};
+
+// 行内标题编辑草稿。
+type EditingAiChatTitleDraft = {
+  // 正在编辑的 AI 会话 ID。
+  id: string;
+  // 正在编辑的标题。
+  title: string;
+};
+
+// AI 会话右键菜单状态。
+type AiChatContextMenuState = {
+  // 菜单所属 AI 会话 ID。
+  sessionId: string;
+  // 菜单显示横坐标。
+  x: number;
+  // 菜单显示纵坐标。
+  y: number;
 };
 
 /**
@@ -25,8 +49,134 @@ export const AiChatHistoryList = ({
   activeSessionId,
   onSessionChange,
   onNewChat,
+  onRenameChat,
+  onDeleteChat,
   "aria-hidden": ariaHidden,
 }: AiChatHistoryListProps): React.JSX.Element => {
+  // 当前行内标题编辑草稿。
+  const [editingTitle, setEditingTitle] = useState<EditingAiChatTitleDraft | null>(null);
+  // 当前打开的右键菜单；集中管理以保证视口内只存在一个菜单。
+  const [contextMenu, setContextMenu] = useState<AiChatContextMenuState | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      return undefined;
+    }
+
+    /**
+     * 关闭当前右键菜单。
+     */
+    const closeContextMenu = (): void => {
+      setContextMenu(null);
+    };
+
+    /**
+     * 按 Escape 关闭当前右键菜单。
+     */
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener("click", closeContextMenu);
+    document.addEventListener("scroll", closeContextMenu, true);
+    window.addEventListener("resize", closeContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("click", closeContextMenu);
+      document.removeEventListener("scroll", closeContextMenu, true);
+      window.removeEventListener("resize", closeContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [contextMenu]);
+
+  /**
+   * 打开指定会话的右键菜单。
+   */
+  const handleOpenContextMenu = (
+    event: React.MouseEvent<HTMLDivElement>,
+    sessionId: string,
+  ): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    setContextMenu({
+      sessionId,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
+
+  /**
+   * 通过键盘激活历史项，保持整行可点击体验。
+   */
+  const handleSessionKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    sessionId: string,
+  ): void => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    onSessionChange(sessionId);
+  };
+
+  /**
+   * 进入标题行内编辑态。
+   */
+  const handleStartEditTitle = (session: AiChatSession): void => {
+    setEditingTitle({
+      id: session.id,
+      title: session.title,
+    });
+    setContextMenu(null);
+  };
+
+  /**
+   * 提交标题编辑；空标题直接放弃，避免误清空。
+   */
+  const handleCommitEditTitle = async (session: AiChatSession): Promise<void> => {
+    if (!editingTitle) {
+      return;
+    }
+
+    const nextTitle = editingTitle.title.trim();
+
+    if (!nextTitle || nextTitle === session.title) {
+      setEditingTitle(null);
+      return;
+    }
+
+    const isUpdated = await onRenameChat(session.id, nextTitle);
+
+    if (isUpdated) {
+      setEditingTitle(null);
+    }
+  };
+
+  /**
+   * 删除当前右键菜单指向的会话。
+   */
+  const handleDeleteChat = async (session: AiChatSession): Promise<void> => {
+    const isDeleted = await onDeleteChat(session.id);
+
+    if (!isDeleted) {
+      return;
+    }
+
+    if (editingTitle?.id === session.id) {
+      setEditingTitle(null);
+    }
+
+    setContextMenu(null);
+  };
+
+  const contextMenuSession = contextMenu
+    ? sessions.find((session) => session.id === contextMenu.sessionId)
+    : undefined;
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -62,22 +212,74 @@ export const AiChatHistoryList = ({
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
+          const isEditing = editingTitle?.id === session.id;
           return (
-            <button
+            <div
               key={session.id}
-              type="button"
               aria-current={isActive ? "true" : undefined}
-              onClick={() => onSessionChange(session.id)}
-              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                 isActive
                   ? "bg-white text-black font-semibold"
                   : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
-              }`}
+              } ${isEditing ? "" : "cursor-pointer"}`}
+              role={isEditing ? undefined : "button"}
+              tabIndex={isEditing ? undefined : 0}
+              onClick={() => {
+                if (!isEditing) {
+                  onSessionChange(session.id);
+                }
+              }}
+              onContextMenu={(event) => handleOpenContextMenu(event, session.id)}
+              onKeyDown={(event) => {
+                if (!isEditing) {
+                  handleSessionKeyDown(event, session.id);
+                }
+              }}
             >
               <div className="flex items-center justify-between gap-2 w-full">
-                <span className="truncate text-xs font-bold leading-none">
-                  {session.title}
-                </span>
+                {isEditing ? (
+                  <div className="relative min-w-0 flex-1">
+                    <div
+                      aria-hidden="true"
+                      className="invisible min-h-[14px] break-words whitespace-pre-wrap text-xs font-bold leading-none"
+                    >
+                      {editingTitle.title || " "}
+                    </div>
+                    <input
+                      autoFocus
+                      aria-label={`编辑对话标题 ${session.title}`}
+                      className={`absolute inset-0 h-full w-full min-w-0 rounded-[4px] border border-transparent bg-transparent text-xs font-bold leading-none outline-none focus:border-transparent ${
+                        isActive ? "text-black" : "text-white"
+                      }`}
+                      onBlur={() => void handleCommitEditTitle(session)}
+                      onChange={(event) =>
+                        setEditingTitle((currentDraft) =>
+                          currentDraft
+                            ? { ...currentDraft, title: event.target.value }
+                            : currentDraft,
+                        )
+                      }
+                      onFocus={(event) => event.target.select()}
+                      onKeyDown={(event) => {
+                        if (event.nativeEvent.isComposing) {
+                          return;
+                        }
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void handleCommitEditTitle(session);
+                        }
+                        if (event.key === "Escape") {
+                          setEditingTitle(null);
+                        }
+                      }}
+                      value={editingTitle.title}
+                    />
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none">
+                    {session.title}
+                  </span>
+                )}
                 <span
                   className={`text-[10px] font-mono leading-none flex-shrink-0 ${
                     isActive ? "text-black/55" : "text-white/30"
@@ -93,10 +295,20 @@ export const AiChatHistoryList = ({
               >
                 {session.summary}
               </p>
-            </button>
+            </div>
           );
         })}
       </div>
+
+      {contextMenuSession ? (
+        <AiChatHistoryContextMenu
+          sessionTitle={contextMenuSession.title}
+          x={contextMenu?.x ?? 0}
+          y={contextMenu?.y ?? 0}
+          onEditTitle={() => handleStartEditTitle(contextMenuSession)}
+          onDeleteChat={() => void handleDeleteChat(contextMenuSession)}
+        />
+      ) : null}
 
       {/* 底部 Mock 状态卡片 */}
       <div className="mt-auto rounded-[6px] border border-white/5 bg-white/[0.02] p-3 flex flex-col gap-1.5">

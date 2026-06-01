@@ -234,6 +234,10 @@ export type AiChatPersistenceService = {
   listSessions: () => AiChatSessionItem[]
   // 读取单个 AI 会话详情。
   getSession: (sessionId: string) => AiChatSessionItem | null
+  // 更新 AI 会话标题。
+  updateSessionTitle: (sessionId: string, title: string, timestamp: string) => void
+  // 删除 AI 会话及关联运行记录。
+  deleteSession: (sessionId: string) => void
   // 创建或更新 AI 会话。
   ensureSession: (input: EnsureSessionInput) => void
   // 写入 AI 消息。
@@ -486,6 +490,42 @@ export const createAiChatPersistenceService = (
       .all(sessionId) as AiChatMessageRow[]
 
     return mapSessionRow(session, messages.map((row) => mapMessageRow(row)))
+  }
+
+  const updateSessionTitle = (sessionId: string, title: string, timestamp: string): void => {
+    database
+      .prepare(
+        `
+          UPDATE ai_chat_sessions
+          SET title = ?,
+              updated_at = ?
+          WHERE id = ?
+        `
+      )
+      .run(title, timestamp, sessionId)
+  }
+
+  const deleteSession = (sessionId: string): void => {
+    runTransaction(database, () => {
+      const runs = database
+        .prepare(
+          `
+            SELECT id
+            FROM ai_agent_runs
+            WHERE session_id = ?
+          `
+        )
+        .all(sessionId) as { id: string }[]
+
+      for (const run of runs) {
+        database.prepare('DELETE FROM ai_agent_context_snapshots WHERE run_id = ?').run(run.id)
+        database.prepare('DELETE FROM ai_agent_tool_calls WHERE run_id = ?').run(run.id)
+      }
+
+      database.prepare('DELETE FROM ai_agent_runs WHERE session_id = ?').run(sessionId)
+      database.prepare('DELETE FROM ai_chat_messages WHERE session_id = ?').run(sessionId)
+      database.prepare('DELETE FROM ai_chat_sessions WHERE id = ?').run(sessionId)
+    })
   }
 
   const ensureSession = (input: EnsureSessionInput): void => {
@@ -768,6 +808,8 @@ export const createAiChatPersistenceService = (
   return {
     listSessions,
     getSession,
+    updateSessionTitle,
+    deleteSession,
     ensureSession,
     appendMessage,
     updateAssistantMessage,

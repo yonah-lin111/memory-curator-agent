@@ -422,6 +422,10 @@ const api = {
     listSessions: (): Promise<AiChatSession[]> => ipcRenderer.invoke('ai:sessions:list'),
     getSession: (sessionId: string): Promise<AiChatSession | null> =>
       ipcRenderer.invoke('ai:session:get', sessionId),
+    updateSessionTitle: (sessionId: string, title: string): Promise<void> =>
+      ipcRenderer.invoke('ai:session:title:update', sessionId, title),
+    deleteSession: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke('ai:session:delete', sessionId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>

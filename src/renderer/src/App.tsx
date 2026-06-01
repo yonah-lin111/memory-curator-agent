@@ -37,6 +37,26 @@ import {
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
 /**
+ * 创建本地空白 AI 会话，供新建入口与最后一条删除后的兜底态复用。
+ */
+const createEmptyAiChatSession = (): AiChatSession => {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return {
+    id: `session-${Date.now()}`,
+    title: "新建对话",
+    summary: "暂无对话内容",
+    time: timeStr,
+    status: "idle",
+    messages: [],
+  };
+};
+
+/**
  * 记忆策展 Agent 的主应用布局。
  * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
@@ -127,22 +147,55 @@ export const App = (): React.JSX.Element => {
       return;
     }
 
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("zh-CN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const newSession: AiChatSession = {
-      id: `session-${Date.now()}`,
-      title: "新建对话",
-      summary: "暂无对话内容",
-      time: timeStr,
-      status: "idle",
-      messages: [],
-    };
+    const newSession = createEmptyAiChatSession();
     // 将新会话插到最前面，保证最新创建的对话排在最上方。
     setChatSessions((prev) => [newSession, ...prev]);
     setActiveChatId(newSession.id);
+  };
+
+  /**
+   * 更新 AI 对话标题，持久化失败时回滚本地状态。
+   */
+  const handleRenameChat = async (sessionId: string, title: string): Promise<boolean> => {
+    const previousSessions = chatSessions;
+
+    setChatSessions((prevSessions) =>
+      prevSessions.map((session) =>
+        session.id === sessionId ? { ...session, title } : session,
+      ),
+    );
+
+    try {
+      await window.api?.ai?.updateSessionTitle?.(sessionId, title);
+      return true;
+    } catch {
+      setChatSessions(previousSessions);
+      return false;
+    }
+  };
+
+  /**
+   * 删除 AI 对话；删空后保留一个本地空白会话，避免主界面无激活对象。
+   */
+  const handleDeleteChat = async (sessionId: string): Promise<boolean> => {
+    const previousSessions = chatSessions;
+    const nextSessions = previousSessions.filter((session) => session.id !== sessionId);
+    const fallbackSession = nextSessions.length === 0 ? createEmptyAiChatSession() : null;
+    const resolvedSessions = fallbackSession ? [fallbackSession] : nextSessions;
+    const nextActiveSession =
+      activeChatId === sessionId
+        ? (resolvedSessions[0]?.id ?? activeChatId)
+        : activeChatId;
+
+    try {
+      await window.api?.ai?.deleteSession?.(sessionId);
+      setChatSessions(resolvedSessions);
+      setActiveChatId(nextActiveSession);
+      useAiChatContextStore.getState().clearSession(sessionId);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   /**
@@ -702,6 +755,8 @@ export const App = (): React.JSX.Element => {
           }}
           onChatSessionChange={setActiveChatId}
           onNewChat={handleNewChat}
+          onRenameChat={handleRenameChat}
+          onDeleteChat={handleDeleteChat}
         />
 
         {/* 中间主工作区 */}

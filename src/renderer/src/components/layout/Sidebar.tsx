@@ -78,6 +78,10 @@ type SidebarProps = {
   onChatSessionChange: (sessionId: string) => void;
   // 新建 AI 对话回调。
   onNewChat: () => void;
+  // 重命名 AI 对话回调。
+  onRenameChat: (sessionId: string, title: string) => Promise<boolean>;
+  // 删除 AI 对话回调。
+  onDeleteChat: (sessionId: string) => Promise<boolean>;
 };
 
 /* ==========================================
@@ -173,6 +177,8 @@ export const Sidebar = ({
   onPageChange,
   onChatSessionChange,
   onNewChat,
+  onRenameChat,
+  onDeleteChat,
 }: SidebarProps): React.JSX.Element => {
   // AI 对话模式下强制使用展开宽度，避免历史列表被折叠成不可读图标。
   const shouldUseCollapsedLayout = mode === "navigation" && isCollapsed;
@@ -310,6 +316,8 @@ export const Sidebar = ({
             activeSessionId={activeChatId}
             onSessionChange={onChatSessionChange}
             onNewChat={onNewChat}
+            onRenameChat={onRenameChat}
+            onDeleteChat={onDeleteChat}
             aria-hidden={mode !== "chat"}
           />
         </div>
