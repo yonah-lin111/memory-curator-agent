@@ -291,7 +291,7 @@ describe('aiChatPersistenceService', () => {
       error: '模型失败'
     })
     expect(service.getSession('s-fail')).toMatchObject({
-      status: '执行失败',
+      status: 'failed',
       messages: [
         { id: 'm-user', role: 'user' },
         { id: 'm-ai', role: 'assistant', content: 'AI 对话执行失败', answer: '模型失败' }

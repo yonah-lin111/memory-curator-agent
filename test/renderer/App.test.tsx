@@ -322,6 +322,95 @@ describe('App', () => {
     })
   })
 
+  it('AI 对话切换历史后继续使用持久化助手消息接收流式输出', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    let capturedPayload: AiChatStartPayload | null = null
+
+    window.api = {
+      ai: {
+        getSession: vi.fn(async (sessionId: string) => {
+          if (!capturedPayload || sessionId !== capturedPayload.sessionId) {
+            return null
+          }
+
+          return {
+            id: capturedPayload.sessionId,
+            title: '整理今天的记忆线索',
+            summary: '切换时恢复流式快照',
+            time: '10:24',
+            status: 'running',
+            messages: [
+              {
+                id: `${capturedPayload.runId}-user`,
+                role: 'user',
+                content: capturedPayload.message,
+                time: '10:24'
+              },
+              {
+                id: `${capturedPayload.runId}-assistant`,
+                role: 'assistant',
+                content: 'AI 已生成回答',
+                answer: '切换前',
+                parts: [
+                  {
+                    id: `${capturedPayload.runId}-assistant-text-0`,
+                    kind: 'text',
+                    content: '切换前'
+                  }
+                ],
+                toolSteps: [],
+                time: '10:24'
+              }
+            ]
+          }
+        }),
+        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+          capturedPayload = payload
+          return {
+            runId: payload.runId ?? 'run-test'
+          }
+        }),
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.type(screen.getByLabelText('AI 对话输入框'), '切换不断流')
+    await user.click(screen.getByRole('button', { name: '发送消息' }))
+
+    await waitFor(() => {
+      expect(window.api.ai?.startChat).toHaveBeenCalled()
+    })
+
+    await user.click(screen.getByRole('button', { name: /周回顾行动拆解/ }))
+    await user.click(screen.getByRole('button', { name: /整理今天的记忆线索/ }))
+
+    await waitFor(() => {
+      expect(screen.getByText('切换前')).toBeInTheDocument()
+    })
+
+    act(() => {
+      listeners.forEach((listener) =>
+        listener({
+          type: 'text_delta',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          delta: '继续输出'
+        })
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('切换前继续输出')).toBeInTheDocument()
+    })
+  })
+
   it('启动时优先使用持久化 AI 会话', async () => {
     window.api = {
       ai: {

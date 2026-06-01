@@ -531,13 +531,14 @@ export const App = (): React.JSX.Element => {
       minute: "2-digit",
     });
     const sessionId = activeChatId;
-    const assistantMessageId = `msg-${Date.now()}-ai`;
     const runId = `run-${Date.now()}`;
+    const userMessageId = `${runId}-user`;
+    const assistantMessageId = `${runId}-assistant`;
     const hasAiBridge = Boolean(window.api?.ai);
     const contextItems = buildStartContextItems(sessionId);
 
     const userMessage = {
-      id: `msg-${Date.now()}-user`,
+      id: userMessageId,
       role: "user" as const,
       content: text,
       time: userTime,
