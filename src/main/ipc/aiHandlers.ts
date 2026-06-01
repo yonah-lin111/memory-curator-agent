@@ -243,7 +243,7 @@ export const registerAiHandlers = (): void => {
         id: payload.sessionId,
         title: sessionTitle,
         summary: payload.message,
-        status: '运行中',
+        status: 'running',
         timestamp
       },
       userMessage: {
@@ -450,7 +450,7 @@ export const registerAiHandlers = (): void => {
                 id: payload.sessionId,
                 title: sessionTitle,
                 summary: payload.message,
-                status: '执行失败',
+                status: 'failed',
                 timestamp: failedTimestamp
               },
               assistantMessage: {
@@ -474,7 +474,7 @@ export const registerAiHandlers = (): void => {
               id: payload.sessionId,
               title: sessionTitle,
               summary: assistantAnswer || payload.message,
-              status: '运行完成',
+              status: 'completed',
               timestamp: createTimestamp()
             })
           }
@@ -495,7 +495,7 @@ export const registerAiHandlers = (): void => {
             id: payload.sessionId,
             title: sessionTitle,
             summary: payload.message,
-            status: '执行失败',
+            status: 'failed',
             timestamp: failedTimestamp
           },
           assistantMessage: {

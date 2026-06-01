@@ -20,7 +20,7 @@ describe('aiChatPersistenceService', () => {
       id: 's1',
       title: '新会话',
       summary: '第一条消息',
-      status: '运行中',
+      status: 'running',
       timestamp: '2026-05-31 10:00'
     })
     service.appendMessage({
@@ -61,7 +61,7 @@ describe('aiChatPersistenceService', () => {
       id: 's1',
       title: '新会话',
       summary: '摘要',
-      status: '运行中',
+      status: 'running',
       timestamp: '2026-05-31 10:00'
     })
     service.appendMessage({
@@ -183,7 +183,7 @@ describe('aiChatPersistenceService', () => {
           id: 's-rollback',
           title: '回滚会话',
           summary: '测试回滚',
-          status: '运行中',
+      status: 'running',
           timestamp: '2026-05-31 10:00'
         },
         userMessage: {
@@ -229,7 +229,7 @@ describe('aiChatPersistenceService', () => {
         id: 's-fail',
         title: '失败会话',
         summary: '测试失败',
-        status: '运行中',
+        status: 'running',
         timestamp: '2026-05-31 10:00'
       },
       userMessage: {
@@ -267,7 +267,7 @@ describe('aiChatPersistenceService', () => {
         id: 's-fail',
         title: '失败会话',
         summary: '测试失败',
-        status: '执行失败',
+        status: 'failed',
         timestamp: '2026-05-31 10:01'
       },
       run: {

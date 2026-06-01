@@ -47,7 +47,7 @@ const session: AiChatSession = {
   title: '上下文测试',
   summary: '摘要',
   time: '10:00',
-  status: '运行完成',
+  status: 'completed',
   messages: [
     {
       id: 'u1',

@@ -107,14 +107,14 @@ describe('aiHandlers', () => {
   it('registers AI history handlers through persistence service', async () => {
     const service = {
       listSessions: vi.fn(() => [
-        { id: 's1', title: '历史', summary: '摘要', time: '10:00', status: '运行完成', messages: [] }
+        { id: 's1', title: '历史', summary: '摘要', time: '10:00', status: 'completed', messages: [] }
       ]),
       getSession: vi.fn((sessionId: string) => ({
         id: sessionId,
         title: '历史',
         summary: '摘要',
         time: '10:00',
-        status: '运行完成',
+        status: 'completed',
         messages: []
       }))
     }
@@ -179,7 +179,7 @@ describe('aiHandlers', () => {
 
     expect(result).toEqual({ runId: 'run-1' })
     expect(service.createRunWithMessages).toHaveBeenCalledWith({
-      session: expect.objectContaining({ id: 's1', status: '运行中' }),
+      session: expect.objectContaining({ id: 's1', status: 'running' }),
       userMessage: expect.objectContaining({ id: 'run-1-user', role: 'user' }),
       assistantMessage: expect.objectContaining({ id: 'run-1-assistant', role: 'assistant' }),
       run: expect.objectContaining({ id: 'run-1', sessionId: 's1' })

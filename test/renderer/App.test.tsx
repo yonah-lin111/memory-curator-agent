@@ -331,7 +331,7 @@ describe('App', () => {
             title: '持久化会话',
             summary: '从 SQLite 恢复',
             time: '10:00',
-            status: '运行完成',
+            status: 'completed',
             messages: [
               {
                 id: 'persisted-m1',
@@ -347,7 +347,7 @@ describe('App', () => {
           title: '持久化会话',
           summary: '从 SQLite 恢复',
           time: '10:00',
-          status: '运行完成',
+          status: 'completed',
           messages: [
             {
               id: 'persisted-m1',

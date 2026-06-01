@@ -137,7 +137,7 @@ export const App = (): React.JSX.Element => {
       title: "新建对话",
       summary: "暂无对话内容",
       time: timeStr,
-      status: "等待输入",
+      status: "idle",
       messages: [],
     };
     // 将新会话插到最前面，保证最新创建的对话排在最上方。
@@ -312,7 +312,7 @@ export const App = (): React.JSX.Element => {
     }
 
     if (event.type === "done") {
-      updateChatSessionStatus(mapping.sessionId, "运行完成");
+      updateChatSessionStatus(mapping.sessionId, "completed");
       return;
     }
 
@@ -402,7 +402,7 @@ export const App = (): React.JSX.Element => {
     }
 
     if (event.type === "error") {
-      updateChatSessionStatus(mapping.sessionId, "执行失败");
+      updateChatSessionStatus(mapping.sessionId, "failed");
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
         ...message,
         content: "AI 对话执行失败",
@@ -566,7 +566,7 @@ export const App = (): React.JSX.Element => {
               ? text.slice(0, 15) + (text.length > 15 ? "..." : "")
               : session.title,
             summary: isNewSession ? text : session.summary,
-            status: "运行中",
+            status: "running",
             messages: [...session.messages, userMessage, aiMessage],
           };
         }

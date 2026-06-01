@@ -261,7 +261,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
     title: "整理今天的记忆线索",
     summary: "从 Todo、Notes、Journal 中提炼今天最值得保留的线索。",
     time: "10:24",
-    status: "运行完成",
+    status: "completed",
     messages: [
       {
         id: "today-user-1",
@@ -306,7 +306,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
     title: "周回顾行动拆解",
     summary: "把本周复盘拆成明天可执行的 3 个动作。",
     time: "09:12",
-    status: "工具完成",
+    status: "completed",
     messages: [
       {
         id: "weekly-user-1",
@@ -344,7 +344,7 @@ export const AI_CHAT_SESSIONS: AiChatSession[] = [
     title: "人物关系跟进",
     summary: "从 People 档案中找出需要跟进的关系线索。",
     time: "昨天",
-    status: "等待输入",
+    status: "idle",
     messages: [
       {
         id: "people-user-1",
