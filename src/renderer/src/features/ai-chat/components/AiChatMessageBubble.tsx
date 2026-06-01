@@ -367,8 +367,8 @@ export const AiChatMessageBubble = ({
 
         {/* 消息时间 */}
         <span
-          className={`text-xs font-mono mt-0.5 px-1 text-white/30 ${
-            isUser ? "text-right" : "text-left"
+          className={`text-xs font-mono mt-0.5 px-1 text-white/30 flex items-center min-h-[1.25rem] ${
+            isUser ? "justify-end text-right" : "justify-start text-left"
           }`}
         >
           {isGenerating ? (

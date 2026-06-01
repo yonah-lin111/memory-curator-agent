@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   AiChatSession,
   AiModelProviderOption,
@@ -16,6 +16,9 @@ import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextS
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
+
+// 最新 AI 回答贴近视口顶部时保留的视觉间距。
+const LATEST_ASSISTANT_TOP_OFFSET = 4;
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
@@ -41,7 +44,14 @@ export const AiChatWorkspace = ({
   onSendMessage,
   onModelChange,
 }: AiChatWorkspaceProps): React.JSX.Element => {
+  // 消息滚动容器引用。
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  // 消息底部哨兵节点引用。
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // 最新 AI 消息外层节点引用。
+  const latestAssistantMessageRef = useRef<HTMLDivElement>(null);
+  // 需要置顶显示的最新 AI 消息标识。
+  const [topPinnedAssistantId, setTopPinnedAssistantId] = useState<string | null>(null);
   const syncMessageItems = useAiChatContextStore((state) => state.syncMessageItems);
   const contextItems = useAiChatContextStore(
     (state) => state.sessionItems[session.id] ?? EMPTY_CONTEXT_ITEMS,
@@ -64,12 +74,52 @@ export const AiChatWorkspace = ({
   const prevSessionIdRef = useRef(session.id);
   const prevMessagesLengthRef = useRef(session.messages.length);
 
+  /**
+   * 获取当前消息列表中最后一条 AI 消息标识。
+   */
+  const getLatestAssistantMessageId = (): string | null => {
+    for (let index = session.messages.length - 1; index >= 0; index -= 1) {
+      const message = session.messages[index];
+      if (message.role === "assistant") {
+        return message.id;
+      }
+    }
+
+    return null;
+  };
+
+  /**
+   * 将最新 AI 回答滚动到消息视口顶部。
+   */
+  const scrollLatestAssistantToTop = (behavior: ScrollBehavior): void => {
+    const container = messagesContainerRef.current;
+    const assistantMessage = latestAssistantMessageRef.current;
+    if (!container || !assistantMessage) {
+      return;
+    }
+
+    const targetTop = Math.max(
+      assistantMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
+      0,
+    );
+    if (typeof container.scrollTo === "function") {
+      container.scrollTo({
+        top: targetTop,
+        behavior,
+      });
+      return;
+    }
+
+    container.scrollTop = targetTop;
+  };
+
   // 当切换会话（session.id 变化）时，立即跳转至底部。
   useEffect(() => {
+    setTopPinnedAssistantId(null);
     messagesEndRef.current?.scrollIntoView?.({ behavior: "auto" });
   }, [session.id]);
 
-  // 当用户在当前会话发送新消息时，平滑滚动至最底部。
+  // 当用户在当前会话发送新消息时，优先将最新 AI 回答置顶显示。
   useEffect(() => {
     const prevSessionId = prevSessionIdRef.current;
     const prevLength = prevMessagesLengthRef.current;
@@ -84,15 +134,36 @@ export const AiChatWorkspace = ({
       return;
     }
 
-    // 仅在当前会话的新增消息中包含用户消息时，触发平滑滚动。
+    // 仅在当前会话的新增消息中包含用户消息时，触发对话定位。
     if (currentLength > prevLength) {
       const addedMessages = session.messages.slice(prevLength);
       const hasNewUserMessage = addedMessages.some((msg) => msg.role === "user");
       if (hasNewUserMessage) {
+        const latestAssistantMessageId = getLatestAssistantMessageId();
+        if (latestAssistantMessageId) {
+          setTopPinnedAssistantId(latestAssistantMessageId);
+          return;
+        }
+
         messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
       }
     }
   }, [session.messages, session.id]);
+
+  // 补足最新 AI 回答底部空间后，再将其滚到视口顶部。
+  useLayoutEffect(() => {
+    if (!topPinnedAssistantId) {
+      return;
+    }
+
+    const animationFrame = requestAnimationFrame(() => {
+      scrollLatestAssistantToTop("smooth");
+    });
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [topPinnedAssistantId, session.messages.length]);
 
   // 将当前消息列表同步为全局上下文中的 message 来源。
   useEffect(() => {
@@ -105,17 +176,32 @@ export const AiChatWorkspace = ({
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
       {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4"
+      >
         {session.messages.map((message, index) => {
           const isLast = index === session.messages.length - 1;
           const isGenerating =
-            isLast && session.status === "运行中" && message.role === "assistant";
+            isLast &&
+            (session.status === "running" || session.status === "运行中") &&
+            message.role === "assistant";
+          const shouldPinToTop = message.id === topPinnedAssistantId;
           return (
-            <AiChatMessageBubble
+            <div
               key={message.id}
-              message={message}
-              isGenerating={isGenerating}
-            />
+              ref={shouldPinToTop ? latestAssistantMessageRef : null}
+              className={
+                shouldPinToTop
+                  ? "min-h-[calc(100%_-_1rem)] flex flex-col justify-start"
+                  : undefined
+              }
+            >
+              <AiChatMessageBubble
+                message={message}
+                isGenerating={isGenerating}
+              />
+            </div>
           );
         })}
         <div ref={messagesEndRef} />

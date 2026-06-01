@@ -184,10 +184,10 @@ export const Sidebar = ({
           shouldUseCollapsedLayout ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
         }`}
       >
-        {/* 导航与设置面板主体（无延迟切换动画） */}
+        {/* 导航与设置面板主体（带覆盖式滑出过渡） */}
         <div
           aria-hidden={mode !== "navigation"}
-          className={`w-full flex-1 flex flex-col justify-between ${
+          className={`w-full flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
             mode === "navigation"
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
@@ -296,10 +296,10 @@ export const Sidebar = ({
           </div>
         </div>
 
-        {/* 聊天历史栏（无延迟切换动画） */}
+        {/* 聊天历史栏（带从左到右滑出的覆盖过渡动画） */}
         <div
           aria-hidden={mode !== "chat"}
-          className={`absolute inset-4 flex flex-col ${
+          className={`absolute inset-4 transition-opacity duration-300 ease-out flex flex-col ${
             mode === "chat"
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"

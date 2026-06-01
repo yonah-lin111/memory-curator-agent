@@ -140,4 +140,23 @@ describe('AiChatMessageBubble', () => {
       renderedText.indexOf('测试完成。')
     )
   })
+
+  it('正在生成中时展示 loading 动画/指示器而不是具体的发送时间', () => {
+    const message: AiChatMessage = {
+      id: 'a4',
+      role: 'assistant',
+      content: '正在处理：“正在回复中”',
+      time: '18:22',
+      answer: '回复内容'
+    }
+
+    const { container } = render(<AiChatMessageBubble message={message} isGenerating={true} />)
+    
+    // 不应该展示具体的发送时间
+    expect(screen.queryByText('18:22')).not.toBeInTheDocument()
+    
+    // 应该包含 animate-ping 动画效果相关的 span
+    const pingSpan = container.querySelector('.animate-ping')
+    expect(pingSpan).toBeInTheDocument()
+  })
 })
