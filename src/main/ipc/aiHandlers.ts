@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { ipcMain } from 'electron'
+import { ipcMain, type WebContents } from 'electron'
 import { getDatabase } from '../db'
 import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '../services/peopleService'
 import {
@@ -90,6 +90,21 @@ export type AiChatIpcEvent = AgentStreamEvent & {
   sessionId: string
 }
 
+// AI 会话标题更新事件。
+type AiChatSessionTitleUpdatedEvent = {
+  // 事件类型。
+  type: 'session_title_updated'
+  // Agent 运行 ID。
+  runId: string
+  // 会话 ID。
+  sessionId: string
+  // AI 总结后的会话标题。
+  title: string
+}
+
+// 新会话默认标题。
+const DEFAULT_CHAT_SESSION_TITLE = '新建对话'
+
 /**
  * 创建 Agent 系统提示词。
  */
@@ -142,10 +157,106 @@ const createTimestamp = (): string => {
 const createDisplayTime = (timestamp: string): string => timestamp.slice(11, 16) || timestamp
 
 /**
- * 从用户消息生成会话标题。
+ * 从用户消息生成兜底会话标题。
  */
-const createSessionTitle = (message: string): string =>
+const createFallbackSessionTitle = (message: string): string =>
   message.slice(0, 15) + (message.length > 15 ? '...' : '')
+
+/**
+ * 清理标题总结模型输出，避免把解释或换行写入列表标题。
+ */
+const normalizeGeneratedSessionTitle = (title: string): string => {
+  const normalizedTitle = title
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*#\d.、\s]+/, '').trim())
+    .find(Boolean)
+    ?.replace(/^["'“”‘’《》]+|["'“”‘’《》]+$/g, '')
+    .trim()
+
+  return normalizedTitle ? normalizedTitle.slice(0, 18) : ''
+}
+
+/**
+ * 使用配置中的标题总结模型，为首条用户消息生成极短标题。
+ */
+const createSessionTitle = async (
+  config: ReturnType<typeof loadProviderConfig>,
+  message: string
+): Promise<string> => {
+  const titleProviderConfig = config.providers[config.titleSummary.provider]
+  const fallbackTitle = createFallbackSessionTitle(message)
+
+  if (!titleProviderConfig || !titleProviderConfig.models[config.titleSummary.model]) {
+    return fallbackTitle
+  }
+
+  try {
+    const provider = await createModelProvider(titleProviderConfig)
+    let title = ''
+
+    for await (const event of provider.streamTurn({
+      model: config.titleSummary.model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你只负责把用户第一条聊天内容总结成中文短标题。要求：4到12个汉字，动宾短语，不要标点、引号、解释或换行。示例：用户输入“你是谁”，输出“用户询问AI身份”。'
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      tools: []
+    })) {
+      if (event.type === 'text_delta') {
+        title += event.delta
+      }
+    }
+
+    return normalizeGeneratedSessionTitle(title) || fallbackTitle
+  } catch {
+    return fallbackTitle
+  }
+}
+
+/**
+ * 判断当前会话是否需要生成首个标题。
+ */
+const shouldCreateInitialSessionTitle = (
+  session: ReturnType<ReturnType<typeof createAiChatPersistenceService>['getSession']>
+): boolean => !session || (session.title === DEFAULT_CHAT_SESSION_TITLE && session.messages.length === 0)
+
+/**
+ * 后台生成首个会话标题并回填持久化与渲染层。
+ */
+const scheduleInitialSessionTitle = (
+  input: {
+    config: ReturnType<typeof loadProviderConfig>
+    message: string
+    runId: string
+    sessionId: string
+    sender: WebContents
+  },
+  aiChatService: ReturnType<typeof createAiChatPersistenceService>
+): void => {
+  void (async () => {
+    const title = await createSessionTitle(input.config, input.message)
+    const currentSession = aiChatService.getSession(input.sessionId)
+
+    if (currentSession?.title !== createFallbackSessionTitle(input.message)) {
+      return
+    }
+
+    aiChatService.updateSessionTitle(input.sessionId, title, createTimestamp())
+    input.sender.send('ai:chat:event', {
+      type: 'session_title_updated',
+      runId: input.runId,
+      sessionId: input.sessionId,
+      title
+    } satisfies AiChatSessionTitleUpdatedEvent)
+  })()
+}
 
 /**
  * 追加助手文本片段并合并连续文本。
@@ -242,7 +353,11 @@ export const registerAiHandlers = (): void => {
     const userTime = createDisplayTime(timestamp)
     const userMessageId = `${runId}-user`
     const assistantMessageId = `${runId}-assistant`
-    const sessionTitle = createSessionTitle(payload.message)
+    const existingSession = aiChatService.getSession(payload.sessionId)
+    const shouldCreateTitle = shouldCreateInitialSessionTitle(existingSession)
+    const sessionTitle = shouldCreateTitle
+      ? createFallbackSessionTitle(payload.message)
+      : (existingSession?.title ?? createFallbackSessionTitle(payload.message))
 
     aiChatService.createRunWithMessages({
       session: {
@@ -288,6 +403,19 @@ export const registerAiHandlers = (): void => {
         runId,
         sessionId: payload.sessionId
       } satisfies AiChatIpcEvent)
+    }
+
+    if (shouldCreateTitle) {
+      scheduleInitialSessionTitle(
+        {
+          config,
+          message: payload.message,
+          runId,
+          sessionId: payload.sessionId,
+          sender: event.sender
+        },
+        aiChatService
+      )
     }
 
     void (async () => {

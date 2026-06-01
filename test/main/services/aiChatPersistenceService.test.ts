@@ -88,6 +88,56 @@ describe('aiChatPersistenceService', () => {
     })
   })
 
+  it('ensureSession 不覆盖已经生成的首个会话标题', () => {
+    const service = createService()
+
+    service.ensureSession({
+      id: 's1',
+      title: '第一次标题',
+      summary: '第一条消息',
+      status: 'running',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.ensureSession({
+      id: 's1',
+      title: '第二次标题',
+      summary: '第二条消息',
+      status: 'completed',
+      timestamp: '2026-05-31 10:01'
+    })
+
+    expect(service.getSession('s1')).toMatchObject({
+      id: 's1',
+      title: '第一次标题',
+      summary: '第二条消息',
+      status: 'completed'
+    })
+  })
+
+  it('ensureSession 可以替换默认的新建对话标题', () => {
+    const service = createService()
+
+    service.ensureSession({
+      id: 's1',
+      title: '新建对话',
+      summary: '',
+      status: 'idle',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.ensureSession({
+      id: 's1',
+      title: '用户询问AI身份',
+      summary: '你是谁',
+      status: 'running',
+      timestamp: '2026-05-31 10:01'
+    })
+
+    expect(service.getSession('s1')).toMatchObject({
+      id: 's1',
+      title: '用户询问AI身份'
+    })
+  })
+
   it('updates assistant message text and tool snapshots', () => {
     const service = createService()
 

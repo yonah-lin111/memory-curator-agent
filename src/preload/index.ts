@@ -258,6 +258,16 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
+      type: 'session_title_updated'
+      // Agent 运行 ID。
+      runId: string
+      // 会话 ID。
+      sessionId: string
+      // AI 总结后的会话标题。
+      title: string
+    }
+  | {
+      // 事件类型。
       type: 'error'
       // Agent 运行 ID。
       runId: string

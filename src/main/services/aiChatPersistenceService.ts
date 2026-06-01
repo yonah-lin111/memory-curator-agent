@@ -564,7 +564,10 @@ export const createAiChatPersistenceService = (
           INSERT INTO ai_chat_sessions (id, title, summary, status, created_at, updated_at, last_message_at)
           VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
-            title = excluded.title,
+            title = CASE
+              WHEN ai_chat_sessions.title = '新建对话' THEN excluded.title
+              ELSE ai_chat_sessions.title
+            END,
             summary = excluded.summary,
             status = excluded.status,
             updated_at = excluded.updated_at,

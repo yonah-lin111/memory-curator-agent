@@ -13,8 +13,10 @@ describe('providerConfig', () => {
       configPath,
       JSON.stringify({
         ai: {
-          defaultProvider: 'bailian',
-          defaultModel: 'MiniMax-M2.5',
+          defaultModel: {
+            provider: 'bailian',
+            model: 'MiniMax-M2.5'
+          },
           providers: {
             bailian: {
               type: 'openai-compatible',
@@ -46,6 +48,10 @@ describe('providerConfig', () => {
 
     expect(config.defaultProvider).toBe('bailian')
     expect(config.defaultModel).toBe('MiniMax-M2.5')
+    expect(config.titleSummary).toEqual({
+      provider: 'bailian',
+      model: 'MiniMax-M2.5'
+    })
     expect(config.providers.bailian.type).toBe('openai-compatible')
     expect(config.providers.bailian.options.baseURL).toBe('https://example.com/v1')
     expect(config.agent.context).toEqual({
@@ -95,6 +101,146 @@ describe('providerConfig', () => {
     expect(config.agent.context).toEqual({
       toolOutputMaxChars: 4096,
       recentToolResultLimit: 3
+    })
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  it('兼容旧版 defaultProvider 与 defaultModel 字符串配置', () => {
+    const directory = join(tmpdir(), `mc-config-legacy-default-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(config.defaultProvider).toBe('bailian')
+    expect(config.defaultModel).toBe('MiniMax-M2.5')
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  it('读取 ai.defaultModel 对象格式中的 provider 和模型', () => {
+    const directory = join(tmpdir(), `mc-config-default-object-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultModel: {
+            provider: 'zhipu',
+            model: 'glm-4.7-flash'
+          },
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            },
+            zhipu: {
+              name: 'Zhipu',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'glm-4.7-flash': {
+                  name: 'GLM-4.7-Flash'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(config.defaultProvider).toBe('zhipu')
+    expect(config.defaultModel).toBe('glm-4.7-flash')
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  it('读取 ai.titleSummary 标题总结模型配置', () => {
+    const directory = join(tmpdir(), `mc-config-title-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          titleSummary: {
+            provider: 'zhipu',
+            model: 'glm-4.7-flash'
+          },
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            },
+            zhipu: {
+              name: 'Zhipu',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'glm-4.7-flash': {
+                  name: 'GLM-4.7-Flash'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(config.titleSummary).toEqual({
+      provider: 'zhipu',
+      model: 'glm-4.7-flash'
     })
 
     rmSync(directory, { recursive: true, force: true })

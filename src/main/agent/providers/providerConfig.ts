@@ -6,7 +6,8 @@ import type {
   ModelConfig,
   NormalizedAiConfig,
   NormalizedProviderConfig,
-  ProviderTransportType
+  ProviderTransportType,
+  TitleSummaryConfig
 } from '../types'
 
 // 默认配置路径。
@@ -50,6 +51,17 @@ type RawAgentConfig = {
   }
 }
 
+// 原始模型选择配置形状。
+type RawModelSelectionConfig = {
+  // 模型所属 provider 标识。
+  provider?: string
+  // 模型标识。
+  model?: string
+}
+
+// 原始默认模型配置形状，兼容旧版字符串。
+type RawDefaultModelConfig = string | RawModelSelectionConfig
+
 // 原始配置文件形状。
 type RawConfigFile = {
   // 新版 AI 配置。
@@ -57,7 +69,9 @@ type RawConfigFile = {
     // 默认 provider。
     defaultProvider?: string
     // 默认模型。
-    defaultModel?: string
+    defaultModel?: RawDefaultModelConfig
+    // 标题总结模型配置。
+    titleSummary?: RawModelSelectionConfig
     // 启用的 provider 标识列表。
     enabled_providers?: string[]
     // Provider 配置表。
@@ -141,6 +155,55 @@ const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig =>
 })
 
 /**
+ * 归一化默认模型配置，兼容旧版 defaultProvider/defaultModel 字符串。
+ */
+const normalizeDefaultModelConfig = (
+  value: RawDefaultModelConfig | undefined,
+  legacyProvider: string | undefined,
+  providers: Record<string, NormalizedProviderConfig>
+): TitleSummaryConfig => {
+  const providerIds = Object.keys(providers)
+  const requestedProvider = typeof value === 'object' ? value.provider : legacyProvider
+  const configuredProvider = requestedProvider ?? 'bailian'
+  const provider = providers[configuredProvider] ? configuredProvider : providerIds[0]
+
+  if (!provider) {
+    throw new Error('未启用任何可用 Provider')
+  }
+
+  const providerModels = providers[provider].models
+  const requestedModel = typeof value === 'string' ? value : value?.model
+  const model =
+    requestedModel && providerModels[requestedModel]
+      ? requestedModel
+      : Object.keys(providerModels)[0] ?? requestedModel ?? 'MiniMax-M2.5'
+
+  return {
+    provider,
+    model
+  }
+}
+
+/**
+ * 归一化标题总结模型配置。
+ */
+const normalizeTitleSummaryConfig = (
+  value: RawModelSelectionConfig | undefined,
+  providers: Record<string, NormalizedProviderConfig>,
+  defaultProvider: string,
+  defaultModel: string
+): TitleSummaryConfig => {
+  const provider = value?.provider && providers[value.provider] ? value.provider : defaultProvider
+  const providerModels = providers[provider]?.models ?? {}
+  const model = value?.model && providerModels[value.model] ? value.model : Object.keys(providerModels)[0] ?? defaultModel
+
+  return {
+    provider,
+    model
+  }
+}
+
+/**
  * 读取并归一化模型 provider 配置。
  */
 export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): NormalizedAiConfig => {
@@ -167,23 +230,23 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
       .map((providerId) => [providerId, normalizedProviders[providerId]])
   )
   const providerIds = Object.keys(providers)
-  const configuredDefaultProvider = rawConfig.ai?.defaultProvider ?? 'bailian'
-  const defaultProvider = providers[configuredDefaultProvider] ? configuredDefaultProvider : providerIds[0]
-
-  if (!defaultProvider) {
-    throw new Error('未启用任何可用 Provider')
-  }
-
-  const defaultProviderModels = providers[defaultProvider].models
-  const configuredDefaultModel = rawConfig.ai?.defaultModel
-  const defaultModel =
-    configuredDefaultModel && defaultProviderModels[configuredDefaultModel]
-      ? configuredDefaultModel
-      : Object.keys(defaultProviderModels)[0] ?? configuredDefaultModel ?? 'MiniMax-M2.5'
+  const defaultModelConfig = normalizeDefaultModelConfig(
+    rawConfig.ai?.defaultModel,
+    rawConfig.ai?.defaultProvider,
+    providers
+  )
+  const defaultProvider = defaultModelConfig.provider
+  const defaultModel = defaultModelConfig.model
 
   return {
     defaultProvider,
     defaultModel,
+    titleSummary: normalizeTitleSummaryConfig(
+      rawConfig.ai?.titleSummary,
+      providers,
+      defaultProvider,
+      defaultModel
+    ),
     enabledProviders: providerIds,
     providers,
     agent: normalizeAgentConfig(rawConfig.ai?.agent)

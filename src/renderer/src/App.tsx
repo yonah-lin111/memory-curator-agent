@@ -84,7 +84,9 @@ export const App = (): React.JSX.Element => {
   const [selectedAiModel, setSelectedAiModel] = useState<AiModelSelection | null>(null);
 
   // Agent 运行与消息的映射关系。
-  const runMessageMapRef = useRef<Map<string, { sessionId: string; messageId: string }>>(new Map());
+  const runMessageMapRef = useRef<
+    Map<string, { sessionId: string; messageId: string; optimisticTitle?: string }>
+  >(new Map());
 
   // 流式文本缓冲区，用于打字机输出。
   const textBufferRef = useRef<Map<string, string>>(new Map());
@@ -370,6 +372,19 @@ export const App = (): React.JSX.Element => {
       return;
     }
 
+    if (event.type === "session_title_updated") {
+      setChatSessions((prevSessions) =>
+        prevSessions.map((session) =>
+          session.id === event.sessionId &&
+          mapping.optimisticTitle &&
+          session.title === mapping.optimisticTitle
+            ? { ...session, title: event.title }
+            : session,
+        ),
+      );
+      return;
+    }
+
     if (event.type === "tool_started") {
       flushBufferedTextImmediately(event.runId);
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
@@ -590,6 +605,7 @@ export const App = (): React.JSX.Element => {
     const assistantMessageId = `${runId}-assistant`;
     const hasAiBridge = Boolean(window.api?.ai);
     const contextItems = buildStartContextItems(sessionId);
+    const optimisticSessionTitle = text.slice(0, 15) + (text.length > 15 ? "..." : "");
 
     const userMessage = {
       id: userMessageId,
@@ -608,6 +624,7 @@ export const App = (): React.JSX.Element => {
     runMessageMapRef.current.set(runId, {
       sessionId,
       messageId: assistantMessageId,
+      optimisticTitle: optimisticSessionTitle,
     });
 
     // 1. 更新当前会话，添加用户消息。如果当前会话处于初始状态，自动更新标题与摘要。
@@ -617,9 +634,7 @@ export const App = (): React.JSX.Element => {
           const isNewSession = session.title === "新建对话" && session.messages.length === 0;
           return {
             ...session,
-            title: isNewSession
-              ? text.slice(0, 15) + (text.length > 15 ? "..." : "")
-              : session.title,
+            title: isNewSession ? optimisticSessionTitle : session.title,
             summary: isNewSession ? text : session.summary,
             status: "running",
             messages: [...session.messages, userMessage, aiMessage],

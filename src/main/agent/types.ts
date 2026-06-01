@@ -43,6 +43,14 @@ export type AgentConfig = {
   context: AgentContextPolicyConfig
 }
 
+// 标题总结模型配置。
+export type TitleSummaryConfig = {
+  // 标题总结使用的 provider 标识。
+  provider: string
+  // 标题总结使用的模型标识。
+  model: string
+}
+
 // Provider 连接参数。
 export type ProviderOptions = {
   // API Key。
@@ -73,6 +81,8 @@ export type NormalizedAiConfig = {
   defaultProvider: string
   // 默认模型名。
   defaultModel: string
+  // 标题总结模型配置。
+  titleSummary: TitleSummaryConfig
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
