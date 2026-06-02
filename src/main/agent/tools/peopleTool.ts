@@ -397,7 +397,6 @@ export const createPeopleQueryTool = (
       "谁",
       "关系",
       "女朋友",
-      "男朋友",
       "朋友",
       "家人",
       "同事",
