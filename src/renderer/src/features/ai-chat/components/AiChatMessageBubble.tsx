@@ -32,6 +32,8 @@ type AiMarkdownPreviewProps = {
   content: string;
   // 附加容器类名。
   className?: string;
+  // 是否正在生成中。
+  isGenerating?: boolean;
 };
 
 // AI 消息片段解析参数类型。
@@ -192,6 +194,7 @@ const stripLeakedToolJson = (answer: string, hasToolSteps: boolean): string => {
 const AiMarkdownPreview = ({
   content,
   className = "",
+  isGenerating = false,
 }: AiMarkdownPreviewProps): React.JSX.Element => {
   return (
     <div
@@ -203,7 +206,8 @@ const AiMarkdownPreview = ({
         previewTheme="default"
         codeTheme="atom"
         style={{ backgroundColor: "transparent" }}
-        autoFoldThreshold={Infinity}
+        // AI 输出（生成中）时不折叠代码块，非输出状态下默认折叠所有代码块（阈值设为0）
+        autoFoldThreshold={isGenerating ? Infinity : 0}
         showCodeRowNumber={false}
       />
     </div>
@@ -344,6 +348,7 @@ export const AiChatMessageBubble = ({
                       <AiMarkdownPreview
                         key={part.id}
                         content={part.content}
+                        isGenerating={isGenerating}
                       />,
                     );
                   } else {
