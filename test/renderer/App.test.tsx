@@ -10,7 +10,7 @@ import type {
   AiChatEvent,
   AiChatSession,
   AiChatStartPayload
-} from '@renderer/features/ai-chat/aiChatMock'
+} from '@renderer/features/ai-chat/types'
 import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
 
 describe('App', () => {
@@ -333,40 +333,74 @@ describe('App', () => {
 
     window.api = {
       ai: {
-        getSession: vi.fn(async (sessionId: string) => {
-          if (!capturedPayload || sessionId !== capturedPayload.sessionId) {
-            return null
-          }
-
-          return {
-            id: capturedPayload.sessionId,
+        listSessions: vi.fn(async () => [
+          {
+            id: 'today-memory',
             title: '整理今天的记忆线索',
-            summary: '切换时恢复流式快照',
+            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
-            status: 'running',
-            messages: [
-              {
-                id: `${capturedPayload.runId}-user`,
-                role: 'user',
-                content: capturedPayload.message,
-                time: '10:24'
-              },
-              {
-                id: `${capturedPayload.runId}-assistant`,
-                role: 'assistant',
-                content: 'AI 已生成回答',
-                answer: '切换前',
-                parts: [
-                  {
-                    id: `${capturedPayload.runId}-assistant-text-0`,
-                    kind: 'text',
-                    content: '切换前'
-                  }
-                ],
-                toolSteps: [],
-                time: '10:24'
-              }
-            ]
+            status: 'completed',
+            messages: []
+          },
+          {
+            id: 'weekly-actions',
+            title: '周回顾行动拆解',
+            summary: '把本周复盘拆成明天可执行的 3 个动作。',
+            time: '09:12',
+            status: 'completed',
+            messages: []
+          }
+        ]),
+        getSession: vi.fn(async (sessionId: string) => {
+          if (sessionId === 'weekly-actions') {
+            return {
+              id: 'weekly-actions',
+              title: '周回顾行动拆解',
+              summary: '把本周复盘拆成明天可执行的 3 个动作。',
+              time: '09:12',
+              status: 'completed',
+              messages: []
+            }
+          }
+          if (capturedPayload && sessionId === capturedPayload.sessionId) {
+            return {
+              id: capturedPayload.sessionId,
+              title: '整理今天的记忆线索',
+              summary: '切换时恢复流式快照',
+              time: '10:24',
+              status: 'running',
+              messages: [
+                {
+                  id: `${capturedPayload.runId}-user`,
+                  role: 'user',
+                  content: capturedPayload.message,
+                  time: '10:24'
+                },
+                {
+                  id: `${capturedPayload.runId}-assistant`,
+                  role: 'assistant',
+                  content: 'AI 已生成回答',
+                  answer: '切换前',
+                  parts: [
+                    {
+                      id: `${capturedPayload.runId}-assistant-text-0`,
+                      kind: 'text',
+                      content: '切换前'
+                    }
+                  ],
+                  toolSteps: [],
+                  time: '10:24'
+                }
+              ]
+            }
+          }
+          return {
+            id: 'today-memory',
+            title: '整理今天的记忆线索',
+            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
+            time: '10:24',
+            status: 'completed',
+            messages: []
           }
         }),
         startChat: vi.fn(async (payload: AiChatStartPayload) => {
@@ -818,6 +852,30 @@ describe('App', () => {
   it('点击 Header 聊天按钮后切换为 AI 对话模式，并可关闭恢复主导航', async () => {
     const user = userEvent.setup()
 
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => [
+          {
+            id: 'session-1',
+            title: '整理今天的记忆线索',
+            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
+            time: '10:24',
+            status: 'completed',
+            messages: []
+          }
+        ]),
+        getSession: vi.fn(async (id: string) => ({
+          id,
+          title: '整理今天的记忆线索',
+          summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
+          time: '10:24',
+          status: 'completed',
+          messages: []
+        })),
+        onChatEvent: () => () => undefined
+      }
+    } as never
+
     render(<App />)
 
     expect(window.location.pathname).toBe('/today')
@@ -892,6 +950,73 @@ describe('App', () => {
 
   it('AI 对话模式支持切换历史会话并展示工具调用摘要', async () => {
     const user = userEvent.setup()
+
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => [
+          {
+            id: 'session-1',
+            title: '整理今天的记忆线索',
+            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
+            time: '10:24',
+            status: 'completed',
+            messages: []
+          },
+          {
+            id: 'session-2',
+            title: '周回顾行动拆解',
+            summary: '把本周复盘拆成明天可执行的 3 个动作。',
+            time: '09:12',
+            status: 'completed',
+            messages: []
+          }
+        ]),
+        getSession: vi.fn(async (id: string) => {
+          if (id === 'session-2') {
+            return {
+              id: 'session-2',
+              title: '周回顾行动拆解',
+              summary: '把本周复盘拆成明天可执行的 3 个动作。',
+              time: '09:12',
+              status: 'completed',
+              messages: [
+                {
+                  id: 'm1',
+                  role: 'user',
+                  content: '读取 weekly review 草稿，然后给我三条明天能执行的动作。',
+                  time: '09:06'
+                },
+                {
+                  id: 'm2',
+                  role: 'assistant',
+                  content: '我会先定位周回顾草稿，再把模糊事项压缩成具体动作。',
+                  time: '09:12',
+                  toolSteps: [
+                    {
+                      id: 'step-1',
+                      title: 'Load weekly review draft',
+                      status: 'done',
+                      tool: 'weekly_review.load',
+                      observation: 'The draft contains 4 themes.'
+                    }
+                  ],
+                  answer: '本周回顾行动拆解已完成。'
+                }
+              ]
+            }
+          }
+          return {
+            id,
+            title: '整理今天的记忆线索',
+            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
+            time: '10:24',
+            status: 'completed',
+            messages: []
+          };
+        }),
+        onChatEvent: () => () => undefined
+      }
+    } as never
 
     render(<App />)
 

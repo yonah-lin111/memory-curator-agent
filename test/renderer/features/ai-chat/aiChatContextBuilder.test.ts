@@ -3,7 +3,7 @@ import type {
   AiChatMessage,
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/aiChatMock'
+} from '@renderer/features/ai-chat/types'
 import {
   buildMessageContextItems,
   estimateAiChatContextTokens,

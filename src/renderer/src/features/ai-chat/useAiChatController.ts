@@ -9,7 +9,6 @@ import {
 } from "@renderer/features/ai-chat/aiChatContextBuilder";
 import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
 import {
-  AI_CHAT_SESSIONS,
   type AiAgentOption,
   type AiChatEvent,
   type AiChatMessagePart,
@@ -17,7 +16,7 @@ import {
   type AiChatSessionStatus,
   type AiModelProviderOption,
   type AiModelSelection,
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
@@ -74,6 +73,18 @@ type UseAiChatControllerResult = {
   handleAiChatCommand: (
     command: AiChatInputCommandId,
   ) => string | void | Promise<string | void>;
+};
+
+/**
+ * 兜底的空白会话，避免在列表为空时频繁触发对象重建。
+ */
+const FALLBACK_EMPTY_SESSION: AiChatSession = {
+  id: "",
+  title: "新对话",
+  summary: "",
+  time: "",
+  status: "idle",
+  messages: [],
 };
 
 /**
@@ -186,12 +197,10 @@ export const useAiChatController = (): UseAiChatControllerResult => {
 
   // AI 对话会话列表。
   const [chatSessions, setChatSessions] =
-    useState<AiChatSession[]>(AI_CHAT_SESSIONS);
+    useState<AiChatSession[]>([]);
 
   // 当前激活的 AI 对话会话标识。
-  const [activeChatId, setActiveChatId] = useState<string>(
-    AI_CHAT_SESSIONS[0].id,
-  );
+  const [activeChatId, setActiveChatId] = useState<string>("");
 
   // 已启用的 AI provider 与模型选项。
   const [aiModelOptions, setAiModelOptions] = useState<
@@ -220,7 +229,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   // 当前激活的 AI 对话会话。
   const activeChatSession =
     chatSessions.find((session) => session.id === activeChatId) ??
-    chatSessions[0];
+    chatSessions[0] ??
+    FALLBACK_EMPTY_SESSION;
   const activeChatContextItems = useAiChatContextStore(
     (state) => state.sessionItems[activeChatId] ?? EMPTY_AI_CHAT_CONTEXT_ITEMS,
   );
@@ -751,7 +761,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
 
   // 订阅主进程 AI 对话事件。
   useEffect(() => {
-    const unsubscribe = window.api?.ai?.onChatEvent(handleAiChatEvent);
+    const unsubscribe = window.api?.ai?.onChatEvent?.(handleAiChatEvent);
 
     return () => {
       unsubscribe?.();
@@ -791,24 +801,40 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     };
   }, []);
 
-  // 启动时读取真实持久化会话；没有历史时继续保留静态示例。
+  // 启动时读取真实持久化会话；没有历史时创建空白会话。
   useEffect(() => {
     let isMounted = true;
 
-    void window.api?.ai?.listSessions?.()
-      .then((sessions) => {
-        if (!isMounted || sessions.length === 0) {
-          return;
-        }
+    const listSessionsFn = window.api?.ai?.listSessions;
+    if (listSessionsFn) {
+      void listSessionsFn()
+        .then((sessions) => {
+          if (!isMounted) {
+            return;
+          }
+          if (sessions.length === 0) {
+            const empty = createEmptyAiChatSession();
+            setChatSessions([empty]);
+            setActiveChatId(empty.id);
+            return;
+          }
 
-        setChatSessions(sessions);
-        setActiveChatId(sessions[0].id);
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-      });
+          setChatSessions(sessions);
+          setActiveChatId(sessions[0].id);
+        })
+        .catch(() => {
+          if (!isMounted) {
+            return;
+          }
+          const empty = createEmptyAiChatSession();
+          setChatSessions([empty]);
+          setActiveChatId(empty.id);
+        });
+    } else {
+      const empty = createEmptyAiChatSession();
+      setChatSessions([empty]);
+      setActiveChatId(empty.id);
+    }
 
     return () => {
       isMounted = false;

@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { AiChatHistoryList } from "@renderer/features/ai-chat/components/AiChatHistoryList";
-import type { AiChatSession } from "@renderer/features/ai-chat/aiChatMock";
+import type { AiChatSession } from "@renderer/features/ai-chat/types";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)

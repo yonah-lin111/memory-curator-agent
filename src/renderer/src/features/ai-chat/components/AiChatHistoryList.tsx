@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Bot, Plus, Search } from "lucide-react";
-import type { AiChatSession } from "@renderer/features/ai-chat/aiChatMock";
+import type { AiChatSession } from "@renderer/features/ai-chat/types";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
 

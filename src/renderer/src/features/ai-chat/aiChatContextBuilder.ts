@@ -3,7 +3,7 @@ import type {
   AiModelOption,
   AiModelProviderOption,
   AiModelSelection
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 
 // 运行级异常 assistant 消息正文集合，用于识别不能进入后续上下文的失败 QA。
 const RUN_ERROR_ASSISTANT_CONTENTS = new Set([

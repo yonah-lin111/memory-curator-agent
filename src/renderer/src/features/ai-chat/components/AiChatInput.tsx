@@ -7,7 +7,7 @@ import { useToast } from "@renderer/components/ui/Toast";
 import type {
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 
 // AI 对话输入框组件属性类型。
 export type AiChatInputProps = {

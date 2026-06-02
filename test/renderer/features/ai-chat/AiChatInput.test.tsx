@@ -20,7 +20,7 @@ vi.mock('@renderer/components/ui/Toast', () => ({
 import type {
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/aiChatMock'
+} from '@renderer/features/ai-chat/types'
 
 const modelOptions: AiModelProviderOption[] = [
   {

@@ -3,7 +3,7 @@ import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import type {
   AiToolStep,
   AiToolStepStatus,
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 
 // 工具观察文本最大展示长度。
 const TOOL_OBSERVATION_MAX_LENGTH = 96;

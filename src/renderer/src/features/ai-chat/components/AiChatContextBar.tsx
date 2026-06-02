@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 import { Layers3 } from "lucide-react";
-import type { AiAgentOption } from "@renderer/features/ai-chat/aiChatMock";
+import type { AiAgentOption } from "@renderer/features/ai-chat/types";
 import type {
   AiChatContextBudget,
   AiChatContextItem,

@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AiChatHistoryList } from '@renderer/features/ai-chat/components/AiChatHistoryList'
-import type { AiChatSession } from '@renderer/features/ai-chat/aiChatMock'
+import type { AiChatSession } from '@renderer/features/ai-chat/types'
 
 // 测试用 AI 会话列表。
 const sessions: AiChatSession[] = [

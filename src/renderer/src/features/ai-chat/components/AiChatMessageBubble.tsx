@@ -4,7 +4,7 @@ import type {
   AiChatMessage,
   AiChatMessagePart,
   AiToolStep,
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
