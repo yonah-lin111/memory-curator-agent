@@ -194,14 +194,16 @@ const AiMarkdownPreview = ({
   className = "",
 }: AiMarkdownPreviewProps): React.JSX.Element => {
   return (
-    <div className={`markdown-preview-container select-text max-w-full ${className}`}>
+    <div
+      className={`markdown-preview-container select-text max-w-full ${className}`}
+    >
       <MdPreview
         theme="dark"
         modelValue={content}
         previewTheme="default"
         codeTheme="atom"
         style={{ backgroundColor: "transparent" }}
-        codeFoldable={false}
+        autoFoldThreshold={Infinity}
         showCodeRowNumber={false}
       />
     </div>
