@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
 import { useToast } from "@renderer/components/ui/Toast";
 import {
@@ -10,26 +10,34 @@ import {
 import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
 import {
   type AiAgentOption,
-  type AiChatEvent,
-  type AiChatMessagePart,
   type AiChatSession,
-  type AiChatSessionStatus,
   type AiModelProviderOption,
   type AiModelSelection,
 } from "@renderer/features/ai-chat/types";
+import {
+  clearAiChatTypewriterTimers,
+  createAiChatEventHandler,
+  type AiRunMessageMapping,
+  type AiTypewriterTimer,
+} from "@renderer/features/ai-chat/core/aiChatEventAdapter";
+import {
+  aiChatSessionReducer,
+  createEmptyAiChatSession,
+  getActiveAiChatSession,
+  INITIAL_AI_CHAT_SESSION_STATE,
+  isEmptyAiChatDraftSession,
+  type AiChatMessageUpdater,
+} from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+import {
+  deleteAiChatSession,
+  deleteAiChatTurn,
+  regenerateLatestAiChatAnswer,
+  renameAiChatSession,
+  undoLastAiChatTurn,
+} from "@renderer/features/ai-chat/core/aiChatSessionCommands";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
-
-// 运行消息映射关系。
-type AiRunMessageMapping = {
-  // 会话标识。
-  sessionId: string;
-  // AI 消息标识。
-  messageId: string;
-  // 用户发送后先写入的乐观标题。
-  optimisticTitle?: string;
-};
 
 // AI 对话控制器返回值。
 type UseAiChatControllerResult = {
@@ -76,94 +84,6 @@ type UseAiChatControllerResult = {
 };
 
 /**
- * 兜底的空白会话，避免在列表为空时频繁触发对象重建。
- */
-const FALLBACK_EMPTY_SESSION: AiChatSession = {
-  id: "",
-  title: "新对话",
-  summary: "",
-  time: "",
-  status: "idle",
-  messages: [],
-};
-
-/**
- * 创建本地空白 AI 会话，供新建入口与最后一条删除后的兜底态复用。
- */
-const createEmptyAiChatSession = (): AiChatSession => {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return {
-    id: `session-${Date.now()}`,
-    title: "新建对话",
-    summary: "暂无对话内容",
-    time: timeStr,
-    status: "idle",
-    messages: [],
-  };
-};
-
-/**
- * 判断会话是否为可复用的空白草稿。
- */
-const isEmptyAiChatDraftSession = (session: AiChatSession): boolean =>
-  session.title === "新建对话" && session.messages.length === 0;
-
-/**
- * 查找最后一轮用户对话在消息列表中的起始位置。
- */
-const findLastChatTurnStartIndex = (
-  messages: AiChatSession["messages"],
-): number => {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index].role === "user") {
-      return index;
-    }
-  }
-
-  return -1;
-};
-
-/**
- * 查找指定消息所属 QA 轮次的起止位置。
- */
-const findChatTurnBoundsByMessageId = (
-  messages: AiChatSession["messages"],
-  messageId: string,
-): { startIndex: number; endIndex: number } | null => {
-  const messageIndex = messages.findIndex((message) => message.id === messageId);
-
-  if (messageIndex < 0) {
-    return null;
-  }
-
-  let startIndex = messageIndex;
-
-  while (startIndex > 0 && messages[startIndex].role !== "user") {
-    startIndex -= 1;
-  }
-
-  if (messages[startIndex]?.role !== "user") {
-    return null;
-  }
-
-  let endIndex = startIndex + 1;
-
-  while (endIndex < messages.length && messages[endIndex].role !== "user") {
-    endIndex += 1;
-  }
-
-  return {
-    startIndex,
-    endIndex,
-  };
-};
-
-/**
  * 从启用模型列表中解析默认选择。
  */
 const resolveDefaultAiModel = (
@@ -195,12 +115,13 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   // AI 对话模式打开状态。
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
 
-  // AI 对话会话列表。
-  const [chatSessions, setChatSessions] =
-    useState<AiChatSession[]>([]);
-
-  // 当前激活的 AI 对话会话标识。
-  const [activeChatId, setActiveChatId] = useState<string>("");
+  // AI 对话会话状态。
+  const [chatState, dispatchChatState] = useReducer(
+    aiChatSessionReducer,
+    INITIAL_AI_CHAT_SESSION_STATE,
+  );
+  const chatSessions = chatState.sessions;
+  const activeChatId = chatState.activeId;
 
   // 已启用的 AI provider 与模型选项。
   const [aiModelOptions, setAiModelOptions] = useState<
@@ -222,15 +143,12 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const textBufferRef = useRef<Map<string, string>>(new Map());
 
   // 打字机刷新定时器集合。
-  const typewriterTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+  const typewriterTimerRef = useRef<Map<string, AiTypewriterTimer>>(
     new Map(),
   );
 
   // 当前激活的 AI 对话会话。
-  const activeChatSession =
-    chatSessions.find((session) => session.id === activeChatId) ??
-    chatSessions[0] ??
-    FALLBACK_EMPTY_SESSION;
+  const activeChatSession = getActiveAiChatSession(chatState);
   const activeChatContextItems = useAiChatContextStore(
     (state) => state.sessionItems[activeChatId] ?? EMPTY_AI_CHAT_CONTEXT_ITEMS,
   );
@@ -254,15 +172,16 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const handleNewChat = (): void => {
     const existingEmptySession = chatSessions.find(isEmptyAiChatDraftSession);
     if (existingEmptySession) {
-      setActiveChatId(existingEmptySession.id);
+      dispatchChatState({
+        type: "set-active",
+        activeId: existingEmptySession.id,
+      });
       toast.info("已切换到空白对话");
       return;
     }
 
     const newSession = createEmptyAiChatSession();
-    // 将新会话插到最前面，保证最新创建的对话排在最上方。
-    setChatSessions((prev) => [newSession, ...prev]);
-    setActiveChatId(newSession.id);
+    dispatchChatState({ type: "prepend", session: newSession });
     toast.success("已新建对话");
   };
 
@@ -287,57 +206,15 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    * 撤销当前会话最后一轮用户对话，并同步删除持久化 run、工具调用和上下文快照。
    */
   const handleUndoLastChatTurn = async (): Promise<string | void> => {
-    const session = activeChatSession;
-    const turnStartIndex = findLastChatTurnStartIndex(session.messages);
-
-    if (turnStartIndex < 0) {
-      toast.warning("没有可撤销的对话");
-      return;
-    }
-
-    const previousSessions = chatSessions;
-    const removedMessages = session.messages.slice(turnStartIndex);
-    const removedUserMessage = removedMessages.find(
-      (message) => message.role === "user",
-    );
-    const removedMessageIds = new Set(
-      removedMessages.map((message) => message.id),
-    );
-    const nextMessages = session.messages.slice(0, turnStartIndex);
-    const nextLastUserMessage = [...nextMessages]
-      .reverse()
-      .find((message) => message.role === "user");
-    const nextSession: AiChatSession = {
-      ...session,
-      title: nextMessages.length === 0 ? "新建对话" : session.title,
-      summary: nextLastUserMessage?.content ?? "暂无对话内容",
-      status: nextMessages.length === 0 ? "idle" : "completed",
-      messages: nextMessages,
-    };
-
-    if (!window.api?.ai?.undoLastTurn) {
-      removeRunMappingsByMessageIds(removedMessageIds);
-      setChatSessions((prevSessions) =>
-        prevSessions.map((item) => (item.id === session.id ? nextSession : item)),
-      );
-      toast.success("已撤销上一轮，对应问题已回填");
-      return removedUserMessage?.content;
-    }
-
-    try {
-      const persistedSession = await window.api.ai.undoLastTurn(session.id);
-      removeRunMappingsByMessageIds(removedMessageIds);
-      setChatSessions((prevSessions) =>
-        prevSessions.map((item) =>
-          item.id === session.id ? (persistedSession ?? nextSession) : item,
-        ),
-      );
-      toast.success("已撤销上一轮，对应问题已回填");
-      return removedUserMessage?.content;
-    } catch {
-      setChatSessions(previousSessions);
-      toast.error("撤销对话失败");
-    }
+    return undoLastAiChatTurn({
+      session: activeChatSession,
+      sessions: chatSessions,
+      activeId: activeChatId,
+      undoLastTurn: window.api?.ai?.undoLastTurn,
+      removeRunMappingsByMessageIds,
+      dispatch: dispatchChatState,
+      toast,
+    });
   };
 
   /**
@@ -363,114 +240,44 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     sessionId: string,
     title: string,
   ): Promise<boolean> => {
-    const previousSessions = chatSessions;
-
-    setChatSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === sessionId ? { ...session, title } : session,
-      ),
-    );
-
-    try {
-      await window.api?.ai?.updateSessionTitle?.(sessionId, title);
-      return true;
-    } catch {
-      setChatSessions(previousSessions);
-      return false;
-    }
+    return renameAiChatSession({
+      sessionId,
+      title,
+      sessions: chatSessions,
+      activeId: activeChatId,
+      updateSessionTitle: window.api?.ai?.updateSessionTitle,
+      dispatch: dispatchChatState,
+    });
   };
 
   /**
    * 删除 AI 对话；删空后保留一个本地空白会话，避免主界面无激活对象。
    */
   const handleDeleteChat = async (sessionId: string): Promise<boolean> => {
-    const previousSessions = chatSessions;
-    const nextSessions = previousSessions.filter(
-      (session) => session.id !== sessionId,
-    );
-    const fallbackSession =
-      nextSessions.length === 0 ? createEmptyAiChatSession() : null;
-    const resolvedSessions = fallbackSession ? [fallbackSession] : nextSessions;
-    const nextActiveSession =
-      activeChatId === sessionId
-        ? (resolvedSessions[0]?.id ?? activeChatId)
-        : activeChatId;
-
-    try {
-      await window.api?.ai?.deleteSession?.(sessionId);
-      setChatSessions(resolvedSessions);
-      setActiveChatId(nextActiveSession);
-      useAiChatContextStore.getState().clearSession(sessionId);
-      return true;
-    } catch {
-      return false;
-    }
+    return deleteAiChatSession({
+      sessionId,
+      sessions: chatSessions,
+      activeId: activeChatId,
+      deleteSession: window.api?.ai?.deleteSession,
+      clearSessionContext: useAiChatContextStore.getState().clearSession,
+      dispatch: dispatchChatState,
+    });
   };
 
   /**
    * 删除指定消息所属的一轮 QA，并同步清理持久化上下文快照与工具记录。
    */
   const handleDeleteChatTurn = async (messageId: string): Promise<void> => {
-    const session = activeChatSession;
-
-    if (session.status === "running") {
-      toast.warning("AI 正在生成，不能删除 QA");
-      return;
-    }
-
-    const turnBounds = findChatTurnBoundsByMessageId(session.messages, messageId);
-
-    if (!turnBounds) {
-      toast.warning("未找到可删除的 QA");
-      return;
-    }
-
-    const previousSessions = chatSessions;
-    const removedMessages = session.messages.slice(
-      turnBounds.startIndex,
-      turnBounds.endIndex,
-    );
-    const removedMessageIds = new Set(
-      removedMessages.map((message) => message.id),
-    );
-    const nextMessages = [
-      ...session.messages.slice(0, turnBounds.startIndex),
-      ...session.messages.slice(turnBounds.endIndex),
-    ];
-    const nextLastUserMessage = [...nextMessages]
-      .reverse()
-      .find((message) => message.role === "user");
-    const fallbackSession: AiChatSession = {
-      ...session,
-      title: nextMessages.length === 0 ? "新建对话" : session.title,
-      summary: nextLastUserMessage?.content ?? "暂无对话内容",
-      status: nextMessages.length === 0 ? "idle" : "completed",
-      messages: nextMessages,
-    };
-
-    removeRunMappingsByMessageIds(removedMessageIds);
-    setChatSessions((prevSessions) =>
-      prevSessions.map((item) => (item.id === session.id ? fallbackSession : item)),
-    );
-
-    try {
-      if (window.api?.ai?.deleteTurn) {
-        const persistedSession = await window.api.ai.deleteTurn(
-          session.id,
-          messageId,
-        );
-        setChatSessions((prevSessions) =>
-          prevSessions.map((item) =>
-            item.id === session.id ? (persistedSession ?? fallbackSession) : item,
-          ),
-        );
-      }
-
-      toast.success("已删除 QA");
-    } catch {
-      setChatSessions(previousSessions);
-      toast.error("删除 QA 失败");
-    }
+    await deleteAiChatTurn({
+      messageId,
+      session: activeChatSession,
+      sessions: chatSessions,
+      activeId: activeChatId,
+      deleteTurn: window.api?.ai?.deleteTurn,
+      removeRunMappingsByMessageIds,
+      dispatch: dispatchChatState,
+      toast,
+    });
   };
 
   /**
@@ -479,22 +286,14 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const updateAiMessage = (
     sessionId: string,
     messageId: string,
-    updater: (
-      message: AiChatSession["messages"][number],
-    ) => AiChatSession["messages"][number],
+    updater: AiChatMessageUpdater,
   ): void => {
-    setChatSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === sessionId
-          ? {
-              ...session,
-              messages: session.messages.map((message) =>
-                message.id === messageId ? updater(message) : message,
-              ),
-            }
-          : session,
-      ),
-    );
+    dispatchChatState({
+      type: "update-message",
+      sessionId,
+      messageId,
+      updater,
+    });
   };
 
   /**
@@ -502,273 +301,42 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    */
   const updateChatSessionStatus = (
     sessionId: string,
-    status: AiChatSessionStatus,
+    status: AiChatSession["status"],
   ): void => {
-    setChatSessions((prevSessions) =>
-      prevSessions.map((session) =>
-        session.id === sessionId ? { ...session, status } : session,
-      ),
-    );
+    dispatchChatState({ type: "set-status", sessionId, status });
   };
 
   /**
-   * appendAiMessageTextPart - 追加流式文本，并同步保留 answer 兼容上下文构造。
+   * 确认服务端生成的真实标题。
    */
-  const appendAiMessageTextPart = (
-    message: AiChatSession["messages"][number],
-    chunk: string,
-  ): AiChatSession["messages"][number] => {
-    const parts = message.parts ?? [];
-    const lastPart = parts[parts.length - 1];
-    const nextParts: AiChatMessagePart[] =
-      lastPart?.kind === "text"
-        ? parts.map((part) =>
-            part.id === lastPart.id && part.kind === "text"
-              ? { ...part, content: `${part.content}${chunk}` }
-              : part,
-          )
-        : [
-            ...parts,
-            {
-              id: `${message.id}-text-${parts.length}`,
-              kind: "text",
-              content: chunk,
-            },
-          ];
-
-    return {
-      ...message,
-      answer: `${message.answer ?? ""}${chunk}`,
-      parts: nextParts,
-    };
-  };
-
-  /**
-   * appendAiMessageToolPart - 追加工具片段，避免重试时工具块被整体前置。
-   */
-  const appendAiMessageToolPart = (
-    message: AiChatSession["messages"][number],
-    stepId: string,
-  ): AiChatSession["messages"][number] => {
-    if (message.parts?.some((part) => part.kind === "tool" && part.stepId === stepId)) {
-      return message;
-    }
-
-    return {
-      ...message,
-      parts: [
-        ...(message.parts ?? []),
-        {
-          id: `${message.id}-tool-${stepId}`,
-          kind: "tool",
-          stepId,
-        },
-      ],
-    };
-  };
-
-  /**
-   * flushBufferedTextImmediately - 工具事件到达前落盘文本缓冲，保留事件顺序。
-   */
-  const flushBufferedTextImmediately = (runId: string): void => {
-    const mapping = runMessageMapRef.current.get(runId);
-    const bufferedText = textBufferRef.current.get(runId) ?? "";
-    const timer = typewriterTimerRef.current.get(runId);
-
-    if (timer) {
-      clearTimeout(timer);
-      typewriterTimerRef.current.delete(runId);
-    }
-
-    if (!mapping || !bufferedText) {
-      return;
-    }
-
-    textBufferRef.current.set(runId, "");
-    updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
-      appendAiMessageTextPart(message, bufferedText),
-    );
-  };
-
-  /**
-   * 刷新指定运行的文本缓冲。
-   */
-  const flushTypewriterBuffer = (runId: string): void => {
-    const mapping = runMessageMapRef.current.get(runId);
-    const bufferedText = textBufferRef.current.get(runId) ?? "";
-
-    if (!mapping || !bufferedText) {
-      typewriterTimerRef.current.delete(runId);
-      return;
-    }
-
-    const chunk = bufferedText.slice(0, 8);
-    const rest = bufferedText.slice(8);
-    textBufferRef.current.set(runId, rest);
-    updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
-      appendAiMessageTextPart(message, chunk),
-    );
-
-    if (rest) {
-      const timer = setTimeout(() => flushTypewriterBuffer(runId), 28);
-      typewriterTimerRef.current.set(runId, timer);
-      return;
-    }
-
-    typewriterTimerRef.current.delete(runId);
-  };
-
-  /**
-   * 计划指定运行的打字机刷新。
-   */
-  const scheduleTypewriterFlush = (runId: string): void => {
-    if (typewriterTimerRef.current.has(runId)) {
-      return;
-    }
-
-    const timer = setTimeout(() => flushTypewriterBuffer(runId), 28);
-    typewriterTimerRef.current.set(runId, timer);
-  };
-
-  /**
-   * 处理 AI 对话流式事件。
-   */
-  const handleAiChatEvent = (event: AiChatEvent): void => {
-    const mapping = runMessageMapRef.current.get(event.runId);
-    if (!mapping) {
-      return;
-    }
-
-    if (event.type === "text_delta") {
-      const currentBuffer = textBufferRef.current.get(event.runId) ?? "";
-      textBufferRef.current.set(event.runId, `${currentBuffer}${event.delta}`);
-      scheduleTypewriterFlush(event.runId);
-      return;
-    }
-
-    if (event.type === "done") {
-      updateChatSessionStatus(mapping.sessionId, "completed");
-      return;
-    }
-
-    if (event.type === "session_title_updated") {
-      setChatSessions((prevSessions) =>
-        prevSessions.map((session) =>
-          session.id === event.sessionId &&
-          mapping.optimisticTitle &&
-          session.title === mapping.optimisticTitle
-            ? { ...session, title: event.title }
-            : session,
-        ),
-      );
-      return;
-    }
-
-    if (event.type === "tool_started") {
-      flushBufferedTextImmediately(event.runId);
-      updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...appendAiMessageToolPart(message, event.id),
-        toolSteps: [
-          ...(message.toolSteps ?? []),
-          {
-            id: event.id,
-            title: "Query local People",
-            status: "running",
-            tool: event.name,
-            input: event.input,
-            observation: "Reading the local People table.",
-          },
-        ],
-      }));
-      return;
-    }
-
-    if (event.type === "tool_finished") {
-      updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...appendAiMessageToolPart(message, event.id),
-        toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
-          ? (message.toolSteps ?? []).map((step) =>
-              step.id === event.id
-                ? {
-                    ...step,
-                    status: "done",
-                    input: step.input,
-                    observation: event.observation,
-                    data: event.data,
-                  }
-                : step,
-            )
-          : [
-              ...(message.toolSteps ?? []),
-              {
-                id: event.id,
-                title: `Tool result: ${event.name}`,
-                status: "done",
-                tool: event.name,
-                input: {},
-                observation: event.observation,
-                data: event.data,
-              },
-            ],
-      }));
-      return;
-    }
-
-    if (event.type === "tool_failed") {
-      updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...appendAiMessageToolPart(message, event.id),
-        toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
-          ? (message.toolSteps ?? []).map((step) =>
-              step.id === event.id
-                ? {
-                    ...step,
-                    status: "failed",
-                    input: event.input,
-                    observation: `Tool execution failed: ${event.error}`,
-                    data: {
-                      error: event.error,
-                    },
-                  }
-                : step,
-            )
-          : [
-              ...(message.toolSteps ?? []),
-              {
-                id: event.id,
-                title: `Tool failed: ${event.name}`,
-                status: "failed",
-                tool: event.name,
-                input: event.input,
-                observation: `Tool execution failed: ${event.error}`,
-                data: {
-                  error: event.error,
-                },
-              },
-            ],
-      }));
-      return;
-    }
-
-    if (event.type === "error") {
-      updateChatSessionStatus(mapping.sessionId, "failed");
-      updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
-        ...message,
-        content: "AI chat execution failed",
-        answer: event.message,
-      }));
-    }
+  const confirmOptimisticTitle = (
+    sessionId: string,
+    optimisticTitle: string,
+    title: string,
+  ): void => {
+    dispatchChatState({
+      type: "confirm-optimistic-title",
+      sessionId,
+      optimisticTitle,
+      title,
+    });
   };
 
   // 订阅主进程 AI 对话事件。
   useEffect(() => {
+    const handleAiChatEvent = createAiChatEventHandler({
+      runMessageMapRef,
+      textBufferRef,
+      typewriterTimerRef,
+      updateAiMessage,
+      updateChatSessionStatus,
+      confirmOptimisticTitle,
+    });
     const unsubscribe = window.api?.ai?.onChatEvent?.(handleAiChatEvent);
 
     return () => {
       unsubscribe?.();
-      for (const timer of typewriterTimerRef.current.values()) {
-        clearTimeout(timer);
-      }
-      typewriterTimerRef.current.clear();
+      clearAiChatTypewriterTimers(typewriterTimerRef);
     };
   }, []);
 
@@ -814,26 +382,38 @@ export const useAiChatController = (): UseAiChatControllerResult => {
           }
           if (sessions.length === 0) {
             const empty = createEmptyAiChatSession();
-            setChatSessions([empty]);
-            setActiveChatId(empty.id);
+            dispatchChatState({
+              type: "reset",
+              sessions: [empty],
+              activeId: empty.id,
+            });
             return;
           }
 
-          setChatSessions(sessions);
-          setActiveChatId(sessions[0].id);
+          dispatchChatState({
+            type: "reset",
+            sessions,
+            activeId: sessions[0].id,
+          });
         })
         .catch(() => {
           if (!isMounted) {
             return;
           }
           const empty = createEmptyAiChatSession();
-          setChatSessions([empty]);
-          setActiveChatId(empty.id);
+          dispatchChatState({
+            type: "reset",
+            sessions: [empty],
+            activeId: empty.id,
+          });
         });
     } else {
       const empty = createEmptyAiChatSession();
-      setChatSessions([empty]);
-      setActiveChatId(empty.id);
+      dispatchChatState({
+        type: "reset",
+        sessions: [empty],
+        activeId: empty.id,
+      });
     }
 
     return () => {
@@ -843,7 +423,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
 
   // 会话切换时按需补全消息详情，列表读取失败不阻塞现有对话。
   useEffect(() => {
-    if (!window.api?.ai?.getSession) {
+    if (!activeChatId || !window.api?.ai?.getSession) {
       return;
     }
 
@@ -856,9 +436,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
           return;
         }
 
-        setChatSessions((prevSessions) =>
-          prevSessions.map((item) => (item.id === session.id ? session : item)),
-        );
+        dispatchChatState({ type: "replace", session });
       })
       .catch(() => {
         if (!isMounted) {
@@ -940,29 +518,25 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     });
 
     // 先写入乐观消息，保证 IPC 延迟时界面即时反馈。
-    setChatSessions((prevSessions) => {
-      const sourceSessionsById = new Map(
-        sourceSessions.map((session) => [session.id, session]),
-      );
-
-      return prevSessions.map((session) => {
+    const sourceSessionsById = new Map(
+      sourceSessions.map((session) => [session.id, session]),
+    );
+    dispatchChatState({
+      type: "update",
+      sessionId,
+      updater: (session) => {
         const sourceSession = sourceSessionsById.get(session.id) ?? session;
-
-        if (sourceSession.id === sessionId) {
-          const isNewSession =
-            sourceSession.title === "新建对话" &&
-            sourceSession.messages.length === 0;
-          return {
-            ...sourceSession,
-            title: isNewSession ? optimisticSessionTitle : sourceSession.title,
-            summary: isNewSession ? text : sourceSession.summary,
-            status: "running",
-            messages: [...sourceSession.messages, userMessage, aiMessage],
-          };
-        }
-
-        return sourceSession;
-      });
+        const isNewSession =
+          sourceSession.title === "新建对话" &&
+          sourceSession.messages.length === 0;
+        return {
+          ...sourceSession,
+          title: isNewSession ? optimisticSessionTitle : sourceSession.title,
+          summary: isNewSession ? text : sourceSession.summary,
+          status: "running",
+          messages: [...sourceSession.messages, userMessage, aiMessage],
+        };
+      },
     });
 
     if (!window.api?.ai) {
@@ -999,70 +573,23 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    * 重新生成最新一轮 AI 回答：先删除最新 QA，再用原问题和清理后的上下文重发。
    */
   const handleRegenerateLatestAnswer = async (): Promise<void> => {
-    const session = activeChatSession;
+    await regenerateLatestAiChatAnswer({
+      session: activeChatSession,
+      sessions: chatSessions,
+      activeId: activeChatId,
+      undoLastTurn: window.api?.ai?.undoLastTurn,
+      removeRunMappingsByMessageIds,
+      startAiChatMessage,
+      dispatch: dispatchChatState,
+      toast,
+    });
+  };
 
-    if (session.status === "running") {
-      toast.warning("AI 正在生成，不能重新生成");
-      return;
-    }
-
-    const assistantIndex = [...session.messages]
-      .reverse()
-      .findIndex((message) => message.role === "assistant");
-
-    if (assistantIndex < 0) {
-      toast.warning("没有可重新生成的回答");
-      return;
-    }
-
-    const resolvedAssistantIndex = session.messages.length - 1 - assistantIndex;
-
-    if (resolvedAssistantIndex !== session.messages.length - 1) {
-      toast.warning("只能重新生成最新回答");
-      return;
-    }
-
-    const userMessage = session.messages[resolvedAssistantIndex - 1];
-
-    if (userMessage?.role !== "user") {
-      toast.warning("最新回答缺少对应问题，不能重新生成");
-      return;
-    }
-
-    const removedMessages = session.messages.slice(resolvedAssistantIndex - 1);
-    const removedMessageIds = new Set(
-      removedMessages.map((message) => message.id),
-    );
-    const nextMessages = session.messages.slice(0, resolvedAssistantIndex - 1);
-    const nextLastUserMessage = [...nextMessages]
-      .reverse()
-      .find((message) => message.role === "user");
-    const fallbackSession: AiChatSession = {
-      ...session,
-      title: nextMessages.length === 0 ? "新建对话" : session.title,
-      summary: nextLastUserMessage?.content ?? "暂无对话内容",
-      status: nextMessages.length === 0 ? "idle" : "completed",
-      messages: nextMessages,
-    };
-    const previousSessions = chatSessions;
-
-    try {
-      const persistedSession = window.api?.ai?.undoLastTurn
-        ? await window.api.ai.undoLastTurn(session.id)
-        : null;
-      const cleanSession = persistedSession ?? fallbackSession;
-      const cleanSessions = previousSessions.map((item) =>
-        item.id === session.id ? cleanSession : item,
-      );
-
-      removeRunMappingsByMessageIds(removedMessageIds);
-      setChatSessions(cleanSessions);
-      startAiChatMessage(userMessage.content, session.id, cleanSessions);
-      toast.success("已重新生成回答");
-    } catch {
-      setChatSessions(previousSessions);
-      toast.error("重新生成失败");
-    }
+  /**
+   * 切换当前激活的 AI 对话会话。
+   */
+  const handleActiveChatChange = (sessionId: string): void => {
+    dispatchChatState({ type: "set-active", activeId: sessionId });
   };
 
   return {
@@ -1076,7 +603,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     aiAgentOption,
     selectedAiModel,
     handleChatToggle,
-    setActiveChatId,
+    setActiveChatId: handleActiveChatChange,
     setSelectedAiModel,
     handleNewChat,
     handleRenameChat,
