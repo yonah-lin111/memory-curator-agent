@@ -9,7 +9,7 @@ import type { AiChatMessage } from "@renderer/features/ai-chat/types";
 
 vi.mock("md-editor-rt", () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => (
-    <div>{modelValue}</div>
+    <div data-testid="md-preview">{modelValue}</div>
   ),
 }));
 
@@ -200,6 +200,134 @@ describe("AiChatMessageBubble", () => {
     expect(renderedText.indexOf("SQL query returned no rows.")).toBeLessThan(
       renderedText.indexOf("测试完成。"),
     );
+  });
+
+  it("用独立思考组件渲染 reasoning 片段并锁定 13px 字号", () => {
+    const message: AiChatMessage = {
+      id: "a-reasoning",
+      role: "assistant",
+      content: 'Processing: "分析一下"',
+      time: "16:00",
+      parts: [
+        {
+          id: "reasoning-1",
+          kind: "reasoning",
+          content: "# 思考标题\n先拆解问题。",
+        },
+        {
+          id: "answer-1",
+          kind: "text",
+          content: "最终回答。",
+        },
+      ],
+      answer: "最终回答。",
+    };
+
+    render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    const thinkingBlock = screen.getByTestId("ai-chat-thinking-block");
+
+    expect(thinkingBlock).toHaveTextContent("# 思考标题");
+    expect(thinkingBlock).toHaveTextContent("先拆解问题。");
+    expect(thinkingBlock).not.toHaveTextContent("最终回答。");
+    expect(screen.getByText("最终回答。")).toBeInTheDocument();
+    expect(thinkingBlock).toHaveClass("ai-chat-thinking-block");
+    expect(thinkingBlock).toHaveStyle({ fontSize: "13px" });
+  });
+
+  it("正文里重复出现的 reasoning 段落只展示一次", () => {
+    const message: AiChatMessage = {
+      id: "a-reasoning-duplicate",
+      role: "assistant",
+      content: 'Processing: "我的女朋友是谁"',
+      time: "16:01",
+      parts: [
+        {
+          id: "reasoning-1",
+          kind: "reasoning",
+          content:
+            "用户问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨（也叫 tolin）。我可以直接用中文回答这个问题。",
+        },
+        {
+          id: "answer-1",
+          kind: "text",
+          content:
+            "问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨（也叫 tolin）。我可以直接用中文回答这个问题。\n\n你的女朋友是黄酥梨。",
+        },
+      ],
+      answer:
+        "问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨（也叫 tolin）。我可以直接用中文回答这个问题。\n\n你的女朋友是黄酥梨。",
+    };
+
+    const { container } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+    const renderedText = container.textContent ?? "";
+
+    expect(
+      renderedText.match(/根据查询结果，用户的女朋友是黄酥梨/g),
+    ).toHaveLength(1);
+    expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
+  });
+
+  it("工具前后重复出现的普通文本思考段落只展示一次", () => {
+    const repeatedThinking =
+      "问女朋友是谁，我从数据库中查到了。让我整理一下信息来回答用户。\n\n从查询结果看，用户的女朋友是：\n\n姓名：黄酥梨（别名 tolin）\n关系：女朋友\n状态：温柔可爱，善解人意\n生日：1月13日\n标签：温柔、可爱、善解人意、小吃货、爱笑、心头肉\n我应该简洁地回答这个问题，可以提及她的名字和基本特征。";
+    const message: AiChatMessage = {
+      id: "a-text-duplicate",
+      role: "assistant",
+      content: 'Processing: "我的女朋友是谁"',
+      time: "16:02",
+      parts: [
+        {
+          id: "thinking-text-1",
+          kind: "text",
+          content: repeatedThinking,
+        },
+        {
+          id: "tool-1",
+          kind: "tool",
+          stepId: "tool-1",
+        },
+        {
+          id: "answer-text-1",
+          kind: "text",
+          content: `${repeatedThinking}\n\n你的女朋友是黄酥梨。`,
+        },
+      ],
+      toolSteps: [
+        {
+          id: "tool-1",
+          title: "Tool result: people_query",
+          status: "done",
+          tool: "people_query",
+          observation: "SQL query returned 1 row.",
+        },
+      ],
+      answer: `${repeatedThinking}\n\n你的女朋友是黄酥梨。`,
+    };
+
+    const { container } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+    const renderedText = container.textContent ?? "";
+
+    expect(renderedText.match(/问女朋友是谁，我从数据库中查到了/g)).toHaveLength(
+      1,
+    );
+    expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
+    expect(screen.getByText("people_query")).toBeInTheDocument();
   });
 
   it("正在生成中时展示 loading 动画/指示器而不是具体的发送时间", () => {

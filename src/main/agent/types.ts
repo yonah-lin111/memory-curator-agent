@@ -184,6 +184,16 @@ export type ModelTextDeltaEvent = {
   delta: string
 }
 
+// 模型思考增量事件。
+export type ModelReasoningDeltaEvent = {
+  // 事件类型。
+  type: 'reasoning_delta'
+  // 思考片段唯一标识。
+  id: string
+  // 思考文本增量。
+  delta: string
+}
+
 // 模型工具调用完成事件。
 export type ModelToolCallDoneEvent = {
   // 事件类型。
@@ -203,7 +213,11 @@ export type ModelDoneEvent = {
 }
 
 // 模型流式事件。
-export type ModelStreamEvent = ModelTextDeltaEvent | ModelToolCallDoneEvent | ModelDoneEvent
+export type ModelStreamEvent =
+  | ModelTextDeltaEvent
+  | ModelReasoningDeltaEvent
+  | ModelToolCallDoneEvent
+  | ModelDoneEvent
 
 // 模型 provider。
 export type ModelProvider = {
@@ -245,6 +259,14 @@ export type AgentStreamEvent =
       // 事件类型。
       type: 'text_delta'
       // 文本增量。
+      delta: string
+    }
+  | {
+      // 事件类型。
+      type: 'reasoning_delta'
+      // 思考片段唯一标识。
+      id: string
+      // 思考文本增量。
       delta: string
     }
   | {

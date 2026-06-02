@@ -149,6 +149,71 @@ describe('aiSdkProvider', () => {
     ])
   })
 
+  it('透传 AI SDK reasoning 增量', async () => {
+    const config: NormalizedProviderConfig = {
+      id: 'bailian',
+      type: 'openai-compatible',
+      name: 'Bailian',
+      npm: '@ai-sdk/openai-compatible',
+      options: {
+        apiKey: 'test-key',
+        baseURL: 'https://example.com/v1'
+      },
+      models: {}
+    }
+    const provider = await createAiSdkModelProvider(config, {
+      loadPackage: async () => ({
+        createOpenAICompatible: () => (model: string) => ({
+          model
+        })
+      }),
+      streamText: () => ({
+        fullStream: (async function* () {
+          yield {
+            type: 'reasoning-delta',
+            id: 'reasoning-1',
+            text: '先判断上下文。'
+          }
+          yield {
+            type: 'text-delta',
+            text: '结论。'
+          }
+          yield {
+            type: 'finish'
+          }
+        })()
+      })
+    })
+
+    const events = await Array.fromAsync(
+      provider.streamTurn({
+        model: 'MiniMax-M2.5',
+        messages: [
+          {
+            role: 'user',
+            content: '分析一下'
+          }
+        ],
+        tools: []
+      })
+    )
+
+    expect(events).toEqual([
+      {
+        type: 'reasoning_delta',
+        id: 'reasoning-1',
+        delta: '先判断上下文。'
+      },
+      {
+        type: 'text_delta',
+        delta: '结论。'
+      },
+      {
+        type: 'done'
+      }
+    ])
+  })
+
   it('发送给 AI SDK 前统一准备工具定义', async () => {
     let capturedInput: Record<string, unknown> | undefined
     const config: NormalizedProviderConfig = {

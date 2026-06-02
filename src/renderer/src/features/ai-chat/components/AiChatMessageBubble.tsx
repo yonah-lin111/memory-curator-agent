@@ -5,7 +5,12 @@ import type {
   AiChatMessagePart,
   AiToolStep,
 } from "@renderer/features/ai-chat/types";
+import { AiChatThinkingBlock } from "@renderer/features/ai-chat/components/AiChatThinkingBlock";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
+import {
+  resolveDedupedTextContents,
+  resolveDedupedTextPartContents,
+} from "@renderer/features/ai-chat/core/aiChatReasoningDedupe";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 
@@ -332,13 +337,11 @@ export const AiChatMessageBubble = ({
         displayAnswer,
       })
     : [];
+  const dedupedTextContents = resolveDedupedTextContents(messageParts);
+  const dedupedTextPartContents = resolveDedupedTextPartContents(messageParts);
   const markdownContent = isUser
     ? message.content
-    : messageParts
-        .filter((part) => part.kind === "text")
-        .map((part) => part.content)
-        .join("\n\n")
-        .trim();
+    : dedupedTextContents.join("\n\n").trim();
   const resolvedMarkdownContent =
     markdownContent || displayAnswer || message.answer || message.content;
   const plainTextContent = stripMarkdownSyntax(resolvedMarkdownContent);
@@ -394,6 +397,7 @@ export const AiChatMessageBubble = ({
                 const groupedElements: React.JSX.Element[] = [];
                 let currentToolSteps: AiToolStep[] = [];
                 let currentToolKeys: string[] = [];
+                let renderedTextIndex = 0;
 
                 const flushToolSteps = (): void => {
                   if (currentToolSteps.length > 0) {
@@ -411,9 +415,26 @@ export const AiChatMessageBubble = ({
 
                 for (const part of messageParts) {
                   if (part.kind === "text") {
+                    const displayText =
+                      dedupedTextPartContents[renderedTextIndex] ?? "";
+                    renderedTextIndex += 1;
+
+                    if (!displayText) {
+                      continue;
+                    }
+
                     flushToolSteps();
                     groupedElements.push(
                       <AiMarkdownPreview
+                        key={part.id}
+                        content={displayText}
+                        isGenerating={isGenerating}
+                      />,
+                    );
+                  } else if (part.kind === "reasoning") {
+                    flushToolSteps();
+                    groupedElements.push(
+                      <AiChatThinkingBlock
                         key={part.id}
                         content={part.content}
                         isGenerating={isGenerating}

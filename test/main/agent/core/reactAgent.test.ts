@@ -159,6 +159,65 @@ describe("reactAgent", () => {
     });
   });
 
+  it("透传模型 reasoning 增量且不触发助手正文开始事件", async () => {
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        yield {
+          type: "reasoning_delta",
+          id: "reasoning-1",
+          delta: "先拆问题。",
+        };
+        yield {
+          type: "text_delta",
+          delta: "最终回答。",
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "分析一下",
+          },
+        ],
+        tools: [],
+      }),
+    );
+
+    expect(events).toEqual([
+      {
+        type: "run_started",
+      },
+      {
+        type: "reasoning_delta",
+        id: "reasoning-1",
+        delta: "先拆问题。",
+      },
+      {
+        type: "assistant_message_started",
+      },
+      {
+        type: "text_delta",
+        delta: "最终回答。",
+      },
+      {
+        type: "turn_finished",
+      },
+      {
+        type: "done",
+      },
+    ]);
+  });
+
   it("工具参数为空或 undefined 文本时按空对象处理", async () => {
     const toolInputs: unknown[] = [];
     let turnCount = 0;

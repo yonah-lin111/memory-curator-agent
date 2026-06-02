@@ -118,6 +118,14 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         }
       }
 
+      if (event.type === 'reasoning_delta') {
+        yield {
+          type: 'reasoning_delta',
+          id: event.id,
+          delta: event.delta
+        }
+      }
+
       if (event.type === 'tool_call_done') {
         toolCalls.push(event)
       }

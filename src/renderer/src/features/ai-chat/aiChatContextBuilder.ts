@@ -4,6 +4,7 @@ import type {
   AiModelProviderOption,
   AiModelSelection
 } from "@renderer/features/ai-chat/types";
+import { resolveDedupedTextContents } from "@renderer/features/ai-chat/core/aiChatReasoningDedupe";
 
 // 运行级异常 assistant 消息正文集合，用于识别不能进入后续上下文的失败 QA。
 const RUN_ERROR_ASSISTANT_CONTENTS = new Set([
@@ -92,6 +93,16 @@ const summarizeContextContent = (content: string): string => {
  * 从单条消息中提取可进入上下文的正文。
  */
 const getMessageContextContent = (message: AiChatMessage): string => {
+  if (message.role === "assistant" && message.parts?.length) {
+    const textContent = resolveDedupedTextContents(message.parts)
+      .join("\n\n")
+      .trim();
+
+    if (textContent) {
+      return textContent;
+    }
+  }
+
   if (message.role === "assistant" && message.answer?.trim()) {
     return message.answer.trim();
   }

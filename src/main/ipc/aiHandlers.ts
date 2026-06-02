@@ -293,6 +293,33 @@ const appendTextPart = (parts: AiChatMessagePart[], messageId: string, chunk: st
 }
 
 /**
+ * 追加助手思考片段并合并同一 reasoning ID 的连续增量。
+ */
+const appendReasoningPart = (parts: AiChatMessagePart[], reasoningId: string, chunk: string): AiChatMessagePart[] => {
+  const lastPart = parts[parts.length - 1]
+
+  if (lastPart?.kind === 'reasoning' && lastPart.id === reasoningId) {
+    return parts.map((part) =>
+      part.id === reasoningId && part.kind === 'reasoning'
+        ? {
+            ...part,
+            content: `${part.content}${chunk}`
+          }
+        : part
+    )
+  }
+
+  return [
+    ...parts,
+    {
+      id: reasoningId,
+      kind: 'reasoning',
+      content: chunk
+    }
+  ]
+}
+
+/**
  * 追加工具片段，保持工具与文本出现顺序。
  */
 const appendToolPart = (parts: AiChatMessagePart[], messageId: string, stepId: string): AiChatMessagePart[] => {
@@ -470,6 +497,15 @@ export const registerAiHandlers = (): void => {
               0,
               assistantParts.length,
               ...appendTextPart(assistantParts, assistantMessageId, agentEvent.delta)
+            )
+            updateAssistantSnapshot()
+          }
+
+          if (agentEvent.type === 'reasoning_delta') {
+            assistantParts.splice(
+              0,
+              assistantParts.length,
+              ...appendReasoningPart(assistantParts, agentEvent.id, agentEvent.delta)
             )
             updateAssistantSnapshot()
           }

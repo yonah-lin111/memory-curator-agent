@@ -5,6 +5,7 @@ import type {
   AiChatSessionStatus,
 } from "@renderer/features/ai-chat/types";
 import {
+  appendAiMessageReasoningPart,
   appendAiMessageTextPart,
   appendAiMessageToolPart,
 } from "@renderer/features/ai-chat/core/aiChatMessageParts";
@@ -242,6 +243,14 @@ export const createAiChatEventHandler = ({
       const currentBuffer = textBufferRef.current.get(event.runId) ?? "";
       textBufferRef.current.set(event.runId, `${currentBuffer}${event.delta}`);
       scheduleTypewriterFlush(event.runId);
+      return;
+    }
+
+    if (event.type === "reasoning_delta") {
+      flushBufferedTextImmediately(event.runId);
+      updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
+        appendAiMessageReasoningPart(message, event.id, event.delta),
+      );
       return;
     }
 

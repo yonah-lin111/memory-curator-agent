@@ -146,6 +146,18 @@ export type AiChatEvent =
     }
   | {
       // 事件类型。
+      type: "reasoning_delta";
+      // Agent 运行 ID。
+      runId: string;
+      // 会话 ID。
+      sessionId: string;
+      // 思考片段唯一标识。
+      id: string;
+      // 思考文本增量。
+      delta: string;
+    }
+  | {
+      // 事件类型。
       type: "tool_started";
       // Agent 运行 ID。
       runId: string;
@@ -222,6 +234,14 @@ export type AiChatMessagePart =
       // 片段类型。
       kind: "text";
       // Markdown 文本内容。
+      content: string;
+    }
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "reasoning";
+      // Markdown 思考内容。
       content: string;
     }
   | {

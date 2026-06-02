@@ -215,6 +215,14 @@ export type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
+      kind: 'reasoning'
+      // Markdown 思考内容。
+      content: string
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
       kind: 'tool'
       // 对应工具步骤 ID。
       stepId: string

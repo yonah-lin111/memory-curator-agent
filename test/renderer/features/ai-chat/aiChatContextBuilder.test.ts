@@ -62,6 +62,70 @@ describe('aiChatContextBuilder', () => {
     expect(items[0].content).toBe('最终回答')
   })
 
+  it('从上下文中剥离已单独保存的 reasoning 重复段落', () => {
+    const messages: AiChatMessage[] = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '处理中',
+        answer:
+          '用户问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨。\n\n你的女朋友是黄酥梨。',
+        time: '10:01',
+        parts: [
+          {
+            id: 'reasoning-1',
+            kind: 'reasoning',
+            content: '用户问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨。'
+          },
+          {
+            id: 'answer-1',
+            kind: 'text',
+            content:
+              '用户问女朋友是谁。根据查询结果，用户的女朋友是黄酥梨。\n\n你的女朋友是黄酥梨。'
+          }
+        ]
+      }
+    ]
+
+    const items = buildMessageContextItems('s1', messages)
+
+    expect(items[0].content).toBe('你的女朋友是黄酥梨。')
+  })
+
+  it('从上下文中剥离工具前后重复出现的普通文本思考段落', () => {
+    const repeatedThinking = '问女朋友是谁，我从数据库中查到了。让我整理一下信息来回答用户。'
+    const messages: AiChatMessage[] = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '处理中',
+        answer: `${repeatedThinking}\n\n你的女朋友是黄酥梨。`,
+        time: '10:01',
+        parts: [
+          {
+            id: 'thinking-text-1',
+            kind: 'text',
+            content: repeatedThinking
+          },
+          {
+            id: 'tool-1',
+            kind: 'tool',
+            stepId: 'tool-1'
+          },
+          {
+            id: 'answer-text-1',
+            kind: 'text',
+            content: `${repeatedThinking}\n\n你的女朋友是黄酥梨。`
+          }
+        ]
+      }
+    ]
+
+    const items = buildMessageContextItems('s1', messages)
+
+    expect(items[0].content).toBe(`${repeatedThinking}\n\n你的女朋友是黄酥梨。`)
+  })
+
   it('估算 tokens 并根据当前模型 limit 计算预算', () => {
     expect(estimateAiChatContextTokens('12345678')).toBe(2)
 

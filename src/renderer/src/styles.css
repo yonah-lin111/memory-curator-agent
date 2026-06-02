@@ -243,6 +243,12 @@ html:hover::-webkit-scrollbar-thumb,
   margin-bottom: 0 !important;
 }
 
+/* AI 思考内容必须整体压到 13px，避免 Markdown 标题突破聊天气泡层级。 */
+.ai-chat-thinking-block.markdown-preview-container,
+.ai-chat-thinking-block.markdown-preview-container * {
+  font-size: 13px !important;
+}
+
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
 @keyframes modal-backdrop-in {
   from {

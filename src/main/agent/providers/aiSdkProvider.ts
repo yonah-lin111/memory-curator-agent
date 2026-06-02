@@ -186,6 +186,18 @@ export const createAiSdkModelProvider = async (
         }
 
         if (
+          part.type === 'reasoning-delta' &&
+          typeof part.id === 'string' &&
+          typeof part.text === 'string'
+        ) {
+          yield {
+            type: 'reasoning_delta',
+            id: part.id,
+            delta: part.text
+          }
+        }
+
+        if (
           part.type === 'tool-call' &&
           typeof part.toolCallId === 'string' &&
           typeof part.toolName === 'string'

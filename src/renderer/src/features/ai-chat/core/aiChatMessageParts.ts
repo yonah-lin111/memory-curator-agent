@@ -39,6 +39,38 @@ export const appendAiMessageTextPart = (
 };
 
 /**
+ * appendAiMessageReasoningPart - 追加流式思考内容，并避免污染最终回答。
+ */
+export const appendAiMessageReasoningPart = (
+  message: AiChatMessage,
+  reasoningId: string,
+  chunk: string,
+): AiChatMessage => {
+  const parts = message.parts ?? [];
+  const lastPart = parts[parts.length - 1];
+  const nextParts: AiChatMessagePart[] =
+    lastPart?.kind === "reasoning" && lastPart.id === reasoningId
+      ? parts.map((part) =>
+          part.id === reasoningId && part.kind === "reasoning"
+            ? { ...part, content: `${part.content}${chunk}` }
+            : part,
+        )
+      : [
+          ...parts,
+          {
+            id: reasoningId,
+            kind: "reasoning",
+            content: chunk,
+          },
+        ];
+
+  return {
+    ...message,
+    parts: nextParts,
+  };
+};
+
+/**
  * appendAiMessageToolPart - 追加工具片段，避免重试时工具块被整体前置。
  */
 export const appendAiMessageToolPart = (
