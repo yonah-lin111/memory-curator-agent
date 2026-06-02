@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Plus, Search } from "lucide-react";
 import type { AiChatSession } from "@renderer/features/ai-chat/aiChatMock";
 import { IconButton } from "@renderer/components/ui/IconButton";
@@ -57,6 +57,57 @@ export const AiChatHistoryList = ({
   const [editingTitle, setEditingTitle] = useState<EditingAiChatTitleDraft | null>(null);
   // 当前打开的右键菜单；集中管理以保证视口内只存在一个菜单。
   const [contextMenu, setContextMenu] = useState<AiChatContextMenuState | null>(null);
+  // 刚从生成中转为完成的会话 ID，用于完成提醒红点。
+  const [completedSessionIds, setCompletedSessionIds] = useState<Set<string>>(() => new Set());
+  // 上一次渲染后的会话状态快照，用于识别 running -> completed。
+  const previousSessionStatusRef = useRef<Map<string, AiChatSession["status"]>>(new Map());
+
+  useEffect(() => {
+    const previousStatuses = previousSessionStatusRef.current;
+    const liveSessionIds = new Set(sessions.map((session) => session.id));
+
+    setCompletedSessionIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      let hasChanged = false;
+
+      for (const session of sessions) {
+        const previousStatus = previousStatuses.get(session.id);
+
+        if (
+          (session.id === activeSessionId || session.status === "running") &&
+          nextIds.delete(session.id)
+        ) {
+          hasChanged = true;
+        }
+
+        if (
+          previousStatus === "running" &&
+          session.status === "completed" &&
+          session.id !== activeSessionId &&
+          !nextIds.has(session.id)
+        ) {
+          nextIds.add(session.id);
+          hasChanged = true;
+        }
+      }
+
+      for (const sessionId of currentIds) {
+        if (liveSessionIds.has(sessionId)) {
+          continue;
+        }
+
+        nextIds.delete(sessionId);
+        hasChanged = true;
+      }
+
+      return hasChanged ? nextIds : currentIds;
+    });
+
+    previousStatuses.clear();
+    for (const session of sessions) {
+      previousStatuses.set(session.id, session.status);
+    }
+  }, [activeSessionId, sessions]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -183,6 +234,12 @@ export const AiChatHistoryList = ({
       aria-label="对话历史列表"
       aria-hidden={ariaHidden}
     >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes ai-loading-bar {
+          0%, 100% { height: 30%; }
+          50% { height: 100%; }
+        }
+      `}} />
       {/* 顶部标题与新建按钮 */}
       <div className="flex items-center justify-between px-1">
         <h2 className="text-xs font-bold tracking-wider text-white/40 uppercase">
@@ -213,15 +270,20 @@ export const AiChatHistoryList = ({
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
           const isEditing = editingTitle?.id === session.id;
+          const isGenerating = session.status === "running";
+          const hasCompletionNotice =
+            !isActive && !isGenerating && completedSessionIds.has(session.id);
+          const itemStyleClass = isActive
+            ? "bg-white text-black font-semibold"
+            : hasCompletionNotice
+              ? "bg-emerald-950/20 text-emerald-300 font-semibold shadow-[inset_0_0_10px_rgba(16,185,129,0.06)]"
+              : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white";
+
           return (
             <div
               key={session.id}
               aria-current={isActive ? "true" : undefined}
-              className={`flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
-                isActive
-                  ? "bg-white text-black font-semibold"
-                  : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white"
-              } ${isEditing ? "" : "cursor-pointer"}`}
+              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${itemStyleClass} ${isEditing ? "" : "cursor-pointer"}`}
               role={isEditing ? undefined : "button"}
               tabIndex={isEditing ? undefined : 0}
               onClick={() => {
@@ -280,17 +342,28 @@ export const AiChatHistoryList = ({
                     {session.title}
                   </span>
                 )}
-                <span
-                  className={`text-[10px] font-mono leading-none flex-shrink-0 ${
-                    isActive ? "text-black/55" : "text-white/30"
+                 <span
+                  className={`flex min-h-2.5 min-w-[2.5rem] flex-shrink-0 items-center justify-end text-[10px] font-mono leading-none ${
+                    isActive ? "text-black/55" : hasCompletionNotice ? "text-emerald-400/50" : "text-white/30"
                   }`}
                 >
-                  {session.time}
+                  {isGenerating ? (
+                    <span
+                      className="flex items-end gap-[2px] h-3 px-1"
+                      aria-label="AI 正在输出"
+                    >
+                      <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '0ms' }} />
+                      <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '150ms' }} />
+                      <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '300ms' }} />
+                    </span>
+                  ) : (
+                    session.time
+                  )}
                 </span>
               </div>
               <p
                 className={`text-[11px] leading-relaxed truncate w-full ${
-                  isActive ? "text-black/75" : "text-white/40"
+                  isActive ? "text-black/75" : hasCompletionNotice ? "text-emerald-300/45" : "text-white/40"
                 }`}
               >
                 {session.summary}
