@@ -240,7 +240,7 @@ const AiMarkdownPreview = ({
 }: AiMarkdownPreviewProps): React.JSX.Element => {
   return (
     <div
-      className={`markdown-preview-container select-text max-w-full ${className}`}
+      className={`markdown-preview-container ai-chat-markdown-preview select-text max-w-full ${className}`}
     >
       <MdPreview
         theme="dark"

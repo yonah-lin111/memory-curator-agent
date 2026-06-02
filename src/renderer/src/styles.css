@@ -229,6 +229,15 @@ html:hover::-webkit-scrollbar-thumb,
   font-size: 14px !important;
 }
 
+/* AI 聊天气泡内 Markdown 预览的图片尺寸限制，圆角符合 6px 规范 */
+.ai-chat-markdown-preview img {
+  max-width: 300px !important;
+  max-height: 300px !important;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
 /* 向上调整随滚动条滚动的代码块顶部栏的 top 位置 */
 .markdown-preview-container .md-editor-code-head {
   top: -16px !important;
