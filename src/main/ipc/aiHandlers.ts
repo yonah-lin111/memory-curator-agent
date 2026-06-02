@@ -326,6 +326,9 @@ export const registerAiHandlers = (): void => {
   ipcMain.handle('ai:session:turn:undo', async (_, sessionId: string) =>
     aiChatService.undoLastTurn(sessionId, createTimestamp())
   )
+  ipcMain.handle('ai:session:turn:delete', async (_, sessionId: string, messageId: string) =>
+    aiChatService.deleteTurnByMessageId(sessionId, messageId, createTimestamp())
+  )
 
   ipcMain.handle('ai:chat:start', async (event, payload: AiChatStartPayload) => {
     const runId = payload.runId ?? randomUUID()

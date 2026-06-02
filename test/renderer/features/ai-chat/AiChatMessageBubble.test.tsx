@@ -13,6 +13,11 @@ vi.mock("md-editor-rt", () => ({
   ),
 }));
 
+/**
+ * 测试渲染默认不关心右键菜单打开行为。
+ */
+const noopContextMenu = (): void => undefined;
+
 describe("AiChatMessageBubble", () => {
   afterEach(() => {
     cleanup();
@@ -37,7 +42,12 @@ describe("AiChatMessageBubble", () => {
         'Tool observation:\n找到 1 位关联人物：阿明\nTool data:\n```json\n{"rows":[{"name":"阿明","details":"完整详情"}]}\n```\n\n阿明是你本地 People 中的朋友。',
     };
 
-    render(<AiChatMessageBubble message={message} />);
+    render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
 
     expect(screen.getByText("people_query")).toBeInTheDocument();
     expect(screen.getByText("找到 1 位关联人物：阿明")).toBeInTheDocument();
@@ -68,7 +78,12 @@ describe("AiChatMessageBubble", () => {
       answer: "你的女朋友是黄酥梨。",
     };
 
-    render(<AiChatMessageBubble message={message} />);
+    render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
 
     expect(screen.getByText("people_query")).toBeInTheDocument();
     expect(
@@ -98,7 +113,12 @@ describe("AiChatMessageBubble", () => {
       answer: "Done.",
     };
 
-    render(<AiChatMessageBubble message={message} />);
+    render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
 
     expect(screen.getByText("SQL query returned 1 row.")).toBeInTheDocument();
   });
@@ -156,7 +176,12 @@ describe("AiChatMessageBubble", () => {
       answer: "我会先传递错误参数。工具报错了，现在修正参数重试。测试完成。",
     };
 
-    const { container } = render(<AiChatMessageBubble message={message} />);
+    const { container } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
     const renderedText = container.textContent ?? "";
 
     expect(renderedText.indexOf("我会先传递错误参数。")).toBeLessThan(
@@ -187,7 +212,11 @@ describe("AiChatMessageBubble", () => {
     };
 
     const { container } = render(
-      <AiChatMessageBubble message={message} isGenerating={true} />,
+      <AiChatMessageBubble
+        message={message}
+        isGenerating={true}
+        onOpenContextMenu={noopContextMenu}
+      />,
     );
 
     // 不应该展示具体的发送时间

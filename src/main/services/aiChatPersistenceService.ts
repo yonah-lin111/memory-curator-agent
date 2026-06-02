@@ -241,6 +241,8 @@ export type AiChatPersistenceService = {
   deleteSession: (sessionId: string) => void
   // 撤销指定会话最后一轮对话。
   undoLastTurn: (sessionId: string, timestamp: string) => AiChatSessionItem | null
+  // 删除指定消息所属的一轮 QA。
+  deleteTurnByMessageId: (sessionId: string, messageId: string, timestamp: string) => AiChatSessionItem | null
   // 创建或更新 AI 会话。
   ensureSession: (input: EnsureSessionInput) => void
   // 写入 AI 消息。
@@ -565,18 +567,120 @@ export const createAiChatPersistenceService = (
     })
   }
 
+  /**
+   * 读取会话消息的稳定顺序快照。
+   */
+  const listTurnMessages = (sessionId: string): AiChatTurnMessageRow[] =>
+    database
+      .prepare(
+        `
+          SELECT rowid AS row_order, id, role, content, created_at
+          FROM ai_chat_messages
+          WHERE session_id = ?
+          ORDER BY created_at ASC, rowid ASC
+        `
+      )
+      .all(sessionId) as AiChatTurnMessageRow[]
+
+  /**
+   * 删除一组助手消息对应的 run、工具调用和上下文快照。
+   */
+  const deleteRunsByAssistantMessageIds = (
+    sessionId: string,
+    assistantMessageIds: string[]
+  ): void => {
+    if (assistantMessageIds.length === 0) {
+      return
+    }
+
+    const assistantPlaceholders = assistantMessageIds.map(() => '?').join(', ')
+    const runs = database
+      .prepare(
+        `
+          SELECT id
+          FROM ai_agent_runs
+          WHERE session_id = ? AND assistant_message_id IN (${assistantPlaceholders})
+        `
+      )
+      .all(sessionId, ...assistantMessageIds) as { id: string }[]
+
+    for (const run of runs) {
+      database.prepare('DELETE FROM ai_agent_context_snapshots WHERE run_id = ?').run(run.id)
+      database.prepare('DELETE FROM ai_agent_tool_calls WHERE run_id = ?').run(run.id)
+    }
+
+    if (runs.length === 0) {
+      return
+    }
+
+    const runPlaceholders = runs.map(() => '?').join(', ')
+    database.prepare(`DELETE FROM ai_agent_runs WHERE id IN (${runPlaceholders})`).run(
+      ...runs.map((run) => run.id)
+    )
+  }
+
+  /**
+   * 删除指定范围内的 QA 消息，并重算会话摘要和时间。
+   */
+  const deleteTurnByRange = (
+    sessionId: string,
+    messages: AiChatTurnMessageRow[],
+    turnStartIndex: number,
+    turnEndIndex: number,
+    timestamp: string
+  ): void => {
+    const removedMessages = messages.slice(turnStartIndex, turnEndIndex)
+    const removedMessageIds = removedMessages.map((message) => message.id)
+    const removedAssistantMessageIds = removedMessages
+      .filter((message) => message.role === 'assistant')
+      .map((message) => message.id)
+
+    deleteRunsByAssistantMessageIds(sessionId, removedAssistantMessageIds)
+
+    if (removedMessageIds.length > 0) {
+      const messagePlaceholders = removedMessageIds.map(() => '?').join(', ')
+      database.prepare(`DELETE FROM ai_chat_messages WHERE id IN (${messagePlaceholders})`).run(
+        ...removedMessageIds
+      )
+    }
+
+    const remainingMessages = [
+      ...messages.slice(0, turnStartIndex),
+      ...messages.slice(turnEndIndex)
+    ]
+    const latestRemainingMessage = remainingMessages[remainingMessages.length - 1]
+    const latestRemainingUserMessage = [...remainingMessages]
+      .reverse()
+      .find((message) => message.role === 'user')
+
+    database
+      .prepare(
+        `
+          UPDATE ai_chat_sessions
+          SET title = CASE
+                WHEN ? = 0 THEN '新建对话'
+                ELSE title
+              END,
+              summary = ?,
+              status = ?,
+              updated_at = ?,
+              last_message_at = ?
+          WHERE id = ?
+        `
+      )
+      .run(
+        remainingMessages.length,
+        latestRemainingUserMessage?.content ?? '暂无对话内容',
+        remainingMessages.length === 0 ? 'idle' : 'completed',
+        timestamp,
+        latestRemainingMessage?.created_at ?? timestamp,
+        sessionId
+      )
+  }
+
   const undoLastTurn = (sessionId: string, timestamp: string): AiChatSessionItem | null => {
     runTransaction(database, () => {
-      const messages = database
-        .prepare(
-          `
-            SELECT rowid AS row_order, id, role, content, created_at
-            FROM ai_chat_messages
-            WHERE session_id = ?
-            ORDER BY created_at ASC, rowid ASC
-          `
-        )
-        .all(sessionId) as AiChatTurnMessageRow[]
+      const messages = listTurnMessages(sessionId)
       const turnStartIndex = [...messages]
         .reverse()
         .findIndex((message) => message.role === 'user')
@@ -586,73 +690,42 @@ export const createAiChatPersistenceService = (
       }
 
       const resolvedTurnStartIndex = messages.length - 1 - turnStartIndex
-      const removedMessages = messages.slice(resolvedTurnStartIndex)
-      const removedMessageIds = removedMessages.map((message) => message.id)
-      const removedAssistantMessageIds = removedMessages
-        .filter((message) => message.role === 'assistant')
-        .map((message) => message.id)
+      deleteTurnByRange(sessionId, messages, resolvedTurnStartIndex, messages.length, timestamp)
+    })
 
-      if (removedAssistantMessageIds.length > 0) {
-        const assistantPlaceholders = removedAssistantMessageIds.map(() => '?').join(', ')
-        const runs = database
-          .prepare(
-            `
-              SELECT id
-              FROM ai_agent_runs
-              WHERE session_id = ? AND assistant_message_id IN (${assistantPlaceholders})
-            `
-          )
-          .all(sessionId, ...removedAssistantMessageIds) as { id: string }[]
+    return getSession(sessionId)
+  }
 
-        for (const run of runs) {
-          database.prepare('DELETE FROM ai_agent_context_snapshots WHERE run_id = ?').run(run.id)
-          database.prepare('DELETE FROM ai_agent_tool_calls WHERE run_id = ?').run(run.id)
-        }
+  const deleteTurnByMessageId = (
+    sessionId: string,
+    messageId: string,
+    timestamp: string
+  ): AiChatSessionItem | null => {
+    runTransaction(database, () => {
+      const messages = listTurnMessages(sessionId)
+      const messageIndex = messages.findIndex((message) => message.id === messageId)
 
-        if (runs.length > 0) {
-          const runPlaceholders = runs.map(() => '?').join(', ')
-          database.prepare(`DELETE FROM ai_agent_runs WHERE id IN (${runPlaceholders})`).run(
-            ...runs.map((run) => run.id)
-          )
-        }
+      if (messageIndex < 0) {
+        return
       }
 
-      if (removedMessageIds.length > 0) {
-        const messagePlaceholders = removedMessageIds.map(() => '?').join(', ')
-        database.prepare(`DELETE FROM ai_chat_messages WHERE id IN (${messagePlaceholders})`).run(
-          ...removedMessageIds
-        )
+      let turnStartIndex = messageIndex
+
+      while (turnStartIndex > 0 && messages[turnStartIndex].role !== 'user') {
+        turnStartIndex -= 1
       }
 
-      const remainingMessages = messages.slice(0, resolvedTurnStartIndex)
-      const latestRemainingMessage = remainingMessages[remainingMessages.length - 1]
-      const latestRemainingUserMessage = [...remainingMessages]
-        .reverse()
-        .find((message) => message.role === 'user')
+      if (messages[turnStartIndex]?.role !== 'user') {
+        return
+      }
 
-      database
-        .prepare(
-          `
-            UPDATE ai_chat_sessions
-            SET title = CASE
-                  WHEN ? = 0 THEN '新建对话'
-                  ELSE title
-                END,
-                summary = ?,
-                status = ?,
-                updated_at = ?,
-                last_message_at = ?
-            WHERE id = ?
-          `
-        )
-        .run(
-          remainingMessages.length,
-          latestRemainingUserMessage?.content ?? '暂无对话内容',
-          remainingMessages.length === 0 ? 'idle' : 'completed',
-          timestamp,
-          latestRemainingMessage?.created_at ?? timestamp,
-          sessionId
-        )
+      let turnEndIndex = turnStartIndex + 1
+
+      while (turnEndIndex < messages.length && messages[turnEndIndex].role !== 'user') {
+        turnEndIndex += 1
+      }
+
+      deleteTurnByRange(sessionId, messages, turnStartIndex, turnEndIndex, timestamp)
     })
 
     return getSession(sessionId)
@@ -944,6 +1017,7 @@ export const createAiChatPersistenceService = (
     updateSessionTitle,
     deleteSession,
     undoLastTurn,
+    deleteTurnByMessageId,
     ensureSession,
     appendMessage,
     updateAssistantMessage,

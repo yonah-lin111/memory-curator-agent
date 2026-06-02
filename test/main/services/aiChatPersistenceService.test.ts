@@ -389,6 +389,93 @@ describe('aiChatPersistenceService', () => {
     expect(service.listContextSnapshots('run-2')).toEqual([])
   })
 
+  it('deletes the selected QA turn and related run data', () => {
+    const service = createService()
+    const createTurn = (turn: number, userContent: string): void => {
+      service.createRunWithMessages({
+        session: {
+          id: 's-delete-turn',
+          title: '删除中间 QA',
+          summary: userContent,
+          status: 'completed',
+          timestamp: `2026-05-31 10:0${turn}`
+        },
+        userMessage: {
+          id: `m${turn}-user`,
+          sessionId: 's-delete-turn',
+          role: 'user',
+          content: userContent,
+          time: `10:0${turn}`,
+          timestamp: `2026-05-31 10:0${turn}`
+        },
+        assistantMessage: {
+          id: `m${turn}-ai`,
+          sessionId: 's-delete-turn',
+          role: 'assistant',
+          content: `${userContent}回答`,
+          answer: `${userContent}回答`,
+          parts: [],
+          toolSteps: [],
+          time: `10:0${turn}`,
+          timestamp: `2026-05-31 10:0${turn}`
+        },
+        run: {
+          id: `run-${turn}`,
+          sessionId: 's-delete-turn',
+          assistantMessageId: `m${turn}-ai`,
+          provider: 'bailian',
+          model: 'MiniMax-M2.5',
+          context: [
+            {
+              key: `message:m${turn}-user`,
+              kind: 'message',
+              title: '用户消息',
+              sourceId: `m${turn}-user`,
+              content: userContent
+            }
+          ],
+          timestamp: `2026-05-31 10:0${turn}`
+        }
+      })
+    }
+
+    createTurn(1, '第一轮')
+    createTurn(2, '第二轮')
+    createTurn(3, '第三轮')
+    service.upsertToolCall({
+      id: 'tool-delete',
+      runId: 'run-2',
+      messageId: 'm2-ai',
+      toolCallId: 'call-delete',
+      name: 'people_query',
+      status: 'done',
+      input: {},
+      observation: '完成',
+      data: null,
+      timestamp: '2026-05-31 10:04'
+    })
+
+    const session = service.deleteTurnByMessageId('s-delete-turn', 'm2-ai', '2026-05-31 10:05')
+
+    expect(session).toMatchObject({
+      id: 's-delete-turn',
+      title: '删除中间 QA',
+      summary: '第三轮',
+      status: 'completed',
+      messages: [
+        { id: 'm1-user', role: 'user', content: '第一轮' },
+        { id: 'm1-ai', role: 'assistant', content: '第一轮回答' },
+        { id: 'm3-user', role: 'user', content: '第三轮' },
+        { id: 'm3-ai', role: 'assistant', content: '第三轮回答' }
+      ]
+    })
+    expect(service.getRun('run-1')).toMatchObject({ id: 'run-1' })
+    expect(service.getRun('run-2')).toBeNull()
+    expect(service.getRun('run-3')).toMatchObject({ id: 'run-3' })
+    expect(service.listToolCalls('run-2')).toEqual([])
+    expect(service.listContextSnapshots('run-2')).toEqual([])
+  })
+
   it('persists run, tool call, and context snapshots', () => {
     const service = createService()
 

@@ -24,6 +24,26 @@ type AiChatMessageBubbleProps = {
   message: AiChatMessage;
   // 是否正在生成中。
   isGenerating?: boolean;
+  // 是否允许对当前助手回答重新生成。
+  canRegenerate?: boolean;
+  // 打开消息右键菜单回调。
+  onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
+};
+
+// AI 消息右键菜单打开请求类型。
+export type AiChatMessageContextMenuRequest = {
+  // 菜单所属消息 ID。
+  messageId: string;
+  // 菜单显示横坐标。
+  x: number;
+  // 菜单显示纵坐标。
+  y: number;
+  // 是否允许对当前助手回答重新生成。
+  canRegenerate: boolean;
+  // 可复制的纯文本内容。
+  plainTextContent: string;
+  // 可复制的 Markdown 内容。
+  markdownContent: string;
 };
 
 // Markdown 预览组件属性类型。
@@ -189,6 +209,23 @@ const stripLeakedToolJson = (answer: string, hasToolSteps: boolean): string => {
 };
 
 /**
+ * stripMarkdownSyntax - 将可读 Markdown 粗略转换为纯文本。
+ */
+const stripMarkdownSyntax = (content: string): string =>
+  content
+    .replace(/```[a-zA-Z0-9_-]*\n?([\s\S]*?)```/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s?/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/[*_~]{1,3}/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+/**
  * AiMarkdownPreview - 渲染 AI 内容 Markdown 片段。
  */
 const AiMarkdownPreview = ({
@@ -275,6 +312,8 @@ const findToolStepByPart = (
 export const AiChatMessageBubble = ({
   message,
   isGenerating = false,
+  canRegenerate = false,
+  onOpenContextMenu,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
   const isProcessing =
@@ -293,12 +332,41 @@ export const AiChatMessageBubble = ({
         displayAnswer,
       })
     : [];
+  const markdownContent = isUser
+    ? message.content
+    : messageParts
+        .filter((part) => part.kind === "text")
+        .map((part) => part.content)
+        .join("\n\n")
+        .trim();
+  const resolvedMarkdownContent =
+    markdownContent || displayAnswer || message.answer || message.content;
+  const plainTextContent = stripMarkdownSyntax(resolvedMarkdownContent);
+
+  /**
+   * 打开当前消息的右键菜单。
+   */
+  const handleOpenContextMenu = (
+    event: React.MouseEvent<HTMLDivElement>,
+  ): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    onOpenContextMenu({
+      messageId: message.id,
+      x: event.clientX,
+      y: event.clientY,
+      canRegenerate: canRegenerate && !isGenerating,
+      plainTextContent,
+      markdownContent: resolvedMarkdownContent,
+    });
+  };
 
   return (
     <div
       className={`flex gap-3 w-full max-w-[85%] ${
         isUser ? "ml-auto flex-row-reverse" : "mr-auto"
       }`}
+      onContextMenu={handleOpenContextMenu}
     >
       {/* 角色头像 */}
       {!isUser && (
@@ -391,6 +459,7 @@ export const AiChatMessageBubble = ({
           )}
         </span>
       </div>
+
     </div>
   );
 };

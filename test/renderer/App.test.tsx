@@ -562,14 +562,19 @@ describe('App', () => {
     const firstPayload = startChat.mock.calls[0][0]
 
     act(() => {
-      listeners.forEach((listener) =>
+      listeners.forEach((listener) => {
         listener({
           type: 'text_delta',
           runId: firstPayload.runId!,
           sessionId: firstPayload.sessionId,
           delta: '第一个问题是关于上下文。'
         })
-      )
+        listener({
+          type: 'done',
+          runId: firstPayload.runId!,
+          sessionId: firstPayload.sessionId
+        })
+      })
     })
 
     await waitFor(() => {
@@ -633,7 +638,7 @@ describe('App', () => {
     const firstPayload = startChat.mock.calls[0][0]
 
     act(() => {
-      listeners.forEach((listener) =>
+      listeners.forEach((listener) => {
         listener({
           type: 'tool_finished',
           runId: firstPayload.runId!,
@@ -643,7 +648,12 @@ describe('App', () => {
           observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
           data: []
         })
-      )
+        listener({
+          type: 'done',
+          runId: firstPayload.runId!,
+          sessionId: firstPayload.sessionId
+        })
+      })
     })
     await waitFor(() => {
       expect(screen.getByText('找到 1 位关联人物：阿明｜朋友｜技术狂热者')).toBeInTheDocument()

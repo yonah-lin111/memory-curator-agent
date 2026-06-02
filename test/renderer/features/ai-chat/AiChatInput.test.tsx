@@ -5,6 +5,18 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AiChatInput } from '@renderer/features/ai-chat/components/AiChatInput'
+
+const mockToastWarning = vi.fn()
+vi.mock('@renderer/components/ui/Toast', () => ({
+  useToast: () => ({
+    warning: mockToastWarning,
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    show: vi.fn()
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+}))
 import type {
   AiModelProviderOption,
   AiModelSelection
@@ -37,7 +49,9 @@ const selectedModel: AiModelSelection = {
 }
 
 const renderAiChatInput = (
-  onCommandExecute: (command: 'clear' | 'undo') => string | void | Promise<string | void> = () => undefined
+  onCommandExecute: (command: 'clear' | 'undo') => string | void | Promise<string | void> = () => undefined,
+  isGenerating = false,
+  onSendMessage: (text: string) => void = () => undefined
 ): void => {
   render(
     <AiChatInput
@@ -46,7 +60,8 @@ const renderAiChatInput = (
       contextUsagePercent={0}
       contextTokens={0}
       contextLimit={204800}
-      onSendMessage={() => undefined}
+      isGenerating={isGenerating}
+      onSendMessage={onSendMessage}
       onCommandExecute={onCommandExecute}
       onModelChange={() => undefined}
     />
@@ -194,5 +209,25 @@ describe('AiChatInput', () => {
 
     await waitFor(() => expect(textarea).toHaveValue('需要重新编辑的问题'))
     expect(textarea).toHaveFocus()
+  })
+
+  it('在 AI 正在输出时（isGenerating = true）尝试发送，会通过 Toast 提示并阻止发送', async () => {
+    const onSendMessage = vi.fn()
+    renderAiChatInput(() => undefined, true, onSendMessage)
+    const textarea = screen.getByLabelText('AI 对话输入框')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '新的测试问题'
+      }
+    })
+
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(mockToastWarning).toHaveBeenCalledWith('请等待 AI 输出完成')
+    expect(onSendMessage).not.toHaveBeenCalled()
   })
 })

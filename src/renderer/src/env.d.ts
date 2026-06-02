@@ -550,6 +550,8 @@ type AppAPI = {
     deleteSession?: (sessionId: string) => Promise<void>
     // 撤销当前会话最后一轮对话。
     undoLastTurn?: (sessionId: string) => Promise<AiChatSession | null>
+    // 删除指定消息所属的一轮 QA。
+    deleteTurn?: (sessionId: string, messageId: string) => Promise<AiChatSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
     // 启动 AI 对话。

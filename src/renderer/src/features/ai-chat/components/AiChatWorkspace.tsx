@@ -5,7 +5,11 @@ import type {
   AiModelProviderOption,
   AiModelSelection,
 } from "@renderer/features/ai-chat/types";
-import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
+import {
+  AiChatMessageBubble,
+  type AiChatMessageContextMenuRequest,
+} from "@renderer/features/ai-chat/components/AiChatMessageBubble";
+import { AiChatMessageContextMenu } from "@renderer/features/ai-chat/components/AiChatMessageContextMenu";
 import {
   AiChatInput,
   type AiChatInputCommandId,
@@ -26,6 +30,26 @@ const LATEST_ASSISTANT_TOP_OFFSET = 4;
 // 加速滚动动画时长，放慢末段滚动避免突兀冲刺。
 const ACCELERATED_SCROLL_DURATION_MS = 250;
 
+/**
+ * copyTextToClipboard - 写入系统剪贴板，兼容缺失 Clipboard API 的运行时。
+ */
+const copyTextToClipboard = async (content: string): Promise<void> => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(content);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = content;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+};
+
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
   // 当前激活的 AI 会话。
@@ -36,6 +60,10 @@ type AiChatWorkspaceProps = {
   selectedModel: AiModelSelection | null;
   // 发送消息回调。
   onSendMessage: (text: string) => void;
+  // 重新生成最新 AI 回答回调。
+  onRegenerateLatestAnswer: () => void;
+  // 删除指定消息所属 QA 回调。
+  onDeleteChatTurn: (messageId: string) => void;
   // 执行输入框命令回调。
   onCommandExecute: (command: AiChatInputCommandId) => void;
   // AI 模型切换回调。
@@ -50,6 +78,8 @@ export const AiChatWorkspace = ({
   modelOptions,
   selectedModel,
   onSendMessage,
+  onRegenerateLatestAnswer,
+  onDeleteChatTurn,
   onCommandExecute,
   onModelChange,
 }: AiChatWorkspaceProps): React.JSX.Element => {
@@ -63,6 +93,9 @@ export const AiChatWorkspace = ({
   const [topPinnedAssistantId, setTopPinnedAssistantId] = useState<
     string | null
   >(null);
+  // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
+  const [messageContextMenu, setMessageContextMenu] =
+    useState<AiChatMessageContextMenuRequest | null>(null);
   const syncMessageItems = useAiChatContextStore(
     (state) => state.syncMessageItems,
   );
@@ -82,17 +115,7 @@ export const AiChatWorkspace = ({
       }),
     [contextItems, modelOptions, selectedModel],
   );
-
-  // 记录上一次的 session.id 与消息长度。
-  const prevSessionIdRef = useRef(session.id);
-  const prevMessagesLengthRef = useRef(session.messages.length);
-  // 当前加速滚动动画帧。
-  const acceleratedScrollFrameRef = useRef<number | null>(null);
-
-  /**
-   * 获取当前消息列表中最后一条 AI 消息标识。
-   */
-  const getLatestAssistantMessageId = (): string | null => {
+  const latestAssistantMessageId = useMemo(() => {
     for (let index = session.messages.length - 1; index >= 0; index -= 1) {
       const message = session.messages[index];
       if (message.role === "assistant") {
@@ -101,6 +124,21 @@ export const AiChatWorkspace = ({
     }
 
     return null;
+  }, [session.messages]);
+
+  // 记录上一次的 session.id 与消息长度。
+  const prevSessionIdRef = useRef(session.id);
+  const prevMessagesLengthRef = useRef(session.messages.length);
+  // 记录上一次最新 AI 消息标识，覆盖重新生成时消息数量不变的场景。
+  const prevLatestAssistantMessageIdRef = useRef(latestAssistantMessageId);
+  // 当前加速滚动动画帧。
+  const acceleratedScrollFrameRef = useRef<number | null>(null);
+
+  /**
+   * 获取当前消息列表中最后一条 AI 消息标识。
+   */
+  const getLatestAssistantMessageId = (): string | null => {
+    return latestAssistantMessageId;
   };
 
   /**
@@ -233,14 +271,33 @@ export const AiChatWorkspace = ({
   useEffect(() => {
     const prevSessionId = prevSessionIdRef.current;
     const prevLength = prevMessagesLengthRef.current;
+    const prevLatestAssistantMessageId =
+      prevLatestAssistantMessageIdRef.current;
     const currentLength = session.messages.length;
 
     // 更新 ref 状态值
     prevSessionIdRef.current = session.id;
     prevMessagesLengthRef.current = currentLength;
+    prevLatestAssistantMessageIdRef.current = latestAssistantMessageId;
 
     // 如果 session.id 发生改变（切换会话），则在此不处理滚动，已由切换会话的 useEffect 处理。
     if (session.id !== prevSessionId) {
+      return;
+    }
+
+    if (currentLength < prevLength) {
+      setTopPinnedAssistantId(null);
+      cancelAcceleratedScroll();
+      return;
+    }
+
+    // 发送和重新生成都会产生新的 AI 消息 ID；删除 QA 导致数量减少时不触发滚动。
+    if (
+      latestAssistantMessageId &&
+      latestAssistantMessageId !== prevLatestAssistantMessageId &&
+      currentLength >= prevLength
+    ) {
+      setTopPinnedAssistantId(latestAssistantMessageId);
       return;
     }
 
@@ -264,6 +321,15 @@ export const AiChatWorkspace = ({
 
   // 补足最新 AI 回答底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
+    const isDeletingMessages =
+      session.id === prevSessionIdRef.current &&
+      session.messages.length < prevMessagesLengthRef.current;
+
+    if (isDeletingMessages) {
+      cancelAcceleratedScroll();
+      return;
+    }
+
     if (!topPinnedAssistantId) {
       return;
     }
@@ -282,6 +348,94 @@ export const AiChatWorkspace = ({
   useEffect(() => {
     syncMessageItems(session.id, messageContextItems);
   }, [messageContextItems, session.id, syncMessageItems]);
+
+  useEffect(() => {
+    if (!messageContextMenu) {
+      return undefined;
+    }
+
+    /**
+     * 关闭当前消息右键菜单。
+     */
+    const closeContextMenu = (): void => {
+      setMessageContextMenu(null);
+    };
+
+    /**
+     * 按 Escape 关闭当前消息右键菜单。
+     */
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener("click", closeContextMenu);
+    document.addEventListener("scroll", closeContextMenu, true);
+    window.addEventListener("resize", closeContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("click", closeContextMenu);
+      document.removeEventListener("scroll", closeContextMenu, true);
+      window.removeEventListener("resize", closeContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [messageContextMenu]);
+
+  /**
+   * 打开消息右键菜单；覆盖旧状态保证工作区内只存在一个菜单。
+   */
+  const handleOpenMessageContextMenu = (
+    request: AiChatMessageContextMenuRequest,
+  ): void => {
+    setMessageContextMenu(request);
+  };
+
+  /**
+   * 复制当前菜单指向消息的纯文本内容。
+   */
+  const handleCopyText = (): void => {
+    if (!messageContextMenu) {
+      return;
+    }
+
+    void copyTextToClipboard(messageContextMenu.plainTextContent);
+    setMessageContextMenu(null);
+  };
+
+  /**
+   * 复制当前菜单指向消息的 Markdown 内容。
+   */
+  const handleCopyMarkdown = (): void => {
+    if (!messageContextMenu) {
+      return;
+    }
+
+    void copyTextToClipboard(messageContextMenu.markdownContent);
+    setMessageContextMenu(null);
+  };
+
+  /**
+   * 重新生成当前菜单指向的最新回答。
+   */
+  const handleRegenerate = (): void => {
+    setMessageContextMenu(null);
+    onRegenerateLatestAnswer();
+  };
+
+  /**
+   * 删除当前菜单指向消息所属的 QA。
+   */
+  const handleDeleteQa = (): void => {
+    if (!messageContextMenu) {
+      return;
+    }
+
+    const { messageId } = messageContextMenu;
+    setMessageContextMenu(null);
+    onDeleteChatTurn(messageId);
+  };
 
   return (
     <section
@@ -307,6 +461,13 @@ export const AiChatWorkspace = ({
               isLast &&
               session.status === "running" &&
               message.role === "assistant";
+            const previousMessage = session.messages[index - 1];
+            const canRegenerate =
+              message.role === "assistant" &&
+              isLast &&
+              message.id === latestAssistantMessageId &&
+              previousMessage?.role === "user" &&
+              session.status !== "running";
             const shouldPinToTop = message.id === topPinnedAssistantId;
             return (
               <div
@@ -321,6 +482,8 @@ export const AiChatWorkspace = ({
                 <AiChatMessageBubble
                   message={message}
                   isGenerating={isGenerating}
+                  canRegenerate={canRegenerate}
+                  onOpenContextMenu={handleOpenMessageContextMenu}
                 />
               </div>
             );
@@ -329,6 +492,18 @@ export const AiChatWorkspace = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {messageContextMenu ? (
+        <AiChatMessageContextMenu
+          x={messageContextMenu.x}
+          y={messageContextMenu.y}
+          canRegenerate={messageContextMenu.canRegenerate}
+          onCopyText={handleCopyText}
+          onCopyMarkdown={handleCopyMarkdown}
+          onRegenerate={handleRegenerate}
+          onDeleteQa={handleDeleteQa}
+        />
+      ) : null}
+
       {/* 输入区域 */}
       <AiChatInput
         modelOptions={modelOptions}
@@ -336,6 +511,7 @@ export const AiChatWorkspace = ({
         contextUsagePercent={contextBudget.usagePercent}
         contextTokens={contextBudget.totalTokens}
         contextLimit={contextBudget.contextLimit}
+        isGenerating={session.status === "running"}
         onSendMessage={onSendMessage}
         onCommandExecute={onCommandExecute}
         onModelChange={onModelChange}

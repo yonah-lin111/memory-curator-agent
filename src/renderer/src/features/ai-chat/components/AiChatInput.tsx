@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select } from "@renderer/components/ui/Select";
+import { useToast } from "@renderer/components/ui/Toast";
 import type {
   AiModelProviderOption,
   AiModelSelection,
@@ -20,6 +21,8 @@ export type AiChatInputProps = {
   contextTokens: number;
   // 当前模型上下文窗口上限。
   contextLimit?: number;
+  // 是否正在生成 AI 输出。
+  isGenerating?: boolean;
   // 发送消息回调。
   onSendMessage: (text: string) => void;
   // 执行输入框斜杠命令回调。
@@ -135,10 +138,12 @@ export const AiChatInput = ({
   contextUsagePercent,
   contextTokens,
   contextLimit,
+  isGenerating = false,
   onSendMessage,
   onCommandExecute,
   onModelChange,
 }: AiChatInputProps): React.JSX.Element => {
+  const toast = useToast();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [inputText, setInputText] = useState("");
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
@@ -221,6 +226,10 @@ export const AiChatInput = ({
    */
   const handleSend = (): void => {
     if (!inputText.trim()) return;
+    if (isGenerating) {
+      toast.warning("请等待 AI 输出完成");
+      return;
+    }
     onSendMessage(inputText.trim());
     setInputText("");
     setIsCommandPanelOpen(false);
@@ -230,6 +239,10 @@ export const AiChatInput = ({
    * 执行指定斜杠命令，并清理命令输入态。
    */
   const executeCommand = (command: AiChatInputCommand): void => {
+    if (isGenerating) {
+      toast.warning("请等待 AI 输出完成");
+      return;
+    }
     setIsCommandPanelOpen(false);
     void Promise.resolve(onCommandExecute(command.id))
       .then((nextInputText) => {
@@ -504,6 +517,7 @@ export const AiChatInput = ({
             aria-label="发送消息"
             onClick={handleSend}
             disabled={!inputText.trim()}
+            highlighted={!!inputText.trim()}
             className={`h-6 w-6 rounded-full flex items-center justify-center transition-all ${
               inputText.trim()
                 ? "bg-white text-black hover:bg-white/90"

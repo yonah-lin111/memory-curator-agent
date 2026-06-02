@@ -6,6 +6,17 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiChatWorkspace } from '@renderer/features/ai-chat/components/AiChatWorkspace'
 import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
+
+vi.mock('@renderer/components/ui/Toast', () => ({
+  useToast: () => ({
+    warning: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    show: vi.fn()
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+}))
 import type {
   AiChatSession,
   AiModelProviderOption,
@@ -112,6 +123,8 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
@@ -132,6 +145,8 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
@@ -157,6 +172,8 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
@@ -177,6 +194,8 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
@@ -199,6 +218,8 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
@@ -214,5 +235,144 @@ describe('AiChatWorkspace', () => {
 
     expect(travelDistances.length).toBeGreaterThanOrEqual(2)
     expect(travelDistances[1]).toBeGreaterThan(travelDistances[0])
+  })
+
+  it('重新生成导致最新 AI 消息变化但消息数量不变时仍置顶显示', async () => {
+    const regeneratedSession: AiChatSession = {
+      ...session,
+      messages: [
+        {
+          id: 'u3',
+          role: 'user',
+          content: '重新生成原问题',
+          time: '10:02'
+        },
+        {
+          id: 'a3',
+          role: 'assistant',
+          content: '重新生成后的回答',
+          answer: '重新生成后的回答',
+          time: '10:03'
+        }
+      ]
+    }
+    const { rerender } = render(
+      <AiChatWorkspace
+        session={session}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const scrollTo = vi.fn()
+    messagesContainer.scrollTop = 520
+    Object.defineProperty(messagesContainer, 'scrollTo', {
+      configurable: true,
+      value: scrollTo.mockImplementation(({ top }: ScrollToOptions) => {
+        messagesContainer.scrollTop = Number(top ?? messagesContainer.scrollTop)
+      })
+    })
+    scrollTo.mockClear()
+
+    rerender(
+      <AiChatWorkspace
+        session={regeneratedSession}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith({
+        top: 0,
+        behavior: 'auto'
+      })
+    })
+  })
+
+  it('删除最新 QA 导致最新 AI 消息回退时不触发置顶滚动', () => {
+    const twoTurnSession: AiChatSession = {
+      ...session,
+      messages: [
+        ...session.messages,
+        {
+          id: 'u2-delete',
+          role: 'user',
+          content: '准备删除的问题',
+          time: '10:02'
+        },
+        {
+          id: 'a2-delete',
+          role: 'assistant',
+          content: '准备删除的回答',
+          answer: '准备删除的回答',
+          time: '10:03'
+        }
+      ]
+    }
+    const deletedSession: AiChatSession = {
+      ...twoTurnSession,
+      messages: session.messages
+    }
+    const { rerender } = render(
+      <AiChatWorkspace
+        session={session}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const scrollTo = vi.fn()
+    Object.defineProperty(messagesContainer, 'scrollTo', {
+      configurable: true,
+      value: scrollTo
+    })
+    scrollTo.mockClear()
+
+    rerender(
+      <AiChatWorkspace
+        session={twoTurnSession}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+
+    expect(scrollTo).toHaveBeenCalled()
+    scrollTo.mockClear()
+
+    rerender(
+      <AiChatWorkspace
+        session={deletedSession}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 })

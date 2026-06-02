@@ -78,6 +78,41 @@ const findLastChatTurnStartIndex = (messages: AiChatSession["messages"]): number
 };
 
 /**
+ * 查找指定消息所属 QA 轮次的起止位置。
+ */
+const findChatTurnBoundsByMessageId = (
+  messages: AiChatSession["messages"],
+  messageId: string,
+): { startIndex: number; endIndex: number } | null => {
+  const messageIndex = messages.findIndex((message) => message.id === messageId);
+
+  if (messageIndex < 0) {
+    return null;
+  }
+
+  let startIndex = messageIndex;
+
+  while (startIndex > 0 && messages[startIndex].role !== "user") {
+    startIndex -= 1;
+  }
+
+  if (messages[startIndex]?.role !== "user") {
+    return null;
+  }
+
+  let endIndex = startIndex + 1;
+
+  while (endIndex < messages.length && messages[endIndex].role !== "user") {
+    endIndex += 1;
+  }
+
+  return {
+    startIndex,
+    endIndex,
+  };
+};
+
+/**
  * 记忆策展 Agent 的主应用布局。
  * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
@@ -303,6 +338,67 @@ const AppContent = (): React.JSX.Element => {
       return true;
     } catch {
       return false;
+    }
+  };
+
+  /**
+   * 删除指定消息所属的一轮 QA，并同步清理持久化上下文快照与工具记录。
+   */
+  const handleDeleteChatTurn = async (messageId: string): Promise<void> => {
+    const session = activeChatSession;
+
+    if (session.status === "running") {
+      toast.warning("AI 正在生成，不能删除 QA");
+      return;
+    }
+
+    const turnBounds = findChatTurnBoundsByMessageId(session.messages, messageId);
+
+    if (!turnBounds) {
+      toast.warning("未找到可删除的 QA");
+      return;
+    }
+
+    const previousSessions = chatSessions;
+    const removedMessages = session.messages.slice(
+      turnBounds.startIndex,
+      turnBounds.endIndex,
+    );
+    const removedMessageIds = new Set(removedMessages.map((message) => message.id));
+    const nextMessages = [
+      ...session.messages.slice(0, turnBounds.startIndex),
+      ...session.messages.slice(turnBounds.endIndex),
+    ];
+    const nextLastUserMessage = [...nextMessages]
+      .reverse()
+      .find((message) => message.role === "user");
+    const fallbackSession: AiChatSession = {
+      ...session,
+      title: nextMessages.length === 0 ? "新建对话" : session.title,
+      summary: nextLastUserMessage?.content ?? "暂无对话内容",
+      status: nextMessages.length === 0 ? "idle" : "completed",
+      messages: nextMessages,
+    };
+
+    removeRunMappingsByMessageIds(removedMessageIds);
+    setChatSessions((prevSessions) =>
+      prevSessions.map((item) => (item.id === session.id ? fallbackSession : item)),
+    );
+
+    try {
+      if (window.api?.ai?.deleteTurn) {
+        const persistedSession = await window.api.ai.deleteTurn(session.id, messageId);
+        setChatSessions((prevSessions) =>
+          prevSessions.map((item) =>
+            item.id === session.id ? (persistedSession ?? fallbackSession) : item,
+          ),
+        );
+      }
+
+      toast.success("已删除 QA");
+    } catch {
+      setChatSessions(previousSessions);
+      toast.error("删除 QA 失败");
     }
   };
 
@@ -680,8 +776,11 @@ const AppContent = (): React.JSX.Element => {
   /**
    * 构造发送给主进程的上下文，优先使用当前 React 状态中的消息避免 store 同步延迟。
    */
-  const buildStartContextItems = (sessionId: string): AiChatContextItem[] => {
-    const session = chatSessions.find((item) => item.id === sessionId);
+  const buildStartContextItems = (
+    sessionId: string,
+    sourceSessions: AiChatSession[] = chatSessions,
+  ): AiChatContextItem[] => {
+    const session = sourceSessions.find((item) => item.id === sessionId);
     const storeItems = useAiChatContextStore.getState().getSessionItems(sessionId);
     const preservedItems = storeItems.filter((item) => item.kind !== "message" && item.kind !== "tool");
     const messageItems = buildMessageContextItems(sessionId, session?.messages ?? []);
@@ -697,19 +796,22 @@ const AppContent = (): React.JSX.Element => {
   };
 
   /**
-   * 发送用户消息并触发 AI 回答。
+   * 在指定会话中追加用户消息并触发 AI 回答。
    */
-  const handleSendMessage = (text: string): void => {
+  const startAiChatMessage = (
+    text: string,
+    sessionId: string,
+    sourceSessions: AiChatSession[] = chatSessions,
+  ): void => {
     const userTime = new Date().toLocaleTimeString("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const sessionId = activeChatId;
     const runId = `run-${Date.now()}`;
     const userMessageId = `${runId}-user`;
     const assistantMessageId = `${runId}-assistant`;
     const hasAiBridge = Boolean(window.api?.ai);
-    const contextItems = buildStartContextItems(sessionId);
+    const contextItems = buildStartContextItems(sessionId, sourceSessions);
     const optimisticSessionTitle = text.slice(0, 15) + (text.length > 15 ? "..." : "");
 
     const userMessage = {
@@ -734,18 +836,24 @@ const AppContent = (): React.JSX.Element => {
 
     // 1. 更新当前会话，添加用户消息。如果当前会话处于初始状态，自动更新标题与摘要。
     setChatSessions((prevSessions) => {
+      const sourceSessionsById = new Map(sourceSessions.map((session) => [session.id, session]));
+
       return prevSessions.map((session) => {
-        if (session.id === sessionId) {
-          const isNewSession = session.title === "新建对话" && session.messages.length === 0;
+        const sourceSession = sourceSessionsById.get(session.id) ?? session;
+
+        if (sourceSession.id === sessionId) {
+          const isNewSession =
+            sourceSession.title === "新建对话" && sourceSession.messages.length === 0;
           return {
-            ...session,
-            title: isNewSession ? optimisticSessionTitle : session.title,
-            summary: isNewSession ? text : session.summary,
+            ...sourceSession,
+            title: isNewSession ? optimisticSessionTitle : sourceSession.title,
+            summary: isNewSession ? text : sourceSession.summary,
             status: "running",
-            messages: [...session.messages, userMessage, aiMessage],
+            messages: [...sourceSession.messages, userMessage, aiMessage],
           };
         }
-        return session;
+
+        return sourceSession;
       });
     });
 
@@ -769,6 +877,79 @@ const AppContent = (): React.JSX.Element => {
           answer: error instanceof Error ? error.message : "AI chat failed to start",
         }));
       });
+  };
+
+  /**
+   * 发送用户消息并触发 AI 回答。
+   */
+  const handleSendMessage = (text: string): void => {
+    startAiChatMessage(text, activeChatId);
+  };
+
+  /**
+   * 重新生成最新一轮 AI 回答：先删除最新 QA，再用原问题和清理后的上下文重发。
+   */
+  const handleRegenerateLatestAnswer = async (): Promise<void> => {
+    const session = activeChatSession;
+
+    if (session.status === "running") {
+      toast.warning("AI 正在生成，不能重新生成");
+      return;
+    }
+
+    const assistantIndex = [...session.messages]
+      .reverse()
+      .findIndex((message) => message.role === "assistant");
+
+    if (assistantIndex < 0) {
+      toast.warning("没有可重新生成的回答");
+      return;
+    }
+
+    const resolvedAssistantIndex = session.messages.length - 1 - assistantIndex;
+
+    if (resolvedAssistantIndex !== session.messages.length - 1) {
+      toast.warning("只能重新生成最新回答");
+      return;
+    }
+
+    const userMessage = session.messages[resolvedAssistantIndex - 1];
+
+    if (userMessage?.role !== "user") {
+      toast.warning("最新回答缺少对应问题，不能重新生成");
+      return;
+    }
+
+    const removedMessages = session.messages.slice(resolvedAssistantIndex - 1);
+    const removedMessageIds = new Set(removedMessages.map((message) => message.id));
+    const nextMessages = session.messages.slice(0, resolvedAssistantIndex - 1);
+    const nextLastUserMessage = [...nextMessages].reverse().find((message) => message.role === "user");
+    const fallbackSession: AiChatSession = {
+      ...session,
+      title: nextMessages.length === 0 ? "新建对话" : session.title,
+      summary: nextLastUserMessage?.content ?? "暂无对话内容",
+      status: nextMessages.length === 0 ? "idle" : "completed",
+      messages: nextMessages,
+    };
+    const previousSessions = chatSessions;
+
+    try {
+      const persistedSession = window.api?.ai?.undoLastTurn
+        ? await window.api.ai.undoLastTurn(session.id)
+        : null;
+      const cleanSession = persistedSession ?? fallbackSession;
+      const cleanSessions = previousSessions.map((item) =>
+        item.id === session.id ? cleanSession : item,
+      );
+
+      removeRunMappingsByMessageIds(removedMessageIds);
+      setChatSessions(cleanSessions);
+      startAiChatMessage(userMessage.content, session.id, cleanSessions);
+      toast.success("已重新生成回答");
+    } catch {
+      setChatSessions(previousSessions);
+      toast.error("重新生成失败");
+    }
   };
 
   // 根据当前 URL pathname 获取初始页面标识，默认为 'today'。
@@ -924,6 +1105,8 @@ const AppContent = (): React.JSX.Element => {
                 modelOptions={aiModelOptions}
                 selectedModel={selectedAiModel}
                 onSendMessage={handleSendMessage}
+                onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
+                onDeleteChatTurn={handleDeleteChatTurn}
                 onCommandExecute={handleAiChatCommand}
                 onModelChange={setSelectedAiModel}
               />
