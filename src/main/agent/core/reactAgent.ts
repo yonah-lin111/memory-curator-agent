@@ -6,6 +6,10 @@ import type {
   ReactAgentRunInput
 } from '../types'
 import { prepareToolsForModel, selectToolsForTurn } from '../tools/toolRegistry'
+import {
+  formatAskAnswerObservation,
+  isAskRequestData
+} from '../tools/askTool'
 
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
@@ -174,6 +178,32 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           name: toolCall.name,
           observation: result.observation,
           data: result.data
+        }
+
+        if (isAskRequestData(result.data)) {
+          if (!input.askAnswerProvider) {
+            throw new Error('Ask answer provider is not configured')
+          }
+
+          const answerData = await input.askAnswerProvider(result.data)
+          const answerObservation = formatAskAnswerObservation(answerData)
+
+          yield {
+            type: 'tool_finished',
+            id: toolCall.id,
+            name: toolCall.name,
+            observation: answerObservation,
+            data: answerData
+          }
+
+          messages.push({
+            role: 'tool',
+            toolCallId: toolCall.id,
+            name: toolCall.name,
+            content: renderToolResultContent(answerObservation, answerData)
+          })
+
+          continue
         }
 
         messages.push({

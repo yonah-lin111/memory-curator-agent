@@ -1,7 +1,7 @@
 import type { AgentTool, AgentToolResult } from '../types'
 
 // Ask 选项。
-type AskOption = {
+export type AskOption = {
   // 选项标签。
   label: string
   // 选项说明。
@@ -9,7 +9,7 @@ type AskOption = {
 }
 
 // Ask 问题。
-type AskQuestion = {
+export type AskQuestion = {
   // 问题短标题。
   header: string
   // 需要用户回答的问题。
@@ -29,7 +29,7 @@ type AskToolInput = {
 }
 
 // Ask 工具结构化数据。
-type AskToolData = {
+export type AskRequestData = {
   // 工具数据类型。
   kind: 'ask_request'
   // Ask 请求唯一标识。
@@ -39,9 +39,28 @@ type AskToolData = {
 }
 
 // Ask 工具结果。
+// Ask 回答。
+export type AskAnswer = {
+  // 问题文本。
+  question: string
+  // 回答列表。
+  answers: string[]
+}
+
+// Ask 回答数据。
+export type AskAnswerData = {
+  // 工具数据类型。
+  kind: 'ask_answer'
+  // Ask 请求唯一标识。
+  id: string
+  // 回答列表。
+  answers: AskAnswer[]
+}
+
+// Ask 工具结果。
 type AskToolResult = AgentToolResult & {
   // Ask 工具结构化数据。
-  data: AskToolData
+  data: AskRequestData
 }
 
 // 单次 ask 最大问题数。
@@ -155,6 +174,38 @@ const createAskId = (): string => {
 }
 
 /**
+ * 判断值是否为 Ask 请求数据。
+ */
+export const isAskRequestData = (value: unknown): value is AskRequestData =>
+  isRecord(value) &&
+  value.kind === 'ask_request' &&
+  typeof value.id === 'string' &&
+  Array.isArray(value.questions)
+
+/**
+ * 将 Ask 回答格式化为模型观察文本。
+ */
+export const formatAskAnswerObservation = (data: AskAnswerData): string => {
+  const formatted = data.answers
+    .map((item) => `"${item.question}"="${item.answers.length > 0 ? item.answers.join(', ') : 'Unanswered'}"`)
+    .join(', ')
+
+  return `User has answered your clarification questions: ${formatted}. Continue the task using these answers.`
+}
+
+/**
+ * 从请求和二维答案构造 Ask 回答数据。
+ */
+export const createAskAnswerData = (request: AskRequestData, answers: string[][]): AskAnswerData => ({
+  kind: 'ask_answer',
+  id: request.id,
+  answers: request.questions.map((question, index) => ({
+    question: question.question,
+    answers: answers[index] ?? []
+  }))
+})
+
+/**
  * 创建用户澄清工具。
  */
 export const createAskTool = (): AgentTool => ({
@@ -179,7 +230,7 @@ export const createAskTool = (): AgentTool => ({
       'Do not present more than three questions or four options per question.'
     ],
     output:
-      'Return an ask_request. After the user answers, continue from the supplied answer message; do not ask the same question again unless the answer is contradictory.',
+      'Return an ask_request. After the user answers, the answer is returned as this tool result; continue in the same assistant response and do not ask the same question again unless the answer is contradictory.',
     examples: [
       '{"questions":[{"header":"Scope","question":"Which data source should I update?","options":[{"label":"Current project","description":"Only change files in the active workspace."},{"label":"Reference project","description":"Use the reference project as the source of truth."}],"custom":true}]}'
     ]
@@ -240,7 +291,6 @@ export const createAskTool = (): AgentTool => ({
 
     return {
       observation: `Ask request created: waiting for the user to answer ${parsed.questions.length} ${questionLabel}.`,
-      terminal: true,
       data: {
         kind: 'ask_request',
         id: createAskId(),

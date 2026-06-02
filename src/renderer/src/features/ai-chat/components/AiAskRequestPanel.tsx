@@ -1,12 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  MessageSquareText,
-  SendHorizonal,
-} from "lucide-react";
+import { Check, SendHorizonal } from "lucide-react";
 
 // Ask 选项。
 export type AiAskOption = {
@@ -40,18 +34,47 @@ export type AiAskRequest = {
   questions: AiAskQuestion[];
 };
 
+// Ask 回答。
+export type AiAskAnswer = {
+  // 问题文本。
+  question: string;
+  // 回答列表。
+  answers: string[];
+};
+
+// Ask 回答数据。
+export type AiAskAnswerData = {
+  // 工具数据类型。
+  kind: "ask_answer";
+  // Ask 请求唯一标识。
+  id: string;
+  // 回答列表。
+  answers: AiAskAnswer[];
+};
+
+// Ask 回答提交载荷。
+export type AiAskAnswerSubmitPayload = {
+  // Ask 请求唯一标识。
+  requestId: string;
+  // 每个问题对应的答案列表。
+  answers: string[][];
+};
+
 // Ask 回答映射。
 type AiAskAnswerMap = Record<string, string[]>;
 
 // Ask 自定义输入映射。
 type AiAskCustomInputMap = Record<string, string>;
 
+// Ask 自定义选中映射。
+type AiAskCustomSelectionMap = Record<string, boolean>;
+
 // Ask 请求面板组件属性类型。
 type AiAskRequestPanelProps = {
   // Ask 请求数据。
   request: AiAskRequest;
   // 提交回答回调。
-  onSubmit: (content: string) => void;
+  onSubmit: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
 };
 
 // 已提交 Ask 本地存储键前缀。
@@ -94,6 +117,22 @@ export const isAiAskRequest = (value: unknown): value is AiAskRequest =>
   value.questions.every(isAskQuestion);
 
 /**
+ * 判断工具数据是否为 Ask 回答。
+ */
+export const isAiAskAnswer = (value: unknown): value is AiAskAnswerData =>
+  isRecord(value) &&
+  value.kind === "ask_answer" &&
+  typeof value.id === "string" &&
+  Array.isArray(value.answers) &&
+  value.answers.every(
+    (item) =>
+      isRecord(item) &&
+      typeof item.question === "string" &&
+      Array.isArray(item.answers) &&
+      item.answers.every((answer) => typeof answer === "string"),
+  );
+
+/**
  * 生成答案键。
  */
 const createAnswerKey = (requestId: string, index: number): string =>
@@ -128,24 +167,32 @@ const storeAskSubmission = (requestId: string): void => {
 };
 
 /**
- * 格式化用户回答为下一轮消息。
+ * 解析问题当前答案。
  */
-const formatAskAnswerMessage = (
+const resolveQuestionAnswers = (
   request: AiAskRequest,
+  questionIndex: number,
   answers: AiAskAnswerMap,
-): string => {
-  const lines = request.questions.map((question, index) => {
-    const key = createAnswerKey(request.id, index);
-    const values = answers[key] ?? [];
-    const answer = values.length > 0 ? values.join("、") : "未回答";
+  customInputs: AiAskCustomInputMap,
+  customSelections: AiAskCustomSelectionMap,
+): string[] => {
+  const question = request.questions[questionIndex];
+  const key = createAnswerKey(request.id, questionIndex);
+  const selectedValues = answers[key] ?? [];
+  const isCustomSelected = question?.custom !== false && customSelections[key];
+  const customValue = isCustomSelected ? (customInputs[key] ?? "").trim() : "";
 
-    return `- ${question.question}\n  回答：${answer}`;
-  });
+  if (!customValue) {
+    return selectedValues;
+  }
 
-  return [
-    "我已回答你的澄清问题，请基于这些答案继续：",
-    ...lines,
-  ].join("\n");
+  if (!question?.multiple) {
+    return [customValue];
+  }
+
+  return selectedValues.includes(customValue)
+    ? selectedValues
+    : [...selectedValues, customValue];
 };
 
 /**
@@ -154,9 +201,18 @@ const formatAskAnswerMessage = (
 const hasAnsweredAllQuestions = (
   request: AiAskRequest,
   answers: AiAskAnswerMap,
+  customInputs: AiAskCustomInputMap,
+  customSelections: AiAskCustomSelectionMap,
 ): boolean =>
   request.questions.every(
-    (_, index) => (answers[createAnswerKey(request.id, index)] ?? []).length > 0,
+    (_, index) =>
+      resolveQuestionAnswers(
+        request,
+        index,
+        answers,
+        customInputs,
+        customSelections,
+      ).length > 0,
   );
 
 /**
@@ -172,22 +228,44 @@ export const AiAskRequestPanel = ({
   const [answers, setAnswers] = useState<AiAskAnswerMap>({});
   // 自定义输入值。
   const [customInputs, setCustomInputs] = useState<AiAskCustomInputMap>({});
+  // 自定义回答选中状态。
+  const [customAnswerSelections, setCustomAnswerSelections] =
+    useState<AiAskCustomSelectionMap>({});
   // 当前 Ask 是否已提交。
   const [isSubmitted, setIsSubmitted] = useState<boolean>(() =>
     hasStoredAskSubmission(request.id),
   );
+  // 当前是否正在提交。
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const questionCount = request.questions.length;
   const currentQuestion = request.questions[currentIndex] ?? request.questions[0];
   const canSubmit = useMemo(
-    () => hasAnsweredAllQuestions(request, answers) && !isSubmitted,
-    [answers, request, isSubmitted],
+    () =>
+      hasAnsweredAllQuestions(
+        request,
+        answers,
+        customInputs,
+        customAnswerSelections,
+      ) &&
+      !isSubmitted &&
+      !isSubmitting,
+    [
+      answers,
+      customInputs,
+      customAnswerSelections,
+      request,
+      isSubmitted,
+      isSubmitting,
+    ],
   );
 
   useEffect(() => {
     setCurrentIndex(0);
     setAnswers({});
     setCustomInputs({});
+    setCustomAnswerSelections({});
     setIsSubmitted(hasStoredAskSubmission(request.id));
+    setIsSubmitting(false);
   }, [request.id]);
 
   /**
@@ -221,6 +299,37 @@ export const AiAskRequestPanel = ({
       ...answers,
       [key]: nextValues,
     });
+    if (!question.multiple) {
+      setCustomAnswerSelections({
+        ...customAnswerSelections,
+        [key]: false,
+      });
+    }
+  };
+
+  /**
+   * 选中自定义回答。
+   */
+  const handleSelectCustomAnswer = (
+    question: AiAskQuestion,
+    questionIndex: number,
+  ): void => {
+    if (isSubmitted) {
+      return;
+    }
+
+    const key = createAnswerKey(request.id, questionIndex);
+    setCustomAnswerSelections({
+      ...customAnswerSelections,
+      [key]: true,
+    });
+
+    if (!question.multiple) {
+      setAnswers({
+        ...answers,
+        [key]: [],
+      });
+    }
   };
 
   /**
@@ -241,40 +350,6 @@ export const AiAskRequestPanel = ({
   };
 
   /**
-   * 确认自定义输入。
-   */
-  const handleAddCustomAnswer = (
-    question: AiAskQuestion,
-    questionIndex: number,
-  ): void => {
-    if (isSubmitted) {
-      return;
-    }
-
-    const key = createAnswerKey(request.id, questionIndex);
-    const value = (customInputs[key] ?? "").trim();
-    if (!value) {
-      return;
-    }
-
-    const current = answers[key] ?? [];
-    const nextValues = question.multiple
-      ? current.includes(value)
-        ? current
-        : [...current, value]
-      : [value];
-
-    setAnswers({
-      ...answers,
-      [key]: nextValues,
-    });
-    setCustomInputs({
-      ...customInputs,
-      [key]: "",
-    });
-  };
-
-  /**
    * 提交回答并续写会话。
    */
   const handleSubmit = (): void => {
@@ -282,60 +357,51 @@ export const AiAskRequestPanel = ({
       return;
     }
 
-    const content = formatAskAnswerMessage(request, answers);
-    storeAskSubmission(request.id);
-    setIsSubmitted(true);
-    onSubmit(content);
+    const payload = {
+      requestId: request.id,
+      answers: request.questions.map(
+        (_, index) =>
+          resolveQuestionAnswers(
+            request,
+            index,
+            answers,
+            customInputs,
+            customAnswerSelections,
+          ),
+      ),
+    };
+
+    setIsSubmitting(true);
+    void Promise.resolve(onSubmit(payload))
+      .then(() => {
+        storeAskSubmission(request.id);
+        setIsSubmitted(true);
+      })
+      .catch(() => {
+        setIsSubmitted(false);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
-    <div className="w-full max-w-[34rem] rounded-[6px] border border-white/10 bg-black/35 p-3 text-xs text-white/70">
-      <div className="mb-3 flex items-center gap-2 text-white/90">
-        <span className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-white/10 bg-[#212121]">
-          <MessageSquareText className="h-3.5 w-3.5" />
-        </span>
-        <span className="font-semibold">需要你确认</span>
-      </div>
-
+    <div className="w-full max-w-[28rem] py-1 text-xs text-white/70">
       {currentQuestion ? (
-        <div className="flex flex-col gap-3">
-          {questionCount > 1 ? (
-            <div className="flex items-center justify-between gap-2 text-white/45">
-              <button
-                type="button"
-                aria-label="上一个问题"
-                disabled={currentIndex === 0}
-                onClick={() => handleQuestionSwitch(currentIndex - 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-[#212121] transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-              <div className="text-[12px]">
-                {currentIndex + 1} / {questionCount}
-              </div>
-              <button
-                type="button"
-                aria-label="下一个问题"
-                disabled={currentIndex === questionCount - 1}
-                onClick={() => handleQuestionSwitch(currentIndex + 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/10 bg-[#212121] transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : null}
-
-          <section className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
+          <section className="flex flex-col gap-1.5">
             <div>
-              <div className="text-[12px] font-semibold text-white/85">
-                {currentQuestion.header}
-              </div>
-              <div className="mt-0.5 leading-relaxed text-white/55">
-                {currentQuestion.question}
+              <div className="min-w-0 text-left">
+                <div className="text-[12px] font-semibold text-white/85">
+                  {currentQuestion.header}
+                </div>
+                <div className="mt-0.5 leading-relaxed text-white/55">
+                  {currentQuestion.question}
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-1.5">
+            <div className="grid gap-1">
               {currentQuestion.options.map((option) => {
                 const key = createAnswerKey(request.id, currentIndex);
                 const selectedValues = answers[key] ?? [];
@@ -353,26 +419,24 @@ export const AiAskRequestPanel = ({
                         option.label,
                       )
                     }
-                    className={`flex w-full items-start gap-2 rounded-[6px] border px-2.5 py-2 text-left transition ${
+                    className={`flex w-full items-start justify-start gap-1.5 py-1 text-left transition ${
                       isSelected
-                        ? "border-white/30 bg-white/10 text-white"
-                        : "border-white/10 bg-[#212121] text-white/65 hover:border-white/20 hover:text-white/85"
+                        ? "text-white"
+                        : "text-white/55 hover:text-white/80"
                     } disabled:cursor-default disabled:opacity-70`}
                   >
                     <span
-                      className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[6px] border ${
-                        isSelected
-                          ? "border-white/40 bg-white text-black"
-                          : "border-white/15"
+                      className={`mt-0.5 flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center ${
+                        isSelected ? "text-white" : "text-transparent"
                       }`}
                     >
-                      {isSelected ? <Check className="h-3 w-3" /> : null}
+                      <Check className="h-3 w-3" />
                     </span>
-                    <span className="min-w-0">
-                      <span className="block font-medium leading-snug">
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block text-left font-medium leading-snug">
                         {option.label}
                       </span>
-                      <span className="mt-0.5 block leading-relaxed text-white/40">
+                      <span className="mt-0.5 block text-left leading-relaxed text-white/35">
                         {option.description}
                       </span>
                     </span>
@@ -382,85 +446,96 @@ export const AiAskRequestPanel = ({
             </div>
 
             {currentQuestion.custom !== false ? (
-              <div className="flex gap-1.5">
-                <input
-                  value={
-                    customInputs[createAnswerKey(request.id, currentIndex)] ??
-                    ""
+              <div
+                role="button"
+                tabIndex={isSubmitted ? -1 : 0}
+                onClick={() =>
+                  handleSelectCustomAnswer(currentQuestion, currentIndex)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelectCustomAnswer(currentQuestion, currentIndex);
                   }
-                  disabled={isSubmitted}
-                  onChange={(event) =>
-                    handleCustomInputChange(currentIndex, event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      handleAddCustomAnswer(currentQuestion, currentIndex);
-                    }
-                  }}
-                  placeholder="自定义回答"
-                  className="min-w-0 flex-1 rounded-[6px] border border-white/10 bg-black px-2 py-1.5 text-xs text-white outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:opacity-60"
-                />
-                <button
-                  type="button"
-                  disabled={
-                    isSubmitted ||
-                    !(
-                      customInputs[
-                        createAnswerKey(request.id, currentIndex)
-                      ] ?? ""
-                    ).trim()
-                  }
-                  onClick={() =>
-                    handleAddCustomAnswer(currentQuestion, currentIndex)
-                  }
-                  className="rounded-[6px] border border-white/10 bg-[#212121] px-2 py-1.5 text-xs text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                }}
+                className="flex w-full items-start justify-start gap-1.5 py-1 text-left"
+              >
+                <span
+                  className={`mt-0.5 flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center ${
+                    customAnswerSelections[
+                      createAnswerKey(request.id, currentIndex)
+                    ]
+                      ? "text-white"
+                      : "text-transparent"
+                  }`}
                 >
-                  添加
-                </button>
+                  <Check className="h-3 w-3" />
+                </span>
+                <div className="min-w-0 flex-1 text-left">
+                  <div
+                    className={`text-left font-medium leading-snug ${
+                      customAnswerSelections[
+                        createAnswerKey(request.id, currentIndex)
+                      ]
+                        ? "text-white"
+                        : "text-white/55"
+                    }`}
+                  >
+                    自定义回答
+                  </div>
+                  <input
+                    value={
+                      customInputs[createAnswerKey(request.id, currentIndex)] ??
+                      ""
+                    }
+                    disabled={isSubmitted}
+                    onFocus={() =>
+                      handleSelectCustomAnswer(currentQuestion, currentIndex)
+                    }
+                    onChange={(event) =>
+                      handleCustomInputChange(currentIndex, event.target.value)
+                    }
+                    placeholder="输入回答"
+                    className="mt-0.5 w-full min-w-0 rounded-[6px] bg-white/10 px-2 py-1 text-xs text-white outline-none transition placeholder:text-white/25 focus:bg-white/15 disabled:opacity-60"
+                  />
+                </div>
               </div>
             ) : null}
           </section>
         </div>
       ) : null}
 
-      {questionCount > 1 ? (
-        <div className="mt-3 flex gap-1.5">
-          {request.questions.map((question, index) => {
-            const isAnswered =
-              (answers[createAnswerKey(request.id, index)] ?? []).length > 0;
-            const isCurrent = index === currentIndex;
-
-            return (
-              <button
-                key={createAnswerKey(request.id, index)}
-                type="button"
-                aria-label={`切换到问题 ${index + 1}`}
-                onClick={() => handleQuestionSwitch(index)}
-                className={`h-1.5 flex-1 rounded-full transition ${
-                  isCurrent
-                    ? "bg-white"
-                    : isAnswered
-                      ? "bg-white/45"
-                      : "bg-white/12"
-                }`}
-                title={question.header}
-              />
-            );
-          })}
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
-        <div className="min-w-0 text-[12px] text-white/35">
-          {isSubmitted
-            ? "已提交，不能重复使用。"
-            : "选择后提交给 AI 继续。"}
-        </div>
+      <div className="mt-2 flex items-center justify-end gap-1.5">
+        {isSubmitted || isSubmitting ? (
+          <div className="min-w-0 text-[12px] text-white/35">
+            {isSubmitted ? "已提交，不能重复使用。" : "正在提交回答..."}
+          </div>
+        ) : null}
+        {questionCount > 1 ? (
+          <>
+            <button
+              type="button"
+              disabled={currentIndex === 0}
+              onClick={() => handleQuestionSwitch(currentIndex - 1)}
+              className="rounded-[6px] px-2 py-1 text-xs text-white/45 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={currentIndex === questionCount - 1}
+              onClick={() => handleQuestionSwitch(currentIndex + 1)}
+              className="rounded-[6px] px-2 py-1 text-xs text-white/45 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
           disabled={!canSubmit}
           onClick={handleSubmit}
-          className="inline-flex items-center gap-1.5 rounded-[6px] border border-white/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/35"
+          className="inline-flex items-center gap-1.5 rounded-[6px] bg-white px-2 py-1 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/35"
         >
           <SendHorizonal className="h-3.5 w-3.5" />
           提交

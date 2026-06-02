@@ -34,7 +34,6 @@ describe('askTool', () => {
     })
 
     expect(result.observation).toContain('waiting for the user')
-    expect(result.terminal).toBe(true)
     const data = result.data as AskToolData
 
     expect(data).toMatchObject({

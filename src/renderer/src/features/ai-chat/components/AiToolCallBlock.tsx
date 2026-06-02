@@ -6,11 +6,16 @@ import type {
 } from "@renderer/features/ai-chat/types";
 import {
   AiAskRequestPanel,
+  isAiAskAnswer,
   isAiAskRequest,
+  type AiAskAnswerSubmitPayload,
 } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // 工具观察文本最大展示长度。
 const TOOL_OBSERVATION_MAX_LENGTH = 96;
+
+// Ask 回答后的固定展示摘要。
+const ASK_ANSWER_OBSERVATION = "User has answered your clarification question.";
 
 // SQL 原始行观察文本匹配规则。
 const SQL_RAW_ROWS_OBSERVATION_PATTERN =
@@ -25,7 +30,9 @@ type AiToolCallBlockProps = {
   // 工具执行步骤列表。
   steps: AiToolStep[];
   // 发送 Ask 回答回调。
-  onSendMessage?: (text: string) => void;
+  onSubmitAskAnswer?: (
+    payload: AiAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
 };
 
 // 根据工具步骤状态返回状态展示配置。
@@ -70,8 +77,12 @@ const getStatusConfig = (
 /**
  * formatToolObservation - 将工具原始观察压缩成用户可读摘要。
  */
-const formatToolObservation = (observation: string): string => {
-  const normalizedObservation = observation.trim();
+const formatToolObservation = (step: AiToolStep): string => {
+  if (isAiAskAnswer(step.data)) {
+    return ASK_ANSWER_OBSERVATION;
+  }
+
+  const normalizedObservation = step.observation.trim();
   const sqlRowsMatch = normalizedObservation.match(
     SQL_RAW_ROWS_OBSERVATION_PATTERN,
   );
@@ -103,11 +114,49 @@ const formatToolObservation = (observation: string): string => {
 };
 
 /**
+ * renderAskAnswerSummary - 渲染 Ask 回答键值摘要。
+ */
+const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
+  if (!isAiAskAnswer(data)) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 flex items-start gap-1 text-xs leading-relaxed text-white/45">
+      <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
+        <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M3 1v5h7"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <div className="grid min-w-0 gap-1">
+        {data.answers.map((item) => (
+          <div
+            key={item.question}
+            className="grid grid-cols-[auto_auto_1fr] gap-x-1.5"
+          >
+            <span className="text-white/35">{item.question}</span>
+            <span className="text-white/25">=</span>
+            <span className="min-w-0 text-white/70">
+              {item.answers.length > 0 ? item.answers.join("、") : "未回答"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
  * AiToolCallBlock - 渲染 ReAct 风格的工具执行摘要
  */
 export const AiToolCallBlock = ({
   steps,
-  onSendMessage,
+  onSubmitAskAnswer,
 }: AiToolCallBlockProps): React.JSX.Element => {
   return (
     <div className="my-0.5 flex flex-col gap-2">
@@ -116,8 +165,9 @@ export const AiToolCallBlock = ({
         {steps.map((step, index) => {
           const config = getStatusConfig(step.status);
           const StatusIcon = config.icon;
-          const displayObservation = formatToolObservation(step.observation);
+          const displayObservation = formatToolObservation(step);
           const askRequest = isAiAskRequest(step.data) ? step.data : null;
+          const askAnswerSummary = renderAskAnswerSummary(step.data);
 
           return (
             <div key={step.id} className="relative flex gap-2.5 items-start">
@@ -160,12 +210,29 @@ export const AiToolCallBlock = ({
                   </span>
                   <span className="flex-1">{displayObservation}</span>
                 </div>
-                {askRequest && onSendMessage ? (
-                  <div className="pt-1.5">
-                    <AiAskRequestPanel
-                      request={askRequest}
-                      onSubmit={onSendMessage}
-                    />
+                {askAnswerSummary}
+                {askRequest && onSubmitAskAnswer ? (
+                  <div className="mt-1 flex items-start gap-1 text-white/45">
+                    <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
+                      <svg
+                        className="h-3 w-3 stroke-current"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                      >
+                        <path
+                          d="M3 1v5h7"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <AiAskRequestPanel
+                        request={askRequest}
+                        onSubmit={onSubmitAskAnswer}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>

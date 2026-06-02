@@ -11,6 +11,7 @@ import {
   completeAiMessageReasoningParts,
 } from "@renderer/features/ai-chat/core/aiChatMessageParts";
 import type { AiChatMessageUpdater } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+import { isAiAskRequest } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // Agent 运行消息映射关系。
 export type AiRunMessageMapping = {
@@ -175,7 +176,7 @@ export const createAiChatEventHandler = ({
           step.id === event.id
             ? {
                 ...step,
-                status: "done",
+                status: isAiAskRequest(event.data) ? "running" : "done",
                 input: step.input,
                 observation: event.observation,
                 data: event.data,
@@ -187,7 +188,7 @@ export const createAiChatEventHandler = ({
           {
             id: event.id,
             title: `Tool result: ${event.name}`,
-            status: "done",
+            status: isAiAskRequest(event.data) ? "running" : "done",
             tool: event.name,
             input: {},
             observation: event.observation,

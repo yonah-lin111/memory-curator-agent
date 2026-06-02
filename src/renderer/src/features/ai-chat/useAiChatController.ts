@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
+import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import { useToast } from "@renderer/components/ui/Toast";
 import {
   buildMessageContextItems,
@@ -73,6 +74,8 @@ type UseAiChatControllerResult = {
   handleDeleteChat: (sessionId: string) => Promise<boolean>;
   // 发送用户消息。
   handleSendMessage: (text: string) => void;
+  // 提交 Ask 回答。
+  handleSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => Promise<void>;
   // 重新生成最新 AI 回答。
   handleRegenerateLatestAnswer: () => Promise<void>;
   // 删除指定消息所属 QA。
@@ -570,6 +573,19 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   };
 
   /**
+   * 提交 Ask 回答，主进程会在同一个 Agent run 内继续执行。
+   */
+  const handleSubmitAskAnswer = async (
+    payload: AiAskAnswerSubmitPayload,
+  ): Promise<void> => {
+    if (!window.api?.ai?.submitAskAnswer) {
+      throw new Error("AI Ask bridge is not ready");
+    }
+
+    await window.api.ai.submitAskAnswer(payload);
+  };
+
+  /**
    * 重新生成最新一轮 AI 回答：先删除最新 QA，再用原问题和清理后的上下文重发。
    */
   const handleRegenerateLatestAnswer = async (): Promise<void> => {
@@ -609,6 +625,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     handleRenameChat,
     handleDeleteChat,
     handleSendMessage,
+    handleSubmitAskAnswer,
     handleRegenerateLatestAnswer,
     handleDeleteChatTurn,
     handleAiChatCommand,

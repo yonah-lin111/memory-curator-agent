@@ -132,6 +132,14 @@ type AiChatStartPayload = {
   }>
 }
 
+// AI Ask 回答载荷类型。
+type AiAskAnswerPayload = {
+  // Ask 请求唯一标识。
+  requestId: string
+  // 每个问题对应的答案列表。
+  answers: string[][]
+}
+
 // AI 模型选项。
 type AiModelOption = {
   // 模型唯一标识。
@@ -447,6 +455,8 @@ const api = {
       ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
       ipcRenderer.invoke('ai:chat:start', payload),
+    submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
+      ipcRenderer.invoke('ai:chat:ask-answer', payload),
     onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {
       const wrappedListener = (_: Electron.IpcRendererEvent, event: AiChatEvent): void => {
         listener(event)

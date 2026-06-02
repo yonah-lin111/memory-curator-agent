@@ -168,6 +168,14 @@ type AiChatStartPayload = {
   }>
 }
 
+// AI Ask 回答载荷类型。
+type AiAskAnswerPayload = {
+  // Ask 请求唯一标识。
+  requestId: string
+  // 每个问题对应的答案列表。
+  answers: string[][]
+}
+
 // AI 模型选项。
 type AiModelOption = {
   // 模型唯一标识。
@@ -556,6 +564,8 @@ type AppAPI = {
     getModelOptions: () => Promise<AiModelOptionsResponse>
     // 启动 AI 对话。
     startChat: (payload: AiChatStartPayload) => Promise<{ runId: string }>
+    // 提交 Ask 回答。
+    submitAskAnswer?: (payload: AiAskAnswerPayload) => Promise<void>
     // 监听 AI 对话事件。
     onChatEvent: (listener: (event: AiChatEvent) => void) => () => void
   }

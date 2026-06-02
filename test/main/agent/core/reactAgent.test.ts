@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runReactAgent } from "../../../../src/main/agent/core/reactAgent";
 import type {
   AgentTool,
@@ -94,13 +94,34 @@ describe("reactAgent", () => {
     );
   });
 
-  it("终止型工具完成后结束当前 run 并等待外部输入", async () => {
+  it("ask 工具等待用户回答后在同一个 run 内继续执行", async () => {
     const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {
       id: "fake",
       type: "openai-compatible",
       streamTurn: async function* (input) {
         providerInputs.push(input);
+
+        if (providerInputs.length > 1) {
+          expect(input.messages.at(-1)).toMatchObject({
+            role: "tool",
+            toolCallId: "call-ask",
+            name: "ask_user",
+          });
+          expect(input.messages.at(-1)?.content).toContain(
+            "User has answered your clarification questions",
+          );
+          expect(input.messages.at(-1)?.content).toContain("当前项目");
+          yield {
+            type: "text_delta",
+            delta: "继续执行。",
+          };
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
         yield {
           type: "tool_call_done",
           id: "call-ask",
@@ -121,14 +142,34 @@ describe("reactAgent", () => {
       },
       execute: async () => ({
         observation: "Ask request created: waiting for the user.",
-        terminal: true,
         data: {
           kind: "ask_request",
           id: "ask-1",
-          questions: [],
+          questions: [
+            {
+              header: "范围",
+              question: "改哪里？",
+              options: [
+                {
+                  label: "当前项目",
+                  description: "只改当前项目。",
+                },
+              ],
+            },
+          ],
         },
       }),
     };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-1",
+      answers: [
+        {
+          question: "改哪里？",
+          answers: ["当前项目"],
+        },
+      ],
+    }));
 
     const events = await Array.fromAsync(
       runReactAgent({
@@ -141,6 +182,7 @@ describe("reactAgent", () => {
           },
         ],
         tools: [askTool],
+        askAnswerProvider,
         maxTurns: 3,
       }),
     );
@@ -149,10 +191,15 @@ describe("reactAgent", () => {
       "run_started",
       "tool_started",
       "tool_finished",
+      "tool_finished",
+      "turn_finished",
+      "assistant_message_started",
+      "text_delta",
       "turn_finished",
       "done",
     ]);
-    expect(providerInputs).toHaveLength(1);
+    expect(askAnswerProvider).toHaveBeenCalledTimes(1);
+    expect(providerInputs).toHaveLength(2);
   });
 
   it("当模型流丢失工具名且只有一个授权工具时使用唯一工具兜底", async () => {

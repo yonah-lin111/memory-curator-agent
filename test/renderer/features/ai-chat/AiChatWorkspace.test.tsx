@@ -123,6 +123,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -145,6 +146,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -172,6 +174,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -194,6 +197,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -218,6 +222,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -262,6 +267,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -285,6 +291,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -330,6 +337,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -350,6 +358,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}
@@ -366,6 +375,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
         onRegenerateLatestAnswer={() => undefined}
         onDeleteChatTurn={() => undefined}
         onCommandExecute={() => undefined}

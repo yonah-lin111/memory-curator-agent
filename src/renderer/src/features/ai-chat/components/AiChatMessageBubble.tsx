@@ -7,6 +7,7 @@ import type {
 } from "@renderer/features/ai-chat/types";
 import { AiChatThinkingBlock } from "@renderer/features/ai-chat/components/AiChatThinkingBlock";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
+import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import {
   resolveDedupedRenderablePartContents,
   resolveDedupedTextContents,
@@ -31,8 +32,10 @@ type AiChatMessageBubbleProps = {
   isGenerating?: boolean;
   // 是否允许对当前助手回答重新生成。
   canRegenerate?: boolean;
-  // 发送 Ask 回答回调。
-  onSendMessage?: (text: string) => void;
+  // 提交 Ask 回答回调。
+  onSubmitAskAnswer?: (
+    payload: AiAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
   // 打开消息右键菜单回调。
   onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
 };
@@ -341,7 +344,7 @@ export const AiChatMessageBubble = ({
   message,
   isGenerating = false,
   canRegenerate = false,
-  onSendMessage,
+  onSubmitAskAnswer,
   onOpenContextMenu,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
@@ -430,7 +433,7 @@ export const AiChatMessageBubble = ({
                       <AiToolCallBlock
                         key={key}
                         steps={[...currentToolSteps]}
-                        onSendMessage={onSendMessage}
+                        onSubmitAskAnswer={onSubmitAskAnswer}
                       />,
                     );
                     currentToolSteps = [];

@@ -10,6 +10,7 @@ import { loadProviderConfig } from '../agent/providers/providerConfig'
 import { createModelProvider } from '../agent/providers/providerFactory'
 import { runReactAgent } from '../agent/core/reactAgent'
 import { createAgentToolRegistry } from '../agent/tools/toolRegistry'
+import { createAskAnswerData, isAskRequestData, type AskRequestData } from '../agent/tools/askTool'
 import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/core/contextMessages'
 import type { AgentMessage, AgentStreamEvent } from '../agent/types'
 import type { AiChatMessagePart, AiToolStep } from '../db/schema'
@@ -28,6 +29,14 @@ type AiChatStartPayload = {
   model?: string
   // 本轮请求可用上下文。
   context?: AgentContextPayloadItem[]
+}
+
+// AI Ask 回答载荷。
+type AiAskAnswerPayload = {
+  // Ask 请求唯一标识。
+  requestId: string
+  // 每个问题对应的回答列表。
+  answers: string[][]
 }
 
 // AI 模型选项。
@@ -105,6 +114,23 @@ type AiChatSessionTitleUpdatedEvent = {
 // 新会话默认标题。
 const DEFAULT_CHAT_SESSION_TITLE = '新建对话'
 
+// 等待用户回答的 Ask 请求。
+type PendingAskAnswer = {
+  // Agent 运行 ID。
+  runId: string
+  /**
+   * 完成 Ask 回答。
+   */
+  resolve: (answers: string[][]) => void
+  /**
+   * 拒绝 Ask 回答。
+   */
+  reject: (error: Error) => void
+}
+
+// 等待中的 Ask 回答表。
+const pendingAskAnswers = new Map<string, PendingAskAnswer>()
+
 // Agent 系统提示词段落。
 const SYSTEM_PROMPT_SECTIONS = [
   '身份：你是 Memory Curator Agent，可以日常聊天，也可以在需要读取本地记忆或人物档案时使用本轮已授权工具。',
@@ -163,6 +189,37 @@ const createTimestamp = (): string => {
  * 创建聊天展示时间。
  */
 const createDisplayTime = (timestamp: string): string => timestamp.slice(11, 16) || timestamp
+
+/**
+ * 判断值是否为二维字符串数组。
+ */
+const isStringMatrix = (value: unknown): value is string[][] =>
+  Array.isArray(value) &&
+  value.every((items) => Array.isArray(items) && items.every((item) => typeof item === 'string'))
+
+/**
+ * 等待渲染进程提交 Ask 回答。
+ */
+const waitForAskAnswer = (runId: string, request: AskRequestData): Promise<ReturnType<typeof createAskAnswerData>> =>
+  new Promise((resolve, reject) => {
+    pendingAskAnswers.set(request.id, {
+      runId,
+      resolve: (answers) => resolve(createAskAnswerData(request, answers)),
+      reject
+    })
+  })
+
+/**
+ * 清理指定 run 下等待中的 Ask 请求。
+ */
+const clearPendingAskAnswersByRun = (runId: string, error: Error): void => {
+  for (const [requestId, entry] of pendingAskAnswers.entries()) {
+    if (entry.runId === runId) {
+      pendingAskAnswers.delete(requestId)
+      entry.reject(error)
+    }
+  }
+}
 
 /**
  * 从用户消息生成兜底会话标题。
@@ -364,6 +421,19 @@ export const registerAiHandlers = (): void => {
   ipcMain.handle('ai:session:turn:delete', async (_, sessionId: string, messageId: string) =>
     aiChatService.deleteTurnByMessageId(sessionId, messageId, createTimestamp())
   )
+  ipcMain.handle('ai:chat:ask-answer', async (_, payload: AiAskAnswerPayload) => {
+    if (!payload || typeof payload.requestId !== 'string' || !isStringMatrix(payload.answers)) {
+      throw new Error('Invalid Ask answer payload')
+    }
+
+    const pending = pendingAskAnswers.get(payload.requestId)
+    if (!pending) {
+      throw new Error(`Ask request is not pending: ${payload.requestId}`)
+    }
+
+    pendingAskAnswers.delete(payload.requestId)
+    pending.resolve(payload.answers)
+  })
 
   ipcMain.handle('ai:chat:start', async (event, payload: AiChatStartPayload) => {
     const runId = payload.runId ?? randomUUID()
@@ -490,7 +560,8 @@ export const registerAiHandlers = (): void => {
             toolOutputMaxChars: config.agent.context.toolOutputMaxChars,
             recentToolResultLimit: config.agent.context.recentToolResultLimit
           }),
-          tools
+          tools,
+          askAnswerProvider: (request) => waitForAskAnswer(runId, request)
         })) {
           if (agentEvent.type === 'text_delta') {
             assistantAnswer += agentEvent.delta
@@ -545,7 +616,7 @@ export const registerAiHandlers = (): void => {
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
               title: `Tool result: ${agentEvent.name}`,
-              status: 'done',
+              status: isAskRequestData(agentEvent.data) ? 'running' : 'done',
               tool: agentEvent.name,
               input: assistantToolSteps[toolStepIndex]?.input,
               observation: agentEvent.observation,
@@ -667,6 +738,7 @@ export const registerAiHandlers = (): void => {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'AI chat execution failed'
+        clearPendingAskAnswersByRun(runId, new Error(message))
         const failedTimestamp = createTimestamp()
         aiChatService.failRunWithAssistantMessage({
           run: {
