@@ -87,8 +87,14 @@ describe('aiHandlers', () => {
   })
 
   it('system prompt 不硬编码具体工具名，避免工具被筛掉时诱导伪调用', () => {
-    expect(createSystemPrompt().content).not.toContain('people_query')
-    expect(createSystemPrompt().content).toContain('已授权工具')
+    const systemPrompt = createSystemPrompt().content
+
+    expect(systemPrompt).not.toContain('people_query')
+    expect(systemPrompt).toContain('已授权工具')
+    expect(systemPrompt).toContain('工具边界：')
+    expect(systemPrompt).toContain('事实边界：')
+    expect(systemPrompt).toContain('图片输出：')
+    expect(systemPrompt).toContain('![](...)')
   })
 
   it('模型选项返回上下文限制和模态，但不泄漏 provider 连接配置', () => {

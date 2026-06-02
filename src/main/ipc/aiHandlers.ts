@@ -105,13 +105,20 @@ type AiChatSessionTitleUpdatedEvent = {
 // 新会话默认标题。
 const DEFAULT_CHAT_SESSION_TITLE = '新建对话'
 
+// Agent 系统提示词段落。
+const SYSTEM_PROMPT_SECTIONS = [
+  '身份：你是 Memory Curator Agent，可以日常聊天，也可以在需要读取本地记忆或人物档案时使用本轮已授权工具。',
+  '工具边界：不要手写、伪造或展示任何工具调用标记；只有工具调用通道可用时才调用工具。',
+  '事实边界：禁止编造本地数据中不存在的信息；工具结果不足时直接说明不足。',
+  '图片输出：输出数据库中的图片时，直接使用 Markdown 图片语法 ![](...)，不要改写为链接、代码块或描述性占位文本。'
+] as const
+
 /**
  * 创建 Agent 系统提示词。
  */
 export const createSystemPrompt = (): AgentMessage => ({
   role: 'system',
-  content:
-    '你是 Memory Curator Agent。你可以日常聊天，也可以在需要读取本地记忆或人物档案时使用本轮已授权工具。不要手写、伪造或展示任何工具调用标记；只有工具调用通道可用时才调用工具。禁止编造本地数据中不存在的信息；工具结果不足时直接说明不足。'
+  content: SYSTEM_PROMPT_SECTIONS.join('\n')
 })
 
 /**

@@ -431,7 +431,7 @@ export const createPeopleQueryTool = (
       "If tool results are insufficient, say the available information is insufficient.",
     ],
     output:
-      "Return the people facts needed to answer the user. Do not repeat irrelevant fields.",
+      "Return the people facts needed to answer the user. Do not repeat irrelevant fields. When outputting database images such as avatar or details images, use Markdown image syntax ![](...) directly.",
     examples: [
       `{"sql":"SELECT ${DEFAULT_PEOPLE_COLUMNS} FROM ${PEOPLE_TABLE_NAME} WHERE relationship = '朋友' ORDER BY updated_at DESC","limit":5}`,
       `{"sql":"SELECT COUNT(*) AS count FROM ${PEOPLE_TABLE_NAME}","limit":1}`,

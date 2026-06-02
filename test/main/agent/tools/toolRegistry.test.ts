@@ -92,6 +92,7 @@ describe('toolRegistry', () => {
     expect(peopleTool?.prompt?.summary).toContain('People table')
     expect(prepared.description).toContain('When to use:')
     expect(prepared.description).toContain('local People table')
+    expect(prepared.description).toContain('Markdown image syntax ![](...)')
   })
 
   it('根据用户意图筛选工具，普通闲聊不注入 people_query', () => {
