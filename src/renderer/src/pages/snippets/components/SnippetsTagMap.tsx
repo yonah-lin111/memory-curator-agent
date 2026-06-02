@@ -97,7 +97,7 @@ export const SnippetsTagMap = ({
       {tags.map((tag) => (
         <button
           key={tag.value}
-          aria-label={`筛选标签 ${tag.value}`}
+          aria-label={`Filter tag ${tag.value}`}
           className={`rounded-[6px] border px-2.5 py-1 text-xs font-semibold transition-colors ${
             activeTag === tag.value
               ? "border-white/18 bg-white/12 text-white"

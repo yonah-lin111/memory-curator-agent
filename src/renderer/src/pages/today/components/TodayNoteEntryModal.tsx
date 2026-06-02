@@ -106,7 +106,7 @@ export const TodayNoteEntryModal = ({
             </h2>
           </div>
           <IconButton
-            aria-label="关闭添加弹窗"
+            aria-label="Close modal"
             onClick={onClose}
           >
             <X className="h-3.5 w-3.5" />
@@ -117,7 +117,7 @@ export const TodayNoteEntryModal = ({
           <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
             随记标题
             <input
-              aria-label="随记标题"
+              aria-label="Snippet title"
               className="rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-sm font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
               placeholder="给这段想法一个临时标题"
               value={title}
@@ -127,7 +127,7 @@ export const TodayNoteEntryModal = ({
           <label className="flex flex-col gap-1 text-sm font-semibold tracking-wide text-white/55">
             随记内容
             <textarea
-              aria-label="随记内容"
+              aria-label="Snippet content"
               className="min-h-24 resize-none rounded-[6px] border border-white/10 bg-black p-2.5 text-sm font-normal leading-relaxed text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25"
               placeholder="保留原始表达，不急着归类..."
               value={content}
@@ -153,7 +153,7 @@ export const TodayNoteEntryModal = ({
                 ))}
               </div>
               <input
-                aria-label="输入新标签"
+                aria-label="Input new tag"
                 disabled={tags.length >= 6}
                 className="w-full rounded-[6px] border border-white/10 bg-black px-3 py-1.5 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed"
                 placeholder={tags.length >= 6 ? "最多可添加 6 个标签" : "输入新标签并按回车确认..."}

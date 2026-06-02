@@ -129,11 +129,11 @@ describe("SnippetsPage", () => {
     expect(await screen.findByText("今天片段")).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     );
     expect(await screen.findByText("昨天片段")).toBeInTheDocument();
   });
@@ -161,17 +161,17 @@ describe("SnippetsPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "日期选择器" });
+    const dialog = screen.getByRole("dialog", { name: "Date picker" });
     expect(dialog).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-27，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-27, has entries" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     ).toBeInTheDocument();
   });
 
@@ -218,14 +218,14 @@ describe("SnippetsPage", () => {
     renderSnippetsPage();
 
     expect(await screen.findByText("产品想法")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "筛选标签 产品" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter tag 产品" }));
     expect(screen.queryByText("技术笔记")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("产品想法"));
-    await userEvent.clear(screen.getByLabelText("随记标题"));
-    await userEvent.type(screen.getByLabelText("随记标题"), "更新后的片段");
-    await userEvent.clear(screen.getByLabelText("随记内容"));
-    await userEvent.type(screen.getByLabelText("随记内容"), "更新内容");
+    await userEvent.clear(screen.getByLabelText("Snippet title"));
+    await userEvent.type(screen.getByLabelText("Snippet title"), "更新后的片段");
+    await userEvent.clear(screen.getByLabelText("Snippet content"));
+    await userEvent.type(screen.getByLabelText("Snippet content"), "更新内容");
     await userEvent.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     await waitFor(() => {
@@ -255,10 +255,10 @@ describe("SnippetsPage", () => {
 
     renderSnippetsPage();
 
-    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
-    await user.type(screen.getByLabelText("随记标题"), "离线片段");
-    await user.type(screen.getByLabelText("随记内容"), "本地创建内容");
-    await user.type(screen.getByLabelText("输入新标签"), "离线{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add snippet" }));
+    await user.type(screen.getByLabelText("Snippet title"), "离线片段");
+    await user.type(screen.getByLabelText("Snippet content"), "本地创建内容");
+    await user.type(screen.getByLabelText("Input new tag"), "离线{Enter}");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     expect(await screen.findByText("离线片段")).toBeInTheDocument();
@@ -282,22 +282,22 @@ describe("SnippetsPage", () => {
 
     renderSnippetsPage();
 
-    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
-    await user.type(screen.getByLabelText("随记标题"), "本地片段");
-    await user.type(screen.getByLabelText("随记内容"), "需要继续编辑");
-    await user.type(screen.getByLabelText("输入新标签"), "本地{Enter}");
+    await user.click(screen.getByRole("button", { name: "Add snippet" }));
+    await user.type(screen.getByLabelText("Snippet title"), "本地片段");
+    await user.type(screen.getByLabelText("Snippet content"), "需要继续编辑");
+    await user.type(screen.getByLabelText("Input new tag"), "本地{Enter}");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
 
     expect(await screen.findByText("本地片段")).toBeInTheDocument();
 
     await user.click(screen.getByText("本地片段"));
-    await user.clear(screen.getByLabelText("随记标题"));
-    await user.type(screen.getByLabelText("随记标题"), "本地片段-已更新");
+    await user.clear(screen.getByLabelText("Snippet title"));
+    await user.type(screen.getByLabelText("Snippet title"), "本地片段-已更新");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     expect(await screen.findByText("本地片段-已更新")).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", { name: "删除片段 本地片段-已更新" }),
+      screen.getByRole("button", { name: "Delete snippet 本地片段-已更新" }),
     );
     await waitFor(() => {
       expect(screen.queryByText("本地片段-已更新")).not.toBeInTheDocument();
@@ -337,16 +337,16 @@ describe("SnippetsPage", () => {
 
     expect(await screen.findByText("稳定片段")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "添加随记片段" }));
-    await user.type(screen.getByLabelText("随记标题"), "失败片段");
-    await user.type(screen.getByLabelText("随记内容"), "不会创建");
+    await user.click(screen.getByRole("button", { name: "Add snippet" }));
+    await user.type(screen.getByLabelText("Snippet title"), "失败片段");
+    await user.type(screen.getByLabelText("Snippet content"), "不会创建");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("创建片段失败");
     expect(screen.queryByText("失败片段")).not.toBeInTheDocument();
 
     await user.click(screen.getByText("稳定片段"));
-    await user.clear(screen.getByLabelText("随记标题"));
-    await user.type(screen.getByLabelText("随记标题"), "稳定片段-修改");
+    await user.clear(screen.getByLabelText("Snippet title"));
+    await user.type(screen.getByLabelText("Snippet title"), "稳定片段-修改");
     await user.click(screen.getByRole("button", { name: "保存随记卡片" }));
     await waitFor(() => {
       expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("保存片段失败");
@@ -354,7 +354,7 @@ describe("SnippetsPage", () => {
     expect(screen.getByText("稳定片段")).toBeInTheDocument();
     expect(screen.queryByText("稳定片段-修改")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "删除片段 稳定片段" }));
+    await user.click(screen.getByRole("button", { name: "Delete snippet 稳定片段" }));
     await waitFor(() => {
       expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("删除片段失败");
     });

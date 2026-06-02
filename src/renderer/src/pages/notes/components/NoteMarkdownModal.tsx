@@ -133,7 +133,7 @@ export const NoteMarkdownModal = ({
           <div className="flex items-center gap-2 flex-1 max-w-[500px]">
             <FileText className="h-3.5 w-3.5 text-white/45 flex-shrink-0" />
             <input
-              aria-label="Markdown 笔记标题"
+              aria-label="Markdown note title"
               id="note-markdown-modal-title"
               className="w-full bg-transparent border-0 px-0 py-1 text-sm font-semibold text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:placeholder:text-white/10"
               placeholder={initialDraft ? "编辑 Markdown 笔记标题..." : "给这段 Markdown 一个临时标题..."}
@@ -154,7 +154,7 @@ export const NoteMarkdownModal = ({
             )}
             {/* 关闭按钮 */}
             <IconButton
-              aria-label="关闭 Markdown 笔记弹窗"
+              aria-label="Close Markdown note modal"
               onClick={onClose}
             >
               <X className="h-3.5 w-3.5" />
@@ -220,7 +220,7 @@ export const NoteMarkdownModal = ({
                       ))}
                     </div>
                     <input
-                      aria-label="输入新标签"
+                      aria-label="Input new tag"
                       disabled={draft.tags.length >= 6}
                       className="w-full rounded-[6px] border border-white/10 bg-black px-2 py-1 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed"
                       placeholder={draft.tags.length >= 6 ? "最多可添加 6 个标签" : "输入新标签并按回车确认..."}

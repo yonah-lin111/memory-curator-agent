@@ -245,7 +245,7 @@ export const TodayTodoPanel = ({
             已完成 {completedCount}/{todos.length}
           </span>
           <IconButton
-            aria-label="一键排序"
+            aria-label="One-click sort"
             className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
             onClick={() => void onSortTodos()}
             title="手动排序"
@@ -258,7 +258,7 @@ export const TodayTodoPanel = ({
       <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
         <div className="flex items-center gap-2 rounded-[6px] border border-white/8 bg-black/30 px-2 py-2 transition-all duration-300 ease-out focus-within:border-white/20 focus-within:bg-black">
           <button
-            aria-label={`切换新待办优先级 ${composerDraft.priority}`}
+            aria-label={`Toggle new todo priority ${composerDraft.priority}`}
             className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(composerDraft.priority, false)}`}
             type="button"
             onClick={handleCycleComposerPriority}
@@ -302,7 +302,7 @@ export const TodayTodoPanel = ({
             />
           </div>
           <IconButton
-            aria-label="添加待办"
+            aria-label="Add todo"
             className="bg-white/6 text-white/55 hover:bg-white/12 hover:text-white"
             disabled={!composerDraft.text.trim()}
             onClick={() => void handleAddTodo()}
@@ -346,7 +346,7 @@ export const TodayTodoPanel = ({
               data-testid="today-todo-item"
             >
               <button
-                aria-label={todo.completed ? "标记为未完成" : "标记为已完成"}
+                aria-label={todo.completed ? "Mark as incomplete" : "Mark as completed"}
                 className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
                   todo.completed
                     ? "text-emerald-500"
@@ -372,7 +372,7 @@ export const TodayTodoPanel = ({
               </button>
 
               <button
-                aria-label={`切换 ${todo.text} 的优先级`}
+                aria-label={`Toggle priority of ${todo.text}`}
                 className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(todo.priority, todo.completed)}`}
                 type="button"
                 onClick={() => void handleCycleTodoPriority(todo)}
@@ -438,7 +438,7 @@ export const TodayTodoPanel = ({
               )}
 
                   <button
-                    aria-label={`删除待办 ${todo.text}`}
+                    aria-label={`Delete todo ${todo.text}`}
                 className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/30 transition-colors hover:bg-white/5 hover:text-rose-400"
                 type="button"
                 onClick={() => handleDeleteTodo(todo.id)}

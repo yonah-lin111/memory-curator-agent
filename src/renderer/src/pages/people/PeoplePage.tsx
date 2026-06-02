@@ -54,7 +54,7 @@ export const PeoplePage = (): React.JSX.Element => {
 
   return (
     <section
-      aria-label="People 页面"
+      aria-label="People Page"
       className="flex h-full min-h-0 flex-col gap-3 text-white"
     >
       {/* 顶层主网格：双栏布局 */}
@@ -75,7 +75,7 @@ export const PeoplePage = (): React.JSX.Element => {
                 </span>
               </div>
               <IconButton
-                aria-label="新增人物档案"
+                aria-label="Add person profile"
                 className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                 onClick={enterCreateMode}
               >

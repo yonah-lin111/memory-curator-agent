@@ -439,7 +439,7 @@ export const AiChatWorkspace = ({
 
   return (
     <section
-      aria-label="AI 对话主体"
+      aria-label="AI Chat Workspace"
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
       {/* 消息列表 */}

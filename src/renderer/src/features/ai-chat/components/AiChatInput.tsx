@@ -155,11 +155,11 @@ export const AiChatInput = ({
   const activeCommand = matchedCommands[activeCommandIndex] ?? matchedCommands[0];
   const hasModelOptions = modelOptions.some((provider) => provider.models.length > 0);
   const contextUsageValue = contextUsagePercent === null ? null : Math.min(Math.max(contextUsagePercent, 0), 100);
-  const contextUsageLabel = contextUsageValue === null ? "上下文使用未知" : `上下文使用 ${contextUsageValue}%`;
+  const contextUsageLabel = contextUsageValue === null ? "Unknown context usage" : `Context usage ${contextUsageValue}%`;
   const contextTokenLabel =
     contextLimit === undefined
-      ? `约 ${contextTokens.toLocaleString("zh-CN")} tokens / 未知上限`
-      : `约 ${contextTokens.toLocaleString("zh-CN")} tokens / ${contextLimit.toLocaleString("zh-CN")}`;
+      ? `~${contextTokens.toLocaleString("zh-CN")} tokens / Unknown limit`
+      : `~${contextTokens.toLocaleString("zh-CN")} tokens / ${contextLimit.toLocaleString("zh-CN")}`;
   const contextTooltipLabel = `${contextUsageLabel} · ${contextTokenLabel}`;
   const circleRadius = 8;
   const circleCircumference = 2 * Math.PI * circleRadius;
@@ -404,7 +404,7 @@ export const AiChatInput = ({
         {isCommandPanelOpen && matchedCommands.length > 0 ? (
           <div
             role="listbox"
-            aria-label="AI 输入命令面板"
+            aria-label="AI Command Input Panel"
             aria-activedescendant={`ai-chat-command-${activeCommand?.id ?? matchedCommands[0].id}`}
             onKeyDown={handleCommandPanelKeyDown}
             className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-hidden rounded-[6px] border border-white/10 bg-black shadow-2xl outline-none"
@@ -444,7 +444,7 @@ export const AiChatInput = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder="输入您的问题..."
-          aria-label="AI 对话输入框"
+          aria-label="AI Chat Input Area"
           className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
         />
 
@@ -497,14 +497,14 @@ export const AiChatInput = ({
               </div>
             </div>
             <IconButton
-              aria-label="添加附件"
+              aria-label="Add attachment"
               disabled
               className="text-white/30 h-6 w-6 cursor-not-allowed"
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
             <IconButton
-              aria-label="设置工具模式"
+              aria-label="Set tool mode"
               disabled
               className="text-white/30 h-6 w-6 cursor-not-allowed"
             >
@@ -514,7 +514,7 @@ export const AiChatInput = ({
 
           {/* 右侧发送按钮 */}
           <IconButton
-            aria-label="发送消息"
+            aria-label="Send message"
             onClick={handleSend}
             disabled={!inputText.trim()}
             highlighted={!!inputText.trim()}

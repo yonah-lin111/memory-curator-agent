@@ -186,7 +186,7 @@ export const PeopleProfileForm = ({
               : `编辑 ${formState.name || "人物"} 档案`}
           </span>
         </div>
-        <IconButton aria-label="取消编辑" onClick={onCancel}>
+        <IconButton aria-label="Cancel edit" onClick={onCancel}>
           <X className="h-3.5 w-3.5" />
         </IconButton>
       </div>
@@ -199,7 +199,7 @@ export const PeopleProfileForm = ({
             </span>
             <div
               role="button"
-              aria-label="点击或拖拽上传新头像"
+              aria-label="Click or drag and drop to upload new avatar"
               className={`relative w-20 h-20 rounded-[6px] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
                 isDragging
                   ? "border-pink-500 bg-pink-500/5"

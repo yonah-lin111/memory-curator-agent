@@ -117,7 +117,7 @@ export const PageDateNavigator = ({
   return (
     <div ref={navigatorRef} className="flex items-center gap-1">
       <IconButton
-        aria-label={`查看前一天 ${previousDate}`}
+        aria-label={`View previous day ${previousDate}`}
         className="h-7 w-7 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
         onClick={() => onChange(previousDate)}
       >
@@ -128,7 +128,7 @@ export const PageDateNavigator = ({
         <button
           aria-expanded={isCalendarOpen}
           aria-haspopup="dialog"
-          aria-label={`打开日期选择器，当前日期 ${entryDate}`}
+          aria-label={`Open date picker, current date ${entryDate}`}
           className="relative flex h-7 items-center gap-1.5 rounded-[6px] border border-white/5 bg-black/20 px-2.5 text-left text-xs font-semibold text-white/80 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.04]"
           type="button"
           onClick={() => setIsCalendarOpen((currentOpen) => !currentOpen)}
@@ -142,7 +142,7 @@ export const PageDateNavigator = ({
 
         {isCalendarOpen ? (
           <div
-            aria-label="日期选择器"
+            aria-label="Date picker"
             className="absolute left-0 top-[calc(100%+8px)] z-50 w-[296px] rounded-[6px] border border-white/10 bg-[#111111] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.62)]"
             role="dialog"
           >
@@ -157,7 +157,7 @@ export const PageDateNavigator = ({
               </div>
               <div className="flex items-center gap-1">
                 <IconButton
-                  aria-label={`查看上个月 ${shiftEntryMonth(visibleMonth, -1)}`}
+                  aria-label={`View previous month ${shiftEntryMonth(visibleMonth, -1)}`}
                   className="h-7 w-7 bg-white/[0.03] text-white/56 hover:bg-white/[0.08] hover:text-white"
                   onClick={() =>
                     onVisibleMonthChange(shiftEntryMonth(visibleMonth, -1))
@@ -166,7 +166,7 @@ export const PageDateNavigator = ({
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </IconButton>
                 <IconButton
-                  aria-label={`查看下个月 ${shiftEntryMonth(visibleMonth, 1)}`}
+                  aria-label={`View next month ${shiftEntryMonth(visibleMonth, 1)}`}
                   className="h-7 w-7 bg-white/[0.03] text-white/56 hover:bg-white/[0.08] hover:text-white"
                   onClick={() =>
                     onVisibleMonthChange(shiftEntryMonth(visibleMonth, 1))
@@ -200,7 +200,7 @@ export const PageDateNavigator = ({
                 return (
                   <button
                     key={dayItem.entryDate}
-                    aria-label={`选择日期 ${dayItem.entryDate}，${entryCount > 0 ? "有记录" : "无记录"}`}
+                    aria-label={`Select date ${dayItem.entryDate}, ${entryCount > 0 ? "has entries" : "no entries"}`}
                     className={`relative flex aspect-square w-full items-center justify-center rounded-[6px] border transition-colors duration-150 ${
                       isSelected
                         ? "border-white/28 bg-white/[0.09] text-white"
@@ -239,7 +239,7 @@ export const PageDateNavigator = ({
       </div>
 
       <IconButton
-        aria-label={`查看后一天 ${nextDate}`}
+        aria-label={`View next day ${nextDate}`}
         className="h-7 w-7 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
         onClick={() => onChange(nextDate)}
       >

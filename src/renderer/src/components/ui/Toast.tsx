@@ -1,6 +1,5 @@
 import type React from "react";
 import { createContext, useContext, useState, useCallback } from "react";
-import { CheckCircle2, AlertCircle, Info, X, AlertTriangle } from "lucide-react";
 
 // 消息提示类型。
 export type ToastType = "success" | "error" | "info" | "warning";
@@ -13,10 +12,14 @@ export interface ToastItem {
   message: string;
   // 提示类型。
   type: ToastType;
+  // 是否正在退出（用于退出动画）
+  isExiting?: boolean;
 }
 
 // 消息提示上下文接口。
 interface ToastContextType {
+  // 当前消息列表。
+  toasts: ToastItem[];
   // 触发通用消息提示。
   show: (message: string, type?: ToastType, duration?: number) => void;
   // 触发成功类型消息。
@@ -33,8 +36,25 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 /**
+ * 获取不同类型对应的文字颜色类名。
+ */
+export const getToastColorClass = (type: ToastType): string => {
+  switch (type) {
+    case "success":
+      return "text-emerald-400";
+    case "error":
+      return "text-rose-400";
+    case "warning":
+      return "text-amber-400";
+    case "info":
+    default:
+      return "text-blue-400";
+  }
+};
+
+/**
  * 消息提示 Provider 组件。
- * 管理全局消息队列，并在视口右上角渲染消息堆叠卡片。
+ * 管理全局消息队列。
  */
 export const ToastProvider = ({
   children,
@@ -45,10 +65,16 @@ export const ToastProvider = ({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   /**
-   * 移除指定 ID 的消息。
+   * 移除指定 ID 的消息（带退出过渡）。
    */
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    setToasts((prev) =>
+      prev.map((toast) => (toast.id === id ? { ...toast, isExiting: true } : toast))
+    );
+    // 延迟 300ms（等待 CSS 过渡结束）后，真正移出
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+    }, 300);
   }, []);
 
   /**
@@ -109,73 +135,16 @@ export const ToastProvider = ({
     [show]
   );
 
-  /**
-   * 获取不同类型对应的图标与样式配置。
-   */
-  const getToastStyle = (type: ToastType) => {
-    switch (type) {
-      case "success":
-        return {
-          icon: CheckCircle2,
-          iconClass: "text-emerald-400",
-          borderClass: "border-emerald-500/20",
-        };
-      case "error":
-        return {
-          icon: AlertCircle,
-          iconClass: "text-rose-400",
-          borderClass: "border-rose-500/20",
-        };
-      case "warning":
-        return {
-          icon: AlertTriangle,
-          iconClass: "text-amber-400",
-          borderClass: "border-amber-500/20",
-        };
-      case "info":
-      default:
-        return {
-          icon: Info,
-          iconClass: "text-blue-400",
-          borderClass: "border-blue-500/20",
-        };
-    }
-  };
-
   return (
-    <ToastContext.Provider value={{ show, success, error, info, warning }}>
+    <ToastContext.Provider value={{ toasts, show, success, error, info, warning }}>
       {children}
-
-      {/* 消息提示卡片层容器 */}
-      <div className="fixed top-4 right-4 z-[9999] flex flex-col items-end gap-2 max-w-sm w-full pointer-events-none">
-        {toasts.map((toast) => {
-          const { icon: Icon, iconClass, borderClass } = getToastStyle(toast.type);
-
-          return (
-            <div
-              key={toast.id}
-              className={`pointer-events-auto flex items-start gap-3 w-auto rounded-[6px] border bg-[#212121] p-3 shadow-[0_8px_30px_rgb(0,0,0,0.5)] transition-all duration-300 animate-card-modal-in ${borderClass}`}
-              role="alert"
-            >
-              {/* 类型对应高亮图标 */}
-              <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${iconClass}`} />
-
-              {/* 核心消息内容文本，默认 13px */}
-              <span className="flex-1 text-sm font-medium text-white/90 leading-normal break-all">
-                {toast.message}
-              </span>
-
-              {/* 手动关闭按钮 */}
-              <button
-                type="button"
-                className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-[4px] text-white/30 transition-all duration-150 hover:bg-white/5 hover:text-white outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
-                onClick={() => removeToast(toast.id)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          );
-        })}
+      {/* 隐藏的辅助无障碍 alert 容器，供屏幕阅读器和测试框架定位 */}
+      <div className="sr-only" aria-live="assertive">
+        {toasts.map((toast) => (
+          <div key={toast.id} role="alert">
+            {toast.message}
+          </div>
+        ))}
       </div>
     </ToastContext.Provider>
   );
@@ -183,12 +152,19 @@ export const ToastProvider = ({
 
 /**
  * 全局消息提示 Hook。
- * 供各页面或组件调用以输出轻量级提示信息。
  */
 export const useToast = (): ToastContextType => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast 必须在 ToastProvider 内部使用");
+    // 优雅降级，防止非 Provider 环境下崩溃
+    return {
+      toasts: [],
+      show: () => {},
+      success: () => {},
+      error: () => {},
+      info: () => {},
+      warning: () => {},
+    };
   }
   return context;
 };

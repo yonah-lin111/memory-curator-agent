@@ -64,7 +64,7 @@ describe('AiChatHistoryList', () => {
       clientX: 120,
       clientY: 140
     })
-    expect(screen.getByRole('menu', { name: '第一会话 操作菜单' })).toBeInTheDocument()
+    expect(screen.getByRole('menu', { name: '第一会话 action menu' })).toBeInTheDocument()
 
     fireEvent.contextMenu(screen.getByText('第二会话'), {
       clientX: 160,
@@ -72,7 +72,7 @@ describe('AiChatHistoryList', () => {
     })
 
     expect(screen.getAllByRole('menu')).toHaveLength(1)
-    expect(screen.getByRole('menu', { name: '第二会话 操作菜单' })).toBeInTheDocument()
+    expect(screen.getByRole('menu', { name: '第二会话 action menu' })).toBeInTheDocument()
   })
 
   it('点击编辑标题后直接在标题位置输入并提交', async () => {
@@ -82,7 +82,7 @@ describe('AiChatHistoryList', () => {
 
     fireEvent.contextMenu(screen.getByText('第一会话'))
     await user.click(screen.getByRole('menuitem', { name: /编辑标题/ }))
-    const input = screen.getByLabelText('编辑对话标题 第一会话')
+    const input = screen.getByLabelText('Edit chat title 第一会话')
 
     await user.clear(input)
     await user.type(input, '新的标题{Enter}')

@@ -109,7 +109,7 @@ export const AiChatMessageContextMenu = ({
 
   return (
     <div
-      aria-label="AI 消息操作菜单"
+      aria-label="AI message action menu"
       className="fixed z-50 w-[176px] rounded-[6px] border border-white/10 bg-[#000000] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
       role="menu"
       onClick={(event) => event.stopPropagation()}

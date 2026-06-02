@@ -67,7 +67,7 @@ export const Tag = ({
   return (
     <span
       role={isClickable ? "button" : undefined}
-      aria-label={isClickable && typeof children === "string" ? `添加随记标签 ${children}` : undefined}
+      aria-label={isClickable && typeof children === "string" ? `Add snippet tag ${children}` : undefined}
       className={`inline-flex items-center justify-center border font-semibold select-none transition-all duration-150 ${
         currentStyles.container
       } ${
@@ -84,7 +84,7 @@ export const Tag = ({
       {onClose && (
         <span
           role="button"
-          aria-label="删除标签"
+          aria-label="Delete tag"
           className="opacity-60 hover:opacity-100 cursor-pointer text-current hover:text-rose-400 transition-all flex items-center justify-center"
           onClick={(e) => {
             e.stopPropagation();

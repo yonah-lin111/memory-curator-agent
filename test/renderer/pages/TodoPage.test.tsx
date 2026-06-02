@@ -129,11 +129,11 @@ describe("TodoPage", () => {
     expect(await screen.findByText("今天任务")).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     );
     expect(await screen.findByText("昨天任务")).toBeInTheDocument();
   });
@@ -161,17 +161,17 @@ describe("TodoPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "日期选择器" });
+    const dialog = screen.getByRole("dialog", { name: "Date picker" });
     expect(dialog).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-27，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-27, has entries" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     ).toBeInTheDocument();
   });
 
@@ -244,13 +244,13 @@ describe("TodoPage", () => {
     const existingTodoText = screen.getByText("旧任务");
     const existingTodoItem = existingTodoText.closest(".group");
     const toggleButton = existingTodoItem?.querySelector<HTMLButtonElement>(
-      'button[aria-label="标记为已完成"]',
+      'button[aria-label="Mark as completed"]',
     );
     const priorityButton = existingTodoItem?.querySelector<HTMLButtonElement>(
-      'button[aria-label="切换 旧任务 的优先级"]',
+      'button[aria-label="Toggle priority of 旧任务"]',
     );
     const deleteButton = existingTodoItem?.querySelector<HTMLButtonElement>(
-      'button[aria-label="删除待办 旧任务"]',
+      'button[aria-label="Delete todo 旧任务"]',
     );
 
     expect(toggleButton).not.toBeNull();

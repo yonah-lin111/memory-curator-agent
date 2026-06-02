@@ -34,18 +34,18 @@ describe('App', () => {
     expect(screen.getByText('计划 / 随记 / 日记')).toBeInTheDocument()
     expect(screen.queryByLabelText('右侧策展栏')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '折叠左侧导航栏' }))
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
     expect(screen.queryByText('MEMORY CURATOR')).not.toBeInTheDocument()
     expect(screen.getAllByText('DAILY')).toHaveLength(1)
     expect(screen.queryByText('LIBRARY')).not.toBeInTheDocument()
     expect(screen.queryByText('CURATION')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '展开左侧导航栏' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument()
   })
 
   it('使用更小的圆形折叠按钮', () => {
     render(<App />)
 
-    expect(screen.getByRole('button', { name: '折叠左侧导航栏' })).toHaveClass('h-6', 'w-6', 'rounded-full')
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toHaveClass('h-6', 'w-6', 'rounded-full')
   })
 
   it('默认将 Today 标记为当前侧栏页面', () => {
@@ -64,25 +64,25 @@ describe('App', () => {
     expect(screen.getByText('Notes').closest('[aria-current="page"]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /View previous day/ })).toBeInTheDocument()
     expect(
-      within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })
+      within(screen.getByLabelText('Sidebar main navigation')).getByRole('button', { name: /Journal/ })
     ).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Weekly Review/ }))
-    expect(screen.getByLabelText('Weekly Review 页面')).toBeInTheDocument()
+    expect(screen.getByLabelText('Weekly Review Page')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Weekly Review/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Themes/ }))
-    expect(screen.getByLabelText('Themes 页面')).toBeInTheDocument()
+    expect(screen.getByLabelText('Themes Page')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Themes/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /Memories/ }))
-    expect(screen.getByLabelText('Memories 页面')).toBeInTheDocument()
+    expect(screen.getByLabelText('Memories Page')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Memories/ })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: /People/ }))
-    expect(screen.getByLabelText('People 页面')).toBeInTheDocument()
+    expect(screen.getByLabelText('People Page')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /People/ })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -105,9 +105,9 @@ describe('App', () => {
       window.dispatchEvent(new PopStateEvent('popstate'))
     })
 
-    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /View previous day/ })).toBeInTheDocument()
     expect(
-      within(screen.getByLabelText('侧边栏主导航')).getByRole('button', { name: /Journal/ })
+      within(screen.getByLabelText('Sidebar main navigation')).getByRole('button', { name: /Journal/ })
     ).toHaveAttribute('aria-current', 'page')
   })
 
@@ -117,7 +117,7 @@ describe('App', () => {
     render(<App />)
 
     await user.click(screen.getByRole('button', { name: /Journal/ }))
-    expect(screen.getByRole('button', { name: /查看前一天/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /View previous day/ })).toBeInTheDocument()
     expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Todo/ }))
@@ -132,7 +132,7 @@ describe('App', () => {
   it('中间内容容器保留克制的左右内边距', () => {
     render(<App />)
 
-    expect(screen.getByLabelText('中间内容容器')).toHaveClass('px-1', 'lg:px-2')
+    expect(screen.getByLabelText('Main content container')).toHaveClass('px-1', 'lg:px-2')
   })
 
   it('待办快速录入框默认常驻，一键排序按钮可对列表进行排序', async () => {
@@ -141,7 +141,7 @@ describe('App', () => {
     const input = screen.getByPlaceholderText('添加一个待办，回车保存')
     expect(input).toBeInTheDocument()
 
-    const sortBtn = screen.getByRole('button', { name: '一键排序' })
+    const sortBtn = screen.getByRole('button', { name: 'One-click sort' })
     expect(sortBtn).toBeInTheDocument()
   })
 
@@ -155,7 +155,7 @@ describe('App', () => {
 
     const input = screen.getByPlaceholderText('添加一个待办，回车保存')
     // 默认优先级是 P1
-    const priorityBtn = screen.getByRole('button', { name: /切换新待办优先级/ })
+    const priorityBtn = screen.getByRole('button', { name: /Toggle new todo priority/ })
     expect(priorityBtn).toHaveTextContent('P1')
 
     // 点击循环切换优先级 P1 -> P2
@@ -223,7 +223,7 @@ describe('App', () => {
     const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
     const container = todoText.closest('.group')!
 
-    const priorityBtn = container.querySelector('button[aria-label^="切换 "]')!
+    const priorityBtn = container.querySelector('button[aria-label^="Toggle priority of "]')!
     expect(priorityBtn).toHaveTextContent('P2')
 
     // 点击切换优先级，P2 -> P3
@@ -238,7 +238,7 @@ describe('App', () => {
 
     const todoText = screen.getByText('完成 Today 工作台的三栏静态布局编码与视觉自审')
     const container = todoText.closest('.group')!
-    const deleteBtn = container.querySelector('button[aria-label="删除待办 完成 Today 工作台的三栏静态布局编码与视觉自审"]')!
+    const deleteBtn = container.querySelector('button[aria-label="Delete todo 完成 Today 工作台的三栏静态布局编码与视觉自审"]')!
 
     await user.click(deleteBtn)
 
@@ -271,9 +271,9 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    await user.type(screen.getByLabelText('AI 对话输入框'), '阿明是谁')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '阿明是谁')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(window.api.ai?.startChat).toHaveBeenCalled()
@@ -418,9 +418,9 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    await user.type(screen.getByLabelText('AI 对话输入框'), '切换不断流')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '切换不断流')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(window.api.ai?.startChat).toHaveBeenCalled()
@@ -549,11 +549,11 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
     await user.click(await screen.findByRole('button', { name: /MiniMax-M2\.5/ }))
     await user.click(screen.getByRole('option', { name: 'Gemini 3.5 Flash' }))
-    await user.type(screen.getByLabelText('AI 对话输入框'), '使用 Gemini')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '使用 Gemini')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(startChat).toHaveBeenCalledWith(
@@ -585,9 +585,9 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    await user.type(screen.getByLabelText('AI 对话输入框'), '第一个问题是什么')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '第一个问题是什么')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(startChat).toHaveBeenCalledTimes(1)
@@ -615,8 +615,8 @@ describe('App', () => {
       expect(screen.getByText('第一个问题是关于上下文。')).toBeInTheDocument()
     })
 
-    await user.type(screen.getByLabelText('AI 对话输入框'), '上一个问题是什么')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '上一个问题是什么')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(startChat).toHaveBeenCalledTimes(2)
@@ -661,9 +661,9 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    await user.type(screen.getByLabelText('AI 对话输入框'), '查一下阿明')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '查一下阿明')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(startChat).toHaveBeenCalledTimes(1)
@@ -693,8 +693,8 @@ describe('App', () => {
       expect(screen.getByText('找到 1 位关联人物：阿明｜朋友｜技术狂热者')).toBeInTheDocument()
     })
 
-    await user.type(screen.getByLabelText('AI 对话输入框'), '刚才工具查到了什么')
-    await user.click(screen.getByRole('button', { name: '发送消息' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '刚才工具查到了什么')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     await waitFor(() => {
       expect(startChat).toHaveBeenCalledTimes(2)
@@ -729,7 +729,7 @@ describe('App', () => {
 
     const todoText = screen.getByText('修复渲染层 TypeScript 编译错误与 Lint 规范冲突')
     const container = todoText.closest('.group')!
-    const checkboxBtn = container.querySelector('button[aria-label="标记为已完成"]')!
+    const checkboxBtn = container.querySelector('button[aria-label="Mark as completed"]')!
 
     await user.click(checkboxBtn)
 
@@ -741,7 +741,7 @@ describe('App', () => {
     expect(afterToggleIndex).toBe(0)
 
     // 点击一键排序按钮
-    const sortBtn = screen.getByRole('button', { name: '一键排序' })
+    const sortBtn = screen.getByRole('button', { name: 'One-click sort' })
     await user.click(sortBtn)
 
     // 排序后，已完成的任务应该沉底，其索引应变大
@@ -758,20 +758,20 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '添加自由随记片段' }))
+    await user.click(screen.getByRole('button', { name: 'Add free snippet' }))
 
     const dialog = screen.getByRole('dialog', { name: '新建自由随记卡片' })
     expect(dialog).toBeInTheDocument()
-    expect(screen.getByLabelText('随记标题')).toBeInTheDocument()
-    expect(screen.getByLabelText('随记内容')).toBeInTheDocument()
+    expect(screen.getByLabelText('Snippet title')).toBeInTheDocument()
+    expect(screen.getByLabelText('Snippet content')).toBeInTheDocument()
     
     // 输入新标签并回车产生标签
-    const tagInput = screen.getByLabelText('输入新标签')
+    const tagInput = screen.getByLabelText('Input new tag')
     expect(tagInput).toBeInTheDocument()
     await user.type(tagInput, 'UX{Enter}')
     
     expect(within(dialog).getByText('UX')).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: '删除标签' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Delete tag' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '第 1 条待办选择优先级P0' })).not.toBeInTheDocument()
   })
 
@@ -788,8 +788,8 @@ describe('App', () => {
     const dialog = screen.getByRole('dialog', { name: '编辑自由随记卡片' })
     expect(dialog).toBeInTheDocument()
 
-    const titleInput = screen.getByLabelText('随记标题')
-    const contentInput = screen.getByLabelText('随记内容')
+    const titleInput = screen.getByLabelText('Snippet title')
+    const contentInput = screen.getByLabelText('Snippet content')
 
     expect(titleInput).toHaveValue('关于记忆持久化的思考')
     expect(contentInput).toHaveValue('所有的临时闪念都不应该直接成为长期记忆，必须经过一个类似海马体的主动策展层。今天看到一个概念：信息不仅需要被存储，更需要主动被遗忘以保持高信噪比。')
@@ -814,10 +814,10 @@ describe('App', () => {
     render(<App />)
 
     // 点击添加
-    await user.click(screen.getByRole('button', { name: '添加自由随记片段' }))
+    await user.click(screen.getByRole('button', { name: 'Add free snippet' }))
 
-    const titleInput = screen.getByLabelText('随记标题')
-    const contentInput = screen.getByLabelText('随记内容')
+    const titleInput = screen.getByLabelText('Snippet title')
+    const contentInput = screen.getByLabelText('Snippet content')
 
     await user.type(titleInput, '我的新闪念')
     await user.type(contentInput, '今天突然想到的一个设计细节')
@@ -838,7 +838,7 @@ describe('App', () => {
     const cardTitle = screen.getByText('本地持久化方案表现')
     expect(cardTitle).toBeInTheDocument()
 
-    const deleteBtn = screen.getByRole('button', { name: '删除片段 本地持久化方案表现' })
+    const deleteBtn = screen.getByRole('button', { name: 'Delete snippet 本地持久化方案表现' })
     expect(deleteBtn).toBeInTheDocument()
 
     await user.click(deleteBtn)
@@ -880,20 +880,20 @@ describe('App', () => {
 
     expect(window.location.pathname).toBe('/today')
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
 
-    expect(screen.getByRole('button', { name: '关闭聊天' })).toBeInTheDocument()
-    expect(screen.getByLabelText('对话历史列表')).toBeInTheDocument()
-    expect(screen.getByLabelText('AI 对话主体')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Close chat' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Chat history list')).toBeInTheDocument()
+    expect(screen.getByLabelText('AI Chat Workspace')).toBeInTheDocument()
     expect(screen.getByText('AI DIALOGS')).toBeInTheDocument()
     expect(screen.getAllByText('整理今天的记忆线索')[0]).toBeInTheDocument()
     expect(window.location.pathname).toBe('/today')
 
-    await user.click(screen.getByRole('button', { name: '关闭聊天' }))
+    await user.click(screen.getByRole('button', { name: 'Close chat' }))
 
-    expect(screen.getByRole('button', { name: '打开聊天' })).toBeInTheDocument()
-    expect(screen.getByLabelText('侧边栏主导航')).toBeInTheDocument()
-    expect(screen.getByLabelText('对话历史列表')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('button', { name: 'Open chat' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Sidebar main navigation')).toBeInTheDocument()
+    expect(screen.getByLabelText('Chat history list')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('Header 聊天按钮左侧展示上下文记录 tooltip 按钮和工具策略详情', async () => {
@@ -933,15 +933,15 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
 
-    const contextButton = await screen.findByRole('button', { name: '查看 AI 上下文记录' })
-    const chatButton = screen.getByRole('button', { name: '关闭聊天' })
+    const contextButton = await screen.findByRole('button', { name: 'View AI context records' })
+    const chatButton = screen.getByRole('button', { name: 'Close chat' })
     expect(contextButton.compareDocumentPosition(chatButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await user.click(contextButton)
 
-    expect(screen.getByRole('dialog', { name: 'AI 上下文记录详情' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'AI context record details' })).toBeInTheDocument()
     expect(screen.queryByText('单条工具输出上限')).not.toBeInTheDocument()
     expect(screen.queryByText('4,096 chars')).not.toBeInTheDocument()
     expect(screen.queryByText('最近完整工具结果')).not.toBeInTheDocument()
@@ -1020,10 +1020,10 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
     await user.click(screen.getByRole('button', { name: /周回顾行动拆解/ }))
 
-    const chatMain = screen.getByLabelText('AI 对话主体')
+    const chatMain = screen.getByLabelText('AI Chat Workspace')
     const banner = screen.getByRole('banner')
     expect(within(banner).getByText('周回顾行动拆解')).toBeInTheDocument()
     expect(within(chatMain).getByText('weekly_review.load')).toBeInTheDocument()
@@ -1071,11 +1071,11 @@ describe('App', () => {
 
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: '打开聊天' }))
-    const historyList = screen.getByLabelText('对话历史列表')
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    const historyList = screen.getByLabelText('Chat history list')
     await within(historyList).findByText('历史一')
 
-    await user.click(screen.getByRole('button', { name: '新建对话' }))
+    await user.click(screen.getByRole('button', { name: 'New chat' }))
 
     const banner = screen.getByRole('banner')
     expect(within(banner).getByText('新建对话')).toBeInTheDocument()

@@ -68,7 +68,7 @@ export const TodaySnippetsPanel = ({
         </div>
         <div className="flex items-center gap-2">
           <IconButton
-            aria-label="添加自由随记片段"
+            aria-label="Add free snippet"
             className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
             onClick={onAddNote}
           >
@@ -116,7 +116,7 @@ export const TodaySnippetsPanel = ({
                     {note.time}
                   </span>
                   <button
-                    aria-label={`删除片段 ${note.title || "无标题片段"}`}
+                    aria-label={`Delete snippet ${note.title || "Untitled snippet"}`}
                     className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
                     type="button"
                     onClick={(e) => handleDeleteNote(e, note.id)}

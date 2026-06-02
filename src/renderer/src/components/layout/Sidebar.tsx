@@ -223,7 +223,7 @@ export const Sidebar = ({
             </div>
 
             {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
-            <nav className="flex flex-col gap-3 w-full" aria-label="侧边栏主导航">
+            <nav className="flex flex-col gap-3 w-full" aria-label="Sidebar main navigation">
               {NAVIGATION_GROUPS.map((group) => (
                 <section key={group.id} className="flex flex-col gap-1.5">
                   {!shouldUseCollapsedLayout && (
@@ -326,7 +326,7 @@ export const Sidebar = ({
       {mode === "navigation" && (
         <button
           type="button"
-          aria-label={isCollapsed ? "展开左侧导航栏" : "折叠左侧导航栏"}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-expanded={!isCollapsed}
           onClick={() => onCollapsedChange(!isCollapsed)}
           className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"

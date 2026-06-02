@@ -25,7 +25,7 @@ vi.mock("md-editor-rt", () => ({
     placeholder?: string;
   }) => (
     <textarea
-      aria-label="日记正文"
+      aria-label="Journal content"
       placeholder={placeholder}
       value={value ?? ""}
       onChange={(event) => onChange?.(event.target.value)}
@@ -140,11 +140,11 @@ describe("JournalPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     );
 
     expect(listDay).toHaveBeenLastCalledWith("2026-05-26");
@@ -174,17 +174,17 @@ describe("JournalPage", () => {
 
     await userEvent.click(
       screen.getByRole("button", {
-        name: "打开日期选择器，当前日期 2026-05-27",
+        name: "Open date picker, current date 2026-05-27",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "日期选择器" });
+    const dialog = screen.getByRole("dialog", { name: "Date picker" });
     expect(dialog).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-27，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-27, has entries" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "选择日期 2026-05-26，有记录" }),
+      screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
     ).toBeInTheDocument();
   });
 
@@ -215,9 +215,9 @@ describe("JournalPage", () => {
 
     renderJournalPage();
 
-    await user.type(await screen.findByLabelText("日记正文"), "待保存草稿");
+    await user.type(await screen.findByLabelText("Journal content"), "待保存草稿");
     await user.click(
-      screen.getByRole("button", { name: "查看前一天 2026-05-26" }),
+      screen.getByRole("button", { name: "View previous day 2026-05-26" }),
     );
 
     await waitFor(() => {
@@ -247,7 +247,7 @@ describe("JournalPage", () => {
 
     renderJournalPage();
 
-    await user.type(await screen.findByLabelText("日记正文"), "新的内容");
+    await user.type(await screen.findByLabelText("Journal content"), "新的内容");
 
     await waitFor(() => {
       expect(saveJournal).toHaveBeenCalledWith({
@@ -278,7 +278,7 @@ describe("JournalPage", () => {
 
     renderJournalPage();
 
-    const editor = await screen.findByLabelText("日记正文");
+    const editor = await screen.findByLabelText("Journal content");
     await user.clear(editor);
 
     await waitFor(() => {

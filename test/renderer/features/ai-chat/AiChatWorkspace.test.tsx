@@ -134,8 +134,8 @@ describe('AiChatWorkspace', () => {
       expect(useAiChatContextStore.getState().getSessionItems('s1')).toHaveLength(2)
     })
     expect(screen.getByText('MiniMax-M2.5')).toBeInTheDocument()
-    expect(screen.getByLabelText(/上下文使用 0% · 约 \d+ tokens \/ 204,800/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('AI 对话上下文')).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/Context usage 0% · ~\d+ tokens \/ 204,800/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('AI Chat Context')).not.toBeInTheDocument()
   })
 
   it('切换 active chat 后复用发送消息的最新 AI 回答定位效果', async () => {
@@ -151,7 +151,7 @@ describe('AiChatWorkspace', () => {
         onModelChange={() => undefined}
       />
     )
-    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const messagesContainer = screen.getByLabelText('AI Chat Workspace').querySelector('.custom-scrollbar')!
     const scrollTo = vi.fn()
     messagesContainer.scrollTop = 480
     Object.defineProperty(messagesContainer, 'scrollHeight', {
@@ -200,7 +200,7 @@ describe('AiChatWorkspace', () => {
         onModelChange={() => undefined}
       />
     )
-    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const messagesContainer = screen.getByLabelText('AI Chat Workspace').querySelector('.custom-scrollbar')!
     const scrollPositions: number[] = []
     messagesContainer.scrollTop = 480
     Object.defineProperty(messagesContainer, 'scrollTo', {
@@ -268,7 +268,7 @@ describe('AiChatWorkspace', () => {
         onModelChange={() => undefined}
       />
     )
-    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const messagesContainer = screen.getByLabelText('AI Chat Workspace').querySelector('.custom-scrollbar')!
     const scrollTo = vi.fn()
     messagesContainer.scrollTop = 520
     Object.defineProperty(messagesContainer, 'scrollTo', {
@@ -336,7 +336,7 @@ describe('AiChatWorkspace', () => {
         onModelChange={() => undefined}
       />
     )
-    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
+    const messagesContainer = screen.getByLabelText('AI Chat Workspace').querySelector('.custom-scrollbar')!
     const scrollTo = vi.fn()
     Object.defineProperty(messagesContainer, 'scrollTo', {
       configurable: true,

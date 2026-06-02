@@ -311,7 +311,7 @@ export const SnippetsPage = (): React.JSX.Element => {
   };
 
   return (
-    <section aria-label="随记 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section aria-label="Snippets Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -329,7 +329,7 @@ export const SnippetsPage = (): React.JSX.Element => {
               />
             </div>
             <IconButton
-              aria-label="添加随记片段"
+              aria-label="Add snippet"
               className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
               onClick={() => {
                 setEditingNote(null);
@@ -381,7 +381,7 @@ export const SnippetsPage = (): React.JSX.Element => {
                             {snippet.time}
                           </span>
                           <button
-                            aria-label={`删除片段 ${snippet.title || "无标题片段"}`}
+                            aria-label={`Delete snippet ${snippet.title || "Untitled snippet"}`}
                             className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
                             type="button"
                             onClick={(e) => handleDeleteNote(e, snippet.id)}

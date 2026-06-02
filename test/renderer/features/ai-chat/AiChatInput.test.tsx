@@ -79,7 +79,7 @@ describe('AiChatInput', () => {
 
     fireEvent.click(screen.getByTestId('ai-chat-input-container'))
 
-    expect(screen.getByLabelText('AI 对话输入框')).toHaveFocus()
+    expect(screen.getByLabelText('AI Chat Input Area')).toHaveFocus()
   })
 
   it('输入多行内容时最多扩张到 6 行高度', () => {
@@ -89,7 +89,7 @@ describe('AiChatInput', () => {
       paddingBottom: '0px'
     } as CSSStyleDeclaration)
     renderAiChatInput()
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     Object.defineProperty(textarea, 'scrollHeight', {
       configurable: true,
       value: 180
@@ -108,7 +108,7 @@ describe('AiChatInput', () => {
   it('输入 / 后保持输入框聚焦并支持键盘选择执行命令', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     textarea.focus()
 
     fireEvent.change(textarea, {
@@ -118,7 +118,7 @@ describe('AiChatInput', () => {
     })
 
     const commandPanel = screen.getByRole('listbox', {
-      name: 'AI 输入命令面板'
+      name: 'AI Command Input Panel'
     })
     await waitFor(() => expect(commandPanel).toBeInTheDocument())
     expect(textarea).toHaveFocus()
@@ -138,7 +138,7 @@ describe('AiChatInput', () => {
   it('输入 /new 时匹配新建对话命令', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     textarea.focus()
 
     fireEvent.change(textarea, {
@@ -148,7 +148,7 @@ describe('AiChatInput', () => {
     })
 
     const commandPanel = screen.getByRole('listbox', {
-      name: 'AI 输入命令面板'
+      name: 'AI Command Input Panel'
     })
     await waitFor(() => expect(commandPanel).toBeInTheDocument())
     expect(textarea).toHaveFocus()
@@ -163,7 +163,7 @@ describe('AiChatInput', () => {
   it('支持命令模糊匹配和上下循环切换', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     textarea.focus()
 
     fireEvent.change(textarea, {
@@ -195,7 +195,7 @@ describe('AiChatInput', () => {
 
   it('undo 命令返回文本时回填到输入框', async () => {
     renderAiChatInput((command) => (command === 'undo' ? '需要重新编辑的问题' : undefined))
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     textarea.focus()
 
     fireEvent.change(textarea, {
@@ -214,7 +214,7 @@ describe('AiChatInput', () => {
   it('在 AI 正在输出时（isGenerating = true）尝试发送，会通过 Toast 提示并阻止发送', async () => {
     const onSendMessage = vi.fn()
     renderAiChatInput(() => undefined, true, onSendMessage)
-    const textarea = screen.getByLabelText('AI 对话输入框')
+    const textarea = screen.getByLabelText('AI Chat Input Area')
     textarea.focus()
 
     fireEvent.change(textarea, {

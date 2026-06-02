@@ -201,7 +201,7 @@ const NotesSidebar = ({
       {tags.map((tag) => (
         <button
           key={tag.value}
-          aria-label={`筛选标签 ${tag.value}`}
+          aria-label={`Filter tag ${tag.value}`}
           className={`rounded-[6px] border px-2 py-0.5 text-xs font-semibold transition-colors ${
             activeTag === tag.value
               ? "border-white/18 bg-white/12 text-white"
@@ -363,7 +363,7 @@ export const NotesPage = (): React.JSX.Element => {
   };
 
   return (
-    <section aria-label="自由笔记素材池页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section aria-label="Notes library page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         {/* 左侧主素材展示区 */}
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
@@ -416,7 +416,7 @@ export const NotesPage = (): React.JSX.Element => {
 
             <div className="flex items-center gap-2">
               <IconButton
-                aria-label="新建 Markdown 素材"
+                aria-label="New Markdown note"
                 className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                 onClick={() => setIsMarkdownModalOpen(true)}
               >

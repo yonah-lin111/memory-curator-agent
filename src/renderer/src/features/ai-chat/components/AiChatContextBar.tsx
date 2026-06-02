@@ -34,9 +34,9 @@ export const AiChatContextBar = ({
   void agent;
 
   return (
-    <div className="relative" aria-label="AI 对话上下文">
+    <div className="relative" aria-label="AI Chat Context">
       <IconButton
-        aria-label="查看 AI 上下文记录"
+        aria-label="View AI context records"
         title="查看 AI 上下文记录"
         highlighted={isOpen}
         onClick={() => setIsOpen((current) => !current)}
@@ -51,7 +51,7 @@ export const AiChatContextBar = ({
         <div
           id="ai-chat-context-detail"
           role="dialog"
-          aria-label="AI 上下文记录详情"
+          aria-label="AI context record details"
           className="absolute right-0 top-8 z-40 w-[min(420px,calc(100vw-32px))] rounded-[6px] border border-white/10 bg-[#161616] p-3 text-xs text-white/55 shadow-2xl"
         >
           <div className="mb-2 flex items-center gap-2">

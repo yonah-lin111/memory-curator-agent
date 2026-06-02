@@ -231,7 +231,7 @@ export const AiChatHistoryList = ({
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
-      aria-label="对话历史列表"
+      aria-label="Chat history list"
       aria-hidden={ariaHidden}
     >
       <style dangerouslySetInnerHTML={{ __html: `
@@ -246,7 +246,7 @@ export const AiChatHistoryList = ({
           AI DIALOGS
         </h2>
         <IconButton
-          aria-label="新建对话"
+          aria-label="New chat"
           onClick={onNewChat}
           className="text-white/45 hover:bg-white/5 hover:text-white"
         >
@@ -309,7 +309,7 @@ export const AiChatHistoryList = ({
                     </div>
                     <input
                       autoFocus
-                      aria-label={`编辑对话标题 ${session.title}`}
+                      aria-label={`Edit chat title ${session.title}`}
                       className={`absolute inset-0 h-full w-full min-w-0 rounded-[4px] border border-transparent bg-transparent text-xs font-bold leading-none outline-none focus:border-transparent ${
                         isActive ? "text-black" : "text-white"
                       }`}
@@ -350,7 +350,7 @@ export const AiChatHistoryList = ({
                   {isGenerating ? (
                     <span
                       className="flex items-end gap-[2px] h-3 px-1"
-                      aria-label="AI 正在输出"
+                      aria-label="AI is generating"
                     >
                       <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '0ms' }} />
                       <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '150ms' }} />

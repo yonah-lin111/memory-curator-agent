@@ -205,7 +205,7 @@ export const JournalPage = (): React.JSX.Element => {
   }, [journalContent]);
 
   return (
-    <section aria-label="Journal 页面" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section aria-label="Journal Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <JournalEditorSurface
           value={journalContent}
