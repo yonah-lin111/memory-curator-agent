@@ -312,6 +312,27 @@ const findToolStepByPart = (
 };
 
 /**
+ * isReasoningPartGenerating - 判断指定思考片段是否仍在流式输出。
+ */
+const isReasoningPartGenerating = (
+  parts: AiChatMessagePart[],
+  partIndex: number,
+  isMessageGenerating: boolean,
+): boolean => {
+  const part = parts[partIndex];
+
+  if (part?.kind !== "reasoning") {
+    return false;
+  }
+
+  if (part.status) {
+    return part.status === "streaming";
+  }
+
+  return isMessageGenerating && partIndex === parts.length - 1;
+};
+
+/**
  * AiChatMessageBubble - 渲染单个用户或 AI 消息气泡。
  */
 export const AiChatMessageBubble = ({
@@ -443,7 +464,11 @@ export const AiChatMessageBubble = ({
                       <AiChatThinkingBlock
                         key={part.id}
                         content={displayReasoning}
-                        isGenerating={isGenerating}
+                        isGenerating={isReasoningPartGenerating(
+                          messageParts,
+                          partIndex,
+                          isGenerating,
+                        )}
                       />,
                     );
                   } else {

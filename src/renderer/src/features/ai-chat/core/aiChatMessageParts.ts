@@ -7,13 +7,34 @@ import type {
 type AiChatMessage = AiChatSession["messages"][number];
 
 /**
+ * completeAiMessageReasoningParts - 将仍在流式输出的思考片段标记为完成。
+ */
+export const completeAiMessageReasoningParts = (
+  message: AiChatMessage,
+): AiChatMessage => {
+  if (!message.parts?.some((part) => part.kind === "reasoning")) {
+    return message;
+  }
+
+  return {
+    ...message,
+    parts: message.parts.map((part) =>
+      part.kind === "reasoning" && part.status !== "done"
+        ? { ...part, status: "done" }
+        : part,
+    ),
+  };
+};
+
+/**
  * appendAiMessageTextPart - 追加流式文本，并同步保留 answer 兼容上下文构造。
  */
 export const appendAiMessageTextPart = (
   message: AiChatMessage,
   chunk: string,
 ): AiChatMessage => {
-  const parts = message.parts ?? [];
+  const completedMessage = completeAiMessageReasoningParts(message);
+  const parts = completedMessage.parts ?? [];
   const lastPart = parts[parts.length - 1];
   const nextParts: AiChatMessagePart[] =
     lastPart?.kind === "text"
@@ -32,8 +53,8 @@ export const appendAiMessageTextPart = (
         ];
 
   return {
-    ...message,
-    answer: `${message.answer ?? ""}${chunk}`,
+    ...completedMessage,
+    answer: `${completedMessage.answer ?? ""}${chunk}`,
     parts: nextParts,
   };
 };
@@ -46,13 +67,22 @@ export const appendAiMessageReasoningPart = (
   reasoningId: string,
   chunk: string,
 ): AiChatMessage => {
-  const parts = message.parts ?? [];
+  const parts =
+    message.parts?.map((part) =>
+      part.kind === "reasoning" && part.id !== reasoningId
+        ? { ...part, status: "done" as const }
+        : part,
+    ) ?? [];
   const lastPart = parts[parts.length - 1];
   const nextParts: AiChatMessagePart[] =
     lastPart?.kind === "reasoning" && lastPart.id === reasoningId
       ? parts.map((part) =>
           part.id === reasoningId && part.kind === "reasoning"
-            ? { ...part, content: `${part.content}${chunk}` }
+            ? {
+                ...part,
+                content: `${part.content}${chunk}`,
+                status: "streaming",
+              }
             : part,
         )
       : [
@@ -61,6 +91,7 @@ export const appendAiMessageReasoningPart = (
             id: reasoningId,
             kind: "reasoning",
             content: chunk,
+            status: "streaming",
           },
         ];
 
@@ -77,16 +108,20 @@ export const appendAiMessageToolPart = (
   message: AiChatMessage,
   stepId: string,
 ): AiChatMessage => {
+  const completedMessage = completeAiMessageReasoningParts(message);
+
   if (
-    message.parts?.some((part) => part.kind === "tool" && part.stepId === stepId)
+    completedMessage.parts?.some(
+      (part) => part.kind === "tool" && part.stepId === stepId,
+    )
   ) {
-    return message;
+    return completedMessage;
   }
 
   return {
-    ...message,
+    ...completedMessage,
     parts: [
-      ...(message.parts ?? []),
+      ...(completedMessage.parts ?? []),
       {
         id: `${message.id}-tool-${stepId}`,
         kind: "tool",

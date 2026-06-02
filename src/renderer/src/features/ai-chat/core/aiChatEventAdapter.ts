@@ -8,6 +8,7 @@ import {
   appendAiMessageReasoningPart,
   appendAiMessageTextPart,
   appendAiMessageToolPart,
+  completeAiMessageReasoningParts,
 } from "@renderer/features/ai-chat/core/aiChatMessageParts";
 import type { AiChatMessageUpdater } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
 
@@ -255,6 +256,9 @@ export const createAiChatEventHandler = ({
     }
 
     if (event.type === "done") {
+      updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
+        completeAiMessageReasoningParts(message),
+      );
       updateChatSessionStatus(mapping.sessionId, "completed");
       return;
     }

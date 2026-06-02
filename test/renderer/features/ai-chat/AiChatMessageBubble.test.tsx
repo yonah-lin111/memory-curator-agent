@@ -393,6 +393,41 @@ describe("AiChatMessageBubble", () => {
     expect(screen.getByText("people_query")).toBeInTheDocument();
   });
 
+  it("消息仍在生成时已结束的 reasoning 显示完成态", () => {
+    const message: AiChatMessage = {
+      id: "a-reasoning-done-while-generating",
+      role: "assistant",
+      content: 'Processing: "分析一下"',
+      time: "16:04",
+      parts: [
+        {
+          id: "reasoning-1",
+          kind: "reasoning",
+          content: "先分析问题。",
+          status: "done",
+        },
+        {
+          id: "answer-1",
+          kind: "text",
+          content: "正在输出最终回答。",
+        },
+      ],
+      answer: "正在输出最终回答。",
+    };
+
+    const { container } = render(
+      <AiChatMessageBubble
+        message={message}
+        isGenerating={true}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    expect(screen.getByText("Thought Process")).toBeInTheDocument();
+    expect(screen.queryByText("Thinking")).not.toBeInTheDocument();
+    expect(container.querySelector(".animate-ping")).toBeInTheDocument();
+  });
+
   it("正在生成中时展示 loading 动画/指示器而不是具体的发送时间", () => {
     const message: AiChatMessage = {
       id: "a4",

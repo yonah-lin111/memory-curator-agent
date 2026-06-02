@@ -243,6 +243,8 @@ export type AiChatMessagePart =
       kind: "reasoning";
       // Markdown 思考内容。
       content: string;
+      // 思考片段状态。
+      status?: "streaming" | "done";
     }
   | {
       // 片段唯一标识。
