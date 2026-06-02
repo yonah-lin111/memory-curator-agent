@@ -8,8 +8,8 @@ import type {
 import { AiChatThinkingBlock } from "@renderer/features/ai-chat/components/AiChatThinkingBlock";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
 import {
+  resolveDedupedRenderablePartContents,
   resolveDedupedTextContents,
-  resolveDedupedTextPartContents,
 } from "@renderer/features/ai-chat/core/aiChatReasoningDedupe";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
@@ -338,7 +338,8 @@ export const AiChatMessageBubble = ({
       })
     : [];
   const dedupedTextContents = resolveDedupedTextContents(messageParts);
-  const dedupedTextPartContents = resolveDedupedTextPartContents(messageParts);
+  const dedupedRenderablePartContents =
+    resolveDedupedRenderablePartContents(messageParts);
   const markdownContent = isUser
     ? message.content
     : dedupedTextContents.join("\n\n").trim();
@@ -397,7 +398,6 @@ export const AiChatMessageBubble = ({
                 const groupedElements: React.JSX.Element[] = [];
                 let currentToolSteps: AiToolStep[] = [];
                 let currentToolKeys: string[] = [];
-                let renderedTextIndex = 0;
 
                 const flushToolSteps = (): void => {
                   if (currentToolSteps.length > 0) {
@@ -413,11 +413,10 @@ export const AiChatMessageBubble = ({
                   }
                 };
 
-                for (const part of messageParts) {
+                for (const [partIndex, part] of messageParts.entries()) {
                   if (part.kind === "text") {
                     const displayText =
-                      dedupedTextPartContents[renderedTextIndex] ?? "";
-                    renderedTextIndex += 1;
+                      dedupedRenderablePartContents[partIndex] ?? "";
 
                     if (!displayText) {
                       continue;
@@ -432,11 +431,18 @@ export const AiChatMessageBubble = ({
                       />,
                     );
                   } else if (part.kind === "reasoning") {
+                    const displayReasoning =
+                      dedupedRenderablePartContents[partIndex] ?? "";
+
+                    if (!displayReasoning) {
+                      continue;
+                    }
+
                     flushToolSteps();
                     groupedElements.push(
                       <AiChatThinkingBlock
                         key={part.id}
-                        content={part.content}
+                        content={displayReasoning}
                         isGenerating={isGenerating}
                       />,
                     );

@@ -73,6 +73,39 @@ type DedupableMessagePart =
   };
 
 /**
+ * isDedupableContentPart - 判断片段是否包含需要参与去重的可渲染内容。
+ */
+const isDedupableContentPart = (part: DedupableMessagePart): boolean =>
+  (part.kind === "reasoning" || part.kind === "text") &&
+  typeof part.content === "string";
+
+/**
+ * resolveDedupedRenderablePartContents - 按原片段顺序剥离重复的思考与正文段落。
+ */
+export const resolveDedupedRenderablePartContents = (
+  parts: DedupableMessagePart[],
+): string[] => {
+  const referenceContents: string[] = [];
+
+  return parts.map((part) => {
+    if (!isDedupableContentPart(part) || typeof part.content !== "string") {
+      return "";
+    }
+
+    const dedupedContent = stripReasoningFromTextContent(
+      part.content,
+      referenceContents,
+    );
+
+    if (dedupedContent) {
+      referenceContents.push(dedupedContent);
+    }
+
+    return dedupedContent;
+  });
+};
+
+/**
  * resolveDedupedTextPartContents - 剥离当前消息内跨片段重复出现的文本段落。
  */
 export const resolveDedupedTextPartContents = (

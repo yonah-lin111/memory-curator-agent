@@ -1,4 +1,5 @@
-import type React from "react";
+import React, { useState } from "react";
+import { ChevronDown, Brain } from "lucide-react";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 
@@ -12,25 +13,58 @@ type AiChatThinkingBlockProps = {
 
 /**
  * AiChatThinkingBlock - 使用 Markdown 预览渲染模型思考内容。
+ * 支持点击折叠/展开，并提供流式生成动画指示。
  */
 export const AiChatThinkingBlock = ({
   content,
   isGenerating = false,
-}: AiChatThinkingBlockProps): React.JSX.Element => (
-  <div
-    className="ai-chat-thinking-block markdown-preview-container select-text max-w-full border-l border-white/10 pl-3 text-white/50"
-    data-testid="ai-chat-thinking-block"
-    style={{ fontSize: "13px" }}
-  >
-    <MdPreview
-      theme="dark"
-      modelValue={content}
-      previewTheme="default"
-      codeTheme="atom"
-      style={{ backgroundColor: "transparent" }}
-      // 思考流式输出时不折叠代码块，避免用户看到突然跳变的代码区域。
-      autoFoldThreshold={isGenerating ? Infinity : 0}
-      showCodeRowNumber={false}
-    />
-  </div>
-);
+}: AiChatThinkingBlockProps): React.JSX.Element => {
+  // 是否展开思考内容。
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1 w-full my-1.5">
+      {/* 折叠/展开控制头部 */}
+      <button
+        type="button"
+        className="flex items-center gap-1.5 cursor-pointer text-xs select-none py-1.5 px-2.5 rounded-[6px] bg-[#212121] text-white/50 hover:bg-[#212121]/80 hover:text-white/70 transition-all duration-200 w-fit outline-none focus:outline-none border-none"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        aria-expanded={isExpanded}
+      >
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+            isExpanded ? "" : "-rotate-90"
+          }`}
+        />
+        <Brain className="w-3.5 h-3.5" />
+        <span>{isGenerating ? "Thinking" : "Thought Process"}</span>
+        {isGenerating && (
+          <span className="flex h-1.5 w-1.5 relative ml-0.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/40 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50"></span>
+          </span>
+        )}
+      </button>
+
+      {/* 展开的思考内容区域 */}
+      {isExpanded && (
+        <div
+          className="ai-chat-thinking-block markdown-preview-container select-text max-w-full border-l border-white/10 pl-3 text-white/50 animate-fade-in"
+          data-testid="ai-chat-thinking-block"
+          style={{ fontSize: "13px" }}
+        >
+          <MdPreview
+            theme="dark"
+            modelValue={content}
+            previewTheme="default"
+            codeTheme="atom"
+            style={{ backgroundColor: "transparent" }}
+            // 思考流式输出时不折叠代码块，避免用户看到突然跳变的代码区域。
+            autoFoldThreshold={isGenerating ? Infinity : 0}
+            showCodeRowNumber={false}
+          />
+        </div>
+      )}
+    </div>
+  );
+};

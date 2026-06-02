@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
 import type { AiChatMessage } from "@renderer/features/ai-chat/types";
@@ -230,6 +230,10 @@ describe("AiChatMessageBubble", () => {
       />,
     );
 
+    // 思考内容默认折叠，点击展开
+    const toggleButton = screen.getByText("Thought Process");
+    fireEvent.click(toggleButton);
+
     const thinkingBlock = screen.getByTestId("ai-chat-thinking-block");
 
     expect(thinkingBlock).toHaveTextContent("# 思考标题");
@@ -270,6 +274,11 @@ describe("AiChatMessageBubble", () => {
         onOpenContextMenu={noopContextMenu}
       />,
     );
+
+    // 思考内容默认折叠，点击展开以包含在 textContent 中
+    const toggleButton = screen.getByText("Thought Process");
+    fireEvent.click(toggleButton);
+
     const renderedText = container.textContent ?? "";
 
     expect(
@@ -326,6 +335,60 @@ describe("AiChatMessageBubble", () => {
     expect(renderedText.match(/问女朋友是谁，我从数据库中查到了/g)).toHaveLength(
       1,
     );
+    expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
+    expect(screen.getByText("people_query")).toBeInTheDocument();
+  });
+
+  it("工具前后重复出现的 reasoning 片段只展示一次", () => {
+    const repeatedReasoning =
+      "用户问我的女朋友是谁，我通过people_query查询了relationship为女朋友的人员，找到了1条记录。";
+    const message: AiChatMessage = {
+      id: "a-reasoning-tool-duplicate",
+      role: "assistant",
+      content: 'Processing: "我的女朋友是谁"',
+      time: "16:03",
+      parts: [
+        {
+          id: "reasoning-before-tool",
+          kind: "reasoning",
+          content: repeatedReasoning,
+        },
+        {
+          id: "tool-1",
+          kind: "tool",
+          stepId: "tool-1",
+        },
+        {
+          id: "reasoning-after-tool",
+          kind: "reasoning",
+          content: repeatedReasoning,
+        },
+        {
+          id: "answer-text-1",
+          kind: "text",
+          content: "你的女朋友是黄酥梨。",
+        },
+      ],
+      toolSteps: [
+        {
+          id: "tool-1",
+          title: "Tool result: people_query",
+          status: "done",
+          tool: "people_query",
+          observation: "SQL query returned 1 row.",
+        },
+      ],
+      answer: "你的女朋友是黄酥梨。",
+    };
+
+    render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    expect(screen.getAllByText("Thought Process")).toHaveLength(1);
     expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
     expect(screen.getByText("people_query")).toBeInTheDocument();
   });
