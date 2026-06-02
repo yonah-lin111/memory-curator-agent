@@ -126,7 +126,7 @@ const assertValidDateTimeOptions = (locale: string, timeZone: string): void => {
   try {
     new Intl.DateTimeFormat(locale, { timeZone }).format(new Date())
   } catch {
-    throw new Error(`无效的语言区域或时区：${locale} / ${timeZone}`)
+    throw new Error(`Invalid locale or time zone: ${locale} / ${timeZone}`)
   }
 }
 
@@ -221,7 +221,7 @@ const parseBaseDate = (baseDate: string | undefined, now: Date): Date => {
 
   const date = new Date(normalized)
   if (Number.isNaN(date.getTime())) {
-    throw new Error(`无效的基准日期：${normalized}`)
+    throw new Error(`Invalid base date: ${normalized}`)
   }
 
   return date
@@ -232,17 +232,17 @@ const parseBaseDate = (baseDate: string | undefined, now: Date): Date => {
  */
 export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
   name: 'common_time_now',
-  description: '获取当前日期、时间、星期、时区和 Unix 时间戳，只读，不访问网络。',
+  description: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
   prompt: {
-    summary: '获取当前日期、时间、星期、时区和 Unix 时间戳，只读，不访问网络。',
+    summary: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
     intentKeywords: ['时间', '几点', '现在', '今天是', '今天几号', '几号', '日期', '时区', 'timestamp', 'time', 'date', 'now'],
     whenToUse: [
-      '用户询问当前时间、日期、星期、时区或时间戳时使用。',
-      '回答“今天是几号”“现在几点”“当前 Unix 时间戳”等需要实时信息的问题时使用。'
+      'Use when the user asks for the current time, date, weekday, time zone, or timestamp.',
+      'Use for questions such as today\'s date, the current time, or the current Unix timestamp that require real-time information.'
     ],
-    whenNotToUse: ['用户只是泛泛讨论时间概念、写作或翻译时不要使用。'],
-    safety: ['只读取本机当前时间，不访问网络，不读取用户文件。'],
-    output: '直接给出用户需要的时间信息，必要时说明时区。',
+    whenNotToUse: ['Do not use when the user is only discussing time concepts, writing, or translating.'],
+    safety: ['Only read the local current time. Do not access the network or user files.'],
+    output: 'Return the requested time information directly, including the time zone when useful.',
     examples: ['{}', '{"timeZone":"Asia/Shanghai","locale":"zh-CN"}']
   },
   parameters: {
@@ -250,11 +250,11 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
     properties: {
       timeZone: {
         type: 'string',
-        description: 'IANA 时区名称，例如 Asia/Shanghai、America/Los_Angeles；不传使用系统默认时区。'
+        description: 'IANA time zone name, for example Asia/Shanghai or America/Los_Angeles. Defaults to the system time zone.'
       },
       locale: {
         type: 'string',
-        description: 'BCP 47 语言区域，例如 zh-CN、en-US；不传默认 zh-CN。'
+        description: 'BCP 47 locale, for example zh-CN or en-US. Defaults to zh-CN.'
       }
     }
   },
@@ -268,7 +268,7 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
     const data = buildTimeData(nowProvider(), locale, timeZone)
 
     return {
-      observation: `当前时间：${data.local}（${data.weekday}，${data.timeZone}，${data.offsetName}）。`,
+      observation: `Current time: ${data.local} (${data.weekday}, ${data.timeZone}, ${data.offsetName}).`,
       data,
       ...data
     }
@@ -280,9 +280,9 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
  */
 export const createDateOffsetTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
   name: 'common_date_offset',
-  description: '按天计算日期偏移，例如昨天、明天、N 天后或 N 天前，只读，不访问网络。',
+  description: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
   prompt: {
-    summary: '按天计算日期偏移，例如昨天、明天、N 天后或 N 天前，只读，不访问网络。',
+    summary: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
     intentKeywords: [
       '昨天',
       '明天',
@@ -296,12 +296,12 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
       'date offset'
     ],
     whenToUse: [
-      '用户询问昨天、明天、后天、N 天前或 N 天后的日期时使用。',
-      '用户需要基于一个给定日期计算偏移日期时使用。'
+      'Use when the user asks for yesterday, tomorrow, the day after tomorrow, N days earlier, or N days later.',
+      'Use when the user needs a date offset from a given base date.'
     ],
-    whenNotToUse: ['用户只询问当前日期或当前时间时优先使用 common_time_now。'],
-    safety: ['只做本地日期计算，不访问网络，不读取用户文件。'],
-    output: '给出计算后的日期、星期和时区。',
+    whenNotToUse: ['Prefer common_time_now when the user only asks for the current date or current time.'],
+    safety: ['Only perform local date calculations. Do not access the network or user files.'],
+    output: 'Return the calculated date, weekday, and time zone.',
     examples: ['{"offsetDays":1}', '{"baseDate":"2026-05-30T10:00:00+08:00","offsetDays":-7,"timeZone":"Asia/Shanghai"}']
   },
   parameters: {
@@ -310,19 +310,19 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
     properties: {
       baseDate: {
         type: 'string',
-        description: '基准日期或时间；支持 Date 可解析的 ISO 字符串；不传使用当前时间。'
+        description: 'Base date or time. Supports Date-parseable ISO strings. Defaults to the current time.'
       },
       offsetDays: {
         type: 'number',
-        description: '偏移天数；明天为 1，昨天为 -1。'
+        description: 'Day offset. Tomorrow is 1; yesterday is -1.'
       },
       timeZone: {
         type: 'string',
-        description: 'IANA 时区名称；不传使用系统默认时区。'
+        description: 'IANA time zone name. Defaults to the system time zone.'
       },
       locale: {
         type: 'string',
-        description: 'BCP 47 语言区域；不传默认 zh-CN。'
+        description: 'BCP 47 locale. Defaults to zh-CN.'
       }
     }
   },
@@ -344,7 +344,7 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
     }
 
     return {
-      observation: `偏移 ${offsetDays} 天后的日期时间：${data.local}（${data.weekday}，${data.timeZone}，${data.offsetName}）。`,
+      observation: `Date/time after offsetting ${offsetDays} days: ${data.local} (${data.weekday}, ${data.timeZone}, ${data.offsetName}).`,
       data,
       ...data
     }
@@ -356,17 +356,17 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
  */
 export const createRuntimeInfoTool = (): AgentTool => ({
   name: 'common_runtime_info',
-  description: '获取当前应用运行环境的非敏感基础信息，只读，不返回环境变量或密钥。',
+  description: 'Get non-sensitive basic runtime information for the current app. Read-only; does not return environment variables or secrets.',
   prompt: {
-    summary: '获取当前应用运行环境的非敏感基础信息，只读，不返回环境变量或密钥。',
+    summary: 'Get non-sensitive basic runtime information for the current app. Read-only; does not return environment variables or secrets.',
     intentKeywords: ['运行环境', '系统信息', '平台', '操作系统', 'node', 'electron', 'runtime', 'platform', 'os'],
     whenToUse: [
-      '用户询问当前应用运行在哪个平台、Node/Electron 版本、系统架构或默认时区时使用。',
-      '排查环境差异但不需要读取文件或环境变量时使用。'
+      'Use when the user asks which platform the app is running on, Node/Electron versions, system architecture, or default time zone.',
+      'Use for troubleshooting runtime differences when reading files or environment variables is not needed.'
     ],
-    whenNotToUse: ['用户询问业务数据、本地记忆或人物档案时不要使用。'],
-    safety: ['不返回环境变量、密钥、文件内容或用户目录。'],
-    output: '只返回必要的运行环境字段。',
+    whenNotToUse: ['Do not use when the user asks about business data, local memories, or people profiles.'],
+    safety: ['Do not return environment variables, secrets, file contents, or user directories.'],
+    output: 'Return only the necessary runtime fields.',
     examples: ['{}']
   },
   parameters: {
@@ -386,7 +386,7 @@ export const createRuntimeInfoTool = (): AgentTool => ({
     }
 
     return {
-      observation: `当前运行环境：${data.osType} ${data.osRelease}（${data.platform}/${data.arch}），Node ${data.nodeVersion}。`,
+      observation: `Current runtime: ${data.osType} ${data.osRelease} (${data.platform}/${data.arch}), Node ${data.nodeVersion}.`,
       data,
       ...data
     }

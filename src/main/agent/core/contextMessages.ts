@@ -101,7 +101,7 @@ const compressContent = (content: string, tokenBudget: number): string => {
     return trimmed.slice(0, charBudget)
   }
 
-  const marker = '\n...[已压缩]...\n'
+  const marker = '\n...[compressed]...\n'
   const sideBudget = Math.max(Math.floor((charBudget - marker.length) / 2), 1)
 
   return `${trimmed.slice(0, sideBudget)}${marker}${trimmed.slice(-sideBudget)}`
@@ -120,7 +120,7 @@ const truncateToolOutput = (content: string, maxChars: number): string => {
     return trimmed.slice(0, Math.max(maxChars, 0))
   }
 
-  const marker = '\n...[工具结果已截断]...\n'
+  const marker = '\n...[tool result truncated]...\n'
   const headChars = Math.max(Math.floor((maxChars - marker.length) * 0.7), 1)
   const tailChars = Math.max(maxChars - marker.length - headChars, 1)
 
@@ -135,8 +135,8 @@ const summarizeOldToolOutput = (item: AgentContextPayloadItem): string => {
   const suffix = item.content.trim().length > summary.length ? '...' : ''
 
   return summary
-    ? `[旧工具结果已省略，仅保留摘要]\n${summary}${suffix}`
-    : '[旧工具结果已省略]'
+    ? `[old tool result omitted, summary only]\n${summary}${suffix}`
+    : '[old tool result omitted]'
 }
 
 /**
@@ -166,7 +166,7 @@ const normalizeContextContent = (
     return truncateToolOutput(content, toolOutputMaxChars)
   }
 
-  return `上下文：${item.title.trim() || item.kind}\n${content}`
+  return `Context: ${item.title.trim() || item.kind}\n${content}`
 }
 
 /**
@@ -215,7 +215,7 @@ const toContextAgentMessages = (item: SelectedContextItem): AgentMessage[] => {
     ]
   }
 
-  const toolName = getStringMeta(item, 'tool') ?? item.title.replace(/^工具结果：/, '').trim()
+  const toolName = getStringMeta(item, 'tool') ?? item.title.replace(/^Tool result:/, '').trim()
   const toolCallId = buildHistoricalToolCallId(item)
 
   return [

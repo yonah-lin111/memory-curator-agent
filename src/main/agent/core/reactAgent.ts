@@ -46,7 +46,7 @@ const stringifyToolData = (data: unknown): string => {
     return JSON.stringify(data, null, 2)
   } catch {
     return JSON.stringify({
-      error: '工具结构化数据无法序列化'
+      error: 'Tool structured data is not serializable'
     })
   }
 }
@@ -57,7 +57,7 @@ const stringifyToolData = (data: unknown): string => {
 const renderToolResultContent = (observation: string, data: unknown): string => {
   const dataText = stringifyToolData(data)
 
-  return [`工具观察：`, observation.trim(), `工具数据：`, dataText].join('\n')
+  return [`Tool observation:`, observation.trim(), `Tool data:`, dataText].join('\n')
 }
 
 /**
@@ -72,8 +72,8 @@ const getToolErrorMessage = (error: unknown): string =>
 const renderToolFailureContent = (toolName: string, error: string): string =>
   renderToolResultContent(
     [
-      `工具 ${toolName} 执行失败：${error}`,
-      '这不是最终答案。必须先根据错误信息修正参数并重新调用工具；只有确认错误不可恢复时，才向用户说明失败原因。'
+      `Tool ${toolName} execution failed: ${error}`,
+      'This is not the final answer. Fix the arguments and call the tool again first; only explain the failure to the user when the error is confirmed unrecoverable.'
     ].join('\n'),
     {
     error,
@@ -147,7 +147,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     for (const toolCall of normalizedToolCalls) {
       const tool = toolsByName.get(toolCall.name)
       if (!tool) {
-        throw new Error(`模型请求了未授权工具：${toolCall.name || '<empty>'}`)
+        throw new Error(`The model requested an unauthorized tool: ${toolCall.name || '<empty>'}`)
       }
 
       const toolInput = parseToolArguments(toolCall)
@@ -199,5 +199,5 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     }
   }
 
-  throw new Error(`Agent 超过最大循环轮数：${maxTurns}`)
+  throw new Error(`Agent exceeded the maximum turn count: ${maxTurns}`)
 }

@@ -30,10 +30,10 @@ describe('toolRegistry', () => {
     })
 
     expect(registry.ids()).toEqual(['people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
-    expect(registry.get('people_query')?.description).toContain('People 表')
-    expect(registry.get('common_time_now')?.description).toContain('当前日期')
-    expect(registry.get('common_date_offset')?.description).toContain('日期偏移')
-    expect(registry.get('common_runtime_info')?.description).toContain('运行环境')
+    expect(registry.get('people_query')?.description).toContain('People table')
+    expect(registry.get('common_time_now')?.description).toContain('current date')
+    expect(registry.get('common_date_offset')?.description).toContain('date offsets')
+    expect(registry.get('common_runtime_info')?.description).toContain('runtime information')
     expect(registry.all()).toHaveLength(4)
   })
 
@@ -45,7 +45,7 @@ describe('toolRegistry', () => {
         },
         [() => createTestTool('same_tool'), () => createTestTool('same_tool')]
       )
-    ).toThrow('重复注册 Agent 工具：same_tool')
+    ).toThrow('Duplicate Agent tool registration: same_tool')
   })
 
   it('为模型准备工具说明并保留原始工具不变', () => {
@@ -54,7 +54,7 @@ describe('toolRegistry', () => {
 
     expect(tool.description).toBe('query_memory 工具')
     expect(prepared.description).toContain('query_memory 工具')
-    expect(prepared.description).toContain('严格按参数 Schema 提供参数')
+    expect(prepared.description).toContain('provide arguments strictly according to the parameter schema')
   })
 
   it('优先用结构化 prompt 统一渲染工具说明', () => {
@@ -62,24 +62,24 @@ describe('toolRegistry', () => {
       {
         ...createTestTool('query_memory'),
         prompt: {
-          summary: '查询本地记忆。',
-          whenToUse: ['用户询问已保存记忆时使用。'],
-          whenNotToUse: ['用户只是闲聊时不要使用。'],
-          safety: ['只读，不写入数据。'],
-          output: '返回简短观察文本。',
+          summary: 'Query local memories.',
+          whenToUse: ['Use when the user asks about saved memories.'],
+          whenNotToUse: ['Do not use for casual chat.'],
+          safety: ['Read-only; never writes data.'],
+          output: 'Return a concise observation.',
           intentKeywords: ['记忆']
         }
       }
     ])
 
-    expect(prepared.description).toContain('能力：查询本地记忆。')
-    expect(prepared.description).toContain('使用时机：')
-    expect(prepared.description).toContain('- 用户询问已保存记忆时使用。')
-    expect(prepared.description).toContain('不要使用：')
-    expect(prepared.description).toContain('- 用户只是闲聊时不要使用。')
-    expect(prepared.description).toContain('安全边界：')
-    expect(prepared.description).toContain('- 只读，不写入数据。')
-    expect(prepared.description).toContain('输出要求：返回简短观察文本。')
+    expect(prepared.description).toContain('Capability: Query local memories.')
+    expect(prepared.description).toContain('When to use:')
+    expect(prepared.description).toContain('- Use when the user asks about saved memories.')
+    expect(prepared.description).toContain('Do not use:')
+    expect(prepared.description).toContain('- Do not use for casual chat.')
+    expect(prepared.description).toContain('Safety boundaries:')
+    expect(prepared.description).toContain('- Read-only; never writes data.')
+    expect(prepared.description).toContain('Output requirements: Return a concise observation.')
   })
 
   it('people_query 使用结构化 prompt 元数据', () => {
@@ -89,9 +89,9 @@ describe('toolRegistry', () => {
     const peopleTool = registry.get('people_query')
     const [prepared] = prepareToolsForModel(registry.all())
 
-    expect(peopleTool?.prompt?.summary).toContain('People 表')
-    expect(prepared.description).toContain('使用时机：')
-    expect(prepared.description).toContain('本地 People 表')
+    expect(peopleTool?.prompt?.summary).toContain('People table')
+    expect(prepared.description).toContain('When to use:')
+    expect(prepared.description).toContain('local People table')
   })
 
   it('根据用户意图筛选工具，普通闲聊不注入 people_query', () => {
@@ -189,7 +189,7 @@ describe('toolRegistry', () => {
       }
     ])
 
-    await expect(prepared.execute({})).rejects.toThrow('工具 strict_tool 参数无效：缺少必填字段 query')
+    await expect(prepared.execute({})).rejects.toThrow('Invalid arguments for tool strict_tool: Missing required field query')
   })
 
   it('执行前统一校验工具入参，拒绝字段类型错误', async () => {
@@ -207,6 +207,6 @@ describe('toolRegistry', () => {
       }
     ])
 
-    await expect(prepared.execute({ limit: '20' })).rejects.toThrow('工具 typed_tool 参数无效：limit 必须是 number')
+    await expect(prepared.execute({ limit: '20' })).rejects.toThrow('Invalid arguments for tool typed_tool: limit must be a number')
   })
 })

@@ -10,7 +10,11 @@ const TOOL_OBSERVATION_MAX_LENGTH = 96;
 
 // SQL 原始行观察文本匹配规则。
 const SQL_RAW_ROWS_OBSERVATION_PATTERN =
-  /^SQL 查询返回 (\d+) 行[：:].*[\[{].*[\]}]/s;
+  /^SQL query returned (\d+) rows?[：:].*[\[{].*[\]}]/s;
+
+// SQL 结果汇总观察文本匹配规则。
+const SQL_SUMMARY_OBSERVATION_PATTERN =
+  /^SQL query returned (\d+) rows?[,.]\s*Structured data has been returned\.$/;
 
 // AI 工具调用块组件属性类型。
 type AiToolCallBlockProps = {
@@ -32,25 +36,25 @@ const getStatusConfig = (
   switch (status) {
     case "done":
       return {
-        label: "工具完成",
+        label: "Tool completed",
         icon: CheckCircle2,
         className: "text-emerald-400",
       };
     case "failed":
       return {
-        label: "工具失败",
+        label: "Tool failed",
         icon: XCircle,
         className: "text-red-400",
       };
     case "running":
       return {
-        label: "执行中",
+        label: "Running",
         icon: Loader2,
         className: "text-amber-400 animate-spin",
       };
     case "queued":
       return {
-        label: "等待中",
+        label: "Queued",
         icon: CircleDashed,
         className: "text-white/30",
       };
@@ -67,7 +71,22 @@ const formatToolObservation = (observation: string): string => {
   );
 
   if (sqlRowsMatch) {
-    return `SQL 查询返回 ${sqlRowsMatch[1]} 行，已整理为结构化结果。`;
+    const rowCount = Number(sqlRowsMatch[1]);
+    const rowLabel = rowCount === 1 ? "row" : "rows";
+    return `SQL query returned ${sqlRowsMatch[1]} ${rowLabel} and was normalized as structured results.`;
+  }
+
+  const sqlSummaryMatch = normalizedObservation.match(
+    SQL_SUMMARY_OBSERVATION_PATTERN,
+  );
+  if (sqlSummaryMatch) {
+    const rowCount = Number(sqlSummaryMatch[1]);
+    const rowLabel = rowCount === 1 ? "row" : "rows";
+    return `SQL query returned ${sqlSummaryMatch[1]} ${rowLabel}.`;
+  }
+
+  if (normalizedObservation === "SQL query returned no rows.") {
+    return "SQL query returned no rows.";
   }
 
   if (normalizedObservation.length <= TOOL_OBSERVATION_MAX_LENGTH) {
@@ -118,7 +137,11 @@ export const AiToolCallBlock = ({
 
                 <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
                   <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
-                    <svg className="w-3 h-3 stroke-current" viewBox="0 0 12 12" fill="none">
+                    <svg
+                      className="w-3 h-3 stroke-current"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                    >
                       <path
                         d="M3 1v5h7"
                         strokeWidth="1.5"

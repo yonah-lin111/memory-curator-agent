@@ -165,16 +165,16 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:old',
           kind: 'tool',
-          title: '工具结果：people_query',
-          content: '旧工具结果'.repeat(80),
+          title: 'Tool result: people_query',
+          content: 'old tool result'.repeat(80),
           createdAt: 1,
           meta: { tool: 'people_query' }
         }),
         createContextItem({
           key: 'tool:new',
           kind: 'tool',
-          title: '工具结果：people_query',
-          content: '新工具结果',
+          title: 'Tool result: people_query',
+          content: 'new tool result',
           createdAt: 2,
           meta: { tool: 'people_query' }
         })
@@ -194,9 +194,9 @@ describe('contextMessages', () => {
       role: 'tool',
       name: 'people_query'
     })
-    expect(messages[2].content).toContain('[旧工具结果已省略，仅保留摘要]')
-    expect(messages[2].content.length).toBeLessThan('旧工具结果'.repeat(80).length)
-    expect(messages[4].content).toContain('新工具结果')
+    expect(messages[2].content).toContain('[old tool result omitted, summary only]')
+    expect(messages[2].content.length).toBeLessThan('old tool result'.repeat(80).length)
+    expect(messages[4].content).toContain('new tool result')
   })
 
   it('单条工具 observation 按 toolOutputMaxChars 截断', () => {
@@ -207,7 +207,7 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:long',
           kind: 'tool',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           content: `${'头部'.repeat(40)}中间${'尾部'.repeat(40)}`,
           createdAt: 1,
           meta: { tool: 'people_query' }
@@ -228,7 +228,7 @@ describe('contextMessages', () => {
       role: 'tool',
       name: 'people_query'
     })
-    expect(messages[2].content).toContain('[工具结果已截断]')
+    expect(messages[2].content).toContain('[tool result truncated]')
     expect(messages[2].content).toContain('头部')
     expect(messages[2].content).toContain('尾部')
     expect(messages[2].content.length).toBeLessThan(`${'头部'.repeat(40)}中间${'尾部'.repeat(40)}`.length)
@@ -242,7 +242,7 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:a1:call-1',
           kind: 'tool',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           sourceId: 'call-1',
           content: '第一次查询结果',
           createdAt: 1,
@@ -255,7 +255,7 @@ describe('contextMessages', () => {
         createContextItem({
           key: 'tool:a2:call-1',
           kind: 'tool',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           sourceId: 'call-1',
           content: '第二次查询结果',
           createdAt: 2,

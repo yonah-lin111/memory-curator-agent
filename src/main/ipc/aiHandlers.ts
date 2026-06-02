@@ -469,11 +469,11 @@ export const registerAiHandlers = (): void => {
             )
             assistantToolSteps.push({
               id: agentEvent.id,
-              title: `工具结果：${agentEvent.name}`,
+              title: `Tool result: ${agentEvent.name}`,
               status: 'running',
               tool: agentEvent.name,
               input: agentEvent.input,
-              observation: '工具执行中。'
+              observation: 'Tool is running.'
             })
             aiChatService.upsertToolCall({
               id: `${runId}-${agentEvent.id}`,
@@ -494,7 +494,7 @@ export const registerAiHandlers = (): void => {
             const toolStepIndex = assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
-              title: `工具结果：${agentEvent.name}`,
+              title: `Tool result: ${agentEvent.name}`,
               status: 'done',
               tool: agentEvent.name,
               input: assistantToolSteps[toolStepIndex]?.input,
@@ -532,11 +532,11 @@ export const registerAiHandlers = (): void => {
             const toolStepIndex = assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
-              title: `工具失败：${agentEvent.name}`,
+              title: `Tool failed: ${agentEvent.name}`,
               status: 'failed',
               tool: agentEvent.name,
               input: agentEvent.input,
-              observation: `工具执行失败：${agentEvent.error}`,
+              observation: `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               }
@@ -561,7 +561,7 @@ export const registerAiHandlers = (): void => {
               name: agentEvent.name,
               status: 'failed',
               input: agentEvent.input,
-              observation: `工具执行失败：${agentEvent.error}`,
+              observation: `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               },
@@ -589,7 +589,7 @@ export const registerAiHandlers = (): void => {
               },
               assistantMessage: {
                 messageId: assistantMessageId,
-                content: 'AI 对话执行失败',
+                content: 'AI chat execution failed',
                 answer: agentEvent.message,
                 parts: assistantParts,
                 toolSteps: assistantToolSteps,
@@ -616,7 +616,7 @@ export const registerAiHandlers = (): void => {
           sendEvent(agentEvent)
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'AI 对话执行失败'
+        const message = error instanceof Error ? error.message : 'AI chat execution failed'
         const failedTimestamp = createTimestamp()
         aiChatService.failRunWithAssistantMessage({
           run: {
@@ -634,7 +634,7 @@ export const registerAiHandlers = (): void => {
           },
           assistantMessage: {
             messageId: assistantMessageId,
-            content: 'AI 对话执行失败',
+            content: 'AI chat execution failed',
             answer: message,
             parts: assistantParts,
             toolSteps: assistantToolSteps,

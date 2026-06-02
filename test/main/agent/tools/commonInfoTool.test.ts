@@ -20,7 +20,7 @@ describe('commonInfoTool', () => {
       timeZone: 'Asia/Shanghai',
       locale: 'zh-CN'
     })
-    expect(result.observation).toContain('当前时间')
+    expect(result.observation).toContain('Current time')
     expect(result.observation).toContain('Asia/Shanghai')
   })
 
@@ -31,7 +31,7 @@ describe('commonInfoTool', () => {
       tool.execute({
         timeZone: 'Mars/Olympus'
       })
-    ).rejects.toThrow('无效的语言区域或时区')
+    ).rejects.toThrow('Invalid locale or time zone')
   })
 
   it('common_date_offset 按天计算日期偏移', async () => {
@@ -51,7 +51,7 @@ describe('commonInfoTool', () => {
       weekday: '星期五',
       timeZone: 'Asia/Shanghai'
     })
-    expect(result.observation).toContain('偏移 -1 天')
+    expect(result.observation).toContain('offsetting -1 days')
   })
 
   it('common_date_offset 拒绝无效基准日期', async () => {
@@ -62,7 +62,7 @@ describe('commonInfoTool', () => {
         baseDate: 'bad-date',
         offsetDays: 1
       })
-    ).rejects.toThrow('无效的基准日期')
+    ).rejects.toThrow('Invalid base date')
   })
 
   it('common_runtime_info 只返回非敏感运行环境信息', async () => {
@@ -75,7 +75,6 @@ describe('commonInfoTool', () => {
       nodeVersion: process.versions.node
     })
     expect(JSON.stringify(result.data)).not.toContain('process.env')
-    expect(result.observation).toContain('当前运行环境')
+    expect(result.observation).toContain('Current runtime')
   })
 })
-

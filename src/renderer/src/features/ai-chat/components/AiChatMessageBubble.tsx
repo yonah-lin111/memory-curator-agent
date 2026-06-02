@@ -10,10 +10,10 @@ import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 
 // 工具观察段起始标记。
-const TOOL_OBSERVATION_LABEL = "工具观察：";
+const TOOL_OBSERVATION_LABEL = "Tool observation:";
 
 // 工具结构化数据段起始标记。
-const TOOL_DATA_LABEL = "工具数据：";
+const TOOL_DATA_LABEL = "Tool data:";
 
 // Markdown 代码块围栏。
 const MARKDOWN_CODE_FENCE = "```";
@@ -273,7 +273,10 @@ export const AiChatMessageBubble = ({
   isGenerating = false,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
-  const isProcessing = !isUser && message.content.startsWith("正在处理：");
+  const isProcessing =
+    !isUser &&
+    (message.content.startsWith("Processing:") ||
+      message.content.startsWith("正在处理："));
   const hasToolSteps = Boolean(message.toolSteps?.length);
   const displayAnswer =
     !isUser && message.answer

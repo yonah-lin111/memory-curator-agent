@@ -5,6 +5,13 @@ import type {
   AiModelSelection
 } from "@renderer/features/ai-chat/aiChatMock";
 
+// 运行级异常 assistant 消息正文集合，用于识别不能进入后续上下文的失败 QA。
+const RUN_ERROR_ASSISTANT_CONTENTS = new Set([
+  "AI chat execution failed",
+  "AI chat failed to start",
+  "AI bridge is not ready",
+]);
+
 // AI 对话上下文来源类型。
 export type AiChatContextKind = "message" | "memory" | "page" | "file" | "tool" | "agent";
 
@@ -93,6 +100,39 @@ const getMessageContextContent = (message: AiChatMessage): string => {
 };
 
 /**
+ * 判断 assistant 消息是否为运行级异常，而不是普通工具失败。
+ */
+const isRunErrorAssistantMessage = (message: AiChatMessage): boolean => {
+  if (message.role !== "assistant") {
+    return false;
+  }
+
+  return RUN_ERROR_ASSISTANT_CONTENTS.has(message.content.trim());
+};
+
+/**
+ * 收集需要从 message 上下文中剔除的异常 QA 消息标识。
+ */
+const collectErroredQaMessageIds = (messages: AiChatMessage[]): Set<string> => {
+  const messageIds = new Set<string>();
+
+  for (const [index, message] of messages.entries()) {
+    if (!isRunErrorAssistantMessage(message)) {
+      continue;
+    }
+
+    messageIds.add(message.id);
+
+    const previousMessage = messages[index - 1];
+    if (previousMessage?.role === "user") {
+      messageIds.add(previousMessage.id);
+    }
+  }
+
+  return messageIds;
+};
+
+/**
  * 序列化工具输入，失败时保留空对象，避免破坏上下文构造。
  */
 const stringifyToolInput = (input: unknown): string => {
@@ -111,7 +151,7 @@ const stringifyToolData = (data: unknown): string => {
     return JSON.stringify(data, null, 2);
   } catch {
     return JSON.stringify({
-      error: "工具结构化数据无法序列化",
+      error: "Tool structured data is not serializable",
     });
   }
 };
@@ -124,7 +164,7 @@ const buildToolContextContent = (observation: string, data: unknown): string => 
     return observation;
   }
 
-  return ["工具观察：", observation, "工具数据：", stringifyToolData(data)].join("\n");
+  return ["Tool observation:", observation, "Tool data:", stringifyToolData(data)].join("\n");
 };
 
 /**
@@ -134,12 +174,15 @@ export const buildMessageContextItems = (
   sessionId: string,
   messages: AiChatMessage[],
 ): AiChatContextItem[] => {
+  const erroredQaMessageIds = collectErroredQaMessageIds(messages);
+
   return messages.flatMap((message, index) => {
     const content = getMessageContextContent(message);
     const createdAt = index * 1000;
+    const shouldSkipMessageContext = erroredQaMessageIds.has(message.id);
     const items: AiChatContextItem[] = [];
 
-    if (message.role === "user" && content) {
+    if (message.role === "user" && content && !shouldSkipMessageContext) {
       items.push({
         key: `message:${message.id}`,
         sessionId,
@@ -173,7 +216,7 @@ export const buildMessageContextItems = (
         sessionId,
         kind: "tool",
         sourceId: step.id,
-        title: `工具结果：${step.tool}`,
+        title: `Tool result: ${step.tool}`,
         summary: summarizeContextContent(toolContent),
         content: toolContent,
         tokens: estimateAiChatContextTokens(toolContent),
@@ -186,7 +229,7 @@ export const buildMessageContextItems = (
       });
     }
 
-    if (content) {
+    if (content && !shouldSkipMessageContext) {
       items.push({
         key: `message:${message.id}`,
         sessionId,

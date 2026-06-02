@@ -115,7 +115,7 @@ describe('aiChatContextBuilder', () => {
         toolSteps: [
           {
             id: 'call-1',
-            title: '查询本地 People',
+          title: 'Query local People',
             status: 'done',
             tool: 'people_query',
             observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
@@ -131,7 +131,7 @@ describe('aiChatContextBuilder', () => {
             title: '等待执行',
             status: 'running',
             tool: 'people_query',
-            observation: '正在读取本地 People 表。'
+            observation: 'Reading the local People table.'
           }
         ]
       }
@@ -144,7 +144,7 @@ describe('aiChatContextBuilder', () => {
           sessionId: 's1',
           kind: 'tool',
           sourceId: 'call-1',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           content: expect.stringContaining('"details": "# 阿明\\n完整详情"'),
           meta: expect.objectContaining({
             tool: 'people_query',
@@ -160,5 +160,76 @@ describe('aiChatContextBuilder', () => {
         })
       ])
     )
+  })
+
+  it('剔除运行级异常的 QA message 上下文，并保留已完成工具上下文', () => {
+    const messages: AiChatMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: '帮我整理今天的记忆',
+        time: '10:00'
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'AI chat execution failed',
+        time: '10:00',
+        answer: 'Model request timed out',
+        toolSteps: [
+          {
+            id: 'tool-1',
+            title: 'Load snippets',
+            status: 'done',
+            tool: 'snippets.search',
+            observation: 'Found 2 snippets',
+            data: {
+              count: 2
+            }
+          }
+        ]
+      }
+    ]
+
+    const items = buildMessageContextItems('session-1', messages)
+
+    expect(items.map((item) => item.key)).toEqual(['tool:assistant-1:tool-1'])
+  })
+
+  it('仅工具失败时不剔除 QA message 上下文', () => {
+    const messages: AiChatMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: '帮我找联系人',
+        time: '10:00'
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'Processing: "帮我找联系人"',
+        time: '10:00',
+        answer: 'The local People query failed, but I can continue with the existing context.',
+        toolSteps: [
+          {
+            id: 'tool-1',
+            title: 'Tool failed: people.scan',
+            status: 'failed',
+            tool: 'people.scan',
+            observation: 'Tool execution failed: SQLite connection failed',
+            data: {
+              error: 'SQLite connection failed'
+            }
+          }
+        ]
+      }
+    ]
+
+    const items = buildMessageContextItems('session-1', messages)
+
+    expect(items.map((item) => item.key)).toEqual([
+      'message:user-1',
+      'message:assistant-1'
+    ])
   })
 })

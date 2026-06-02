@@ -399,11 +399,11 @@ export const App = (): React.JSX.Element => {
           ...(message.toolSteps ?? []),
           {
             id: event.id,
-            title: "查询本地 People",
+            title: "Query local People",
             status: "running",
             tool: event.name,
             input: event.input,
-            observation: "正在读取本地 People 表。",
+            observation: "Reading the local People table.",
           },
         ],
       }));
@@ -429,7 +429,7 @@ export const App = (): React.JSX.Element => {
               ...(message.toolSteps ?? []),
               {
                 id: event.id,
-                title: `工具结果：${event.name}`,
+                title: `Tool result: ${event.name}`,
                 status: "done",
                 tool: event.name,
                 input: {},
@@ -451,7 +451,7 @@ export const App = (): React.JSX.Element => {
                     ...step,
                     status: "failed",
                     input: event.input,
-                    observation: `工具执行失败：${event.error}`,
+                    observation: `Tool execution failed: ${event.error}`,
                     data: {
                       error: event.error,
                     },
@@ -462,11 +462,11 @@ export const App = (): React.JSX.Element => {
               ...(message.toolSteps ?? []),
               {
                 id: event.id,
-                title: `工具失败：${event.name}`,
+                title: `Tool failed: ${event.name}`,
                 status: "failed",
                 tool: event.name,
                 input: event.input,
-                observation: `工具执行失败：${event.error}`,
+                observation: `Tool execution failed: ${event.error}`,
                 data: {
                   error: event.error,
                 },
@@ -480,7 +480,7 @@ export const App = (): React.JSX.Element => {
       updateChatSessionStatus(mapping.sessionId, "failed");
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
         ...message,
-        content: "AI 对话执行失败",
+        content: "AI chat execution failed",
         answer: event.message,
       }));
     }
@@ -622,10 +622,10 @@ export const App = (): React.JSX.Element => {
     const aiMessage = {
       id: assistantMessageId,
       role: "assistant" as const,
-      content: hasAiBridge ? `正在处理：“${text}”` : "AI 桥接未就绪",
+      content: hasAiBridge ? `Processing: "${text}"` : "AI bridge is not ready",
       time: userTime,
       toolSteps: [],
-      answer: hasAiBridge ? "" : "当前运行环境没有暴露 AI IPC 桥接。",
+      answer: hasAiBridge ? "" : "The current runtime does not expose the AI IPC bridge.",
     };
     runMessageMapRef.current.set(runId, {
       sessionId,
@@ -666,8 +666,8 @@ export const App = (): React.JSX.Element => {
       .catch((error: unknown) => {
         updateAiMessage(sessionId, assistantMessageId, (message) => ({
           ...message,
-          content: "AI 对话启动失败",
-          answer: error instanceof Error ? error.message : "AI 对话启动失败",
+          content: "AI chat failed to start",
+          answer: error instanceof Error ? error.message : "AI chat failed to start",
         }));
       });
   };

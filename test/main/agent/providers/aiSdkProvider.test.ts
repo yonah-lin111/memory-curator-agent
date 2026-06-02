@@ -58,7 +58,7 @@ describe('aiSdkProvider', () => {
         tools: [
           {
             name: 'people_query',
-            description: '查询 People 表',
+            description: 'Query the People table',
             parameters: {
               type: 'object',
               properties: {
@@ -207,6 +207,6 @@ describe('aiSdkProvider', () => {
     )
 
     const tools = capturedInput?.tools as Record<string, { description?: string }>
-    expect(tools.people_query.description).toContain('严格按参数 Schema 提供参数')
+    expect(tools.people_query.description).toContain('provide arguments strictly according to the parameter schema')
   })
 })

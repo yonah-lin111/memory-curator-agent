@@ -296,7 +296,7 @@ describe('App', () => {
         })
       )
     })
-    expect(screen.getByText('正在读取本地 People 表。')).toBeInTheDocument()
+    expect(screen.getByText('Reading the local People table.')).toBeInTheDocument()
 
     act(() => {
       listeners.forEach((listener) =>
@@ -661,7 +661,7 @@ describe('App', () => {
         expect.objectContaining({
           key: expect.stringMatching(/^tool:.*:call-1$/),
           kind: 'tool',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           content: expect.stringContaining('找到 1 位关联人物：阿明｜朋友｜技术狂热者'),
           meta: expect.objectContaining({
             tool: 'people_query',
@@ -892,7 +892,7 @@ describe('App', () => {
     const banner = screen.getByRole('banner')
     expect(within(banner).getByText('周回顾行动拆解')).toBeInTheDocument()
     expect(within(chatMain).getByText('weekly_review.load')).toBeInTheDocument()
-    expect(screen.getAllByLabelText('工具完成').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('Tool completed').length).toBeGreaterThan(0)
   })
 
   it('首次加载持久化历史摘要后点击新建对话直接创建空白会话', async () => {

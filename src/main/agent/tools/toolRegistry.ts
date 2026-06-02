@@ -41,7 +41,8 @@ const builtinToolFactories: AgentToolFactory[] = [
 ]
 
 // 工具调用公共约束。
-const TOOL_CALL_GUARD = '调用约束：严格按参数 Schema 提供参数；只在确实需要该能力时调用；不要臆造工具未返回的信息。'
+const TOOL_CALL_GUARD =
+  'Call constraints: provide arguments strictly according to the parameter schema; call only when the capability is actually needed; never invent information that the tool did not return.'
 
 // 默认工具意图关键词。
 const DEFAULT_INTENT_KEYWORDS = ['工具', '查询', '查找', '搜索', '读取']
@@ -54,7 +55,7 @@ const assertUniqueToolNames = (tools: AgentTool[]): void => {
 
   for (const tool of tools) {
     if (seen.has(tool.name)) {
-      throw new Error(`重复注册 Agent 工具：${tool.name}`)
+      throw new Error(`Duplicate Agent tool registration: ${tool.name}`)
     }
 
     seen.add(tool.name)
@@ -70,7 +71,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /**
  * 格式化参数路径。
  */
-const formatPath = (path: string): string => path || '参数'
+const formatPath = (path: string): string => path || 'parameters'
 
 /**
  * 校验枚举值。
@@ -80,7 +81,7 @@ const validateEnum = (schema: JsonSchema, value: unknown, path: string): string 
     return null
   }
 
-  return schema.enum.includes(value) ? null : `${formatPath(path)} 必须是 ${schema.enum.join(' / ')}`
+  return schema.enum.includes(value) ? null : `${formatPath(path)} must be one of ${schema.enum.join(' / ')}`
 }
 
 /**
@@ -94,12 +95,12 @@ const validateBySchema = (schema: JsonSchema, value: unknown, path = ''): string
 
   if (schema.type === 'object') {
     if (!isRecord(value)) {
-      return `${formatPath(path)} 必须是 object`
+      return `${formatPath(path)} must be an object`
     }
 
     for (const key of schema.required ?? []) {
       if (value[key] === undefined) {
-        return `缺少必填字段 ${path ? `${path}.${key}` : key}`
+        return `Missing required field ${path ? `${path}.${key}` : key}`
       }
     }
 
@@ -117,7 +118,7 @@ const validateBySchema = (schema: JsonSchema, value: unknown, path = ''): string
 
   if (schema.type === 'array') {
     if (!Array.isArray(value)) {
-      return `${formatPath(path)} 必须是 array`
+      return `${formatPath(path)} must be an array`
     }
 
     if (schema.items) {
@@ -133,15 +134,15 @@ const validateBySchema = (schema: JsonSchema, value: unknown, path = ''): string
   }
 
   if (schema.type === 'number') {
-    return typeof value === 'number' && Number.isFinite(value) ? null : `${formatPath(path)} 必须是 number`
+    return typeof value === 'number' && Number.isFinite(value) ? null : `${formatPath(path)} must be a number`
   }
 
   if (schema.type === 'string') {
-    return typeof value === 'string' ? null : `${formatPath(path)} 必须是 string`
+    return typeof value === 'string' ? null : `${formatPath(path)} must be a string`
   }
 
   if (schema.type === 'boolean') {
-    return typeof value === 'boolean' ? null : `${formatPath(path)} 必须是 boolean`
+    return typeof value === 'boolean' ? null : `${formatPath(path)} must be a boolean`
   }
 
   return null
@@ -153,7 +154,7 @@ const validateBySchema = (schema: JsonSchema, value: unknown, path = ''): string
 const assertValidToolInput = (tool: AgentTool, input: unknown): void => {
   const error = validateBySchema(tool.parameters, input)
   if (error) {
-    throw new Error(`工具 ${tool.name} 参数无效：${error}`)
+    throw new Error(`Invalid arguments for tool ${tool.name}: ${error}`)
   }
 }
 
@@ -165,7 +166,7 @@ const renderListSection = (title: string, items: string[] | undefined): string[]
     return []
   }
 
-  return [`${title}：`, ...items.map((item) => `- ${item}`)]
+  return [`${title}:`, ...items.map((item) => `- ${item}`)]
 }
 
 /**
@@ -173,12 +174,12 @@ const renderListSection = (title: string, items: string[] | undefined): string[]
  */
 const renderToolPrompt = (prompt: AgentToolPrompt): string =>
   [
-    `能力：${prompt.summary}`,
-    ...renderListSection('使用时机', prompt.whenToUse),
-    ...renderListSection('不要使用', prompt.whenNotToUse),
-    ...renderListSection('安全边界', prompt.safety),
-    prompt.output ? `输出要求：${prompt.output}` : undefined,
-    ...renderListSection('示例', prompt.examples)
+    `Capability: ${prompt.summary}`,
+    ...renderListSection('When to use', prompt.whenToUse),
+    ...renderListSection('Do not use', prompt.whenNotToUse),
+    ...renderListSection('Safety boundaries', prompt.safety),
+    prompt.output ? `Output requirements: ${prompt.output}` : undefined,
+    ...renderListSection('Examples', prompt.examples)
   ]
     .filter((line): line is string => Boolean(line))
     .join('\n')

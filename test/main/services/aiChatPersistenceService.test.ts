@@ -167,7 +167,7 @@ describe('aiChatPersistenceService', () => {
       toolSteps: [
         {
           id: 'call-1',
-          title: '工具结果：people_query',
+          title: 'Tool result: people_query',
           status: 'done',
           tool: 'people_query',
           input: { query: '阿明' },
@@ -450,7 +450,7 @@ describe('aiChatPersistenceService', () => {
       },
       assistantMessage: {
         messageId: 'm-ai',
-        content: 'AI 对话执行失败',
+        content: 'AI chat execution failed',
         answer: '模型失败',
         parts: [],
         toolSteps: [],
@@ -466,7 +466,7 @@ describe('aiChatPersistenceService', () => {
       status: 'failed',
       messages: [
         { id: 'm-user', role: 'user' },
-        { id: 'm-ai', role: 'assistant', content: 'AI 对话执行失败', answer: '模型失败' }
+        { id: 'm-ai', role: 'assistant', content: 'AI chat execution failed', answer: '模型失败' }
       ]
     })
   })

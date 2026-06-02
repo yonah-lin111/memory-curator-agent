@@ -111,11 +111,11 @@ const inferProviderType = (provider: RawProviderConfig): ProviderTransportType =
  */
 const normalizeProvider = (id: string, provider: RawProviderConfig): NormalizedProviderConfig => {
   if (!provider.options?.apiKey) {
-    throw new Error(`Provider ${id} 缺少 apiKey`)
+    throw new Error(`Provider ${id} is missing apiKey`)
   }
 
   if (!provider.options?.baseURL) {
-    throw new Error(`Provider ${id} 缺少 baseURL`)
+    throw new Error(`Provider ${id} is missing baseURL`)
   }
 
   return {
@@ -168,7 +168,7 @@ const normalizeDefaultModelConfig = (
   const provider = providers[configuredProvider] ? configuredProvider : providerIds[0]
 
   if (!provider) {
-    throw new Error('未启用任何可用 Provider')
+    throw new Error('No available provider is enabled')
   }
 
   const providerModels = providers[provider].models
@@ -208,12 +208,12 @@ const normalizeTitleSummaryConfig = (
  */
 export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): NormalizedAiConfig => {
   if (!existsSync(configPath)) {
-    throw new Error(`配置文件不存在：${configPath}`)
+    throw new Error(`Config file does not exist: ${configPath}`)
   }
 
   const rawText = readFileSync(configPath, 'utf8').trim()
   if (!rawText) {
-    throw new Error(`配置文件为空：${configPath}`)
+    throw new Error(`Config file is empty: ${configPath}`)
   }
 
   const rawConfig = JSON.parse(rawText) as RawConfigFile

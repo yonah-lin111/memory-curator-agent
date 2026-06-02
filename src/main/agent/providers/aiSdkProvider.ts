@@ -47,7 +47,7 @@ const loadProviderPackage = async (packageName: string): Promise<AiSdkProviderMo
     return (await import(packageName)) as AiSdkProviderModule
   } catch (error) {
     throw new Error(
-      `Provider 依赖未安装或无法加载：${packageName}。请先安装该 npm 包。原始错误：${
+      `Provider dependency is not installed or cannot be loaded: ${packageName}. Install the npm package first. Original error: ${
         error instanceof Error ? error.message : String(error)
       }`
     )
@@ -75,7 +75,7 @@ const resolveProviderFactory = (
     return fallbackEntry[1] as (options: Record<string, unknown>) => AiSdkModelFactory
   }
 
-  throw new Error(`Provider 依赖 ${packageName} 未导出可识别的 create* 工厂函数`)
+  throw new Error(`Provider dependency ${packageName} does not export a recognized create* factory function`)
 }
 
 /**
@@ -150,7 +150,7 @@ export const createAiSdkModelProvider = async (
   runtime: AiSdkProviderRuntime = {}
 ): Promise<ModelProvider> => {
   if (!config.npm) {
-    throw new Error(`Provider ${config.id} 缺少 npm 字段，无法加载 AI SDK provider`)
+    throw new Error(`Provider ${config.id} is missing the npm field, so the AI SDK provider cannot be loaded`)
   }
 
   const providerModule = await (runtime.loadPackage ?? loadProviderPackage)(config.npm)
@@ -174,7 +174,7 @@ export const createAiSdkModelProvider = async (
 
       const eventStream = result.fullStream ?? result.stream
       if (!eventStream) {
-        throw new Error('AI SDK streamText 未返回 fullStream 或 stream')
+        throw new Error('AI SDK streamText did not return fullStream or stream')
       }
 
       for await (const part of eventStream) {
