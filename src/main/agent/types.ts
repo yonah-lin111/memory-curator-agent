@@ -130,12 +130,16 @@ export type AgentToolResult = {
   observation: string
   // 调试或 UI 可用结构化数据。
   data: unknown
+  // 工具完成后是否结束当前 Agent run。
+  terminal?: boolean
 }
 
 // Agent 工具提示词元数据。
 export type AgentToolPrompt = {
   // 工具能力摘要。
   summary: string
+  // 是否每轮都注入该工具。
+  alwaysAvailable?: boolean
   // 命中用户意图的关键词。
   intentKeywords?: string[]
   // 适合调用工具的场景。

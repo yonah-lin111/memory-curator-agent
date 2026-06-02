@@ -1,5 +1,6 @@
 import { createPeopleQueryTool } from './peopleTool'
 import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from './commonInfoTool'
+import { createAskTool } from './askTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '../types'
 import type { PeopleService } from '../../services/peopleService'
 
@@ -34,6 +35,7 @@ export type AgentToolRegistry = {
 
 // 内置工具工厂列表。
 const builtinToolFactories: AgentToolFactory[] = [
+  () => createAskTool(),
   ({ peopleService }) => createPeopleQueryTool(peopleService),
   () => createTimeNowTool(),
   () => createDateOffsetTool(),
@@ -229,6 +231,10 @@ export const selectToolsForTurn = (tools: AgentTool[], messages: AgentMessage[])
 
   return tools.filter((tool) => {
     if (!tool.prompt) {
+      return true
+    }
+
+    if (tool.prompt.alwaysAvailable) {
       return true
     }
 

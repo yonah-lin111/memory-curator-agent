@@ -29,12 +29,19 @@ describe('toolRegistry', () => {
       peopleService
     })
 
-    expect(registry.ids()).toEqual(['people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
+    expect(registry.ids()).toEqual([
+      'ask_user',
+      'people_query',
+      'common_time_now',
+      'common_date_offset',
+      'common_runtime_info'
+    ])
+    expect(registry.get('ask_user')?.description).toContain('structured clarification')
     expect(registry.get('people_query')?.description).toContain('People table')
     expect(registry.get('common_time_now')?.description).toContain('current date')
     expect(registry.get('common_date_offset')?.description).toContain('date offsets')
     expect(registry.get('common_runtime_info')?.description).toContain('runtime information')
-    expect(registry.all()).toHaveLength(4)
+    expect(registry.all()).toHaveLength(5)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -87,12 +94,24 @@ describe('toolRegistry', () => {
       peopleService
     })
     const peopleTool = registry.get('people_query')
-    const [prepared] = prepareToolsForModel(registry.all())
+    const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_query')
 
     expect(peopleTool?.prompt?.summary).toContain('People table')
+    expect(prepared?.description).toContain('When to use:')
+    expect(prepared?.description).toContain('local People table')
+    expect(prepared?.description).toContain('Markdown image syntax ![](...)')
+  })
+
+  it('ask_user 使用结构化 prompt 并每轮常驻', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+    const askTool = registry.get('ask_user')
+    const [prepared] = prepareToolsForModel([askTool!])
+
+    expect(askTool?.prompt?.alwaysAvailable).toBe(true)
+    expect(prepared.description).toContain('Capability: Ask the user structured clarification questions')
     expect(prepared.description).toContain('When to use:')
-    expect(prepared.description).toContain('local People table')
-    expect(prepared.description).toContain('Markdown image syntax ![](...)')
   })
 
   it('根据用户意图筛选工具，普通闲聊不注入 people_query', () => {
@@ -100,7 +119,9 @@ describe('toolRegistry', () => {
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }])).toEqual([])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }]).map((tool) => tool.name)).toEqual([
+      'ask_user'
+    ])
   })
 
   it('根据当前时间意图筛选工具，注入 common_time_now', () => {
@@ -109,6 +130,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual([
+      'ask_user',
       'common_time_now'
     ])
   })
@@ -119,6 +141,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual([
+      'ask_user',
       'common_date_offset'
     ])
   })
@@ -129,6 +152,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '当前系统信息是什么？' }]).map((tool) => tool.name)).toEqual([
+      'ask_user',
       'common_runtime_info'
     ])
   })
@@ -139,6 +163,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
+      'ask_user',
       'people_query'
     ])
   })
@@ -149,6 +174,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
+      'ask_user',
       'people_query'
     ])
   })
@@ -171,7 +197,7 @@ describe('toolRegistry', () => {
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)
-    ).toEqual(['people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
+    ).toEqual(['ask_user', 'people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

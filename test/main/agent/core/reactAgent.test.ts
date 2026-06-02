@@ -94,6 +94,67 @@ describe("reactAgent", () => {
     );
   });
 
+  it("终止型工具完成后结束当前 run 并等待外部输入", async () => {
+    const providerInputs: ModelTurnInput[] = [];
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "ask_user",
+          argumentsText: "{}",
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "ask_user",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        terminal: true,
+        data: {
+          kind: "ask_request",
+          id: "ask-1",
+          questions: [],
+        },
+      }),
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "帮我做个东西",
+          },
+        ],
+        tools: [askTool],
+        maxTurns: 3,
+      }),
+    );
+
+    expect(events.map((event) => event.type)).toEqual([
+      "run_started",
+      "tool_started",
+      "tool_finished",
+      "turn_finished",
+      "done",
+    ]);
+    expect(providerInputs).toHaveLength(1);
+  });
+
   it("当模型流丢失工具名且只有一个授权工具时使用唯一工具兜底", async () => {
     let turnCount = 0;
     const provider: ModelProvider = {

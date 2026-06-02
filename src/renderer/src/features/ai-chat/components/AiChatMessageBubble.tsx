@@ -31,6 +31,8 @@ type AiChatMessageBubbleProps = {
   isGenerating?: boolean;
   // 是否允许对当前助手回答重新生成。
   canRegenerate?: boolean;
+  // 发送 Ask 回答回调。
+  onSendMessage?: (text: string) => void;
   // 打开消息右键菜单回调。
   onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
 };
@@ -339,6 +341,7 @@ export const AiChatMessageBubble = ({
   message,
   isGenerating = false,
   canRegenerate = false,
+  onSendMessage,
   onOpenContextMenu,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
@@ -427,6 +430,7 @@ export const AiChatMessageBubble = ({
                       <AiToolCallBlock
                         key={key}
                         steps={[...currentToolSteps]}
+                        onSendMessage={onSendMessage}
                       />,
                     );
                     currentToolSteps = [];

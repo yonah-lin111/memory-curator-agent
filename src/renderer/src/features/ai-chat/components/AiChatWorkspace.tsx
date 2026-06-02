@@ -483,6 +483,7 @@ export const AiChatWorkspace = ({
                   message={message}
                   isGenerating={isGenerating}
                   canRegenerate={canRegenerate}
+                  onSendMessage={onSendMessage}
                   onOpenContextMenu={handleOpenMessageContextMenu}
                 />
               </div>

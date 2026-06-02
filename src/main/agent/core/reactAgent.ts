@@ -182,6 +182,16 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           name: toolCall.name,
           content: renderToolResultContent(result.observation, result.data)
         })
+
+        if (result.terminal) {
+          yield {
+            type: 'turn_finished'
+          }
+          yield {
+            type: 'done'
+          }
+          return
+        }
       } catch (error) {
         const errorMessage = getToolErrorMessage(error)
 

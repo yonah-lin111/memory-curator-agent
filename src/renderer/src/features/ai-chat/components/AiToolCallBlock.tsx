@@ -4,6 +4,10 @@ import type {
   AiToolStep,
   AiToolStepStatus,
 } from "@renderer/features/ai-chat/types";
+import {
+  AiAskRequestPanel,
+  isAiAskRequest,
+} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // 工具观察文本最大展示长度。
 const TOOL_OBSERVATION_MAX_LENGTH = 96;
@@ -20,6 +24,8 @@ const SQL_SUMMARY_OBSERVATION_PATTERN =
 type AiToolCallBlockProps = {
   // 工具执行步骤列表。
   steps: AiToolStep[];
+  // 发送 Ask 回答回调。
+  onSendMessage?: (text: string) => void;
 };
 
 // 根据工具步骤状态返回状态展示配置。
@@ -101,6 +107,7 @@ const formatToolObservation = (observation: string): string => {
  */
 export const AiToolCallBlock = ({
   steps,
+  onSendMessage,
 }: AiToolCallBlockProps): React.JSX.Element => {
   return (
     <div className="my-0.5 flex flex-col gap-2">
@@ -110,6 +117,7 @@ export const AiToolCallBlock = ({
           const config = getStatusConfig(step.status);
           const StatusIcon = config.icon;
           const displayObservation = formatToolObservation(step.observation);
+          const askRequest = isAiAskRequest(step.data) ? step.data : null;
 
           return (
             <div key={step.id} className="relative flex gap-2.5 items-start">
@@ -152,6 +160,14 @@ export const AiToolCallBlock = ({
                   </span>
                   <span className="flex-1">{displayObservation}</span>
                 </div>
+                {askRequest && onSendMessage ? (
+                  <div className="pt-1.5">
+                    <AiAskRequestPanel
+                      request={askRequest}
+                      onSubmit={onSendMessage}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           );
