@@ -273,6 +273,122 @@ describe('aiChatPersistenceService', () => {
     expect(service.listContextSnapshots('run-delete')).toEqual([])
   })
 
+  it('undoes the last turn and deletes related run data', () => {
+    const service = createService()
+
+    service.createRunWithMessages({
+      session: {
+        id: 's-undo',
+        title: '保留标题',
+        summary: '第一轮',
+        status: 'running',
+        timestamp: '2026-05-31 10:00'
+      },
+      userMessage: {
+        id: 'm1-user',
+        sessionId: 's-undo',
+        role: 'user',
+        content: '第一轮',
+        time: '10:00',
+        timestamp: '2026-05-31 10:00'
+      },
+      assistantMessage: {
+        id: 'm1-ai',
+        sessionId: 's-undo',
+        role: 'assistant',
+        content: '第一轮回答',
+        answer: '第一轮回答',
+        parts: [],
+        toolSteps: [],
+        time: '10:00',
+        timestamp: '2026-05-31 10:00'
+      },
+      run: {
+        id: 'run-1',
+        sessionId: 's-undo',
+        assistantMessageId: 'm1-ai',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: [],
+        timestamp: '2026-05-31 10:00'
+      }
+    })
+    service.createRunWithMessages({
+      session: {
+        id: 's-undo',
+        title: '第二轮标题不会覆盖',
+        summary: '第二轮',
+        status: 'running',
+        timestamp: '2026-05-31 10:01'
+      },
+      userMessage: {
+        id: 'm2-user',
+        sessionId: 's-undo',
+        role: 'user',
+        content: '第二轮',
+        time: '10:01',
+        timestamp: '2026-05-31 10:01'
+      },
+      assistantMessage: {
+        id: 'm2-ai',
+        sessionId: 's-undo',
+        role: 'assistant',
+        content: '第二轮回答',
+        answer: '第二轮回答',
+        parts: [],
+        toolSteps: [],
+        time: '10:01',
+        timestamp: '2026-05-31 10:01'
+      },
+      run: {
+        id: 'run-2',
+        sessionId: 's-undo',
+        assistantMessageId: 'm2-ai',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: [
+          {
+            key: 'message:m1-user',
+            kind: 'message',
+            title: '用户消息',
+            sourceId: 'm1-user',
+            content: '第一轮'
+          }
+        ],
+        timestamp: '2026-05-31 10:01'
+      }
+    })
+    service.upsertToolCall({
+      id: 'tool-undo',
+      runId: 'run-2',
+      messageId: 'm2-ai',
+      toolCallId: 'call-undo',
+      name: 'people_query',
+      status: 'done',
+      input: {},
+      observation: '完成',
+      data: null,
+      timestamp: '2026-05-31 10:02'
+    })
+
+    const session = service.undoLastTurn('s-undo', '2026-05-31 10:03')
+
+    expect(session).toMatchObject({
+      id: 's-undo',
+      title: '保留标题',
+      summary: '第一轮',
+      status: 'completed',
+      messages: [
+        { id: 'm1-user', role: 'user', content: '第一轮' },
+        { id: 'm1-ai', role: 'assistant', content: '第一轮回答' }
+      ]
+    })
+    expect(service.getRun('run-1')).toMatchObject({ id: 'run-1' })
+    expect(service.getRun('run-2')).toBeNull()
+    expect(service.listToolCalls('run-2')).toEqual([])
+    expect(service.listContextSnapshots('run-2')).toEqual([])
+  })
+
   it('persists run, tool call, and context snapshots', () => {
     const service = createService()
 

@@ -10,7 +10,7 @@ import type {
   AiChatSession,
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/aiChatMock'
+} from '@renderer/features/ai-chat/types'
 
 vi.mock('md-editor-rt', () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => <div>{modelValue}</div>
@@ -112,6 +112,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
     )
@@ -131,6 +132,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
     )
@@ -155,6 +157,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
     )
@@ -174,6 +177,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
     )
@@ -195,6 +199,7 @@ describe('AiChatWorkspace', () => {
         modelOptions={modelOptions}
         selectedModel={selectedModel}
         onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
         onModelChange={() => undefined}
       />
     )
@@ -208,6 +213,6 @@ describe('AiChatWorkspace', () => {
       .filter((distance) => distance > 0)
 
     expect(travelDistances.length).toBeGreaterThanOrEqual(2)
-    expect(travelDistances.at(-1)!).toBeGreaterThan(travelDistances[0])
+    expect(travelDistances[1]).toBeGreaterThan(travelDistances[0])
   })
 })

@@ -4,9 +4,12 @@ import type {
   AiChatSession,
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/features/ai-chat/aiChatMock";
+} from "@renderer/features/ai-chat/types";
 import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
-import { AiChatInput } from "@renderer/features/ai-chat/components/AiChatInput";
+import {
+  AiChatInput,
+  type AiChatInputCommandId,
+} from "@renderer/features/ai-chat/components/AiChatInput";
 import {
   buildMessageContextItems,
   getAiChatContextBudget,
@@ -33,6 +36,8 @@ type AiChatWorkspaceProps = {
   selectedModel: AiModelSelection | null;
   // 发送消息回调。
   onSendMessage: (text: string) => void;
+  // 执行输入框命令回调。
+  onCommandExecute: (command: AiChatInputCommandId) => void;
   // AI 模型切换回调。
   onModelChange: (selection: AiModelSelection) => void;
 };
@@ -45,6 +50,7 @@ export const AiChatWorkspace = ({
   modelOptions,
   selectedModel,
   onSendMessage,
+  onCommandExecute,
   onModelChange,
 }: AiChatWorkspaceProps): React.JSX.Element => {
   // 消息滚动容器引用。
@@ -287,30 +293,39 @@ export const AiChatWorkspace = ({
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4"
       >
-        {session.messages.map((message, index) => {
-          const isLast = index === session.messages.length - 1;
-          const isGenerating =
-            isLast &&
-            session.status === "running" &&
-            message.role === "assistant";
-          const shouldPinToTop = message.id === topPinnedAssistantId;
-          return (
-            <div
-              key={message.id}
-              ref={shouldPinToTop ? latestAssistantMessageRef : null}
-              className={
-                shouldPinToTop
-                  ? "min-h-[calc(100%_-_1rem)] flex flex-col justify-start"
-                  : undefined
-              }
-            >
-              <AiChatMessageBubble
-                message={message}
-                isGenerating={isGenerating}
-              />
-            </div>
-          );
-        })}
+        {session.messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
+            <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
+            <p className="max-w-md text-xs text-white/40 leading-relaxed">
+              在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
+            </p>
+          </div>
+        ) : (
+          session.messages.map((message, index) => {
+            const isLast = index === session.messages.length - 1;
+            const isGenerating =
+              isLast &&
+              session.status === "running" &&
+              message.role === "assistant";
+            const shouldPinToTop = message.id === topPinnedAssistantId;
+            return (
+              <div
+                key={message.id}
+                ref={shouldPinToTop ? latestAssistantMessageRef : null}
+                className={
+                  shouldPinToTop
+                    ? "min-h-[calc(100%_-_1rem)] flex flex-col justify-start"
+                    : undefined
+                }
+              >
+                <AiChatMessageBubble
+                  message={message}
+                  isGenerating={isGenerating}
+                />
+              </div>
+            );
+          })
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -322,6 +337,7 @@ export const AiChatWorkspace = ({
         contextTokens={contextBudget.totalTokens}
         contextLimit={contextBudget.contextLimit}
         onSendMessage={onSendMessage}
+        onCommandExecute={onCommandExecute}
         onModelChange={onModelChange}
       />
     </section>

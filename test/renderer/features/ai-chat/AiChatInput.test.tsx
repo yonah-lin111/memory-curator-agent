@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AiChatInput } from '@renderer/features/ai-chat/components/AiChatInput'
 import type {
@@ -36,7 +36,9 @@ const selectedModel: AiModelSelection = {
   model: 'MiniMax-M2.5'
 }
 
-const renderAiChatInput = (): void => {
+const renderAiChatInput = (
+  onCommandExecute: (command: 'clear' | 'undo') => string | void | Promise<string | void> = () => undefined
+): void => {
   render(
     <AiChatInput
       modelOptions={modelOptions}
@@ -45,6 +47,7 @@ const renderAiChatInput = (): void => {
       contextTokens={0}
       contextLimit={204800}
       onSendMessage={() => undefined}
+      onCommandExecute={onCommandExecute}
       onModelChange={() => undefined}
     />
   )
@@ -85,5 +88,111 @@ describe('AiChatInput', () => {
 
     expect((textarea as HTMLTextAreaElement).style.height).toBe('120px')
     expect((textarea as HTMLTextAreaElement).style.overflowY).toBe('auto')
+  })
+
+  it('输入 / 后保持输入框聚焦并支持键盘选择执行命令', async () => {
+    const onCommandExecute = vi.fn()
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI 对话输入框')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/'
+      }
+    })
+
+    const commandPanel = screen.getByRole('listbox', {
+      name: 'AI 输入命令面板'
+    })
+    await waitFor(() => expect(commandPanel).toBeInTheDocument())
+    expect(textarea).toHaveFocus()
+    expect(screen.queryByText('不加入上下文')).not.toBeInTheDocument()
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onCommandExecute).toHaveBeenCalledWith('undo')
+    await waitFor(() => expect(textarea).toHaveValue(''))
+  })
+
+  it('输入 /new 时匹配新建对话命令', async () => {
+    const onCommandExecute = vi.fn()
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI 对话输入框')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/new'
+      }
+    })
+
+    const commandPanel = screen.getByRole('listbox', {
+      name: 'AI 输入命令面板'
+    })
+    await waitFor(() => expect(commandPanel).toBeInTheDocument())
+    expect(textarea).toHaveFocus()
+
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onCommandExecute).toHaveBeenCalledWith('clear')
+  })
+
+  it('支持命令模糊匹配和上下循环切换', async () => {
+    const onCommandExecute = vi.fn()
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI 对话输入框')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/ce'
+      }
+    })
+
+    await waitFor(() => expect(screen.getByRole('option', { name: /\/clear/ })).toBeInTheDocument())
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+    expect(onCommandExecute).toHaveBeenCalledWith('clear')
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/'
+      }
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onCommandExecute).toHaveBeenLastCalledWith('undo')
+  })
+
+  it('undo 命令返回文本时回填到输入框', async () => {
+    renderAiChatInput((command) => (command === 'undo' ? '需要重新编辑的问题' : undefined))
+    const textarea = screen.getByLabelText('AI 对话输入框')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/undo'
+      }
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    await waitFor(() => expect(textarea).toHaveValue('需要重新编辑的问题'))
+    expect(textarea).toHaveFocus()
   })
 })

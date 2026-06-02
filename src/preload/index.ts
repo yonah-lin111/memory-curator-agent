@@ -439,6 +439,8 @@ const api = {
       ipcRenderer.invoke('ai:session:title:update', sessionId, title),
     deleteSession: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke('ai:session:delete', sessionId),
+    undoLastTurn: (sessionId: string): Promise<AiChatSession | null> =>
+      ipcRenderer.invoke('ai:session:turn:undo', sessionId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>

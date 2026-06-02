@@ -14,8 +14,9 @@ import {
 } from "@renderer/components/layout/Sidebar";
 import { Header } from "@renderer/components/layout/Header";
 import { TodayPage } from "@renderer/pages/today/TodayPage";
-import { ToastProvider } from "@renderer/components/ui/Toast";
+import { ToastProvider, useToast } from "@renderer/components/ui/Toast";
 import { AiChatWorkspace } from "@renderer/features/ai-chat/components/AiChatWorkspace";
+import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
 import { AiChatContextBar } from "@renderer/features/ai-chat/components/AiChatContextBar";
 import {
   buildMessageContextItems,
@@ -64,10 +65,23 @@ const isEmptyAiChatDraftSession = (session: AiChatSession): boolean =>
   session.title === "新建对话" && session.messages.length === 0;
 
 /**
+ * 查找最后一轮用户对话在消息列表中的起始位置。
+ */
+const findLastChatTurnStartIndex = (messages: AiChatSession["messages"]): number => {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "user") {
+      return index;
+    }
+  }
+
+  return -1;
+};
+
+/**
  * 记忆策展 Agent 的主应用布局。
  * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
-export const App = (): React.JSX.Element => {
+const AppContent = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
@@ -88,6 +102,7 @@ export const App = (): React.JSX.Element => {
 
   // 当前选中的 AI provider 与模型。
   const [selectedAiModel, setSelectedAiModel] = useState<AiModelSelection | null>(null);
+  const toast = useToast();
 
   // Agent 运行与消息的映射关系。
   const runMessageMapRef = useRef<
@@ -153,6 +168,7 @@ export const App = (): React.JSX.Element => {
     const existingEmptySession = chatSessions.find(isEmptyAiChatDraftSession);
     if (existingEmptySession) {
       setActiveChatId(existingEmptySession.id);
+      toast.info("已切换到空白对话");
       return;
     }
 
@@ -160,6 +176,89 @@ export const App = (): React.JSX.Element => {
     // 将新会话插到最前面，保证最新创建的对话排在最上方。
     setChatSessions((prev) => [newSession, ...prev]);
     setActiveChatId(newSession.id);
+    toast.success("已新建对话");
+  };
+
+  /**
+   * 清理已被删除消息关联的运行状态，避免迟到流式事件重新污染 UI。
+   */
+  const removeRunMappingsByMessageIds = (messageIds: Set<string>): void => {
+    for (const [runId, mapping] of runMessageMapRef.current.entries()) {
+      if (messageIds.has(mapping.messageId)) {
+        runMessageMapRef.current.delete(runId);
+        textBufferRef.current.delete(runId);
+        const timer = typewriterTimerRef.current.get(runId);
+        if (timer) {
+          clearTimeout(timer);
+          typewriterTimerRef.current.delete(runId);
+        }
+      }
+    }
+  };
+
+  /**
+   * 撤销当前会话最后一轮用户对话，并同步删除持久化 run、工具调用和上下文快照。
+   */
+  const handleUndoLastChatTurn = async (): Promise<string | void> => {
+    const session = activeChatSession;
+    const turnStartIndex = findLastChatTurnStartIndex(session.messages);
+
+    if (turnStartIndex < 0) {
+      toast.warning("没有可撤销的对话");
+      return;
+    }
+
+    const previousSessions = chatSessions;
+    const removedMessages = session.messages.slice(turnStartIndex);
+    const removedUserMessage = removedMessages.find((message) => message.role === "user");
+    const removedMessageIds = new Set(removedMessages.map((message) => message.id));
+    const nextMessages = session.messages.slice(0, turnStartIndex);
+    const nextLastUserMessage = [...nextMessages].reverse().find((message) => message.role === "user");
+    const nextSession: AiChatSession = {
+      ...session,
+      title: nextMessages.length === 0 ? "新建对话" : session.title,
+      summary: nextLastUserMessage?.content ?? "暂无对话内容",
+      status: nextMessages.length === 0 ? "idle" : "completed",
+      messages: nextMessages,
+    };
+
+    if (!window.api?.ai?.undoLastTurn) {
+      removeRunMappingsByMessageIds(removedMessageIds);
+      setChatSessions((prevSessions) =>
+        prevSessions.map((item) => (item.id === session.id ? nextSession : item)),
+      );
+      toast.success("已撤销上一轮，对应问题已回填");
+      return removedUserMessage?.content;
+    }
+
+    try {
+      const persistedSession = await window.api.ai.undoLastTurn(session.id);
+      removeRunMappingsByMessageIds(removedMessageIds);
+      setChatSessions((prevSessions) =>
+        prevSessions.map((item) =>
+          item.id === session.id ? (persistedSession ?? nextSession) : item,
+        ),
+      );
+      toast.success("已撤销上一轮，对应问题已回填");
+      return removedUserMessage?.content;
+    } catch {
+      setChatSessions(previousSessions);
+      toast.error("撤销对话失败");
+    }
+  };
+
+  /**
+   * 执行 AI 输入框斜杠命令。
+   */
+  const handleAiChatCommand = (command: AiChatInputCommandId): string | void | Promise<string | void> => {
+    if (command === "clear") {
+      handleNewChat();
+      return;
+    }
+
+    if (command === "undo") {
+      return handleUndoLastChatTurn();
+    }
   };
 
   /**
@@ -761,7 +860,6 @@ export const App = (): React.JSX.Element => {
   };
 
   return (
-    <ToastProvider>
       <main className="flex flex-col lg:flex-row h-screen w-screen bg-[#000000] p-3 gap-3 text-white antialiased overflow-y-auto lg:overflow-hidden">
         {/* 左侧多维导航栏 */}
         <Sidebar
@@ -826,12 +924,18 @@ export const App = (): React.JSX.Element => {
                 modelOptions={aiModelOptions}
                 selectedModel={selectedAiModel}
                 onSendMessage={handleSendMessage}
+                onCommandExecute={handleAiChatCommand}
                 onModelChange={setSelectedAiModel}
               />
             </div>
           </div>
         </div>
       </main>
-    </ToastProvider>
   );
 };
+
+export const App = (): React.JSX.Element => (
+  <ToastProvider>
+    <AppContent />
+  </ToastProvider>
+);
