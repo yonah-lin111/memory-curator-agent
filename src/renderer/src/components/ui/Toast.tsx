@@ -18,7 +18,7 @@ export interface ToastItem {
 
 // 消息提示上下文接口。
 interface ToastContextType {
-  // 当前消息列表。
+  // 当前消息列表（在当前设计中，该列表中最多只会包含最新的一条活动消息，以防消息堆叠，并供 Header 统一渲染）。
   toasts: ToastItem[];
   // 触发通用消息提示。
   show: (message: string, type?: ToastType, duration?: number) => void;
@@ -54,38 +54,43 @@ export const getToastColorClass = (type: ToastType): string => {
 
 /**
  * 消息提示 Provider 组件。
- * 管理全局消息队列。
+ * 管理全局唯一的消息提示（每次触发新提示直接替换，避免消息堆叠并完美重新激活入场动画）。
  */
 export const ToastProvider = ({
   children,
 }: {
   children: React.ReactNode;
 }): React.JSX.Element => {
-  // 消息列表状态。
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  // 当前活动的唯一消息状态。
+  const [activeToast, setActiveToast] = useState<ToastItem | null>(null);
 
   /**
    * 移除指定 ID 的消息（带退出过渡）。
+   * 通过闭包 ID 比对，完美避开并发定时器的竞态条件。
    */
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) =>
-      prev.map((toast) => (toast.id === id ? { ...toast, isExiting: true } : toast))
-    );
-    // 延迟 300ms（等待 CSS 过渡结束）后，真正移出
+    setActiveToast((prev) => {
+      if (prev && prev.id === id) {
+        return { ...prev, isExiting: true };
+      }
+      return prev;
+    });
+    // 延迟 300ms（等待 CSS 退出动画结束）后，真正将状态设为 null
     setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      setActiveToast((prev) => (prev && prev.id === id ? null : prev));
     }, 300);
   }, []);
 
   /**
    * 创建并显示一条消息。
+   * 新消息会被直接赋予全新 ID 并替换当前消息，促使 React 完全重新渲染组件并触发动画。
    */
   const show = useCallback(
     (message: string, type: ToastType = "info", duration = 3000) => {
       const id = Math.random().toString(36).substring(2, 9);
       const newToast: ToastItem = { id, message, type };
 
-      setToasts((prev) => [...prev, newToast]);
+      setActiveToast(newToast);
 
       // 定时自动关闭。
       setTimeout(() => {
@@ -134,6 +139,9 @@ export const ToastProvider = ({
     },
     [show]
   );
+
+  // 向上游暴露单条包装的 toasts 数组，保证完美的向下兼容性，无损对接 Header 组件
+  const toasts = activeToast ? [activeToast] : [];
 
   return (
     <ToastContext.Provider value={{ toasts, show, success, error, info, warning }}>

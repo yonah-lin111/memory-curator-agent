@@ -384,6 +384,22 @@ html:hover::-webkit-scrollbar-thumb,
   animation: toast-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Toast 退出动画，微弱右滑淡出（与进入动画完全相反） */
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+.animate-toast-out {
+  animation: toast-out 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-modal-backdrop-in,
   .animate-card-modal-in {

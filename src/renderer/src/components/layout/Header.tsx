@@ -57,10 +57,8 @@ export const Header = ({
               <span
                 key={toast.id}
                 aria-hidden="true"
-                className={`text-xs font-medium tracking-wide transition-all duration-300 ease-out select-none ${colorClass} ${
-                  toast.isExiting
-                    ? "opacity-0 translate-x-2"
-                    : "animate-toast-in opacity-100 translate-x-0"
+                className={`text-xs font-medium tracking-wide select-none ${colorClass} ${
+                  toast.isExiting ? "animate-toast-out" : "animate-toast-in"
                 }`}
               >
                 {toast.message}
