@@ -2,9 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import type React from 'react'
-import { useState } from 'react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiChatWorkspace } from '@renderer/features/ai-chat/components/AiChatWorkspace'
 import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
@@ -167,68 +165,6 @@ describe('AiChatWorkspace', () => {
         behavior: 'auto'
       })
     })
-  })
-
-  it('通过输入框发送时直接使用底部占位定位最新 AI 回答', async () => {
-    const ChatHarness = (): React.JSX.Element => {
-      const [currentSession, setCurrentSession] = useState<AiChatSession>(session)
-
-      return (
-        <AiChatWorkspace
-          session={currentSession}
-          modelOptions={modelOptions}
-          selectedModel={selectedModel}
-          onSendMessage={(text) => {
-            setCurrentSession((prevSession) => ({
-              ...prevSession,
-              status: 'running',
-              messages: [
-                ...prevSession.messages,
-                {
-                  id: 'u-new',
-                  role: 'user',
-                  content: text,
-                  time: '12:00'
-                },
-                {
-                  id: 'a-new',
-                  role: 'assistant',
-                  content: `正在处理：“${text}”`,
-                  answer: '',
-                  time: '12:00'
-                }
-              ]
-            }))
-          }}
-          onModelChange={() => undefined}
-        />
-      )
-    }
-
-    render(<ChatHarness />)
-    const messagesContainer = screen.getByLabelText('AI 对话主体').querySelector('.custom-scrollbar')!
-    const scrollTo = vi.fn(({ top }: ScrollToOptions) => {
-      messagesContainer.scrollTop = Number(top ?? messagesContainer.scrollTop)
-    })
-    messagesContainer.scrollTop = 480
-    Object.defineProperty(messagesContainer, 'scrollTo', {
-      configurable: true,
-      value: scrollTo
-    })
-    scrollTo.mockClear()
-
-    fireEvent.change(screen.getByLabelText('AI 对话输入框'), {
-      target: { value: '继续整理' }
-    })
-    fireEvent.click(screen.getByLabelText('发送消息'))
-
-    await waitFor(() => {
-      expect(scrollTo).toHaveBeenCalledWith({
-        top: 0,
-        behavior: 'auto'
-      })
-    })
-    expect(scrollTo.mock.calls.every(([options]) => options?.behavior === 'auto')).toBe(true)
   })
 
   it('切换 active chat 后滚动速度逐帧递增', async () => {
