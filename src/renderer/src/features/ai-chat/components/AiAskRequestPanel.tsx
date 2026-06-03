@@ -504,7 +504,7 @@ export const AiAskRequestPanel = ({
           className="inline-flex items-center gap-1.5 rounded-[6px] bg-white px-2 py-1 text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/35"
         >
           <SendHorizonal className="h-3.5 w-3.5" />
-          提交
+          Submit
         </button>
       </div>
     </div>

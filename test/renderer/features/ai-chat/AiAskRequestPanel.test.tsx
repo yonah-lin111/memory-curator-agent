@@ -79,7 +79,7 @@ describe("AiAskRequestPanel", () => {
     await user.click(screen.getByText("当前项目"));
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByText("箭头切换"));
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith({
@@ -87,17 +87,17 @@ describe("AiAskRequestPanel", () => {
       answers: [["当前项目"], ["箭头切换"]],
     });
     expect(screen.getByText("已提交，不能重复使用。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "提交" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
 
     unmount();
     render(<AiAskRequestPanel request={request} onSubmit={onSubmit} />);
 
     expect(screen.queryByText("已提交，不能重复使用。")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "提交" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
     await user.click(screen.getByText("当前项目"));
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByText("箭头切换"));
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 
@@ -110,11 +110,11 @@ describe("AiAskRequestPanel", () => {
     await user.click(screen.getByText("当前项目"));
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByText("箭头切换"));
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
 
     expect(screen.getByText("已提交，不能重复使用。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "提交" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
@@ -129,7 +129,7 @@ describe("AiAskRequestPanel", () => {
     await user.type(screen.getByPlaceholderText("输入回答"), "整个工作区");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByText("箭头切换"));
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       requestId: "ask_test_1",
@@ -148,7 +148,7 @@ describe("AiAskRequestPanel", () => {
     await user.type(screen.getByPlaceholderText("输入回答"), "整个工作区");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.click(screen.getByText("箭头切换"));
-    await user.click(screen.getByRole("button", { name: "提交" }));
+    await user.click(screen.getByRole("button", { name: "Submit" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
       requestId: "ask_test_1",
