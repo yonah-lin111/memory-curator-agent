@@ -6,14 +6,18 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "pnpm typecheck && electron-vite build",
+    "dev": "pnpm rebuild:native:electron && electron-vite dev",
+    "build": "pnpm typecheck && pnpm rebuild:native:electron && electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint": "pnpm typecheck",
-    "test": "vitest run --passWithNoTests",
-    "rebuild:native": "electron-builder install-app-deps",
-    "postinstall": "electron-builder install-app-deps"
+    "test": "pnpm rebuild:native:node && vitest run --passWithNoTests",
+    "rebuild:native": "pnpm rebuild:native:electron",
+    "rebuild:native:electron": "node scripts/rebuildNativeIfNeeded.mjs electron",
+    "rebuild:native:electron:force": "electron-rebuild -f -w better-sqlite3 --build-from-source",
+    "rebuild:native:node": "node scripts/rebuildNativeIfNeeded.mjs node",
+    "rebuild:native:node:force": "pnpm rebuild better-sqlite3",
+    "postinstall": "pnpm rebuild:native:electron"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",
@@ -37,6 +41,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
