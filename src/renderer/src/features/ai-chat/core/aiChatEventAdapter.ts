@@ -27,6 +27,8 @@ export type AiRunMessageMapping = {
   messageId: string;
   // 用户发送后先写入的乐观标题。
   optimisticTitle?: string;
+  // 是否需要等待生成标题。
+  shouldUpdateTitle?: boolean;
 };
 
 // 打字机定时器类型。
@@ -295,7 +297,16 @@ export const createAiChatEventHandler = ({
         completeAiMessageReasoningParts(message),
       );
       updateChatSessionStatus(mapping.sessionId, "completed");
-      clearRunState(event.runId);
+      if (mapping.shouldUpdateTitle) {
+        const timer = typewriterTimerRef.current.get(event.runId);
+        if (timer) {
+          clearTimeout(timer);
+          typewriterTimerRef.current.delete(event.runId);
+        }
+        textBufferRef.current.delete(event.runId);
+      } else {
+        clearRunState(event.runId);
+      }
       return;
     }
 
@@ -307,6 +318,7 @@ export const createAiChatEventHandler = ({
           event.title,
         );
       }
+      clearRunState(event.runId);
       return;
     }
 

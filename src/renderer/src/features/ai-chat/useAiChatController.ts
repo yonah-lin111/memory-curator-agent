@@ -711,30 +711,33 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       toolSteps: [],
       answer: hasAiBridge ? "" : "The current runtime does not expose the AI IPC bridge.",
     };
-    runMessageMapRef.current.set(runId, {
-      sessionId,
-      messageId: assistantMessageId,
-      optimisticTitle: optimisticSessionTitle,
-    });
-
     // 先写入乐观消息，保证 IPC 延迟时界面即时反馈。
     const sourceSessionsById = new Map(
       sourceSessions.map((session) => [session.id, session]),
     );
+    const sourceSession = sourceSessionsById.get(sessionId);
+    const isNewSession = sourceSession
+      ? sourceSession.title === "新建对话" && sourceSession.messages.length === 0
+      : false;
+
+    runMessageMapRef.current.set(runId, {
+      sessionId,
+      messageId: assistantMessageId,
+      optimisticTitle: optimisticSessionTitle,
+      shouldUpdateTitle: isNewSession,
+    });
+
     dispatchChatState({
       type: "update",
       sessionId,
       updater: (session) => {
-        const sourceSession = sourceSessionsById.get(session.id) ?? session;
-        const isNewSession =
-          sourceSession.title === "新建对话" &&
-          sourceSession.messages.length === 0;
+        const currentSession = sourceSession ?? session;
         return {
-          ...sourceSession,
-          title: isNewSession ? optimisticSessionTitle : sourceSession.title,
+          ...currentSession,
+          title: isNewSession ? optimisticSessionTitle : currentSession.title,
           time: sessionTime,
           status: "running",
-          messages: [...sourceSession.messages, userMessage, aiMessage],
+          messages: [...currentSession.messages, userMessage, aiMessage],
         };
       },
     });
