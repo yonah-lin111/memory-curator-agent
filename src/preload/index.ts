@@ -458,6 +458,10 @@ const api = {
       ipcRenderer.invoke('ai:session:turn:delete', sessionId, messageId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
+    listPromptHistory: (): Promise<string[]> =>
+      ipcRenderer.invoke('ai:prompt-history:list'),
+    addPromptHistory: (prompt: string): Promise<string[]> =>
+      ipcRenderer.invoke('ai:prompt-history:add', prompt),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
       ipcRenderer.invoke('ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>

@@ -75,6 +75,9 @@ const TEXTAREA_MAX_ROWS = 6;
 // 测不到 CSS line-height 时的兜底行高。
 const FALLBACK_LINE_HEIGHT = 21;
 
+// 本地兜底历史最大保留数量，与主进程服务保持一致。
+const PROMPT_HISTORY_LIMIT = 100;
+
 // 容器点击时不抢焦点的交互元素。
 const INTERACTIVE_SELECTOR = "button, select, input, textarea, a, [role='button'], [role='listbox'], [role='option']";
 
@@ -130,6 +133,28 @@ const getMatchedCommands = (value: string): AiChatInputCommand[] => {
 };
 
 /**
+ * 合并一条提示词历史，旧项在前，新项在后。
+ */
+const mergePromptHistory = (history: string[], prompt: string): string[] => {
+  const normalizedPrompt = prompt.trim();
+
+  if (!normalizedPrompt) {
+    return history;
+  }
+
+  return [
+    ...history.filter((item) => item !== normalizedPrompt),
+    normalizedPrompt,
+  ].slice(-PROMPT_HISTORY_LIMIT);
+};
+
+/**
+ * 判断文本框光标是否折叠在指定位置。
+ */
+const isTextareaCursorAt = (textarea: HTMLTextAreaElement, position: number): boolean =>
+  textarea.selectionStart === position && textarea.selectionEnd === position;
+
+/**
  * AiChatInput - AI 对话底部输入区域组件，包含模型切换、文本输入与辅助功能。
  */
 export const AiChatInput = ({
@@ -145,7 +170,10 @@ export const AiChatInput = ({
 }: AiChatInputProps): React.JSX.Element => {
   const toast = useToast();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const draftInputRef = useRef("");
+  const historyCursorRef = useRef<number | null>(null);
   const [inputText, setInputText] = useState("");
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const selectedModelValue = selectedModel
@@ -201,6 +229,33 @@ export const AiChatInput = ({
   }, [adjustTextareaHeight, inputText]);
 
   useEffect(() => {
+    let isMounted = true;
+    const listPromptHistory = window.api?.ai?.listPromptHistory;
+
+    if (!listPromptHistory) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    void listPromptHistory()
+      .then((history) => {
+        if (isMounted) {
+          setPromptHistory(history);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPromptHistory([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isCommandPanelOpen) {
       return;
     }
@@ -209,6 +264,36 @@ export const AiChatInput = ({
       Math.min(currentIndex, Math.max(matchedCommands.length - 1, 0)),
     );
   }, [isCommandPanelOpen, matchedCommands.length]);
+
+  /**
+   * 保存提示词历史，IPC 不可用时退回内存态避免交互断裂。
+   */
+  const savePromptHistory = useCallback((prompt: string): void => {
+    const normalizedPrompt = prompt.trim();
+
+    if (!normalizedPrompt) {
+      return;
+    }
+
+    const addPromptHistory = window.api?.ai?.addPromptHistory;
+
+    if (!addPromptHistory) {
+      setPromptHistory((currentHistory) =>
+        mergePromptHistory(currentHistory, normalizedPrompt),
+      );
+      return;
+    }
+
+    void addPromptHistory(normalizedPrompt)
+      .then((history) => {
+        setPromptHistory(history);
+      })
+      .catch(() => {
+        setPromptHistory((currentHistory) =>
+          mergePromptHistory(currentHistory, normalizedPrompt),
+        );
+      });
+  }, []);
 
   // 构造供 Select 组件使用的选项列表，支持 provider 分组。
   const selectOptions = hasModelOptions
@@ -225,13 +310,18 @@ export const AiChatInput = ({
    * 发送消息处理函数。
    */
   const handleSend = (): void => {
-    if (!inputText.trim()) return;
+    const trimmedInputText = inputText.trim();
+
+    if (!trimmedInputText) return;
     if (isGenerating) {
       toast.warning("请等待 AI 输出完成");
       return;
     }
-    onSendMessage(inputText.trim());
+    onSendMessage(trimmedInputText);
+    savePromptHistory(trimmedInputText);
     setInputText("");
+    draftInputRef.current = "";
+    historyCursorRef.current = null;
     setIsCommandPanelOpen(false);
   };
 
@@ -272,6 +362,83 @@ export const AiChatInput = ({
   };
 
   /**
+   * 切换历史后恢复焦点并设置光标位置。
+   */
+  const syncTextareaAfterHistoryMove = (cursorPosition: "start" | "end"): void => {
+    requestAnimationFrame(() => {
+      adjustTextareaHeight();
+      const textarea = textareaRef.current;
+
+      if (!textarea) {
+        return;
+      }
+
+      const nextPosition = cursorPosition === "start" ? 0 : textarea.value.length;
+      textarea.focus();
+      textarea.setSelectionRange(nextPosition, nextPosition);
+    });
+  };
+
+  /**
+   * 在非命令面板状态下浏览历史提示词。
+   */
+  const movePromptHistory = (direction: 1 | -1): void => {
+    if (promptHistory.length === 0) {
+      return;
+    }
+
+    const currentCursor = historyCursorRef.current;
+    const newestIndex = promptHistory.length - 1;
+    const nextCursor =
+      currentCursor === null
+        ? direction === -1
+          ? newestIndex
+          : 0
+        : currentCursor + direction;
+
+    if (nextCursor > newestIndex) {
+      setInputText(draftInputRef.current);
+      historyCursorRef.current = null;
+      syncTextareaAfterHistoryMove("end");
+      return;
+    }
+
+    if (nextCursor < 0) {
+      syncTextareaAfterHistoryMove("start");
+      return;
+    }
+
+    setInputText(promptHistory[nextCursor] ?? "");
+    historyCursorRef.current = nextCursor;
+    syncTextareaAfterHistoryMove(direction === -1 ? "start" : "end");
+  };
+
+  /**
+   * 判断普通输入态方向键是否应进入历史提示词导航。
+   */
+  const canMovePromptHistory = (direction: 1 | -1): boolean => {
+    const textarea = textareaRef.current;
+
+    if (!textarea || promptHistory.length === 0) {
+      return false;
+    }
+
+    const textareaValue = textarea.value;
+
+    if (textareaValue.length === 0) {
+      return direction === -1;
+    }
+
+    if (direction === 1 && textareaValue.includes("\n")) {
+      return false;
+    }
+
+    return direction === -1
+      ? isTextareaCursorAt(textarea, 0)
+      : isTextareaCursorAt(textarea, textareaValue.length);
+  };
+
+  /**
    * 处理输入区域点击，空白区域点击时聚焦文本框。
    */
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>): void => {
@@ -293,6 +460,8 @@ export const AiChatInput = ({
     const nextMatchedCommands = getMatchedCommands(nextValue);
 
     setInputText(nextValue);
+    draftInputRef.current = nextValue;
+    historyCursorRef.current = null;
     setActiveCommandIndex(0);
     setIsCommandPanelOpen(isCommandInput(nextValue) && nextMatchedCommands.length > 0);
   };
@@ -316,6 +485,18 @@ export const AiChatInput = ({
     if (isCommandPanelOpen && e.key === "Escape") {
       e.preventDefault();
       setIsCommandPanelOpen(false);
+      return;
+    }
+
+    if (!isCommandPanelOpen && e.key === "ArrowDown" && canMovePromptHistory(1)) {
+      e.preventDefault();
+      movePromptHistory(1);
+      return;
+    }
+
+    if (!isCommandPanelOpen && e.key === "ArrowUp" && canMovePromptHistory(-1)) {
+      e.preventDefault();
+      movePromptHistory(-1);
       return;
     }
 

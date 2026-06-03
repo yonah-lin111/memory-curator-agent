@@ -570,6 +570,10 @@ type AppAPI = {
     deleteTurn?: (sessionId: string, messageId: string) => Promise<AiChatSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
+    // 读取历史提示词列表。
+    listPromptHistory?: () => Promise<string[]>
+    // 保存历史提示词。
+    addPromptHistory?: (prompt: string) => Promise<string[]>
     // 启动 AI 对话。
     startChat: (payload: AiChatStartPayload) => Promise<{ runId: string }>
     // 取消 AI 对话。

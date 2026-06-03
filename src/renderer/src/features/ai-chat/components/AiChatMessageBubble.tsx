@@ -1,5 +1,5 @@
 import type React from "react";
-import { Bot, Loader2 } from "lucide-react";
+import { Bot } from "lucide-react";
 import type {
   AiChatMessage,
   AiChatMessagePart,
@@ -491,13 +491,7 @@ export const AiChatMessageBubble = ({
                 return groupedElements;
               })()}
 
-              {/* 正在处理且无最终回答时，渲染 loading 替代 */}
-              {isProcessing && messageParts.length === 0 && (
-                <div className="flex items-center gap-2 text-white/50 py-0.5">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span className="text-xs font-medium">正在处理...</span>
-                </div>
-              )}
+
             </div>
           )}
         </div>

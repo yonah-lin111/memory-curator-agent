@@ -12,6 +12,11 @@ export const getAppDataRoot = (): string => join(homedir(), '.mc')
 export const getDatabaseDir = (): string => join(getAppDataRoot(), 'db')
 
 /**
+ * 获取提示词历史目录。
+ */
+export const getPromptHistoryDir = (): string => join(getAppDataRoot(), 'history')
+
+/**
  * 获取 SQLite 数据库文件路径。
  */
 export const getDatabasePath = (): string => join(getDatabaseDir(), 'curator.db')

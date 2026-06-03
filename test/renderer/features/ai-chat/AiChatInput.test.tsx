@@ -71,6 +71,7 @@ const renderAiChatInput = (
 describe('AiChatInput', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    delete (window as unknown as { api?: unknown }).api
     cleanup()
   })
 
@@ -209,6 +210,115 @@ describe('AiChatInput', () => {
 
     await waitFor(() => expect(textarea).toHaveValue('需要重新编辑的问题'))
     expect(textarea).toHaveFocus()
+  })
+
+  it('命令面板未打开时仅在输入边界支持上下键切换历史提示词', async () => {
+    const listPromptHistory = vi.fn().mockResolvedValue(['第一个问题', '第二个问题'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          listPromptHistory
+        }
+      }
+    })
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+
+    await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    expect(textarea).toHaveValue('')
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '当前草稿'
+      }
+    })
+    textarea.setSelectionRange(2, 2)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    expect(textarea).toHaveValue('当前草稿')
+
+    textarea.setSelectionRange(0, 0)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    expect(textarea).toHaveValue('第二个问题')
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+    expect(textarea.selectionEnd).toBe(0)
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    expect(textarea).toHaveValue('第一个问题')
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    expect(textarea).toHaveValue('第一个问题')
+
+    textarea.setSelectionRange(0, 0)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    expect(textarea).toHaveValue('第一个问题')
+
+    textarea.setSelectionRange(2, 2)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    expect(textarea).toHaveValue('第一个问题')
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    expect(textarea).toHaveValue('第二个问题')
+    await waitFor(() => expect(textarea.selectionStart).toBe('第二个问题'.length))
+    expect(textarea.selectionEnd).toBe('第二个问题'.length)
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+    expect(textarea).toHaveValue('当前草稿')
+    await waitFor(() => expect(textarea.selectionStart).toBe('当前草稿'.length))
+  })
+
+  it('历史提示词包含换行时下键不切换到下一条历史', async () => {
+    const listPromptHistory = vi.fn().mockResolvedValue(['1\n\n', '第二个问题'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          listPromptHistory
+        }
+      }
+    })
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+
+    await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
+
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowUp'
+    })
+    expect(textarea).toHaveValue('1\n\n')
+
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+    fireEvent.keyDown(textarea, {
+      key: 'ArrowDown'
+    })
+
+    expect(textarea).toHaveValue('1\n\n')
   })
 
   it('在 AI 正在输出时（isGenerating = true）尝试发送，会通过 Toast 提示并阻止发送', async () => {
