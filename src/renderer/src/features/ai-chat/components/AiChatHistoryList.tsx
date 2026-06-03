@@ -71,6 +71,10 @@ export const AiChatHistoryList = ({
   const [contextMenu, setContextMenu] = useState<AiChatContextMenuState | null>(null);
   // 历史搜索关键词。
   const [searchKeyword, setSearchKeyword] = useState<string>("");
+  // 数据库搜索结果状态。
+  const [dbSearchResults, setDbSearchResults] = useState<AiChatSession[]>([]);
+  // 是否正在进行数据库搜索。
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   // 是否进入批量选择模式。
   const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
   // 批量选择的 AI 会话 ID。
@@ -81,16 +85,75 @@ export const AiChatHistoryList = ({
   const previousSessionStatusRef = useRef<Map<string, AiChatSession["status"]>>(new Map());
   // 历史滚动容器引用，用于触底加载。
   const historyListRef = useRef<HTMLDivElement | null>(null);
+  // 记录是否需要在渲染后自动定位。
+  const shouldLocateRef = useRef<boolean>(false);
 
-  // 按标题过滤后的历史列表。
+  // 按标题与摘要过滤（支持数据库搜索与本地过滤）后的历史列表。
   const filteredSessions = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
+    const keyword = searchKeyword.trim();
 
     if (!keyword) {
       return sessions;
     }
 
-    return sessions.filter((session) => session.title.toLowerCase().includes(keyword));
+    return dbSearchResults;
+  }, [searchKeyword, sessions, dbSearchResults]);
+
+  // 当过滤后的列表变化时，如果需要定位，则执行滚动。
+  useEffect(() => {
+    if (shouldLocateRef.current) {
+      const activeElement = historyListRef.current?.querySelector('[aria-current="true"]');
+      if (activeElement) {
+        activeElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        shouldLocateRef.current = false;
+      }
+    }
+  }, [filteredSessions]);
+
+  // 异步加载未加载会话的数据库搜索。
+  useEffect(() => {
+    const keyword = searchKeyword.trim();
+    if (!keyword) {
+      setDbSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    let isMounted = true;
+
+    const timer = setTimeout(() => {
+      const listSessionsFn = window.api?.ai?.listSessions;
+      if (listSessionsFn) {
+        listSessionsFn({ query: keyword })
+          .then((results) => {
+            if (!isMounted) return;
+            setDbSearchResults(results);
+            setIsSearching(false);
+          })
+          .catch(() => {
+            if (!isMounted) return;
+            setDbSearchResults([]);
+            setIsSearching(false);
+          });
+      } else {
+        // 兜底：本地过滤
+        if (isMounted) {
+          const filtered = sessions.filter(
+            (session) =>
+              session.title.toLowerCase().includes(keyword.toLowerCase()) ||
+              session.summary.toLowerCase().includes(keyword.toLowerCase())
+          );
+          setDbSearchResults(filtered);
+          setIsSearching(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [searchKeyword, sessions]);
 
   useEffect(() => {
@@ -345,6 +408,22 @@ export const AiChatHistoryList = ({
 
     if (activeElement) {
       activeElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else {
+      // 找不到激活的元素：可能是因为有搜索关键词过滤，或者尚未加载。
+      if (searchKeyword) {
+        shouldLocateRef.current = true;
+        setSearchKeyword("");
+      } else {
+        // 如果没有搜索关键词却依然找不到，可能是由于该会话还没被完全插入/渲染。
+        shouldLocateRef.current = true;
+        setTimeout(() => {
+          const el = historyListRef.current?.querySelector('[aria-current="true"]');
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            shouldLocateRef.current = false;
+          }
+        }, 100);
+      }
     }
   };
 
@@ -431,7 +510,7 @@ export const AiChatHistoryList = ({
       >
         {filteredSessions.map((session) => {
           const isActive = session.id === activeSessionId;
-          const isEditing = editingTitle?.id === session.id;
+          const isEditing = editingTitle ? editingTitle.id === session.id : false;
           const isGenerating = session.status === "running";
           const isSelected = selectedSessionIds.has(session.id);
           const hasCompletionNotice =
@@ -493,7 +572,7 @@ export const AiChatHistoryList = ({
                       aria-hidden="true"
                       className="invisible min-h-[14px] break-words whitespace-pre-wrap text-xs font-bold leading-none"
                     >
-                      {editingTitle.title || " "}
+                      {editingTitle?.title || " "}
                     </div>
                     <input
                       autoFocus
@@ -522,7 +601,7 @@ export const AiChatHistoryList = ({
                           setEditingTitle(null);
                         }
                       }}
-                      value={editingTitle.title}
+                      value={editingTitle?.title ?? ""}
                     />
                   </div>
                 ) : (
@@ -561,7 +640,7 @@ export const AiChatHistoryList = ({
         })}
         {filteredSessions.length === 0 ? (
           <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35">
-            没有匹配的对话
+            {isSearching ? "搜索中..." : "没有匹配的对话"}
           </div>
         ) : null}
         {hasMore && !searchKeyword.trim() ? (

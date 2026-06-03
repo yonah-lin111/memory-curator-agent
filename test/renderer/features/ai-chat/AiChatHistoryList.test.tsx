@@ -118,21 +118,27 @@ describe('AiChatHistoryList', () => {
     })
   })
 
-  it('搜索框只按标题过滤历史会话', async () => {
+  it('搜索框可以通过标题与摘要搜索过滤历史会话', async () => {
     const user = userEvent.setup()
     renderHistoryList()
     const input = screen.getByPlaceholderText('搜索对话历史')
 
     await user.type(input, '第二')
 
-    expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
-    expect(screen.getByText('第二会话')).toBeInTheDocument()
+    // 等待异步防抖搜索完成
+    await waitFor(() => {
+      expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
+      expect(screen.getByText('第二会话')).toBeInTheDocument()
+    })
 
     await user.clear(input)
     await user.type(input, '第一条摘要')
 
-    expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
-    expect(screen.getByText('没有匹配的对话')).toBeInTheDocument()
+    // 由于新的搜索功能支持摘要搜索，输入“第一条摘要”应该能搜索出“第一会话”
+    await waitFor(() => {
+      expect(screen.queryByText('第二会话')).not.toBeInTheDocument()
+      expect(screen.getByText('第一会话')).toBeInTheDocument()
+    })
   })
 
   it('滚动触底时加载更多历史会话', () => {

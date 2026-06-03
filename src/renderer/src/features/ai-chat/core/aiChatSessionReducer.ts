@@ -237,13 +237,24 @@ export const aiChatSessionReducer = (
         sessions: [...state.sessions, ...nextSessions],
       };
     }
-    case "replace":
+    case "replace": {
+      if (!action.session?.id) {
+        return state;
+      }
+      const exists = state.sessions.some((session) => session.id === action.session.id);
+      if (!exists) {
+        return {
+          ...state,
+          sessions: [action.session, ...state.sessions],
+        };
+      }
       return {
         ...state,
         sessions: state.sessions.map((session) =>
           session.id === action.session.id ? action.session : session,
         ),
       };
+    }
     case "update":
       return {
         ...state,
