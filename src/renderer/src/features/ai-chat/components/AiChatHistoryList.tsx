@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckSquare, Plus, Search, Trash2, X } from "lucide-react";
+import { Bot, CheckSquare, Plus, Search, Target, Trash2, X } from "lucide-react";
 import type { AiChatSession } from "@renderer/features/ai-chat/types";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
@@ -332,6 +332,22 @@ export const AiChatHistoryList = ({
     }
   };
 
+  /**
+   * 定位并滚动到当前激活的对话。
+   */
+  const handleLocateActiveSession = (): void => {
+    if (!historyListRef.current) {
+      return;
+    }
+
+    // 查找具有 aria-current="true" 的激活对话元素。
+    const activeElement = historyListRef.current.querySelector('[aria-current="true"]');
+
+    if (activeElement) {
+      activeElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
   const contextMenuSession = contextMenu
     ? sessions.find((session) => session.id === contextMenu.sessionId)
     : undefined;
@@ -361,6 +377,13 @@ export const AiChatHistoryList = ({
             className={isBatchMode ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
           >
             {isBatchMode ? <X className="h-3.5 w-3.5" /> : <CheckSquare className="h-3.5 w-3.5" />}
+          </IconButton>
+          <IconButton
+            aria-label="Locate active chat"
+            onClick={handleLocateActiveSession}
+            className="text-white/45 hover:bg-white/5 hover:text-white"
+          >
+            <Target className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton
             aria-label="New chat"
