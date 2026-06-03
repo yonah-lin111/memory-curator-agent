@@ -68,7 +68,7 @@ describe("AiAskRequestPanel", () => {
     expect(screen.getByText("多个问题如何展示？")).toBeInTheDocument();
   });
 
-  it("同一个 ask 提交后重挂载也不能二次提交", async () => {
+  it("同一个 ask 只在当前挂载周期内阻止二次提交", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
 
@@ -92,9 +92,28 @@ describe("AiAskRequestPanel", () => {
     unmount();
     render(<AiAskRequestPanel request={request} onSubmit={onSubmit} />);
 
-    expect(screen.getByText("已提交，不能重复使用。")).toBeInTheDocument();
+    expect(screen.queryByText("已提交，不能重复使用。")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "提交" })).toBeDisabled();
     await user.click(screen.getByText("当前项目"));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByText("箭头切换"));
+    await user.click(screen.getByRole("button", { name: "提交" }));
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("当前挂载周期内提交后不能二次提交", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(<AiAskRequestPanel request={request} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByText("当前项目"));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByText("箭头切换"));
+    await user.click(screen.getByRole("button", { name: "提交" }));
+
+    expect(screen.getByText("已提交，不能重复使用。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "提交" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "提交" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });

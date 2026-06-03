@@ -1,5 +1,5 @@
 // 工具步骤状态类型，描述 mock 工具调用当前阶段。
-export type AiToolStepStatus = "done" | "failed" | "running" | "queued";
+export type AiToolStepStatus = "done" | "failed" | "running" | "queued" | "cancelled";
 
 // AI 对话会话状态。
 export type AiChatSessionStatus = "idle" | "running" | "completed" | "failed";

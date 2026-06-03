@@ -77,9 +77,6 @@ type AiAskRequestPanelProps = {
   onSubmit: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
 };
 
-// 已提交 Ask 本地存储键前缀。
-const SUBMITTED_ASK_STORAGE_KEY_PREFIX = "memory-curator-agent:submitted-ask:";
-
 /**
  * 判断值是否为普通对象。
  */
@@ -137,34 +134,6 @@ export const isAiAskAnswer = (value: unknown): value is AiAskAnswerData =>
  */
 const createAnswerKey = (requestId: string, index: number): string =>
   `${requestId}:${index}`;
-
-/**
- * 创建已提交 Ask 存储键。
- */
-const createSubmittedAskStorageKey = (requestId: string): string =>
-  `${SUBMITTED_ASK_STORAGE_KEY_PREFIX}${requestId}`;
-
-/**
- * 读取 Ask 是否已经提交过。
- */
-const hasStoredAskSubmission = (requestId: string): boolean => {
-  try {
-    return window.localStorage.getItem(createSubmittedAskStorageKey(requestId)) === "1";
-  } catch {
-    return false;
-  }
-};
-
-/**
- * 标记 Ask 已经提交。
- */
-const storeAskSubmission = (requestId: string): void => {
-  try {
-    window.localStorage.setItem(createSubmittedAskStorageKey(requestId), "1");
-  } catch {
-    // localStorage 不可用时仍依赖当前组件状态阻止重复提交。
-  }
-};
 
 /**
  * 解析问题当前答案。
@@ -232,9 +201,7 @@ export const AiAskRequestPanel = ({
   const [customAnswerSelections, setCustomAnswerSelections] =
     useState<AiAskCustomSelectionMap>({});
   // 当前 Ask 是否已提交。
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(() =>
-    hasStoredAskSubmission(request.id),
-  );
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   // 当前是否正在提交。
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const questionCount = request.questions.length;
@@ -264,7 +231,7 @@ export const AiAskRequestPanel = ({
     setAnswers({});
     setCustomInputs({});
     setCustomAnswerSelections({});
-    setIsSubmitted(hasStoredAskSubmission(request.id));
+    setIsSubmitted(false);
     setIsSubmitting(false);
   }, [request.id]);
 
@@ -374,7 +341,6 @@ export const AiAskRequestPanel = ({
     setIsSubmitting(true);
     void Promise.resolve(onSubmit(payload))
       .then(() => {
-        storeAskSubmission(request.id);
         setIsSubmitted(true);
       })
       .catch(() => {

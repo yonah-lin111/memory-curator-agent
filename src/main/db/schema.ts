@@ -235,7 +235,7 @@ export type AiToolStep = {
   // 工具步骤标题。
   title: string
   // 工具步骤状态。
-  status: AiAgentToolCallStatus
+  status: AiAgentToolCallStatus | 'cancelled'
   // 工具名称。
   tool: string
   // 工具输入参数。

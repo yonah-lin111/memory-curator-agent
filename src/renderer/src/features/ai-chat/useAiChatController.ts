@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
 import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import { useToast } from "@renderer/components/ui/Toast";
@@ -206,6 +206,19 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   };
 
   /**
+   * 取消指定会话中等待用户回答的 Ask，不中断仍在流式输出的 run。
+   */
+  const cancelPendingAiChatAsks = useCallback((sessionId?: string): void => {
+    for (const [runId, mapping] of runMessageMapRef.current.entries()) {
+      if (sessionId && mapping.sessionId !== sessionId) {
+        continue;
+      }
+
+      void window.api?.ai?.cancelAsk?.(runId).catch(() => undefined);
+    }
+  }, []);
+
+  /**
    * 撤销当前会话最后一轮用户对话，并同步删除持久化 run、工具调用和上下文快照。
    */
   const handleUndoLastChatTurn = async (): Promise<string | void> => {
@@ -338,10 +351,24 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     const unsubscribe = window.api?.ai?.onChatEvent?.(handleAiChatEvent);
 
     return () => {
+      cancelPendingAiChatAsks();
       unsubscribe?.();
       clearAiChatTypewriterTimers(typewriterTimerRef);
     };
-  }, []);
+  }, [cancelPendingAiChatAsks]);
+
+  // 页面刷新或窗口销毁时只作废等待用户回答的 Ask，已输出内容仍由主进程继续落库。
+  useEffect(() => {
+    const handleBeforeUnload = (): void => {
+      cancelPendingAiChatAsks();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [cancelPendingAiChatAsks]);
 
   // 读取启用的 AI 模型选项。
   useEffect(() => {
@@ -605,6 +632,10 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    * 切换当前激活的 AI 对话会话。
    */
   const handleActiveChatChange = (sessionId: string): void => {
+    if (sessionId !== activeChatId) {
+      cancelPendingAiChatAsks(activeChatId);
+    }
+
     dispatchChatState({ type: "set-active", activeId: sessionId });
   };
 

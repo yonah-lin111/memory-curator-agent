@@ -286,7 +286,7 @@ type AiChatEvent =
     }
 
 // AI 工具步骤状态类型。
-type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued'
+type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued' | 'cancelled'
 
 // AI 对话会话状态类型。
 type AiChatSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
@@ -455,6 +455,10 @@ const api = {
       ipcRenderer.invoke('ai:model-options:get'),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
       ipcRenderer.invoke('ai:chat:start', payload),
+    cancelChat: (runId: string): Promise<void> =>
+      ipcRenderer.invoke('ai:chat:cancel', runId),
+    cancelAsk: (runId: string): Promise<void> =>
+      ipcRenderer.invoke('ai:chat:ask-cancel', runId),
     submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
       ipcRenderer.invoke('ai:chat:ask-answer', payload),
     onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {

@@ -169,7 +169,8 @@ export const createAiSdkModelProvider = async (
       const result = runStreamText({
         model: provider(input.model),
         messages: input.messages.map(toAiSdkMessage),
-        tools: toAiSdkTools(input.tools)
+        tools: toAiSdkTools(input.tools),
+        abortSignal: input.signal
       })
 
       const eventStream = result.fullStream ?? result.stream

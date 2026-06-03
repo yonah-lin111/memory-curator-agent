@@ -302,4 +302,114 @@ describe('aiHandlers', () => {
     )
     expect(service.updateSessionTitle).not.toHaveBeenCalled()
   })
+
+  it('persists ask_user tool state like other tools', async () => {
+    const service = {
+      listSessions: vi.fn(),
+      getSession: vi.fn(() => ({
+        id: 's1',
+        title: '已有标题',
+        summary: '摘要',
+        time: '10:00',
+        status: 'completed',
+        messages: [{ id: 'm1' }]
+      })),
+      updateSessionTitle: vi.fn(),
+      deleteSession: vi.fn(),
+      ensureSession: vi.fn(),
+      appendMessage: vi.fn(),
+      startRun: vi.fn(),
+      createRunWithMessages: vi.fn(),
+      finishRun: vi.fn(),
+      failRunWithAssistantMessage: vi.fn(),
+      updateAssistantMessage: vi.fn(),
+      upsertToolCall: vi.fn()
+    }
+    const send = vi.fn()
+    vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
+    vi.mocked(runReactAgent).mockImplementation(async function* () {
+      yield { type: 'text_delta', delta: '需要确认范围。' } as never
+      yield { type: 'tool_started', id: 'call-ask', name: 'ask_user', input: {} } as never
+      yield {
+        type: 'tool_finished',
+        id: 'call-ask',
+        name: 'ask_user',
+        observation: 'Ask request created: waiting for the user.',
+        data: {
+          kind: 'ask_request',
+          id: 'ask-1',
+          questions: [
+            {
+              header: 'Scope',
+              question: 'Which scope should I use?',
+              options: [{ label: 'Current project', description: 'Use current workspace.' }]
+            }
+          ]
+        }
+      } as never
+      yield {
+        type: 'tool_failed',
+        id: 'call-ask',
+        name: 'ask_user',
+        input: {},
+        error: 'Ask request was cancelled.'
+      } as never
+      yield { type: 'done' } as never
+    })
+
+    registerAiHandlers()
+
+    const startHandler = vi
+      .mocked(ipcMain.handle)
+      .mock.calls.find(([channel]) => channel === 'ai:chat:start')?.[1]
+    await startHandler?.(
+      { sender: { send } } as never,
+      {
+        runId: 'run-ask',
+        sessionId: 's1',
+        message: '需要澄清',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: []
+      }
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(service.upsertToolCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolCallId: 'call-ask',
+        name: 'ask_user',
+        status: 'running',
+        observation: 'Ask request created: waiting for the user.'
+      })
+    )
+    expect(service.upsertToolCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolCallId: 'call-ask',
+        name: 'ask_user',
+        status: 'failed',
+        observation: 'Ask was cancelled.',
+        error: 'Ask request was cancelled.'
+      })
+    )
+    expect(service.updateAssistantMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: 'run-ask-assistant',
+        answer: '需要确认范围。',
+        parts: [
+          expect.objectContaining({ kind: 'text', content: '需要确认范围。' }),
+          expect.objectContaining({ kind: 'tool', stepId: 'call-ask' })
+        ],
+        toolSteps: [
+          expect.objectContaining({
+            id: 'call-ask',
+            tool: 'ask_user',
+            status: 'cancelled',
+            observation: 'Ask was cancelled.'
+          })
+        ]
+      })
+    )
+  })
 })

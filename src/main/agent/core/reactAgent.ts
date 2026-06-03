@@ -14,6 +14,18 @@ import {
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
 
+// Ask 被用户界面作废时的固定错误文本。
+const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
+
+/**
+ * 如果当前 run 已取消，直接中断 Agent 循环。
+ */
+const throwIfAborted = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error ? signal.reason : new Error('AI chat request was cancelled')
+  }
+}
+
 /**
  * 解析模型输出的工具参数。
  */
@@ -92,11 +104,15 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
   const messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
 
+  throwIfAborted(input.signal)
+
   yield {
     type: 'run_started'
   }
 
   for (let turn = 0; turn < maxTurns; turn += 1) {
+    throwIfAborted(input.signal)
+
     const selectedTools = selectToolsForTurn(input.tools, messages)
     const tools = prepareToolsForModel(selectedTools)
     const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
@@ -106,8 +122,11 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     for await (const event of input.provider.streamTurn({
       model: input.model,
       messages,
-      tools
+      tools,
+      signal: input.signal
     })) {
+      throwIfAborted(input.signal)
+
       if (event.type === 'text_delta') {
         if (!emittedText) {
           emittedText = true
@@ -135,6 +154,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
     }
 
+    throwIfAborted(input.signal)
+
     if (toolCalls.length === 0) {
       yield {
         type: 'turn_finished'
@@ -157,6 +178,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     })
 
     for (const toolCall of normalizedToolCalls) {
+      throwIfAborted(input.signal)
+
       const tool = toolsByName.get(toolCall.name)
       if (!tool) {
         throw new Error(`The model requested an unauthorized tool: ${toolCall.name || '<empty>'}`)
@@ -172,6 +195,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
       try {
         const result = await tool.execute(toolInput)
+        throwIfAborted(input.signal)
+
         yield {
           type: 'tool_finished',
           id: toolCall.id,
@@ -186,6 +211,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           }
 
           const answerData = await input.askAnswerProvider(result.data)
+          throwIfAborted(input.signal)
           const answerObservation = formatAskAnswerObservation(answerData)
 
           yield {
@@ -224,6 +250,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         }
       } catch (error) {
         const errorMessage = getToolErrorMessage(error)
+        const isAskCancelled = toolCall.name === 'ask_user' && errorMessage === ASK_CANCELLED_MESSAGE
 
         yield {
           type: 'tool_failed',
@@ -231,6 +258,16 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           name: toolCall.name,
           input: toolInput,
           error: errorMessage
+        }
+
+        if (isAskCancelled) {
+          yield {
+            type: 'turn_finished'
+          }
+          yield {
+            type: 'done'
+          }
+          return
         }
 
         messages.push({

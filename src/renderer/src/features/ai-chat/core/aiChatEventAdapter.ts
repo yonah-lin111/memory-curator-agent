@@ -13,6 +13,12 @@ import {
 import type { AiChatMessageUpdater } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
 import { isAiAskRequest } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
+// Ask 被作废时主进程返回的固定错误文本。
+const ASK_CANCELLED_MESSAGE = "Ask request was cancelled.";
+
+// 整个 AI run 被硬取消时的固定错误文本。
+const AI_CHAT_CANCELLED_MESSAGE = "AI chat request was cancelled";
+
 // Agent 运行消息映射关系。
 export type AiRunMessageMapping = {
   // 会话标识。
@@ -143,6 +149,21 @@ export const createAiChatEventHandler = ({
   };
 
   /**
+   * 清理指定 run 的临时映射，避免后续会话切换误操作。
+   */
+  const clearRunState = (runId: string): void => {
+    const timer = typewriterTimerRef.current.get(runId);
+
+    if (timer) {
+      clearTimeout(timer);
+      typewriterTimerRef.current.delete(runId);
+    }
+
+    textBufferRef.current.delete(runId);
+    runMessageMapRef.current.delete(runId);
+  };
+
+  /**
    * 合并工具开始事件。
    */
   const applyToolStarted = (
@@ -203,37 +224,49 @@ export const createAiChatEventHandler = ({
   const applyToolFailed = (
     message: AiChatMessage,
     event: Extract<AiChatEvent, { type: "tool_failed" }>,
-  ): AiChatMessage => ({
-    ...appendAiMessageToolPart(message, event.id),
-    toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
-      ? (message.toolSteps ?? []).map((step) =>
-          step.id === event.id
-            ? {
-                ...step,
-                status: "failed",
-                input: event.input,
-                observation: `Tool execution failed: ${event.error}`,
-                data: {
-                  error: event.error,
-                },
-              }
-            : step,
-        )
-      : [
-          ...(message.toolSteps ?? []),
-          {
-            id: event.id,
-            title: `Tool failed: ${event.name}`,
-            status: "failed",
-            tool: event.name,
-            input: event.input,
-            observation: `Tool execution failed: ${event.error}`,
-            data: {
-              error: event.error,
+  ): AiChatMessage => {
+    const isAskCancelled =
+      event.name === "ask_user" && event.error === ASK_CANCELLED_MESSAGE;
+    const status = isAskCancelled ? "cancelled" : "failed";
+    const observation = isAskCancelled
+      ? "Ask was cancelled."
+      : `Tool execution failed: ${event.error}`;
+    const title = isAskCancelled
+      ? "Tool cancelled: ask_user"
+      : `Tool failed: ${event.name}`;
+
+    return {
+      ...appendAiMessageToolPart(message, event.id),
+      toolSteps: (message.toolSteps ?? []).some((step) => step.id === event.id)
+        ? (message.toolSteps ?? []).map((step) =>
+            step.id === event.id
+              ? {
+                  ...step,
+                  status,
+                  input: event.input,
+                  observation,
+                  data: {
+                    error: event.error,
+                  },
+                }
+              : step,
+          )
+        : [
+            ...(message.toolSteps ?? []),
+            {
+              id: event.id,
+              title,
+              status,
+              tool: event.name,
+              input: event.input,
+              observation,
+              data: {
+                error: event.error,
+              },
             },
-          },
-        ],
-  });
+          ],
+    };
+  };
 
   return (event: AiChatEvent): void => {
     const mapping = runMessageMapRef.current.get(event.runId);
@@ -257,10 +290,12 @@ export const createAiChatEventHandler = ({
     }
 
     if (event.type === "done") {
+      flushBufferedTextImmediately(event.runId);
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) =>
         completeAiMessageReasoningParts(message),
       );
       updateChatSessionStatus(mapping.sessionId, "completed");
+      clearRunState(event.runId);
       return;
     }
 
@@ -298,12 +333,19 @@ export const createAiChatEventHandler = ({
     }
 
     if (event.type === "error") {
+      flushBufferedTextImmediately(event.runId);
       updateChatSessionStatus(mapping.sessionId, "failed");
+      if (event.message === AI_CHAT_CANCELLED_MESSAGE) {
+        clearRunState(event.runId);
+        return;
+      }
+
       updateAiMessage(mapping.sessionId, mapping.messageId, (message) => ({
         ...message,
         content: "AI chat execution failed",
         answer: event.message,
       }));
+      clearRunState(event.runId);
     }
   };
 };

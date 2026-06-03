@@ -202,6 +202,88 @@ describe("reactAgent", () => {
     expect(providerInputs).toHaveLength(2);
   });
 
+  it("ask 工具被取消后标记失败并结束 run，不再继续请求模型", async () => {
+    const providerInputs: ModelTurnInput[] = [];
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "ask_user",
+          argumentsText: "{}",
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "ask_user",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-1",
+          questions: [
+            {
+              header: "范围",
+              question: "改哪里？",
+              options: [
+                {
+                  label: "当前项目",
+                  description: "只改当前项目。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const askAnswerProvider = vi.fn(async () => {
+      throw new Error("Ask request was cancelled.");
+    });
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "帮我做个东西",
+          },
+        ],
+        tools: [askTool],
+        askAnswerProvider,
+        maxTurns: 3,
+      }),
+    );
+
+    expect(events.map((event) => event.type)).toEqual([
+      "run_started",
+      "tool_started",
+      "tool_finished",
+      "tool_failed",
+      "turn_finished",
+      "done",
+    ]);
+    expect(events[3]).toMatchObject({
+      type: "tool_failed",
+      id: "call-ask",
+      name: "ask_user",
+      error: "Ask request was cancelled.",
+    });
+    expect(providerInputs).toHaveLength(1);
+  });
+
   it("当模型流丢失工具名且只有一个授权工具时使用唯一工具兜底", async () => {
     let turnCount = 0;
     const provider: ModelProvider = {

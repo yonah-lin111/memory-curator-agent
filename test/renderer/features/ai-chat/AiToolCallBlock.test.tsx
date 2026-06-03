@@ -49,4 +49,22 @@ describe("AiToolCallBlock", () => {
       "请提供该人物的姓名=王小美",
     );
   });
+
+  it("ask 被取消时展示取消状态", () => {
+    const step: AiToolStep = {
+      id: "ask-cancel-1",
+      title: "Tool cancelled: ask_user",
+      status: "cancelled",
+      tool: "ask_user",
+      observation: "Ask was cancelled.",
+      data: {
+        error: "Ask request was cancelled.",
+      },
+    };
+
+    render(<AiToolCallBlock steps={[step]} />);
+
+    expect(screen.getByLabelText("Cancelled")).toBeInTheDocument();
+    expect(screen.getByText("Ask was cancelled.")).toBeInTheDocument();
+  });
 });

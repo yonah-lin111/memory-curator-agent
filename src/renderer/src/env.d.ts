@@ -322,7 +322,7 @@ type AiChatEvent =
     }
 
 // AI 工具步骤状态类型。
-type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued'
+type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued' | 'cancelled'
 
 // AI 对话会话状态类型。
 type AiChatSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
@@ -564,6 +564,10 @@ type AppAPI = {
     getModelOptions: () => Promise<AiModelOptionsResponse>
     // 启动 AI 对话。
     startChat: (payload: AiChatStartPayload) => Promise<{ runId: string }>
+    // 取消 AI 对话。
+    cancelChat?: (runId: string) => Promise<void>
+    // 取消 AI 对话中等待用户回答的 Ask。
+    cancelAsk?: (runId: string) => Promise<void>
     // 提交 Ask 回答。
     submitAskAnswer?: (payload: AiAskAnswerPayload) => Promise<void>
     // 监听 AI 对话事件。

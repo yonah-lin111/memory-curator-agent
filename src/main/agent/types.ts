@@ -179,6 +179,8 @@ export type ModelTurnInput = {
   messages: AgentMessage[]
   // 本轮可用工具。
   tools: AgentTool[]
+  // 取消当前模型请求的信号。
+  signal?: AbortSignal
 }
 
 // 模型文本增量事件。
@@ -248,6 +250,8 @@ export type ReactAgentRunInput = {
   tools: AgentTool[]
   // 最大工具循环轮数。
   maxTurns?: number
+  // 取消当前 Agent run 的信号。
+  signal?: AbortSignal
   /**
    * 等待用户回答 Ask 请求。
    */

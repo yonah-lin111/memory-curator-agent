@@ -59,6 +59,12 @@ const getStatusConfig = (
         icon: XCircle,
         className: "text-red-400",
       };
+    case "cancelled":
+      return {
+        label: "Cancelled",
+        icon: XCircle,
+        className: "text-white/35",
+      };
     case "running":
       return {
         label: "Running",

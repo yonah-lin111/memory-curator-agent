@@ -131,6 +131,37 @@ type PendingAskAnswer = {
 // 等待中的 Ask 回答表。
 const pendingAskAnswers = new Map<string, PendingAskAnswer>()
 
+// 运行中的 AI 对话请求。
+type ActiveAiChatRun = {
+  // 会话 ID。
+  sessionId: string
+  // 会话标题。
+  sessionTitle: string
+  // 会话摘要。
+  summary: string
+  // 助手消息 ID。
+  assistantMessageId: string
+  // 取消控制器。
+  controller: AbortController
+  // 事件接收端。
+  sender: WebContents
+  // 已生成的助手文本。
+  assistantAnswer: string
+  // 已生成的顺序片段。
+  assistantParts: AiChatMessagePart[]
+  // 已完成持久化的工具步骤。
+  assistantToolSteps: AiToolStep[]
+}
+
+// 当前进程内仍有效的 AI run。
+const activeAiChatRuns = new Map<string, ActiveAiChatRun>()
+
+// 取消 AI 请求的统一文案。
+const AI_CHAT_CANCELLED_MESSAGE = 'AI chat request was cancelled'
+
+// 取消 Ask 请求的统一文案。
+const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
+
 // Agent 系统提示词段落。
 const SYSTEM_PROMPT_SECTIONS = [
   '身份：你是 Memory Curator Agent，可以日常聊天，也可以在需要读取本地记忆或人物档案时使用本轮已授权工具。',
@@ -210,15 +241,23 @@ const waitForAskAnswer = (runId: string, request: AskRequestData): Promise<Retur
   })
 
 /**
- * 清理指定 run 下等待中的 Ask 请求。
+ * 取消指定 run 下等待用户回答的 Ask 请求。
  */
-const clearPendingAskAnswersByRun = (runId: string, error: Error): void => {
+const cancelPendingAskAnswersByRun = (
+  runId: string,
+  error = new Error(ASK_CANCELLED_MESSAGE)
+): boolean => {
+  let hasCancelled = false
+
   for (const [requestId, entry] of pendingAskAnswers.entries()) {
     if (entry.runId === runId) {
       pendingAskAnswers.delete(requestId)
       entry.reject(error)
+      hasCancelled = true
     }
   }
+
+  return hasCancelled
 }
 
 /**
@@ -314,6 +353,10 @@ const scheduleInitialSessionTitle = (
     }
 
     aiChatService.updateSessionTitle(input.sessionId, title, createTimestamp())
+    if (input.sender.isDestroyed?.()) {
+      return
+    }
+
     input.sender.send('ai:chat:event', {
       type: 'session_title_updated',
       runId: input.runId,
@@ -406,6 +449,62 @@ export const registerAiHandlers = (): void => {
     peopleService
   })
 
+  /**
+   * 取消指定 AI run，并同步清理等待中的 ask。
+   */
+  const cancelAiChatRun = (runId: string, message = AI_CHAT_CANCELLED_MESSAGE): boolean => {
+    const activeRun = activeAiChatRuns.get(runId)
+
+    if (!activeRun) {
+      cancelPendingAskAnswersByRun(runId, new Error(message))
+      return false
+    }
+
+    activeAiChatRuns.delete(runId)
+    cancelPendingAskAnswersByRun(runId, new Error(message))
+    activeRun.controller.abort(new Error(message))
+
+    const failedTimestamp = createTimestamp()
+    aiChatService.failRunWithAssistantMessage({
+      run: {
+        id: runId,
+        status: 'failed',
+        error: message,
+        timestamp: failedTimestamp
+      },
+      session: {
+        id: activeRun.sessionId,
+        title: activeRun.sessionTitle,
+        summary: activeRun.summary,
+        status: 'failed',
+        timestamp: failedTimestamp
+      },
+      assistantMessage: {
+        messageId: activeRun.assistantMessageId,
+        content: activeRun.assistantAnswer ? 'AI 已生成回答' : `正在处理：“${activeRun.summary}”`,
+        answer: activeRun.assistantAnswer,
+        parts: activeRun.assistantParts,
+        toolSteps: activeRun.assistantToolSteps,
+        timestamp: failedTimestamp
+      }
+    })
+    if (!activeRun.sender.isDestroyed?.()) {
+      activeRun.sender.send('ai:chat:event', {
+        type: 'error',
+        runId,
+        sessionId: activeRun.sessionId,
+        message
+      } satisfies AiChatIpcEvent)
+    }
+
+    return true
+  }
+
+  /**
+   * 只取消等待中的 ask，不中断 AI run 的流式输出和落库。
+   */
+  const cancelAiChatAsk = (runId: string): boolean => cancelPendingAskAnswersByRun(runId)
+
   ipcMain.handle('ai:model-options:get', async () => createModelOptionsResponse())
   ipcMain.handle('ai:sessions:list', async () => aiChatService.listSessions())
   ipcMain.handle('ai:session:get', async (_, sessionId: string) => aiChatService.getSession(sessionId))
@@ -433,6 +532,20 @@ export const registerAiHandlers = (): void => {
 
     pendingAskAnswers.delete(payload.requestId)
     pending.resolve(payload.answers)
+  })
+  ipcMain.handle('ai:chat:cancel', async (_, runId: string) => {
+    if (typeof runId !== 'string' || !runId.trim()) {
+      throw new Error('Invalid AI run id')
+    }
+
+    cancelAiChatRun(runId)
+  })
+  ipcMain.handle('ai:chat:ask-cancel', async (_, runId: string) => {
+    if (typeof runId !== 'string' || !runId.trim()) {
+      throw new Error('Invalid AI run id')
+    }
+
+    cancelAiChatAsk(runId)
   })
 
   ipcMain.handle('ai:chat:start', async (event, payload: AiChatStartPayload) => {
@@ -509,12 +622,34 @@ export const registerAiHandlers = (): void => {
     })
 
     const sendEvent = (agentEvent: AgentStreamEvent): void => {
+      if (event.sender.isDestroyed?.()) {
+        return
+      }
+
       event.sender.send('ai:chat:event', {
         ...agentEvent,
         runId,
         sessionId: payload.sessionId
       } satisfies AiChatIpcEvent)
     }
+    const controller = new AbortController()
+    const activeRun: ActiveAiChatRun = {
+      sessionId: payload.sessionId,
+      sessionTitle,
+      summary: payload.message,
+      assistantMessageId,
+      controller,
+      sender: event.sender,
+      assistantAnswer: '',
+      assistantParts: [],
+      assistantToolSteps: []
+    }
+    const handleSenderDestroyed = (): void => {
+      cancelAiChatAsk(runId)
+    }
+
+    activeAiChatRuns.set(runId, activeRun)
+    event.sender.once?.('destroyed', handleSenderDestroyed)
 
     if (shouldCreateTitle) {
       scheduleInitialSessionTitle(
@@ -530,17 +665,13 @@ export const registerAiHandlers = (): void => {
     }
 
     void (async () => {
-      const assistantParts: AiChatMessagePart[] = []
-      const assistantToolSteps: AiToolStep[] = []
-      let assistantAnswer = ''
-
       const updateAssistantSnapshot = (): void => {
         aiChatService.updateAssistantMessage({
           messageId: assistantMessageId,
-          content: assistantAnswer ? 'AI 已生成回答' : `正在处理：“${payload.message}”`,
-          answer: assistantAnswer,
-          parts: assistantParts,
-          toolSteps: assistantToolSteps,
+          content: activeRun.assistantAnswer ? 'AI 已生成回答' : `正在处理：“${payload.message}”`,
+          answer: activeRun.assistantAnswer,
+          parts: activeRun.assistantParts,
+          toolSteps: activeRun.assistantToolSteps,
           timestamp: createTimestamp()
         })
       }
@@ -561,34 +692,35 @@ export const registerAiHandlers = (): void => {
             recentToolResultLimit: config.agent.context.recentToolResultLimit
           }),
           tools,
+          signal: controller.signal,
           askAnswerProvider: (request) => waitForAskAnswer(runId, request)
         })) {
           if (agentEvent.type === 'text_delta') {
-            assistantAnswer += agentEvent.delta
-            assistantParts.splice(
+            activeRun.assistantAnswer += agentEvent.delta
+            activeRun.assistantParts.splice(
               0,
-              assistantParts.length,
-              ...appendTextPart(assistantParts, assistantMessageId, agentEvent.delta)
+              activeRun.assistantParts.length,
+              ...appendTextPart(activeRun.assistantParts, assistantMessageId, agentEvent.delta)
             )
             updateAssistantSnapshot()
           }
 
           if (agentEvent.type === 'reasoning_delta') {
-            assistantParts.splice(
+            activeRun.assistantParts.splice(
               0,
-              assistantParts.length,
-              ...appendReasoningPart(assistantParts, agentEvent.id, agentEvent.delta)
+              activeRun.assistantParts.length,
+              ...appendReasoningPart(activeRun.assistantParts, agentEvent.id, agentEvent.delta)
             )
             updateAssistantSnapshot()
           }
 
           if (agentEvent.type === 'tool_started') {
-            assistantParts.splice(
+            activeRun.assistantParts.splice(
               0,
-              assistantParts.length,
-              ...appendToolPart(assistantParts, assistantMessageId, agentEvent.id)
+              activeRun.assistantParts.length,
+              ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id)
             )
-            assistantToolSteps.push({
+            activeRun.assistantToolSteps.push({
               id: agentEvent.id,
               title: `Tool result: ${agentEvent.name}`,
               status: 'running',
@@ -612,26 +744,27 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'tool_finished') {
-            const toolStepIndex = assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
+            const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
+            const isAskRequest = isAskRequestData(agentEvent.data)
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
               title: `Tool result: ${agentEvent.name}`,
-              status: isAskRequestData(agentEvent.data) ? 'running' : 'done',
+              status: isAskRequest ? 'running' : 'done',
               tool: agentEvent.name,
-              input: assistantToolSteps[toolStepIndex]?.input,
+              input: activeRun.assistantToolSteps[toolStepIndex]?.input,
               observation: agentEvent.observation,
               data: agentEvent.data
             }
 
             if (toolStepIndex >= 0) {
-              assistantToolSteps[toolStepIndex] = nextToolStep
+              activeRun.assistantToolSteps[toolStepIndex] = nextToolStep
             } else {
-              assistantParts.splice(
+              activeRun.assistantParts.splice(
                 0,
-                assistantParts.length,
-                ...appendToolPart(assistantParts, assistantMessageId, agentEvent.id)
+                activeRun.assistantParts.length,
+                ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id)
               )
-              assistantToolSteps.push(nextToolStep)
+              activeRun.assistantToolSteps.push(nextToolStep)
             }
 
             aiChatService.upsertToolCall({
@@ -640,7 +773,7 @@ export const registerAiHandlers = (): void => {
               messageId: assistantMessageId,
               toolCallId: agentEvent.id,
               name: agentEvent.name,
-              status: 'done',
+              status: isAskRequest ? 'running' : 'done',
               input: nextToolStep.input ?? {},
               observation: agentEvent.observation,
               data: agentEvent.data,
@@ -650,28 +783,29 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'tool_failed') {
-            const toolStepIndex = assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
+            const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
+            const isAskCancelled = agentEvent.name === 'ask_user' && agentEvent.error === ASK_CANCELLED_MESSAGE
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
-              title: `Tool failed: ${agentEvent.name}`,
-              status: 'failed',
+              title: isAskCancelled ? `Tool cancelled: ${agentEvent.name}` : `Tool failed: ${agentEvent.name}`,
+              status: isAskCancelled ? 'cancelled' : 'failed',
               tool: agentEvent.name,
               input: agentEvent.input,
-              observation: `Tool execution failed: ${agentEvent.error}`,
+              observation: isAskCancelled ? 'Ask was cancelled.' : `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               }
             }
 
             if (toolStepIndex >= 0) {
-              assistantToolSteps[toolStepIndex] = nextToolStep
+              activeRun.assistantToolSteps[toolStepIndex] = nextToolStep
             } else {
-              assistantParts.splice(
+              activeRun.assistantParts.splice(
                 0,
-                assistantParts.length,
-                ...appendToolPart(assistantParts, assistantMessageId, agentEvent.id)
+                activeRun.assistantParts.length,
+                ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id)
               )
-              assistantToolSteps.push(nextToolStep)
+              activeRun.assistantToolSteps.push(nextToolStep)
             }
 
             aiChatService.upsertToolCall({
@@ -682,7 +816,7 @@ export const registerAiHandlers = (): void => {
               name: agentEvent.name,
               status: 'failed',
               input: agentEvent.input,
-              observation: `Tool execution failed: ${agentEvent.error}`,
+              observation: isAskCancelled ? 'Ask was cancelled.' : `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               },
@@ -712,8 +846,8 @@ export const registerAiHandlers = (): void => {
                 messageId: assistantMessageId,
                 content: 'AI chat execution failed',
                 answer: agentEvent.message,
-                parts: assistantParts,
-                toolSteps: assistantToolSteps,
+                parts: activeRun.assistantParts,
+                toolSteps: activeRun.assistantToolSteps,
                 timestamp: failedTimestamp
               }
             })
@@ -728,7 +862,7 @@ export const registerAiHandlers = (): void => {
             aiChatService.ensureSession({
               id: payload.sessionId,
               title: sessionTitle,
-              summary: assistantAnswer || payload.message,
+              summary: activeRun.assistantAnswer || payload.message,
               status: 'completed',
               timestamp: createTimestamp()
             })
@@ -738,7 +872,12 @@ export const registerAiHandlers = (): void => {
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'AI chat execution failed'
-        clearPendingAskAnswersByRun(runId, new Error(message))
+
+        if (controller.signal.aborted && !activeAiChatRuns.has(runId)) {
+          return
+        }
+
+        cancelPendingAskAnswersByRun(runId, new Error(message))
         const failedTimestamp = createTimestamp()
         aiChatService.failRunWithAssistantMessage({
           run: {
@@ -758,8 +897,8 @@ export const registerAiHandlers = (): void => {
             messageId: assistantMessageId,
             content: 'AI chat execution failed',
             answer: message,
-            parts: assistantParts,
-            toolSteps: assistantToolSteps,
+            parts: activeRun.assistantParts,
+            toolSteps: activeRun.assistantToolSteps,
             timestamp: failedTimestamp
           }
         })
@@ -767,6 +906,9 @@ export const registerAiHandlers = (): void => {
           type: 'error',
           message
         })
+      } finally {
+        activeAiChatRuns.delete(runId)
+        event.sender.removeListener?.('destroyed', handleSenderDestroyed)
       }
     })()
 

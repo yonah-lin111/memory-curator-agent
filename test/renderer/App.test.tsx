@@ -330,6 +330,8 @@ describe('App', () => {
     const user = userEvent.setup()
     const listeners: Array<(event: AiChatEvent) => void> = []
     let capturedPayload: AiChatStartPayload | null = null
+    const cancelAsk = vi.fn(async () => undefined)
+    const cancelChat = vi.fn(async () => undefined)
 
     window.api = {
       ai: {
@@ -409,6 +411,8 @@ describe('App', () => {
             runId: payload.runId ?? 'run-test'
           }
         }),
+        cancelAsk,
+        cancelChat,
         onChatEvent: (listener: (event: AiChatEvent) => void) => {
           listeners.push(listener)
           return () => undefined
@@ -427,6 +431,8 @@ describe('App', () => {
     })
 
     await user.click(screen.getByRole('button', { name: /周回顾行动拆解/ }))
+    expect(cancelAsk).toHaveBeenCalledWith(capturedPayload!.runId)
+    expect(cancelChat).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /整理今天的记忆线索/ }))
 
     await waitFor(() => {
