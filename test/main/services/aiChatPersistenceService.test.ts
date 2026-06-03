@@ -38,6 +38,11 @@ describe('aiChatPersistenceService', () => {
 
     expect(
       database
+        .prepare("SELECT name FROM pragma_table_info('ai_chat_sessions') WHERE name = 'summary'")
+        .get()
+    ).toBeUndefined()
+    expect(
+      database
         .prepare('SELECT id, status FROM ai_chat_sessions ORDER BY id ASC')
         .all()
     ).toEqual([
@@ -53,7 +58,6 @@ describe('aiChatPersistenceService', () => {
     service.ensureSession({
       id: 's1',
       title: '新会话',
-      summary: '第一条消息',
       status: 'running',
       timestamp: '2026-05-31 10:00'
     })
@@ -88,22 +92,29 @@ describe('aiChatPersistenceService', () => {
     })
   })
 
-  it('按时间分页读取会话并支持标题与摘要搜索', () => {
+  it('按更新时间分页读取会话并支持标题与消息内容搜索', () => {
     const service = createService()
 
     for (const session of [
-      { id: 's-old', title: '旧会话', summary: '普通摘要', timestamp: '2026-05-31 09:00' },
-      { id: 's-middle', title: 'Alpha 标题', summary: '普通摘要', timestamp: '2026-05-31 10:00' },
-      { id: 's-new', title: '新会话', summary: '包含 alpha 摘要', timestamp: '2026-05-31 11:00' }
+      { id: 's-old', title: '旧会话', timestamp: '2026-05-31 09:00' },
+      { id: 's-middle', title: 'Alpha 标题', timestamp: '2026-05-31 10:00' },
+      { id: 's-new', title: '新会话', timestamp: '2026-05-31 11:00' }
     ]) {
       service.ensureSession({
         id: session.id,
         title: session.title,
-        summary: session.summary,
         status: 'completed',
         timestamp: session.timestamp
       })
     }
+    service.appendMessage({
+      id: 'm-alpha',
+      sessionId: 's-new',
+      role: 'user',
+      content: '包含 alpha 的消息',
+      time: '11:00',
+      timestamp: '2026-05-31 11:00'
+    })
 
     expect(service.listSessions({ limit: 2, offset: 0 }).map((session) => session.id)).toEqual([
       's-new',
@@ -118,20 +129,58 @@ describe('aiChatPersistenceService', () => {
     ])
   })
 
+  it('列表时间与排序使用 updated_at，而不是最后消息时间', () => {
+    const service = createService()
+
+    service.ensureSession({
+      id: 's-old-message',
+      title: '旧消息新更新',
+      status: 'completed',
+      timestamp: '2026-05-31 09:00'
+    })
+    service.appendMessage({
+      id: 'm-old',
+      sessionId: 's-old-message',
+      role: 'user',
+      content: '旧消息',
+      time: '09:00',
+      timestamp: '2026-05-31 09:00'
+    })
+    service.ensureSession({
+      id: 's-new-message',
+      title: '新消息旧更新',
+      status: 'completed',
+      timestamp: '2026-05-31 10:00'
+    })
+    service.appendMessage({
+      id: 'm-new',
+      sessionId: 's-new-message',
+      role: 'user',
+      content: '新消息',
+      time: '10:00',
+      timestamp: '2026-05-31 10:00'
+    })
+
+    service.updateSessionTitle('s-old-message', '旧消息刚改名', '2026-05-31 11:00')
+
+    expect(service.listSessions().map((session) => [session.id, session.time])).toEqual([
+      ['s-old-message', '2026-05-31 11:00'],
+      ['s-new-message', '2026-05-31 10:00']
+    ])
+  })
+
   it('ensureSession 不覆盖已经生成的首个会话标题', () => {
     const service = createService()
 
     service.ensureSession({
       id: 's1',
       title: '第一次标题',
-      summary: '第一条消息',
       status: 'running',
       timestamp: '2026-05-31 10:00'
     })
     service.ensureSession({
       id: 's1',
       title: '第二次标题',
-      summary: '第二条消息',
       status: 'completed',
       timestamp: '2026-05-31 10:01'
     })
@@ -139,7 +188,6 @@ describe('aiChatPersistenceService', () => {
     expect(service.getSession('s1')).toMatchObject({
       id: 's1',
       title: '第一次标题',
-      summary: '第二条消息',
       status: 'completed'
     })
   })
@@ -150,14 +198,12 @@ describe('aiChatPersistenceService', () => {
     service.ensureSession({
       id: 's1',
       title: '新建对话',
-      summary: '',
       status: 'idle',
       timestamp: '2026-05-31 10:00'
     })
     service.ensureSession({
       id: 's1',
       title: '用户询问AI身份',
-      summary: '你是谁',
       status: 'running',
       timestamp: '2026-05-31 10:01'
     })
@@ -174,7 +220,6 @@ describe('aiChatPersistenceService', () => {
     service.ensureSession({
       id: 's1',
       title: '新会话',
-      summary: '摘要',
       status: 'running',
       timestamp: '2026-05-31 10:00'
     })
@@ -221,7 +266,6 @@ describe('aiChatPersistenceService', () => {
     service.ensureSession({
       id: 's-title',
       title: '旧标题',
-      summary: '摘要',
       status: 'idle',
       timestamp: '2026-05-31 10:00'
     })
@@ -249,7 +293,6 @@ describe('aiChatPersistenceService', () => {
     service.ensureSession({
       id: 's-delete',
       title: '待删除',
-      summary: '摘要',
       status: 'running',
       timestamp: '2026-05-31 10:00'
     })
@@ -310,7 +353,6 @@ describe('aiChatPersistenceService', () => {
       session: {
         id: 's-undo',
         title: '保留标题',
-        summary: '第一轮',
         status: 'running',
         timestamp: '2026-05-31 10:00'
       },
@@ -347,7 +389,6 @@ describe('aiChatPersistenceService', () => {
       session: {
         id: 's-undo',
         title: '第二轮标题不会覆盖',
-        summary: '第二轮',
         status: 'running',
         timestamp: '2026-05-31 10:01'
       },
@@ -406,7 +447,6 @@ describe('aiChatPersistenceService', () => {
     expect(session).toMatchObject({
       id: 's-undo',
       title: '保留标题',
-      summary: '第一轮',
       status: 'completed',
       messages: [
         { id: 'm1-user', role: 'user', content: '第一轮' },
@@ -426,7 +466,6 @@ describe('aiChatPersistenceService', () => {
         session: {
           id: 's-delete-turn',
           title: '删除中间 QA',
-          summary: userContent,
           status: 'completed',
           timestamp: `2026-05-31 10:0${turn}`
         },
@@ -490,7 +529,6 @@ describe('aiChatPersistenceService', () => {
     expect(session).toMatchObject({
       id: 's-delete-turn',
       title: '删除中间 QA',
-      summary: '第三轮',
       status: 'completed',
       messages: [
         { id: 'm1-user', role: 'user', content: '第一轮' },
@@ -587,7 +625,6 @@ describe('aiChatPersistenceService', () => {
         session: {
           id: 's-rollback',
           title: '回滚会话',
-          summary: '测试回滚',
           status: 'running',
           timestamp: '2026-05-31 10:00'
         },
@@ -633,7 +670,6 @@ describe('aiChatPersistenceService', () => {
       session: {
         id: 's-fail',
         title: '失败会话',
-        summary: '测试失败',
         status: 'running',
         timestamp: '2026-05-31 10:00'
       },
@@ -671,7 +707,6 @@ describe('aiChatPersistenceService', () => {
       session: {
         id: 's-fail',
         title: '失败会话',
-        summary: '测试失败',
         status: 'failed',
         timestamp: '2026-05-31 10:01'
       },

@@ -70,12 +70,16 @@ type SidebarProps = {
   chatSessions: AiChatSession[];
   // 当前激活的 AI 对话会话标识。
   activeChatId: string;
+  // 已完成但尚未查看的 AI 会话 ID。
+  completionNoticeSessionIds: Set<string>;
   // 左侧栏折叠状态改变回调。
   onCollapsedChange: (collapsed: boolean) => void;
   // 侧栏页面切换回调。
   onPageChange: (pageId: SidebarPageId) => void;
   // AI 对话会话切换回调。
   onChatSessionChange: (sessionId: string) => void;
+  // 清理指定 AI 对话完成提醒回调。
+  onCompletionNoticeClear: (sessionId: string) => void;
   // 新建 AI 对话回调。
   onNewChat: () => void;
   // 重命名 AI 对话回调。
@@ -181,9 +185,11 @@ export const Sidebar = ({
   mode,
   chatSessions,
   activeChatId,
+  completionNoticeSessionIds,
   onCollapsedChange,
   onPageChange,
   onChatSessionChange,
+  onCompletionNoticeClear,
   onNewChat,
   onRenameChat,
   onDeleteChat,
@@ -326,6 +332,8 @@ export const Sidebar = ({
           <AiChatHistoryList
             sessions={chatSessions}
             activeSessionId={activeChatId}
+            completionNoticeSessionIds={completionNoticeSessionIds}
+            onCompletionNoticeClear={onCompletionNoticeClear}
             onSessionChange={onChatSessionChange}
             onNewChat={onNewChat}
             onRenameChat={onRenameChat}

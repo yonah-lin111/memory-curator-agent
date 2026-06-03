@@ -13,16 +13,14 @@ const sessions: AiChatSession[] = [
   {
     id: 's1',
     title: '第一会话',
-    summary: '第一条摘要',
-    time: '10:00',
+    time: '2026-05-31 10:00',
     status: 'idle',
     messages: []
   },
   {
     id: 's2',
     title: '第二会话',
-    summary: '第二条摘要',
-    time: '11:00',
+    time: '2026-05-31 11:00',
     status: 'completed',
     messages: []
   }
@@ -36,6 +34,8 @@ const renderHistoryList = (overrides?: {
   onLoadMore?: () => Promise<void>
   hasMore?: boolean
   isLoadingMore?: boolean
+  completionNoticeSessionIds?: Set<string>
+  onCompletionNoticeClear?: (sessionId: string) => void
 }): void => {
   render(
     <AiChatHistoryList
@@ -49,6 +49,8 @@ const renderHistoryList = (overrides?: {
       onLoadMore={overrides?.onLoadMore ?? vi.fn(async () => undefined)}
       hasMore={overrides?.hasMore ?? false}
       isLoadingMore={overrides?.isLoadingMore ?? false}
+      completionNoticeSessionIds={overrides?.completionNoticeSessionIds}
+      onCompletionNoticeClear={overrides?.onCompletionNoticeClear}
     />
   )
 }
@@ -118,7 +120,7 @@ describe('AiChatHistoryList', () => {
     })
   })
 
-  it('搜索框可以通过标题与摘要搜索过滤历史会话', async () => {
+  it('搜索框可以通过标题搜索过滤历史会话', async () => {
     const user = userEvent.setup()
     renderHistoryList()
     const input = screen.getByPlaceholderText('搜索对话历史')
@@ -130,15 +132,40 @@ describe('AiChatHistoryList', () => {
       expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
       expect(screen.getByText('第二会话')).toBeInTheDocument()
     })
+  })
 
-    await user.clear(input)
-    await user.type(input, '第一条摘要')
+  it('历史项只展示标题和年月日时分，不再展示摘要', () => {
+    renderHistoryList()
 
-    // 由于新的搜索功能支持摘要搜索，输入“第一条摘要”应该能搜索出“第一会话”
-    await waitFor(() => {
-      expect(screen.queryByText('第二会话')).not.toBeInTheDocument()
-      expect(screen.getByText('第一会话')).toBeInTheDocument()
+    expect(screen.getByText('第一会话')).toBeInTheDocument()
+    expect(screen.getByText('2026-05-31 10:00')).toBeInTheDocument()
+    expect(screen.queryByText('第一条摘要')).not.toBeInTheDocument()
+  })
+
+  it('历史项按照更新时间倒序展示', () => {
+    renderHistoryList()
+    const titles = screen
+      .getAllByRole('button')
+      .map((item) => item.textContent ?? '')
+      .filter((text) => text.includes('会话'))
+
+    expect(titles[0]).toContain('第二会话')
+    expect(titles[1]).toContain('第一会话')
+  })
+
+  it('外部完成提醒会高亮非激活会话，点击后清理提醒', async () => {
+    const user = userEvent.setup()
+    const onCompletionNoticeClear = vi.fn()
+    renderHistoryList({
+      completionNoticeSessionIds: new Set(['s2']),
+      onCompletionNoticeClear
     })
+
+    expect(screen.getByText('第二会话').closest('[role="button"]')).toHaveClass('text-emerald-300')
+
+    await user.click(screen.getByText('第二会话'))
+
+    expect(onCompletionNoticeClear).toHaveBeenCalledWith('s2')
   })
 
   it('滚动触底时加载更多历史会话', () => {

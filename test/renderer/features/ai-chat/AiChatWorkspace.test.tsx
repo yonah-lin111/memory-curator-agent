@@ -56,7 +56,6 @@ const selectedModel: AiModelSelection = {
 const session: AiChatSession = {
   id: 's1',
   title: '上下文测试',
-  summary: '摘要',
   time: '10:00',
   status: 'completed',
   messages: [
@@ -79,7 +78,6 @@ const session: AiChatSession = {
 const secondSession: AiChatSession = {
   id: 's2',
   title: '第二会话',
-  summary: '第二条摘要',
   time: '11:00',
   status: 'completed',
   messages: [

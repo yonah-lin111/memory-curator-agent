@@ -56,6 +56,14 @@ export type AiChatSessionAction =
     }
   | {
       // 动作类型。
+      type: "discard";
+      // 丢弃的临时会话标识。
+      sessionId: string;
+      // 丢弃后激活的会话标识。
+      activeId: string;
+    }
+  | {
+      // 动作类型。
       type: "update";
       // 会话标识。
       sessionId: string;
@@ -109,7 +117,6 @@ export const INITIAL_AI_CHAT_SESSION_STATE: AiChatSessionState = {
 export const FALLBACK_EMPTY_SESSION: AiChatSession = {
   id: "",
   title: "新对话",
-  summary: "",
   time: "",
   status: "idle",
   messages: [],
@@ -120,6 +127,11 @@ export const FALLBACK_EMPTY_SESSION: AiChatSession = {
  */
 export const createEmptyAiChatSession = (): AiChatSession => {
   const now = new Date();
+  const dateStr = now.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\//g, "-");
   const timeStr = now.toLocaleTimeString("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
@@ -128,8 +140,7 @@ export const createEmptyAiChatSession = (): AiChatSession => {
   return {
     id: `session-${Date.now()}`,
     title: "新建对话",
-    summary: "暂无对话内容",
-    time: timeStr,
+    time: `${dateStr} ${timeStr}`,
     status: "idle",
     messages: [],
   };
@@ -253,6 +264,16 @@ export const aiChatSessionReducer = (
         sessions: state.sessions.map((session) =>
           session.id === action.session.id ? action.session : session,
         ),
+      };
+    }
+    case "discard": {
+      const nextSessions = state.sessions.filter(
+        (session) => session.id !== action.sessionId,
+      );
+
+      return {
+        sessions: nextSessions,
+        activeId: action.activeId,
       };
     }
     case "update":

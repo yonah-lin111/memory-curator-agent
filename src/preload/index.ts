@@ -358,8 +358,6 @@ type AiChatSession = {
   id: string
   // 会话标题。
   title: string
-  // 会话摘要。
-  summary: string
   // 会话时间。
   time: string
   // 会话状态。

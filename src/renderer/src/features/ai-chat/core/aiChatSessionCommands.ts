@@ -36,14 +36,9 @@ const buildSessionWithMessages = (
   session: AiChatSession,
   messages: AiChatSession["messages"],
 ): AiChatSession => {
-  const nextLastUserMessage = [...messages]
-    .reverse()
-    .find((message) => message.role === "user");
-
   return {
     ...session,
     title: messages.length === 0 ? "新建对话" : session.title,
-    summary: nextLastUserMessage?.content ?? "暂无对话内容",
     status: messages.length === 0 ? "idle" : "completed",
     messages,
   };

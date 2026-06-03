@@ -124,12 +124,11 @@ describe('aiHandlers', () => {
   it('registers AI history handlers through persistence service', async () => {
     const service = {
       listSessions: vi.fn((_input?: { limit?: number; offset?: number; query?: string }) => [
-        { id: 's1', title: '历史', summary: '摘要', time: '10:00', status: 'completed', messages: [] }
+        { id: 's1', title: '历史', time: '10:00', status: 'completed', messages: [] }
       ]),
       getSession: vi.fn((sessionId: string) => ({
         id: sessionId,
         title: '历史',
-        summary: '摘要',
         time: '10:00',
         status: 'completed',
         messages: []
@@ -174,7 +173,6 @@ describe('aiHandlers', () => {
         .mockReturnValue({
           id: 's1',
           title: '找阿明',
-          summary: '找阿明',
           time: '10:00',
           status: 'running',
           messages: []
@@ -260,7 +258,6 @@ describe('aiHandlers', () => {
       getSession: vi.fn(() => ({
         id: 's1',
         title: '第一次标题',
-        summary: '摘要',
         time: '10:00',
         status: 'completed',
         messages: [{ id: 'm1' }]
@@ -311,7 +308,6 @@ describe('aiHandlers', () => {
       getSession: vi.fn(() => ({
         id: 's1',
         title: '已有标题',
-        summary: '摘要',
         time: '10:00',
         status: 'completed',
         messages: [{ id: 'm1' }]

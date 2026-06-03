@@ -27,6 +27,10 @@ type AiChatHistoryListProps = {
   hasMore: boolean;
   // 是否正在加载更多。
   isLoadingMore: boolean;
+  // 已完成但尚未查看的 AI 会话 ID。
+  completionNoticeSessionIds?: Set<string>;
+  // 清理指定会话完成提醒回调。
+  onCompletionNoticeClear?: (sessionId: string) => void;
   // 是否隐藏
   "aria-hidden"?: boolean;
 };
@@ -50,6 +54,31 @@ type AiChatContextMenuState = {
 };
 
 /**
+ * 将会话时间转换为可比较时间戳，无法解析时保留稳定靠后排序。
+ */
+const getSessionTimestampValue = (time: string): number => {
+  const value = Date.parse(time.replace(" ", "T"));
+
+  return Number.isNaN(value) ? 0 : value;
+};
+
+/**
+ * 会话列表按最新消息时间倒序展示。
+ */
+const sortSessionsByUpdatedTime = (items: AiChatSession[]): AiChatSession[] =>
+  [...items].sort((first, second) => {
+    const timeDiff =
+      getSessionTimestampValue(second.time) - getSessionTimestampValue(first.time);
+
+    return timeDiff || second.id.localeCompare(first.id);
+  });
+
+/**
+ * 历史列表展示到年月日时分，兼容旧的短时间数据。
+ */
+const formatSessionListTime = (time: string): string => time.slice(0, 16);
+
+/**
  * AiChatHistoryList - 负责左侧对话历史列表的渲染与交互
  */
 export const AiChatHistoryList = ({
@@ -63,6 +92,8 @@ export const AiChatHistoryList = ({
   onLoadMore,
   hasMore,
   isLoadingMore,
+  completionNoticeSessionIds,
+  onCompletionNoticeClear,
   "aria-hidden": ariaHidden,
 }: AiChatHistoryListProps): React.JSX.Element => {
   // 当前行内标题编辑草稿。
@@ -88,15 +119,15 @@ export const AiChatHistoryList = ({
   // 记录是否需要在渲染后自动定位。
   const shouldLocateRef = useRef<boolean>(false);
 
-  // 按标题与摘要过滤（支持数据库搜索与本地过滤）后的历史列表。
+  // 按标题过滤（支持数据库搜索与本地过滤）后的历史列表。
   const filteredSessions = useMemo(() => {
     const keyword = searchKeyword.trim();
 
     if (!keyword) {
-      return sessions;
+      return sortSessionsByUpdatedTime(sessions);
     }
 
-    return dbSearchResults;
+    return sortSessionsByUpdatedTime(dbSearchResults);
   }, [searchKeyword, sessions, dbSearchResults]);
 
   // 当过滤后的列表变化时，如果需要定位，则执行滚动。
@@ -139,10 +170,9 @@ export const AiChatHistoryList = ({
       } else {
         // 兜底：本地过滤
         if (isMounted) {
-          const filtered = sessions.filter(
-            (session) =>
-              session.title.toLowerCase().includes(keyword.toLowerCase()) ||
-              session.summary.toLowerCase().includes(keyword.toLowerCase())
+          const normalizedKeyword = keyword.toLowerCase();
+          const filtered = sessions.filter((session) =>
+            session.title.toLowerCase().includes(normalizedKeyword)
           );
           setDbSearchResults(filtered);
           setIsSearching(false);
@@ -202,6 +232,14 @@ export const AiChatHistoryList = ({
       previousStatuses.set(session.id, session.status);
     }
   }, [activeSessionId, sessions]);
+
+  useEffect(() => {
+    if (!completionNoticeSessionIds?.has(activeSessionId)) {
+      return;
+    }
+
+    onCompletionNoticeClear?.(activeSessionId);
+  }, [activeSessionId, completionNoticeSessionIds, onCompletionNoticeClear]);
 
   useEffect(() => {
     const liveSessionIds = new Set(sessions.map((session) => session.id));
@@ -428,7 +466,7 @@ export const AiChatHistoryList = ({
   };
 
   const contextMenuSession = contextMenu
-    ? sessions.find((session) => session.id === contextMenu.sessionId)
+    ? filteredSessions.find((session) => session.id === contextMenu.sessionId)
     : undefined;
 
   return (
@@ -514,7 +552,9 @@ export const AiChatHistoryList = ({
           const isGenerating = session.status === "running";
           const isSelected = selectedSessionIds.has(session.id);
           const hasCompletionNotice =
-            !isActive && !isGenerating && completedSessionIds.has(session.id);
+            !isActive &&
+            !isGenerating &&
+            (completedSessionIds.has(session.id) || Boolean(completionNoticeSessionIds?.has(session.id)));
           const itemStyleClass = isActive
             ? "bg-white text-black font-semibold"
             : hasCompletionNotice
@@ -535,6 +575,7 @@ export const AiChatHistoryList = ({
                 }
 
                 if (!isEditing) {
+                  onCompletionNoticeClear?.(session.id);
                   onSessionChange(session.id);
                 }
               }}
@@ -549,7 +590,7 @@ export const AiChatHistoryList = ({
                 }
               }}
             >
-              <div className="flex items-center justify-between gap-2 w-full">
+              <div className="flex items-start justify-between gap-2 w-full">
                 {isBatchMode ? (
                   <span
                     aria-hidden="true"
@@ -605,16 +646,33 @@ export const AiChatHistoryList = ({
                     />
                   </div>
                 ) : (
-                  <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none">
-                    {session.title}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold leading-none">
+                      {session.title}
+                    </span>
+                    <span
+                      className={`mt-1 block truncate text-[10px] font-mono leading-none ${
+                        isActive
+                          ? "text-black/55"
+                          : hasCompletionNotice
+                            ? "text-emerald-400/50"
+                            : "text-white/30"
+                      }`}
+                    >
+                      {formatSessionListTime(session.time)}
+                    </span>
+                  </div>
                 )}
-                 <span
-                  className={`flex min-h-2.5 min-w-[2.5rem] flex-shrink-0 items-center justify-end text-[10px] font-mono leading-none ${
-                    isActive ? "text-black/55" : hasCompletionNotice ? "text-emerald-400/50" : "text-white/30"
-                  }`}
-                >
-                  {isGenerating ? (
+                {isGenerating ? (
+                  <span
+                    className={`flex min-h-2.5 min-w-[2.5rem] flex-shrink-0 items-center justify-end text-[10px] font-mono leading-none ${
+                      isActive
+                        ? "text-black/55"
+                        : hasCompletionNotice
+                          ? "text-emerald-400/50"
+                          : "text-white/30"
+                    }`}
+                  >
                     <span
                       className="flex items-end gap-[2px] h-3 px-1"
                       aria-label="AI is generating"
@@ -623,18 +681,9 @@ export const AiChatHistoryList = ({
                       <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '150ms' }} />
                       <span className="w-[1.5px] bg-current rounded-[0.5px]" style={{ animation: 'ai-loading-bar 1s ease-in-out infinite', animationDelay: '300ms' }} />
                     </span>
-                  ) : (
-                    session.time
-                  )}
-                </span>
+                  </span>
+                ) : null}
               </div>
-              <p
-                className={`text-[11px] leading-relaxed truncate w-full ${
-                  isActive ? "text-black/75" : hasCompletionNotice ? "text-emerald-300/45" : "text-white/40"
-                }`}
-              >
-                {session.summary}
-              </p>
             </div>
           );
         })}

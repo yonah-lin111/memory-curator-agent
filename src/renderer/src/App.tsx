@@ -108,6 +108,7 @@ const AppContent = (): React.JSX.Element => {
     isChatOpen,
     chatSessions,
     activeChatId,
+    completionNoticeSessionIds,
     activeChatSession,
     activeChatContextItems,
     activeChatContextBudget,
@@ -118,6 +119,7 @@ const AppContent = (): React.JSX.Element => {
     isLoadingMoreChatSessions,
     handleChatToggle,
     setActiveChatId,
+    clearCompletionNoticeSession,
     setSelectedAiModel,
     handleNewChat,
     handleRenameChat,
@@ -158,12 +160,14 @@ const AppContent = (): React.JSX.Element => {
         mode={isChatOpen ? "chat" : "navigation"}
         chatSessions={chatSessions}
         activeChatId={activeChatId}
+        completionNoticeSessionIds={completionNoticeSessionIds}
         onCollapsedChange={setIsSidebarCollapsed}
         onPageChange={(pageId) => {
           window.history.pushState({}, "", `/${pageId}`);
           setActivePage(pageId);
         }}
         onChatSessionChange={setActiveChatId}
+        onCompletionNoticeClear={clearCompletionNoticeSession}
         onNewChat={handleNewChat}
         onRenameChat={handleRenameChat}
         onDeleteChat={handleDeleteChat}

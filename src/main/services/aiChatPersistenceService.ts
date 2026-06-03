@@ -36,8 +36,6 @@ export type EnsureSessionInput = {
   id: string
   // 会话标题。
   title: string
-  // 会话摘要。
-  summary: string
   // 会话状态。
   status: AiChatSessionStatus
   // 写入时间。
@@ -433,9 +431,8 @@ const mapSessionRow = (
 ): AiChatSessionItem => ({
   id: row.id,
   title: row.title,
-  summary: row.summary,
   status: normalizeSessionStatus(row.status),
-  time: row.last_message_at.slice(11, 16) || row.last_message_at,
+  time: row.updated_at.slice(0, 16) || row.updated_at,
   messages
 })
 
@@ -503,7 +500,17 @@ export const createAiChatPersistenceService = (
     const query = input.query?.trim()
     const limit = input.limit && input.limit > 0 ? Math.min(input.limit, 100) : undefined
     const offset = input.offset && input.offset > 0 ? input.offset : 0
-    const whereClause = query ? 'WHERE title LIKE ? OR summary LIKE ?' : ''
+    const whereClause = query
+      ? `
+        WHERE title LIKE ?
+          OR EXISTS (
+            SELECT 1
+            FROM ai_chat_messages
+            WHERE ai_chat_messages.session_id = ai_chat_sessions.id
+              AND ai_chat_messages.content LIKE ?
+          )
+      `
+      : ''
     const limitClause = limit ? 'LIMIT ? OFFSET ?' : ''
     const values: unknown[] = []
 
@@ -520,10 +527,10 @@ export const createAiChatPersistenceService = (
       database
         .prepare(
           `
-            SELECT id, title, summary, status, created_at, updated_at, last_message_at
+            SELECT id, title, status, created_at, updated_at, last_message_at
             FROM ai_chat_sessions
             ${whereClause}
-            ORDER BY last_message_at DESC
+            ORDER BY updated_at DESC
             ${limitClause}
           `
         )
@@ -535,7 +542,7 @@ export const createAiChatPersistenceService = (
     const session = database
       .prepare(
         `
-          SELECT id, title, summary, status, created_at, updated_at, last_message_at
+          SELECT id, title, status, created_at, updated_at, last_message_at
           FROM ai_chat_sessions
           WHERE id = ?
         `
@@ -678,10 +685,6 @@ export const createAiChatPersistenceService = (
       ...messages.slice(turnEndIndex)
     ]
     const latestRemainingMessage = remainingMessages[remainingMessages.length - 1]
-    const latestRemainingUserMessage = [...remainingMessages]
-      .reverse()
-      .find((message) => message.role === 'user')
-
     database
       .prepare(
         `
@@ -690,7 +693,6 @@ export const createAiChatPersistenceService = (
                 WHEN ? = 0 THEN '新建对话'
                 ELSE title
               END,
-              summary = ?,
               status = ?,
               updated_at = ?,
               last_message_at = ?
@@ -699,7 +701,6 @@ export const createAiChatPersistenceService = (
       )
       .run(
         remainingMessages.length,
-        latestRemainingUserMessage?.content ?? '暂无对话内容',
         remainingMessages.length === 0 ? 'idle' : 'completed',
         timestamp,
         latestRemainingMessage?.created_at ?? timestamp,
@@ -764,23 +765,20 @@ export const createAiChatPersistenceService = (
     database
       .prepare(
         `
-          INSERT INTO ai_chat_sessions (id, title, summary, status, created_at, updated_at, last_message_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO ai_chat_sessions (id, title, status, created_at, updated_at, last_message_at)
+          VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
             title = CASE
               WHEN ai_chat_sessions.title = '新建对话' THEN excluded.title
               ELSE ai_chat_sessions.title
             END,
-            summary = excluded.summary,
             status = excluded.status,
-            updated_at = excluded.updated_at,
-            last_message_at = excluded.last_message_at
+            updated_at = excluded.updated_at
         `
       )
       .run(
         input.id,
         input.title,
-        input.summary,
         normalizeSessionStatus(input.status),
         input.timestamp,
         input.timestamp,

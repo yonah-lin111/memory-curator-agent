@@ -20,7 +20,6 @@ const createSession = (
 ): AiChatSession => ({
   id: 's1',
   title: '旧对话',
-  summary: '旧摘要',
   time: '10:00',
   status: 'completed',
   messages: [
@@ -76,7 +75,6 @@ describe('aiChatSessionCommands', () => {
       type: 'replace',
       session: expect.objectContaining({
         id: 's1',
-        summary: '第一问',
         status: 'completed',
         messages: session.messages.slice(0, 2)
       })
@@ -157,7 +155,6 @@ describe('aiChatSessionCommands', () => {
 
     const expectedCleanSession = expect.objectContaining({
       id: 's1',
-      summary: '第一问',
       messages: session.messages.slice(0, 2)
     })
     const expectedCleanSessions = [expectedCleanSession]

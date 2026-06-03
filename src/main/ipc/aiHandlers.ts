@@ -147,8 +147,8 @@ type ActiveAiChatRun = {
   sessionId: string
   // 会话标题。
   sessionTitle: string
-  // 会话摘要。
-  summary: string
+  // 本轮用户问题。
+  prompt: string
   // 助手消息 ID。
   assistantMessageId: string
   // 取消控制器。
@@ -485,13 +485,12 @@ export const registerAiHandlers = (): void => {
       session: {
         id: activeRun.sessionId,
         title: activeRun.sessionTitle,
-        summary: activeRun.summary,
         status: 'failed',
         timestamp: failedTimestamp
       },
       assistantMessage: {
         messageId: activeRun.assistantMessageId,
-        content: activeRun.assistantAnswer ? 'AI 已生成回答' : `正在处理：“${activeRun.summary}”`,
+        content: activeRun.assistantAnswer ? 'AI 已生成回答' : `正在处理：“${activeRun.prompt}”`,
         answer: activeRun.assistantAnswer,
         parts: activeRun.assistantParts,
         toolSteps: activeRun.assistantToolSteps,
@@ -599,7 +598,6 @@ export const registerAiHandlers = (): void => {
       session: {
         id: payload.sessionId,
         title: sessionTitle,
-        summary: payload.message,
         status: 'running',
         timestamp
       },
@@ -648,7 +646,7 @@ export const registerAiHandlers = (): void => {
     const activeRun: ActiveAiChatRun = {
       sessionId: payload.sessionId,
       sessionTitle,
-      summary: payload.message,
+      prompt: payload.message,
       assistantMessageId,
       controller,
       sender: event.sender,
@@ -850,7 +848,6 @@ export const registerAiHandlers = (): void => {
               session: {
                 id: payload.sessionId,
                 title: sessionTitle,
-                summary: payload.message,
                 status: 'failed',
                 timestamp: failedTimestamp
               },
@@ -874,7 +871,6 @@ export const registerAiHandlers = (): void => {
             aiChatService.ensureSession({
               id: payload.sessionId,
               title: sessionTitle,
-              summary: activeRun.assistantAnswer || payload.message,
               status: 'completed',
               timestamp: createTimestamp()
             })
@@ -901,7 +897,6 @@ export const registerAiHandlers = (): void => {
           session: {
             id: payload.sessionId,
             title: sessionTitle,
-            summary: payload.message,
             status: 'failed',
             timestamp: failedTimestamp
           },

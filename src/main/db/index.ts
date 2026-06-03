@@ -34,6 +34,15 @@ const getColumnType = (
 }
 
 /**
+ * 判断指定表列是否存在。
+ */
+const columnExists = (
+  database: MigrationDatabase,
+  tableName: string,
+  columnName: string
+): boolean => getColumnType(database, tableName, columnName) !== null
+
+/**
  * 判断表是否已经使用整数主键。
  */
 const usesIntegerPrimaryKey = (database: MigrationDatabase, tableName: string): boolean =>
@@ -245,15 +254,16 @@ export const createAiChatPersistenceTables = (database: Database.Database): void
     CREATE TABLE IF NOT EXISTS ai_chat_sessions (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
-      summary TEXT NOT NULL,
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       last_message_at TEXT NOT NULL
     );
 
-    CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_last_message_at
-    ON ai_chat_sessions(last_message_at DESC);
+    DROP INDEX IF EXISTS idx_ai_chat_sessions_last_message_at;
+
+    CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_updated_at
+    ON ai_chat_sessions(updated_at DESC);
 
     CREATE TABLE IF NOT EXISTS ai_chat_messages (
       id TEXT PRIMARY KEY,
@@ -328,6 +338,32 @@ export const createAiChatPersistenceTables = (database: Database.Database): void
     CREATE INDEX IF NOT EXISTS idx_ai_agent_context_snapshots_run_order
     ON ai_agent_context_snapshots(run_id, created_order ASC);
   `)
+
+  if (
+    tableExists(database, 'ai_chat_sessions') &&
+    columnExists(database, 'ai_chat_sessions', 'summary')
+  ) {
+    database.exec(`
+      DROP INDEX IF EXISTS idx_ai_chat_sessions_last_message_at;
+      DROP INDEX IF EXISTS idx_ai_chat_sessions_updated_at;
+      ALTER TABLE ai_chat_sessions RENAME TO ai_chat_sessions_legacy_summary;
+      CREATE TABLE ai_chat_sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_at TEXT NOT NULL
+      );
+      INSERT INTO ai_chat_sessions (id, title, status, created_at, updated_at, last_message_at)
+      SELECT id, title, status, created_at, updated_at, last_message_at
+      FROM ai_chat_sessions_legacy_summary
+      ORDER BY id ASC;
+      DROP TABLE ai_chat_sessions_legacy_summary;
+      CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_updated_at
+      ON ai_chat_sessions(updated_at DESC);
+    `)
+  }
 
   database.exec(`
     UPDATE ai_chat_sessions

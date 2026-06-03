@@ -339,7 +339,6 @@ describe('App', () => {
           {
             id: 'today-memory',
             title: '整理今天的记忆线索',
-            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
             status: 'completed',
             messages: []
@@ -347,7 +346,6 @@ describe('App', () => {
           {
             id: 'weekly-actions',
             title: '周回顾行动拆解',
-            summary: '把本周复盘拆成明天可执行的 3 个动作。',
             time: '09:12',
             status: 'completed',
             messages: []
@@ -358,7 +356,6 @@ describe('App', () => {
             return {
               id: 'weekly-actions',
               title: '周回顾行动拆解',
-              summary: '把本周复盘拆成明天可执行的 3 个动作。',
               time: '09:12',
               status: 'completed',
               messages: []
@@ -368,7 +365,6 @@ describe('App', () => {
             return {
               id: capturedPayload.sessionId,
               title: '整理今天的记忆线索',
-              summary: '切换时恢复流式快照',
               time: '10:24',
               status: 'running',
               messages: [
@@ -399,7 +395,6 @@ describe('App', () => {
           return {
             id: 'today-memory',
             title: '整理今天的记忆线索',
-            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
             status: 'completed',
             messages: []
@@ -462,7 +457,6 @@ describe('App', () => {
           {
             id: 'persisted-s1',
             title: '持久化会话',
-            summary: '从 SQLite 恢复',
             time: '10:00',
             status: 'completed',
             messages: [
@@ -478,7 +472,6 @@ describe('App', () => {
         getSession: vi.fn(async (sessionId: string) => ({
           id: sessionId,
           title: '持久化会话',
-          summary: '从 SQLite 恢复',
           time: '10:00',
           status: 'completed',
           messages: [
@@ -646,6 +639,78 @@ describe('App', () => {
         })
       ])
     )
+  })
+
+  it('非激活会话输出完成后在历史列表显示完成提醒', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+      runId: payload.runId ?? 'run-test'
+    }))
+
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => [
+          {
+            id: 's-running',
+            title: '运行会话',
+            time: '2026-05-31 10:00',
+            status: 'completed',
+            messages: []
+          },
+          {
+            id: 's-other',
+            title: '其他会话',
+            time: '2026-05-31 09:00',
+            status: 'completed',
+            messages: []
+          }
+        ]),
+        getSession: vi.fn(async (sessionId: string) => ({
+          id: sessionId,
+          title: sessionId === 's-running' ? '运行会话' : '其他会话',
+          time: sessionId === 's-running' ? '2026-05-31 10:00' : '2026-05-31 09:00',
+          status: 'completed',
+          messages: []
+        })),
+        startChat,
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    const historyList = screen.getByLabelText('AI chat history sessions')
+    await within(historyList).findByText('运行会话')
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '后台完成提醒')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledTimes(1)
+    })
+
+    const payload = startChat.mock.calls[0][0]
+    await user.click(within(historyList).getByText('其他会话'))
+
+    act(() => {
+      listeners.forEach((listener) => {
+        listener({
+          type: 'done',
+          runId: payload.runId!,
+          sessionId: payload.sessionId
+        })
+      })
+    })
+
+    await waitFor(() => {
+      expect(within(historyList).getByText('运行会话').closest('[role="button"]')).toHaveClass(
+        'text-emerald-300'
+      )
+    })
   })
 
   it('AI 对话第二轮发送时携带上一轮工具查询上下文', async () => {
@@ -864,7 +929,6 @@ describe('App', () => {
           {
             id: 'session-1',
             title: '整理今天的记忆线索',
-            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
             status: 'completed',
             messages: []
@@ -873,7 +937,6 @@ describe('App', () => {
         getSession: vi.fn(async (id: string) => ({
           id,
           title: '整理今天的记忆线索',
-          summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
           time: '10:24',
           status: 'completed',
           messages: []
@@ -963,7 +1026,6 @@ describe('App', () => {
           {
             id: 'session-1',
             title: '整理今天的记忆线索',
-            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
             status: 'completed',
             messages: []
@@ -971,7 +1033,6 @@ describe('App', () => {
           {
             id: 'session-2',
             title: '周回顾行动拆解',
-            summary: '把本周复盘拆成明天可执行的 3 个动作。',
             time: '09:12',
             status: 'completed',
             messages: []
@@ -982,7 +1043,6 @@ describe('App', () => {
             return {
               id: 'session-2',
               title: '周回顾行动拆解',
-              summary: '把本周复盘拆成明天可执行的 3 个动作。',
               time: '09:12',
               status: 'completed',
               messages: [
@@ -1014,7 +1074,6 @@ describe('App', () => {
           return {
             id,
             title: '整理今天的记忆线索',
-            summary: '从 Todo、Notes、Journal 中提炼今天最值得保留的线索。',
             time: '10:24',
             status: 'completed',
             messages: []
@@ -1042,7 +1101,6 @@ describe('App', () => {
       {
         id: 'persisted-one',
         title: '历史一',
-        summary: '历史一摘要',
         time: '10:00',
         status: 'completed',
         messages: []
@@ -1050,7 +1108,6 @@ describe('App', () => {
       {
         id: 'persisted-two',
         title: '历史二',
-        summary: '历史二摘要',
         time: '11:00',
         status: 'completed',
         messages: []

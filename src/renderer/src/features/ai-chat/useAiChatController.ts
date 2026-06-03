@@ -43,6 +43,24 @@ const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
 // AI 历史每页读取数量。
 const AI_CHAT_HISTORY_PAGE_SIZE = 20;
 
+/**
+ * 创建列表使用的年月日时分时间戳。
+ */
+const createSessionListTimestamp = (): string => {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\//g, "-");
+  const timeStr = now.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${dateStr} ${timeStr}`;
+};
+
 // AI 对话控制器返回值。
 type UseAiChatControllerResult = {
   // AI 对话模式打开状态。
@@ -51,6 +69,8 @@ type UseAiChatControllerResult = {
   chatSessions: AiChatSession[];
   // 当前激活的 AI 对话会话标识。
   activeChatId: string;
+  // 已完成但尚未查看的 AI 会话 ID。
+  completionNoticeSessionIds: Set<string>;
   // 当前激活的 AI 对话会话。
   activeChatSession: AiChatSession;
   // 当前会话上下文条目。
@@ -71,6 +91,8 @@ type UseAiChatControllerResult = {
   handleChatToggle: () => void;
   // 切换当前激活的 AI 对话会话。
   setActiveChatId: (sessionId: string) => void;
+  // 清理指定 AI 对话完成提醒。
+  clearCompletionNoticeSession: (sessionId: string) => void;
   // 切换当前选中的 AI provider 与模型。
   setSelectedAiModel: (selection: AiModelSelection) => void;
   // 新建 AI 对话会话。
@@ -136,6 +158,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   );
   const chatSessions = chatState.sessions;
   const activeChatId = chatState.activeId;
+  const activeChatIdRef = useRef<string>(activeChatId);
+  activeChatIdRef.current = activeChatId;
 
   // 已启用的 AI provider 与模型选项。
   const [aiModelOptions, setAiModelOptions] = useState<
@@ -160,6 +184,10 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const [isLoadingMoreChatSessions, setIsLoadingMoreChatSessions] =
     useState<boolean>(false);
 
+  // 已完成但尚未查看的 AI 会话 ID。
+  const [completionNoticeSessionIds, setCompletionNoticeSessionIds] =
+    useState<Set<string>>(() => new Set());
+
   // Agent 运行与消息的映射关系。
   const runMessageMapRef = useRef<Map<string, AiRunMessageMapping>>(new Map());
 
@@ -170,6 +198,9 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const typewriterTimerRef = useRef<Map<string, AiTypewriterTimer>>(
     new Map(),
   );
+
+  // 搜索命中但不属于当前分页列表的临时会话。
+  const transientSearchSessionIdsRef = useRef<Set<string>>(new Set());
 
   // 当前激活的 AI 对话会话。
   const activeChatSession = getActiveAiChatSession(chatState);
@@ -370,7 +401,48 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     sessionId: string,
     status: AiChatSession["status"],
   ): void => {
-    dispatchChatState({ type: "set-status", sessionId, status });
+    const shouldRefreshTime = status === "completed" || status === "failed";
+    const nextTime = shouldRefreshTime ? createSessionListTimestamp() : undefined;
+
+    dispatchChatState({
+      type: "update",
+      sessionId,
+      updater: (session) => ({
+        ...session,
+        status,
+        time: nextTime ?? session.time,
+      }),
+    });
+
+    setCompletionNoticeSessionIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (status === "completed" && sessionId !== activeChatIdRef.current) {
+        nextIds.add(sessionId);
+        return nextIds;
+      }
+
+      if (status === "running" || sessionId === activeChatIdRef.current) {
+        nextIds.delete(sessionId);
+      }
+
+      return nextIds.size === currentIds.size ? currentIds : nextIds;
+    });
+  };
+
+  /**
+   * 清理指定 AI 对话完成提醒。
+   */
+  const clearCompletionNoticeSession = (sessionId: string): void => {
+    setCompletionNoticeSessionIds((currentIds) => {
+      if (!currentIds.has(sessionId)) {
+        return currentIds;
+      }
+
+      const nextIds = new Set(currentIds);
+      nextIds.delete(sessionId);
+      return nextIds;
+    });
   };
 
   /**
@@ -558,6 +630,10 @@ export const useAiChatController = (): UseAiChatControllerResult => {
           return;
         }
 
+        if (!chatSessions.some((item) => item.id === session.id)) {
+          transientSearchSessionIdsRef.current.add(session.id);
+        }
+
         dispatchChatState({ type: "replace", session });
       })
       .catch(() => {
@@ -612,6 +688,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       hour: "2-digit",
       minute: "2-digit",
     });
+    const sessionTime = createSessionListTimestamp();
     const runId = `run-${Date.now()}`;
     const userMessageId = `${runId}-user`;
     const assistantMessageId = `${runId}-assistant`;
@@ -654,12 +731,13 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         return {
           ...sourceSession,
           title: isNewSession ? optimisticSessionTitle : sourceSession.title,
-          summary: isNewSession ? text : sourceSession.summary,
+          time: sessionTime,
           status: "running",
           messages: [...sourceSession.messages, userMessage, aiMessage],
         };
       },
     });
+    transientSearchSessionIdsRef.current.delete(sessionId);
 
     if (!window.api?.ai) {
       return;
@@ -728,6 +806,22 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       cancelPendingAiChatAsks(activeChatId);
     }
 
+    clearCompletionNoticeSession(sessionId);
+
+    if (
+      sessionId !== activeChatId &&
+      transientSearchSessionIdsRef.current.has(activeChatId)
+    ) {
+      transientSearchSessionIdsRef.current.delete(activeChatId);
+      useAiChatContextStore.getState().clearSession(activeChatId);
+      dispatchChatState({
+        type: "discard",
+        sessionId: activeChatId,
+        activeId: sessionId,
+      });
+      return;
+    }
+
     dispatchChatState({ type: "set-active", activeId: sessionId });
   };
 
@@ -735,6 +829,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     isChatOpen,
     chatSessions,
     activeChatId,
+    completionNoticeSessionIds,
     activeChatSession,
     activeChatContextItems,
     activeChatContextBudget,
@@ -745,6 +840,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     isLoadingMoreChatSessions,
     handleChatToggle,
     setActiveChatId: handleActiveChatChange,
+    clearCompletionNoticeSession,
     setSelectedAiModel,
     handleNewChat,
     handleRenameChat,

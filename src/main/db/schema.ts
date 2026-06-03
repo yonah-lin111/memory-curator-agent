@@ -252,8 +252,6 @@ export type AiChatSessionItem = {
   id: string
   // 会话标题。
   title: string
-  // 会话摘要。
-  summary: string
   // 会话时间。
   time: string
   // 会话状态。
@@ -336,8 +334,6 @@ export type AiChatSessionRow = {
   id: string
   // 会话标题。
   title: string
-  // 会话摘要。
-  summary: string
   // 会话状态。
   status: AiChatSessionStatus
   // 创建时间。
