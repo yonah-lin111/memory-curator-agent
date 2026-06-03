@@ -41,13 +41,17 @@ describe("AiToolCallBlock", () => {
       screen.queryByText(/User has answered your clarification questions:/),
     ).not.toBeInTheDocument();
     expect(
-      screen
-        .getByText("请问您要添加的人物与您是什么关系？")
-        .parentElement,
-    ).toHaveTextContent("请问您要添加的人物与您是什么关系？=家人");
-    expect(screen.getByText("请提供该人物的姓名").parentElement).toHaveTextContent(
-      "请提供该人物的姓名=王小美",
-    );
+      screen.getByText("请问您要添加的人物与您是什么关系？")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("家人")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("请提供该人物的姓名")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("王小美")
+    ).toBeInTheDocument();
   });
 
   it("ask 被取消时展示取消状态", () => {

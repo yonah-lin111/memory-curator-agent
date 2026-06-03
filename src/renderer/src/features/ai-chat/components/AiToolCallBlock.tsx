@@ -127,32 +127,39 @@ const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
     return null;
   }
 
+  const rightAngleSvg = (
+    <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
+      <path
+        d="M3 1v5h7"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
   return (
-    <div className="mt-1 flex items-start gap-1 text-xs leading-relaxed text-white/45">
-      <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
-        <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
-          <path
-            d="M3 1v5h7"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <div className="grid min-w-0 gap-1">
-        {data.answers.map((item) => (
-          <div
-            key={item.question}
-            className="grid grid-cols-[auto_auto_1fr] gap-x-1.5"
-          >
+    <div className="flex flex-col gap-1 min-w-0">
+      {data.answers.map((item, index) => (
+        <div key={item.question} className="flex flex-col gap-1 min-w-0">
+          {/* 问题 */}
+          <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
+            <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
+              {index === 0 ? rightAngleSvg : <span className="w-3" />}
+            </span>
             <span className="text-white/35">{item.question}</span>
-            <span className="text-white/25">=</span>
+          </div>
+          {/* 选择 */}
+          <div className="pl-4 flex items-start gap-1 text-xs leading-relaxed text-white/45">
+            <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
+              {rightAngleSvg}
+            </span>
             <span className="min-w-0 text-white/70">
               {item.answers.length > 0 ? item.answers.join("、") : "未回答"}
             </span>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };
