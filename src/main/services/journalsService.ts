@@ -68,11 +68,18 @@ const validateJournalSaveInput = (input: JournalSaveInput): void => {
  * 将数据库行映射为页面日记。
  */
 const mapJournalRow = (row: JournalRow): JournalItem => ({
+  id: row.id,
   entryDate: row.entry_date,
   content: row.content,
   createdAt: row.created_at,
   updatedAt: row.updated_at
 })
+
+/**
+ * 读取 SQLite 自增主键。
+ */
+const readLastInsertId = (result: unknown): number =>
+  Number(result && typeof result === 'object' && 'lastInsertRowid' in result ? result.lastInsertRowid : 0)
 
 /**
  * 创建 Journals 服务。
@@ -82,7 +89,7 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
     validateEntryDate(entryDate)
 
     const row = database
-      .prepare('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
+      .prepare('SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
       .get(entryDate) as JournalRow | undefined
 
     return row ? mapJournalRow(row) : null
@@ -92,16 +99,17 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
 
     const content = input.content.trim()
     const existing = database
-      .prepare('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
+      .prepare('SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
       .get(input.entryDate) as JournalRow | undefined
     const timestamp = createTimestamp()
 
     if (!existing) {
-      database
+      const result = database
         .prepare('INSERT INTO journals (entry_date, content, created_at, updated_at) VALUES (?, ?, ?, ?)')
         .run(input.entryDate, content, timestamp, timestamp)
 
       return {
+        id: readLastInsertId(result),
         entryDate: input.entryDate,
         content,
         createdAt: timestamp,
@@ -114,6 +122,7 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
       .run(content, timestamp, input.entryDate)
 
     return {
+      id: existing.id,
       entryDate: input.entryDate,
       content,
       createdAt: existing.created_at,

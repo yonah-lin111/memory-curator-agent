@@ -139,6 +139,10 @@ type AssociatedPersonPayload = {
 type AiChatStartPayload = {
   // Agent 运行 ID。
   runId?: string
+  // 用户消息 ID。
+  userMessageId?: string
+  // 助手消息 ID。
+  assistantMessageId?: string
   // 会话 ID。
   sessionId: string
   // 用户消息。
@@ -458,6 +462,8 @@ type SnippetItem = {
 
 // 页面使用的日记类型。
 type JournalItem = {
+  // 日记唯一标识。
+  id: number
   // 日记所属日期。
   entryDate: string
   // 日记正文。

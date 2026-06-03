@@ -263,7 +263,7 @@ class MemoryDailyDatabase implements DatabaseConnection {
       }
     }
 
-    if (sql.startsWith('SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')) {
+    if (sql.startsWith('SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')) {
       return {
         all: () => [],
         get: (...values) => this.journalRows.find((row) => row.entry_date === values[0]),
@@ -296,12 +296,15 @@ class MemoryDailyDatabase implements DatabaseConnection {
         all: () => [],
         get: () => undefined,
         run: (...values) => {
+          const id = this.journalRows.length + 1
           this.journalRows.push({
+            id,
             entry_date: values[0] as string,
             content: values[1] as string,
             created_at: values[2] as string,
             updated_at: values[3] as string
           })
+          return { lastInsertRowid: id }
         }
       }
     }

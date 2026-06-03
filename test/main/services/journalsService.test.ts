@@ -10,7 +10,7 @@ class MemoryJournalsDatabase implements DatabaseConnection {
   prepare = (sql: string): DatabaseStatement => {
     if (
       sql.startsWith(
-        'SELECT entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?'
+        'SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?'
       )
     ) {
       return {
@@ -25,13 +25,15 @@ class MemoryJournalsDatabase implements DatabaseConnection {
         all: () => [],
         get: () => undefined,
         run: (...values) => {
+          const id = this.journalRows.length + 1
           this.journalRows.push({
+            id,
             entry_date: values[0] as string,
             content: values[1] as string,
             created_at: values[2] as string,
             updated_at: values[3] as string
           })
-          return { lastInsertRowid: undefined }
+          return { lastInsertRowid: id }
         }
       }
     }

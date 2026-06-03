@@ -21,6 +21,7 @@ import {
   type AiRunMessageMapping,
   type AiTypewriterTimer,
 } from "@renderer/features/ai-chat/core/aiChatEventAdapter";
+import { createAiChatUuid } from "@renderer/features/ai-chat/core/aiChatIds";
 import {
   aiChatSessionReducer,
   createEmptyAiChatSession,
@@ -689,9 +690,9 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       minute: "2-digit",
     });
     const sessionTime = createSessionListTimestamp();
-    const runId = `run-${Date.now()}`;
-    const userMessageId = `${runId}-user`;
-    const assistantMessageId = `${runId}-assistant`;
+    const runId = createAiChatUuid();
+    const userMessageId = createAiChatUuid();
+    const assistantMessageId = createAiChatUuid();
     const hasAiBridge = Boolean(window.api?.ai);
     const contextItems = buildStartContextItems(sessionId, sourceSessions);
     const optimisticSessionTitle = text.slice(0, 15) + (text.length > 15 ? "..." : "");
@@ -746,6 +747,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     void window.api.ai
       .startChat({
         runId,
+        userMessageId,
+        assistantMessageId,
         sessionId,
         message: text,
         provider: selectedAiModel?.provider,

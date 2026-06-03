@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type {
   AssociatedPersonCreateInput,
   AssociatedPersonItem,
@@ -6,6 +5,7 @@ import type {
   AssociatedPersonUpdateInput,
   PersonRelationship
 } from '../db/schema'
+import { createCompactUuid } from '../id'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -111,7 +111,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
   list: () => {
     const rows = database
       .prepare(
-        'SELECT id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY updated_at DESC, created_at DESC'
+        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY updated_at DESC, created_at DESC'
       )
       .all() as AssociatedPersonRow[]
 
@@ -124,11 +124,11 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
     validatePersonInput(input)
 
     const timestamp = createTimestamp()
-    const id = randomUUID()
+    const id = createCompactUuid()
 
     database
       .prepare(
-        'INSERT INTO associated_people (id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO associated_people (external_id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .run(
         id,
@@ -147,7 +147,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
 
     const row = database
       .prepare(
-        'SELECT id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE id = ?'
+        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?'
       )
       .get(id) as AssociatedPersonRow | undefined
 
@@ -162,7 +162,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
 
     const existing = database
       .prepare(
-        'SELECT id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE id = ?'
+        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?'
       )
       .get(id) as AssociatedPersonRow | undefined
 
@@ -173,7 +173,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
     const updatedAt = createTimestamp()
     database
       .prepare(
-        'UPDATE associated_people SET avatar = ?, name = ?, gender = ?, relationship = ?, status = ?, birthday = ?, contact = ?, tags = ?, details = ?, updated_at = ? WHERE id = ?'
+        'UPDATE associated_people SET avatar = ?, name = ?, gender = ?, relationship = ?, status = ?, birthday = ?, contact = ?, tags = ?, details = ?, updated_at = ? WHERE external_id = ?'
       )
       .run(
         input.avatar,
@@ -204,6 +204,6 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
     })
   },
   delete: (id) => {
-    database.prepare('DELETE FROM associated_people WHERE id = ?').run(id)
+    database.prepare('DELETE FROM associated_people WHERE external_id = ?').run(id)
   }
 })

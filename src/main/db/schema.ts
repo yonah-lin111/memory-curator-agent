@@ -1,4 +1,9 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { customType, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+
+// SQLite 时间戳字段类型。
+const timestamp = customType<{ data: string; driverData: string }>({
+  dataType: () => 'timestamp'
+})
 
 // 笔记来源类型。
 export type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
@@ -169,6 +174,8 @@ export type SnippetItem = {
 
 // 页面使用的日记类型。
 export type JournalItem = {
+  // 日记唯一标识。
+  id: number
   // 日记所属日期。
   entryDate: string
   // 日记正文。
@@ -408,6 +415,8 @@ export type SnippetRow = {
 
 // 日记数据库行类型。
 export type JournalRow = {
+  // 日记唯一标识。
+  id: number
   // 日记所属日期。
   entry_date: string
   // 日记正文。
@@ -420,7 +429,7 @@ export type JournalRow = {
 
 // 关联人物数据库行类型。
 export type AssociatedPersonRow = {
-  // 人物唯一标识。
+  // 人物业务标识。
   id: string
   // 头像地址。
   avatar: string
@@ -453,7 +462,7 @@ export const notes = sqliteTable('notes', {
   content: text('content').notNull(),
   source: text('source').$type<NoteSource>().notNull(),
   tags: text('tags').notNull(),
-  time: text('time').notNull(),
+  time: timestamp('time').notNull(),
   isCurated: integer('is_curated').notNull().default(0),
   clue: text('clue')
 })
@@ -466,8 +475,8 @@ export const todos = sqliteTable('todos', {
   priority: text('priority').$type<TodoPriority>().notNull(),
   completed: integer('completed').notNull().default(0),
   sortOrder: integer('sort_order').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
 })
 
 // 片段 SQLite 表定义。
@@ -477,21 +486,23 @@ export const snippets = sqliteTable('snippets', {
   title: text('title').notNull(),
   content: text('content').notNull(),
   tags: text('tags').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
 })
 
 // 日记 SQLite 表定义。
 export const journals = sqliteTable('journals', {
-  entryDate: text('entry_date').primaryKey(),
+  id: integer('id').primaryKey(),
+  entryDate: text('entry_date').notNull().unique(),
   content: text('content').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
 })
 
 // 关联人物 SQLite 表定义。
 export const associatedPeople = sqliteTable('associated_people', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey(),
+  externalId: text('external_id').notNull().unique(),
   avatar: text('avatar').notNull(),
   name: text('name').notNull(),
   gender: text('gender').notNull(),
@@ -501,6 +512,6 @@ export const associatedPeople = sqliteTable('associated_people', {
   contact: text('contact').notNull(),
   tags: text('tags').notNull(),
   details: text('details').notNull(),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
 })

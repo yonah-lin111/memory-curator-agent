@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createAskTool } from '../../../../src/main/agent/tools/askTool'
 
+// 无连接符 UUID 形态。
+const UUID_PATTERN = /^[\da-f]{32}$/i
+
 // Ask 工具数据类型。
 type AskToolData = {
   // 工具数据类型。
@@ -57,7 +60,7 @@ describe('askTool', () => {
         }
       ]
     })
-    expect(data.id).toMatch(/^ask_\d+_\d+$/)
+    expect(data.id).toMatch(UUID_PATTERN)
   })
 
   it('拒绝缺失问题列表的入参', async () => {

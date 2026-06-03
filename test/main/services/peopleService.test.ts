@@ -16,7 +16,7 @@ class MemoryPeopleDatabase implements DatabaseConnection {
   prepare = (sql: string): DatabaseStatement => {
     if (
       sql.startsWith(
-        'SELECT id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY'
+        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY'
       )
     ) {
       return {
@@ -33,7 +33,14 @@ class MemoryPeopleDatabase implements DatabaseConnection {
 
     if (sql.startsWith('SELECT * FROM associated_people WHERE relationship = ')) {
       return {
-        all: () => this.rows.filter((row) => sql.includes(`'${row.relationship}'`)),
+        all: () =>
+          this.rows
+            .filter((row) => sql.includes(`'${row.relationship}'`))
+            .map((row, index) => ({
+              ...row,
+              id: index + 1,
+              external_id: row.id
+            })),
         get: () => undefined,
         run: () => undefined
       }
@@ -72,7 +79,7 @@ class MemoryPeopleDatabase implements DatabaseConnection {
 
     if (
       sql.startsWith(
-        'SELECT id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE id = ?'
+        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?'
       )
     ) {
       return {
@@ -108,7 +115,7 @@ class MemoryPeopleDatabase implements DatabaseConnection {
       }
     }
 
-    if (sql.startsWith('DELETE FROM associated_people WHERE id = ?')) {
+    if (sql.startsWith('DELETE FROM associated_people WHERE external_id = ?')) {
       return {
         all: () => [],
         get: () => undefined,
@@ -150,7 +157,8 @@ describe('peopleService', () => {
 
     expect(service.querySql("SELECT * FROM associated_people WHERE relationship = '同事'")).toEqual([
       {
-        id: created.id,
+        id: 1,
+        external_id: created.id,
         avatar: '',
         name: '小周',
         gender: '女',
@@ -193,7 +201,7 @@ describe('peopleService', () => {
       tags: ['极客', '开朗'],
       details: '# 阿明'
     })
-    expect(created.id).toMatch(/^[\da-f-]{36}$/)
+    expect(created.id).toMatch(/^[\da-f]{32}$/)
     expect(created.createdAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)
     expect(service.list()).toEqual([created])
 

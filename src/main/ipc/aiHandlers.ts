@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto'
 import { ipcMain, type WebContents } from 'electron'
 import { getDatabase } from '../db'
+import { createCompactUuid } from '../id'
 import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '../services/peopleService'
 import {
   createAiChatPersistenceService,
@@ -19,6 +19,10 @@ import type { AiChatMessagePart, AiToolStep } from '../db/schema'
 type AiChatStartPayload = {
   // Agent 运行 ID。
   runId?: string
+  // 用户消息 ID。
+  userMessageId?: string
+  // 助手消息 ID。
+  assistantMessageId?: string
   // 会话 ID。
   sessionId: string
   // 用户消息。
@@ -560,7 +564,7 @@ export const registerAiHandlers = (): void => {
   })
 
   ipcMain.handle('ai:chat:start', async (event, payload: AiChatStartPayload) => {
-    const runId = payload.runId ?? randomUUID()
+    const runId = payload.runId ?? createCompactUuid()
     const config = loadProviderConfig()
     const providerId = payload.provider ?? config.defaultProvider
     const providerConfig = config.providers[providerId]
@@ -586,8 +590,9 @@ export const registerAiHandlers = (): void => {
     const modelConfig = providerConfig.models[modelId]
     const timestamp = createTimestamp()
     const userTime = createDisplayTime(timestamp)
-    const userMessageId = `${runId}-user`
-    const assistantMessageId = `${runId}-assistant`
+    const userMessageId = payload.userMessageId ?? createCompactUuid()
+    const assistantMessageId = payload.assistantMessageId ?? createCompactUuid()
+    const toolCallIds = new Map<string, string>()
     const existingSession = aiChatService.getSession(payload.sessionId)
     const shouldCreateTitle = shouldCreateInitialSessionTitle(existingSession)
     const sessionTitle = shouldCreateTitle
@@ -687,6 +692,18 @@ export const registerAiHandlers = (): void => {
       }
 
       try {
+        const resolveToolCallId = (providerToolCallId: string): string => {
+          const existingToolCallId = toolCallIds.get(providerToolCallId)
+
+          if (existingToolCallId) {
+            return existingToolCallId
+          }
+
+          const toolCallId = createCompactUuid()
+          toolCallIds.set(providerToolCallId, toolCallId)
+          return toolCallId
+        }
+
         const provider = await createModelProvider(providerConfig)
 
         for await (const agentEvent of runReactAgent({
@@ -725,6 +742,7 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'tool_started') {
+            const persistedToolCallId = resolveToolCallId(agentEvent.id)
             activeRun.assistantParts.splice(
               0,
               activeRun.assistantParts.length,
@@ -739,10 +757,10 @@ export const registerAiHandlers = (): void => {
               observation: 'Tool is running.'
             })
             aiChatService.upsertToolCall({
-              id: `${runId}-${agentEvent.id}`,
+              id: createCompactUuid(),
               runId,
               messageId: assistantMessageId,
-              toolCallId: agentEvent.id,
+              toolCallId: persistedToolCallId,
               name: agentEvent.name,
               status: 'running',
               input: agentEvent.input,
@@ -754,6 +772,7 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'tool_finished') {
+            const persistedToolCallId = resolveToolCallId(agentEvent.id)
             const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const isAskRequest = isAskRequestData(agentEvent.data)
             const nextToolStep: AiToolStep = {
@@ -778,10 +797,10 @@ export const registerAiHandlers = (): void => {
             }
 
             aiChatService.upsertToolCall({
-              id: `${runId}-${agentEvent.id}`,
+              id: createCompactUuid(),
               runId,
               messageId: assistantMessageId,
-              toolCallId: agentEvent.id,
+              toolCallId: persistedToolCallId,
               name: agentEvent.name,
               status: isAskRequest ? 'running' : 'done',
               input: nextToolStep.input ?? {},
@@ -793,6 +812,7 @@ export const registerAiHandlers = (): void => {
           }
 
           if (agentEvent.type === 'tool_failed') {
+            const persistedToolCallId = resolveToolCallId(agentEvent.id)
             const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const isAskCancelled = agentEvent.name === 'ask_user' && agentEvent.error === ASK_CANCELLED_MESSAGE
             const nextToolStep: AiToolStep = {
@@ -819,10 +839,10 @@ export const registerAiHandlers = (): void => {
             }
 
             aiChatService.upsertToolCall({
-              id: `${runId}-${agentEvent.id}`,
+              id: createCompactUuid(),
               runId,
               messageId: assistantMessageId,
-              toolCallId: agentEvent.id,
+              toolCallId: persistedToolCallId,
               name: agentEvent.name,
               status: 'failed',
               input: agentEvent.input,

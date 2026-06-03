@@ -9,9 +9,19 @@ import {
   migrateLegacySchema
 } from '../../../src/main/db/index'
 
+// 内存字段结构。
+type MemoryColumn = {
+  // SQLite 声明类型。
+  type: string
+  // 是否为主键字段。
+  primaryKey: boolean
+}
+
 // 内存表结构。
 type MemoryTable = {
-  columns: Record<string, string>
+  // 字段定义集合。
+  columns: Record<string, MemoryColumn>
+  // 测试行集合。
   rows: Array<Record<string, unknown>>
 }
 
@@ -24,7 +34,7 @@ class MemoryMigrationDatabase {
   private indexes = new Set<string>()
 
   /**
-   * 直接写入测试行，避免依赖真实 SQLite。
+   * 直接写入测试行，避免依赖真实 SQLite native 模块。
    */
   insertRow = (tableName: string, row: Record<string, unknown>): void => {
     const table = this.tables.get(tableName)
@@ -37,12 +47,26 @@ class MemoryMigrationDatabase {
   }
 
   /**
+   * 读取字段定义。
+   */
+  getColumn = (tableName: string, columnName: string): MemoryColumn => {
+    const column = this.tables.get(tableName)?.columns[columnName]
+
+    if (!column) {
+      throw new Error(`字段不存在: ${tableName}.${columnName}`)
+    }
+
+    return column
+  }
+
+  /**
    * 准备内存 SQL 语句。
    */
   prepare = (sql: string) => {
     if (sql === "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?") {
       return {
-        get: (tableName?: string) => (tableName && this.tables.has(tableName) ? { name: tableName } : undefined)
+        get: (tableName?: string) =>
+          tableName && this.tables.has(tableName) ? { name: tableName } : undefined
       }
     }
 
@@ -59,39 +83,42 @@ class MemoryMigrationDatabase {
             return undefined
           }
 
-          const columnType = this.tables.get(tableName)?.columns[columnName]
-          return columnType ? { type: columnType } : undefined
+          const column = this.tables.get(tableName)?.columns[columnName]
+          return column ? { type: column.type } : undefined
         }
       }
     }
 
-    if (sql === "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_todos'") {
+    const tableLookup = sql.match(
+      /^SELECT name FROM sqlite_master WHERE type = 'table' AND name = '(\w+)'$/
+    )
+
+    if (tableLookup) {
+      const [, tableName] = tableLookup
       return {
-        get: (_?: unknown) => (this.tables.has('workspace_todos') ? { name: 'workspace_todos' } : undefined)
+        get: (_?: unknown) => (this.tables.has(tableName) ? { name: tableName } : undefined)
       }
     }
 
-    if (sql === "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_snippets'") {
-      return {
-        get: (_?: unknown) => (this.tables.has('workspace_snippets') ? { name: 'workspace_snippets' } : undefined)
-      }
-    }
+    const selectMatched = sql.match(/^SELECT ([\w,\s]+) FROM (\w+)/)
 
-    if (sql === 'SELECT id, title, content, source, tags, time, is_curated, clue FROM notes') {
-      return {
-        get: (_?: unknown) => this.tables.get('notes')?.rows[0]
-      }
-    }
+    if (selectMatched) {
+      const [, columnsText, tableName] = selectMatched
+      const columns = columnsText.split(',').map((column) => column.trim())
 
-    if (sql === 'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos') {
       return {
-        get: (_?: unknown) => this.tables.get('todos')?.rows[0]
-      }
-    }
+        get: (_?: unknown) => {
+          const row = this.tables.get(tableName)?.rows[0]
 
-    if (sql === 'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets') {
-      return {
-        get: (_?: unknown) => this.tables.get('snippets')?.rows[0]
+          if (!row) {
+            return undefined
+          }
+
+          return columns.reduce<Record<string, unknown>>((selectedRow, columnName) => {
+            selectedRow[columnName] = row[columnName]
+            return selectedRow
+          }, {})
+        }
       }
     }
 
@@ -113,21 +140,7 @@ class MemoryMigrationDatabase {
         }
 
         if (statement.startsWith('ALTER TABLE')) {
-          const matched = statement.match(/^ALTER TABLE (\w+) RENAME TO (\w+)$/)
-
-          if (!matched) {
-            throw new Error(`未支持的测试 SQL: ${statement}`)
-          }
-
-          const [, fromTable, toTable] = matched
-          const table = this.tables.get(fromTable)
-
-          if (!table) {
-            throw new Error(`表不存在: ${fromTable}`)
-          }
-
-          this.tables.set(toTable, table)
-          this.tables.delete(fromTable)
+          this.renameTable(statement)
           return
         }
 
@@ -168,6 +181,39 @@ class MemoryMigrationDatabase {
   }
 
   /**
+   * 按顶层逗号拆分字段定义。
+   */
+  private splitTopLevel = (value: string): string[] => {
+    const parts: string[] = []
+    let depth = 0
+    let current = ''
+
+    for (const char of value) {
+      if (char === '(') {
+        depth += 1
+      }
+
+      if (char === ')') {
+        depth -= 1
+      }
+
+      if (char === ',' && depth === 0) {
+        parts.push(current.trim())
+        current = ''
+        continue
+      }
+
+      current += char
+    }
+
+    if (current.trim()) {
+      parts.push(current.trim())
+    }
+
+    return parts
+  }
+
+  /**
    * 创建内存表。
    */
   private createTable = (statement: string): void => {
@@ -178,11 +224,13 @@ class MemoryMigrationDatabase {
     }
 
     const [, tableName, columnsDefinition] = matched
-    const columns = columnsDefinition
-      .split(',')
-      .map((column) => column.trim())
-      .filter(Boolean)
-      .reduce<Record<string, string>>((currentColumns, columnDefinition) => {
+
+    if (statement.startsWith('CREATE TABLE IF NOT EXISTS') && this.tables.has(tableName)) {
+      return
+    }
+
+    const columns = this.splitTopLevel(columnsDefinition).reduce<Record<string, MemoryColumn>>(
+      (currentColumns, columnDefinition) => {
         if (/^(UNIQUE|PRIMARY|FOREIGN|CHECK)\b/i.test(columnDefinition)) {
           return currentColumns
         }
@@ -192,9 +240,14 @@ class MemoryMigrationDatabase {
           return currentColumns
         }
 
-        currentColumns[columnName] = columnType.toUpperCase()
+        currentColumns[columnName] = {
+          type: columnType.toUpperCase(),
+          primaryKey: /\bPRIMARY\s+KEY\b/i.test(columnDefinition)
+        }
         return currentColumns
-      }, {})
+      },
+      {}
+    )
 
     this.tables.set(tableName, {
       columns,
@@ -203,7 +256,28 @@ class MemoryMigrationDatabase {
   }
 
   /**
-   * 复制旧表数据到新表，同时在整数主键表上自动分配顺序主键。
+   * 重命名内存表。
+   */
+  private renameTable = (statement: string): void => {
+    const matched = statement.match(/^ALTER TABLE (\w+) RENAME TO (\w+)$/)
+
+    if (!matched) {
+      throw new Error(`未支持的测试 SQL: ${statement}`)
+    }
+
+    const [, fromTable, toTable] = matched
+    const table = this.tables.get(fromTable)
+
+    if (!table) {
+      throw new Error(`表不存在: ${fromTable}`)
+    }
+
+    this.tables.set(toTable, table)
+    this.tables.delete(fromTable)
+  }
+
+  /**
+   * 复制旧表数据到新表，同时给整型主键自动分配顺序 id。
    */
   private copyRows = (statement: string): void => {
     const matched = statement.match(
@@ -214,7 +288,8 @@ class MemoryMigrationDatabase {
       throw new Error(`未支持的测试 SQL: ${statement}`)
     }
 
-    const [, targetTableName, insertColumnsText, selectColumnsText, sourceTableName, orderByText] = matched
+    const [, targetTableName, insertColumnsText, selectColumnsText, sourceTableName, orderByText] =
+      matched
     const targetTable = this.tables.get(targetTableName)
     const sourceTable = this.tables.get(sourceTableName)
 
@@ -224,7 +299,9 @@ class MemoryMigrationDatabase {
 
     const insertColumns = insertColumnsText.split(',').map((column) => column.trim())
     const selectColumns = selectColumnsText.split(',').map((column) => column.trim())
-    const orderColumns = orderByText.split(',').map((column) => column.trim().replace(/\s+(ASC|DESC)$/i, ''))
+    const orderColumns = orderByText
+      .split(',')
+      .map((column) => column.trim().replace(/\s+(ASC|DESC)$/i, ''))
     const sortedRows = [...sourceTable.rows].sort((left, right) => {
       for (const column of orderColumns) {
         const leftValue = left[column]
@@ -241,12 +318,15 @@ class MemoryMigrationDatabase {
     })
 
     targetTable.rows = sortedRows.map((sourceRow, index) => {
-      const nextRow = insertColumns.reduce<Record<string, unknown>>((currentRow, columnName, columnIndex) => {
-        currentRow[columnName] = sourceRow[selectColumns[columnIndex]]
-        return currentRow
-      }, {})
+      const nextRow = insertColumns.reduce<Record<string, unknown>>(
+        (currentRow, columnName, columnIndex) => {
+          currentRow[columnName] = sourceRow[selectColumns[columnIndex]]
+          return currentRow
+        },
+        {}
+      )
 
-      if (targetTable.columns.id === 'INTEGER') {
+      if (targetTable.columns.id?.type === 'INTEGER') {
         nextRow.id = index + 1
       }
 
@@ -279,8 +359,87 @@ class MemoryMigrationDatabase {
   }
 }
 
+/**
+ * 创建全部业务表。
+ */
+const createAllTables = (database: MemoryMigrationDatabase): void => {
+  createNotesTable(database as never)
+  createTodosTable(database as never)
+  createSnippetsTable(database as never)
+  createJournalsTable(database as never)
+  createAssociatedPeopleTable(database as never)
+  createAiChatPersistenceTables(database as never)
+}
+
+/**
+ * 断言表存在整型 id 主键。
+ */
+const expectIntegerPrimaryKeyId = (
+  database: MemoryMigrationDatabase,
+  tableName: string
+): void => {
+  const column = database.getColumn(tableName, 'id')
+
+  expect(column.type).toBe('INTEGER')
+  expect(column.primaryKey).toBe(true)
+}
+
+/**
+ * 断言字段使用时间戳声明。
+ */
+const expectTimestampColumn = (
+  database: MemoryMigrationDatabase,
+  tableName: string,
+  columnName: string
+): void => {
+  expect(database.getColumn(tableName, columnName).type).toBe('TIMESTAMP')
+}
+
 describe('db schema migration', () => {
-  it('会将旧版文本主键表迁移为整数主键并保留数据', () => {
+  it('创建的新表统一使用整型 id 主键和时间戳字段', () => {
+    const database = new MemoryMigrationDatabase()
+
+    createAllTables(database)
+
+    ;[
+      'notes',
+      'todos',
+      'snippets',
+      'journals',
+      'associated_people',
+      'ai_chat_sessions',
+      'ai_chat_messages',
+      'ai_agent_runs',
+      'ai_agent_tool_calls',
+      'ai_agent_context_snapshots'
+    ].forEach((tableName) => expectIntegerPrimaryKeyId(database, tableName))
+
+    ;[
+      ['notes', 'time'],
+      ['todos', 'created_at'],
+      ['todos', 'updated_at'],
+      ['snippets', 'created_at'],
+      ['snippets', 'updated_at'],
+      ['journals', 'created_at'],
+      ['journals', 'updated_at'],
+      ['associated_people', 'created_at'],
+      ['associated_people', 'updated_at'],
+      ['ai_chat_sessions', 'created_at'],
+      ['ai_chat_sessions', 'updated_at'],
+      ['ai_chat_sessions', 'last_message_at'],
+      ['ai_chat_messages', 'time'],
+      ['ai_chat_messages', 'created_at'],
+      ['ai_chat_messages', 'updated_at'],
+      ['ai_agent_runs', 'started_at'],
+      ['ai_agent_runs', 'finished_at'],
+      ['ai_agent_tool_calls', 'created_at'],
+      ['ai_agent_tool_calls', 'updated_at']
+    ].forEach(([tableName, columnName]) =>
+      expectTimestampColumn(database, tableName, columnName)
+    )
+  })
+
+  it('迁移旧版文本主键表为整型 id 主键并保留业务数据', () => {
     const database = new MemoryMigrationDatabase()
 
     database.exec(`
@@ -315,6 +474,37 @@ describe('db schema migration', () => {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE TABLE journals (
+        entry_date TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE associated_people (
+        id TEXT PRIMARY KEY,
+        avatar TEXT NOT NULL,
+        name TEXT NOT NULL,
+        gender TEXT NOT NULL,
+        relationship TEXT NOT NULL,
+        status TEXT NOT NULL,
+        birthday TEXT NOT NULL,
+        contact TEXT NOT NULL,
+        tags TEXT NOT NULL,
+        details TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE ai_chat_sessions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_message_at TEXT NOT NULL
+      );
     `)
 
     database.insertRow('notes', {
@@ -346,103 +536,96 @@ describe('db schema migration', () => {
       created_at: '2026-05-27 09:32',
       updated_at: '2026-05-27 09:32'
     })
+    database.insertRow('journals', {
+      entry_date: '2026-05-27',
+      content: '旧日记',
+      created_at: '2026-05-27 09:33',
+      updated_at: '2026-05-27 09:33'
+    })
+    database.insertRow('associated_people', {
+      id: 'person-legacy-1',
+      avatar: '',
+      name: '阿明',
+      gender: '男',
+      relationship: '朋友',
+      status: '在线',
+      birthday: '2000-01-01',
+      contact: '',
+      tags: '["老友"]',
+      details: '旧档案',
+      created_at: '2026-05-27 09:34',
+      updated_at: '2026-05-27 09:34'
+    })
+    database.insertRow('ai_chat_sessions', {
+      id: 'session-legacy-1',
+      title: '旧对话',
+      status: '运行完成',
+      created_at: '2026-05-27 09:35',
+      updated_at: '2026-05-27 09:35',
+      last_message_at: '2026-05-27 09:35'
+    })
 
     migrateLegacySchema(database as never)
-    createNotesTable(database as never)
-    createTodosTable(database as never)
-    createSnippetsTable(database as never)
-    createJournalsTable(database as never)
-    createAssociatedPeopleTable(database as never)
-    createAiChatPersistenceTables(database as never)
+    createAllTables(database)
 
-    const notesIdType = database.prepare("SELECT type FROM pragma_table_info('notes') WHERE name = 'id'").get('id') as {
-      type: string
-    }
-    const todosIdType = database.prepare("SELECT type FROM pragma_table_info('todos') WHERE name = 'id'").get('id') as {
-      type: string
-    }
-    const snippetsIdType = database
-      .prepare("SELECT type FROM pragma_table_info('snippets') WHERE name = 'id'")
-      .get('id') as {
-      type: string
-    }
-    const associatedPeopleIdType = database
-      .prepare("SELECT type FROM pragma_table_info('associated_people') WHERE name = 'id'")
-      .get('id') as {
-      type: string
-    }
-    const aiSessionIdType = database
-      .prepare("SELECT type FROM pragma_table_info('ai_chat_sessions') WHERE name = 'id'")
-      .get('id') as { type: string }
-    const aiMessageSessionIdType = database
-      .prepare("SELECT type FROM pragma_table_info('ai_chat_messages') WHERE name = 'session_id'")
-      .get('session_id') as { type: string }
-    const migratedNote = database.prepare('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes').get() as {
-      id: number
-      title: string
-      content: string
-      source: string
-      tags: string
-      time: string
-      is_curated: number
-      clue: string | null
-    }
-    const migratedTodo = database
-      .prepare('SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos')
-      .get() as {
-      id: number
-      entry_date: string
-      text: string
-      priority: string
-      completed: number
-      sort_order: number
-      created_at: string
-      updated_at: string
-    }
-    const migratedSnippet = database
-      .prepare('SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets')
-      .get() as {
-      id: number
-      entry_date: string
-      title: string
-      content: string
-      tags: string
-      created_at: string
-      updated_at: string
-    }
+    ;[
+      'notes',
+      'todos',
+      'snippets',
+      'journals',
+      'associated_people',
+      'ai_chat_sessions'
+    ].forEach((tableName) => expectIntegerPrimaryKeyId(database, tableName))
 
-    expect(notesIdType.type).toBe('INTEGER')
-    expect(todosIdType.type).toBe('INTEGER')
-    expect(snippetsIdType.type).toBe('INTEGER')
-    expect(associatedPeopleIdType.type).toBe('TEXT')
-    expect(aiSessionIdType.type).toBe('TEXT')
-    expect(aiMessageSessionIdType.type).toBe('TEXT')
-    expect(migratedNote).toMatchObject({
+    expectTimestampColumn(database, 'notes', 'time')
+    expectTimestampColumn(database, 'todos', 'created_at')
+    expectTimestampColumn(database, 'snippets', 'created_at')
+    expectTimestampColumn(database, 'journals', 'created_at')
+    expectTimestampColumn(database, 'associated_people', 'created_at')
+    expectTimestampColumn(database, 'ai_chat_sessions', 'created_at')
+
+    expect(database.prepare('SELECT id, title FROM notes').get()).toMatchObject({
       id: 1,
-      title: '旧笔记',
-      content: '旧内容',
-      source: '随手速记',
-      tags: '["迁移"]',
-      time: '2026-05-27 09:30',
-      is_curated: 0,
-      clue: '旧线索'
+      title: '旧笔记'
     })
-    expect(migratedTodo).toMatchObject({
+    expect(database.prepare('SELECT id, text FROM todos').get()).toMatchObject({
+      id: 1,
+      text: '旧待办'
+    })
+    expect(database.prepare('SELECT id, title FROM snippets').get()).toMatchObject({
+      id: 1,
+      title: '旧片段'
+    })
+    expect(database.prepare('SELECT id, entry_date, content FROM journals').get()).toMatchObject({
       id: 1,
       entry_date: '2026-05-27',
-      text: '旧待办',
-      priority: 'P1',
-      completed: 0,
-      sort_order: 0
+      content: '旧日记'
     })
-    expect(migratedSnippet).toMatchObject({
+    expect(
+      database.prepare('SELECT id, external_id, name FROM associated_people').get()
+    ).toMatchObject({
       id: 1,
-      entry_date: '2026-05-27',
-      title: '旧片段',
-      content: '旧片段内容',
-      tags: '["迁移"]'
+      external_id: 'person-legacy-1',
+      name: '阿明'
     })
-    expect(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_todos'").get()).toBeUndefined()
-    expect(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_snippets'").get()).toBeUndefined()
+    expect(
+      database.prepare('SELECT id, external_id, status FROM ai_chat_sessions').get()
+    ).toMatchObject({
+      id: 1,
+      external_id: 'session-legacy-1',
+      status: 'completed'
+    })
+    expect(
+      database
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_todos'")
+        .get()
+    ).toBeUndefined()
+    expect(
+      database
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'workspace_snippets'"
+        )
+        .get()
+    ).toBeUndefined()
   })
 })

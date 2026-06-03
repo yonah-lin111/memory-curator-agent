@@ -506,7 +506,7 @@ export const createAiChatPersistenceService = (
           OR EXISTS (
             SELECT 1
             FROM ai_chat_messages
-            WHERE ai_chat_messages.session_id = ai_chat_sessions.id
+            WHERE ai_chat_messages.session_id = ai_chat_sessions.external_id
               AND ai_chat_messages.content LIKE ?
           )
       `
@@ -527,7 +527,7 @@ export const createAiChatPersistenceService = (
       database
         .prepare(
           `
-            SELECT id, title, status, created_at, updated_at, last_message_at
+            SELECT external_id AS id, title, status, created_at, updated_at, last_message_at
             FROM ai_chat_sessions
             ${whereClause}
             ORDER BY updated_at DESC
@@ -542,9 +542,9 @@ export const createAiChatPersistenceService = (
     const session = database
       .prepare(
         `
-          SELECT id, title, status, created_at, updated_at, last_message_at
+          SELECT external_id AS id, title, status, created_at, updated_at, last_message_at
           FROM ai_chat_sessions
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .get(sessionId) as AiChatSessionRow | undefined
@@ -556,7 +556,7 @@ export const createAiChatPersistenceService = (
     const messages = database
       .prepare(
         `
-          SELECT id, session_id, role, content, answer, parts_json, tool_steps_json, time, created_at, updated_at
+          SELECT external_id AS id, session_id, role, content, answer, parts_json, tool_steps_json, time, created_at, updated_at
           FROM ai_chat_messages
           WHERE session_id = ?
           ORDER BY created_at ASC, rowid ASC
@@ -574,7 +574,7 @@ export const createAiChatPersistenceService = (
           UPDATE ai_chat_sessions
           SET title = ?,
               updated_at = ?
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .run(title, timestamp, sessionId)
@@ -585,7 +585,7 @@ export const createAiChatPersistenceService = (
       const runs = database
         .prepare(
           `
-            SELECT id
+            SELECT external_id AS id
             FROM ai_agent_runs
             WHERE session_id = ?
           `
@@ -599,7 +599,7 @@ export const createAiChatPersistenceService = (
 
       database.prepare('DELETE FROM ai_agent_runs WHERE session_id = ?').run(sessionId)
       database.prepare('DELETE FROM ai_chat_messages WHERE session_id = ?').run(sessionId)
-      database.prepare('DELETE FROM ai_chat_sessions WHERE id = ?').run(sessionId)
+      database.prepare('DELETE FROM ai_chat_sessions WHERE external_id = ?').run(sessionId)
     })
   }
 
@@ -610,7 +610,7 @@ export const createAiChatPersistenceService = (
     database
       .prepare(
         `
-          SELECT rowid AS row_order, id, role, content, created_at
+          SELECT rowid AS row_order, external_id AS id, role, content, created_at
           FROM ai_chat_messages
           WHERE session_id = ?
           ORDER BY created_at ASC, rowid ASC
@@ -633,7 +633,7 @@ export const createAiChatPersistenceService = (
     const runs = database
       .prepare(
         `
-          SELECT id
+          SELECT external_id AS id
           FROM ai_agent_runs
           WHERE session_id = ? AND assistant_message_id IN (${assistantPlaceholders})
         `
@@ -650,7 +650,7 @@ export const createAiChatPersistenceService = (
     }
 
     const runPlaceholders = runs.map(() => '?').join(', ')
-    database.prepare(`DELETE FROM ai_agent_runs WHERE id IN (${runPlaceholders})`).run(
+    database.prepare(`DELETE FROM ai_agent_runs WHERE external_id IN (${runPlaceholders})`).run(
       ...runs.map((run) => run.id)
     )
   }
@@ -675,7 +675,7 @@ export const createAiChatPersistenceService = (
 
     if (removedMessageIds.length > 0) {
       const messagePlaceholders = removedMessageIds.map(() => '?').join(', ')
-      database.prepare(`DELETE FROM ai_chat_messages WHERE id IN (${messagePlaceholders})`).run(
+      database.prepare(`DELETE FROM ai_chat_messages WHERE external_id IN (${messagePlaceholders})`).run(
         ...removedMessageIds
       )
     }
@@ -696,7 +696,7 @@ export const createAiChatPersistenceService = (
               status = ?,
               updated_at = ?,
               last_message_at = ?
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .run(
@@ -765,9 +765,9 @@ export const createAiChatPersistenceService = (
     database
       .prepare(
         `
-          INSERT INTO ai_chat_sessions (id, title, status, created_at, updated_at, last_message_at)
+          INSERT INTO ai_chat_sessions (external_id, title, status, created_at, updated_at, last_message_at)
           VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET
+          ON CONFLICT(external_id) DO UPDATE SET
             title = CASE
               WHEN ai_chat_sessions.title = '新建对话' THEN excluded.title
               ELSE ai_chat_sessions.title
@@ -791,7 +791,7 @@ export const createAiChatPersistenceService = (
       .prepare(
         `
           INSERT INTO ai_chat_messages (
-            id,
+            external_id,
             session_id,
             role,
             content,
@@ -823,7 +823,7 @@ export const createAiChatPersistenceService = (
         `
           UPDATE ai_chat_sessions
           SET updated_at = ?, last_message_at = ?
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .run(input.timestamp, input.timestamp, input.sessionId)
@@ -839,7 +839,7 @@ export const createAiChatPersistenceService = (
               parts_json = ?,
               tool_steps_json = ?,
               updated_at = ?
-          WHERE id = ? AND role = 'assistant'
+          WHERE external_id = ? AND role = 'assistant'
         `
       )
       .run(
@@ -857,7 +857,7 @@ export const createAiChatPersistenceService = (
       .prepare(
         `
           INSERT INTO ai_agent_runs (
-            id,
+            external_id,
             session_id,
             assistant_message_id,
             provider,
@@ -927,7 +927,7 @@ export const createAiChatPersistenceService = (
           SET status = ?,
               error = ?,
               finished_at = ?
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .run(input.status, input.error ?? null, input.timestamp, input.id)
@@ -954,9 +954,9 @@ export const createAiChatPersistenceService = (
     const row = database
       .prepare(
         `
-          SELECT id, session_id, assistant_message_id, provider, model, status, error, started_at, finished_at
+          SELECT external_id AS id, session_id, assistant_message_id, provider, model, status, error, started_at, finished_at
           FROM ai_agent_runs
-          WHERE id = ?
+          WHERE external_id = ?
         `
       )
       .get(runId) as AiAgentRunRow | undefined
@@ -969,7 +969,7 @@ export const createAiChatPersistenceService = (
       .prepare(
         `
           INSERT INTO ai_agent_tool_calls (
-            id,
+            external_id,
             run_id,
             message_id,
             tool_call_id,
@@ -1015,7 +1015,7 @@ export const createAiChatPersistenceService = (
       database
         .prepare(
           `
-            SELECT id, run_id, message_id, tool_call_id, name, status, input_json, observation, data_json, error
+            SELECT external_id AS id, run_id, message_id, tool_call_id, name, status, input_json, observation, data_json, error
             FROM ai_agent_tool_calls
             WHERE run_id = ?
             ORDER BY created_at ASC

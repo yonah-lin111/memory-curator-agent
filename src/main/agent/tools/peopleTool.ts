@@ -30,11 +30,11 @@ const PEOPLE_TABLE_NAME = "associated_people";
 
 // People 查询字段清单。
 const PEOPLE_COLUMNS =
-  "id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at";
+  "external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at";
 
 // People 默认查询字段清单，不包含 details。
 const DEFAULT_PEOPLE_COLUMNS =
-  "id, avatar, name, gender, relationship, status, birthday, contact, tags, created_at, updated_at";
+  "external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, created_at, updated_at";
 
 // 禁止 AI SQL 使用的高风险关键字。
 const FORBIDDEN_SQL_PATTERN =

@@ -97,6 +97,7 @@ describe("JournalPage", () => {
       .mockResolvedValueOnce(
         createDailyDayData({
           journal: {
+            id: 1,
             entryDate: "2026-05-27",
             content: "今天的日记",
             createdAt: "2026-05-27 09:00",
@@ -107,6 +108,7 @@ describe("JournalPage", () => {
       .mockResolvedValueOnce(
         createDailyDayData({
           journal: {
+            id: 2,
             entryDate: "2026-05-26",
             content: "昨天的日记",
             createdAt: "2026-05-26 09:00",
@@ -195,6 +197,7 @@ describe("JournalPage", () => {
       .mockResolvedValueOnce(
         createDailyDayData({
           journal: {
+            id: 3,
             entryDate: "2026-05-26",
             content: "昨天内容",
             createdAt: "2026-05-26 09:00",
@@ -203,6 +206,7 @@ describe("JournalPage", () => {
         }),
       );
     const saveJournal = vi.fn().mockResolvedValue({
+      id: 5,
       entryDate: "2026-05-27",
       content: "待保存草稿",
       createdAt: "2026-05-27 09:00",
@@ -234,6 +238,7 @@ describe("JournalPage", () => {
     const user = userEvent.setup();
 
     const saveJournal = vi.fn().mockResolvedValue({
+      id: 6,
       entryDate: "2026-05-27",
       content: "新的内容",
       createdAt: "2026-05-27 09:00",
@@ -267,6 +272,7 @@ describe("JournalPage", () => {
     window.api.daily.listDay = vi.fn().mockResolvedValue(
       createDailyDayData({
         journal: {
+          id: 4,
           entryDate: "2026-05-27",
           content: "旧内容",
           createdAt: "2026-05-27 09:00",

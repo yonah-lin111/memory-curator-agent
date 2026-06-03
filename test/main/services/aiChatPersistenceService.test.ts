@@ -43,12 +43,12 @@ describe('aiChatPersistenceService', () => {
     ).toBeUndefined()
     expect(
       database
-        .prepare('SELECT id, status FROM ai_chat_sessions ORDER BY id ASC')
+        .prepare('SELECT id, external_id, status FROM ai_chat_sessions ORDER BY external_id ASC')
         .all()
     ).toEqual([
-      { id: 's-completed', status: 'completed' },
-      { id: 's-failed', status: 'failed' },
-      { id: 's-running', status: 'running' }
+      { id: 2, external_id: 's-completed', status: 'completed' },
+      { id: 3, external_id: 's-failed', status: 'failed' },
+      { id: 1, external_id: 's-running', status: 'running' }
     ])
   })
 

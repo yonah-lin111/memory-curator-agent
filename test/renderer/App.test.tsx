@@ -369,19 +369,19 @@ describe('App', () => {
               status: 'running',
               messages: [
                 {
-                  id: `${capturedPayload.runId}-user`,
+                  id: capturedPayload.userMessageId ?? 'fallback-user-message',
                   role: 'user',
                   content: capturedPayload.message,
                   time: '10:24'
                 },
                 {
-                  id: `${capturedPayload.runId}-assistant`,
+                  id: capturedPayload.assistantMessageId ?? 'fallback-assistant-message',
                   role: 'assistant',
                   content: 'AI 已生成回答',
                   answer: '切换前',
                   parts: [
                     {
-                      id: `${capturedPayload.runId}-assistant-text-0`,
+                      id: `${capturedPayload.assistantMessageId ?? 'fallback-assistant-message'}-text-0`,
                       kind: 'text',
                       content: '切换前'
                     }

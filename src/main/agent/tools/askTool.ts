@@ -1,3 +1,4 @@
+import { createCompactUuid } from '../../id'
 import type { AgentTool, AgentToolResult } from '../types'
 
 // Ask 选项。
@@ -74,9 +75,6 @@ const MAX_ASK_TEXT_LENGTH = 160
 
 // Ask 自定义选项值。
 const CUSTOM_OPTION_LABEL = '自定义'
-
-// Ask 请求序号。
-let nextAskId = 1
 
 /**
  * 判断值是否为普通对象。
@@ -168,9 +166,7 @@ const parseInput = (input: unknown): AskToolInput => {
  * 创建 Ask 请求 ID。
  */
 const createAskId = (): string => {
-  const id = `ask_${Date.now()}_${nextAskId}`
-  nextAskId += 1
-  return id
+  return createCompactUuid()
 }
 
 /**

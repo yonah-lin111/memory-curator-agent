@@ -2,6 +2,7 @@ import type {
   AiChatSession,
   AiChatSessionStatus,
 } from "@renderer/features/ai-chat/types";
+import { createAiChatUuid } from "@renderer/features/ai-chat/core/aiChatIds";
 
 // AI 对话消息类型。
 type AiChatMessage = AiChatSession["messages"][number];
@@ -138,7 +139,7 @@ export const createEmptyAiChatSession = (): AiChatSession => {
   });
 
   return {
-    id: `session-${Date.now()}`,
+    id: createAiChatUuid(),
     title: "新建对话",
     time: `${dateStr} ${timeStr}`,
     status: "idle",

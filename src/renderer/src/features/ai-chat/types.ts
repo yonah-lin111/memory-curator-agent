@@ -46,6 +46,10 @@ export type AiChatStartContextItem = {
 export type AiChatStartPayload = {
   // Agent 运行 ID。
   runId?: string;
+  // 用户消息 ID。
+  userMessageId?: string;
+  // 助手消息 ID。
+  assistantMessageId?: string;
   // 会话 ID。
   sessionId: string;
   // 用户消息。

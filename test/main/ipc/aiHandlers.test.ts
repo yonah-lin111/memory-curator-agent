@@ -6,6 +6,9 @@ import { getDatabase } from '../../../src/main/db'
 import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '../../../src/main/ipc/aiHandlers'
 import { createAiChatPersistenceService } from '../../../src/main/services/aiChatPersistenceService'
 
+// 无连接符 UUID 形态。
+const UUID_PATTERN = /^[\da-f]{32}$/i
+
 vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn()
@@ -212,6 +215,8 @@ describe('aiHandlers', () => {
       { sender: { send } } as never,
       {
         runId: 'run-1',
+        userMessageId: '11111111111141118111111111111111',
+        assistantMessageId: '22222222222242228222222222222222',
         sessionId: 's1',
         message: '找阿明',
         provider: 'bailian',
@@ -225,8 +230,8 @@ describe('aiHandlers', () => {
     expect(result).toEqual({ runId: 'run-1' })
     expect(service.createRunWithMessages).toHaveBeenCalledWith({
       session: expect.objectContaining({ id: 's1', title: '找阿明', status: 'running' }),
-      userMessage: expect.objectContaining({ id: 'run-1-user', role: 'user' }),
-      assistantMessage: expect.objectContaining({ id: 'run-1-assistant', role: 'assistant' }),
+      userMessage: expect.objectContaining({ id: '11111111111141118111111111111111', role: 'user' }),
+      assistantMessage: expect.objectContaining({ id: '22222222222242228222222222222222', role: 'assistant' }),
       run: expect.objectContaining({ id: 'run-1', sessionId: 's1' })
     })
     expect(service.updateSessionTitle).toHaveBeenCalledWith('s1', '用户询问AI身份', expect.any(String))
@@ -239,11 +244,14 @@ describe('aiHandlers', () => {
         title: '用户询问AI身份'
       })
     )
-    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'running' }))
-    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: 'call-1', status: 'done' }))
+    const persistedToolCallIds = vi.mocked(service.upsertToolCall).mock.calls.map(([input]) => input.toolCallId)
+    expect(persistedToolCallIds[0]).toMatch(UUID_PATTERN)
+    expect(persistedToolCallIds[1]).toBe(persistedToolCallIds[0])
+    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: persistedToolCallIds[0], status: 'running' }))
+    expect(service.upsertToolCall).toHaveBeenCalledWith(expect.objectContaining({ toolCallId: persistedToolCallIds[0], status: 'done' }))
     expect(service.updateAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        messageId: 'run-1-assistant',
+        messageId: '22222222222242228222222222222222',
         answer: '你好',
         toolSteps: [expect.objectContaining({ id: 'call-1', status: 'done' })]
       })
@@ -364,6 +372,8 @@ describe('aiHandlers', () => {
       { sender: { send } } as never,
       {
         runId: 'run-ask',
+        userMessageId: '33333333333343338333333333333333',
+        assistantMessageId: '44444444444444448444444444444444',
         sessionId: 's1',
         message: '需要澄清',
         provider: 'bailian',
@@ -374,9 +384,12 @@ describe('aiHandlers', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
+    const askToolCallIds = vi.mocked(service.upsertToolCall).mock.calls.map(([input]) => input.toolCallId)
+    expect(askToolCallIds[0]).toMatch(UUID_PATTERN)
+    expect(new Set(askToolCallIds).size).toBe(1)
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
-        toolCallId: 'call-ask',
+        toolCallId: askToolCallIds[0],
         name: 'ask_user',
         status: 'running',
         observation: 'Ask request created: waiting for the user.'
@@ -384,7 +397,7 @@ describe('aiHandlers', () => {
     )
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
-        toolCallId: 'call-ask',
+        toolCallId: askToolCallIds[0],
         name: 'ask_user',
         status: 'failed',
         observation: 'Ask was cancelled.',
@@ -393,7 +406,7 @@ describe('aiHandlers', () => {
     )
     expect(service.updateAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        messageId: 'run-ask-assistant',
+        messageId: '44444444444444448444444444444444',
         answer: '需要确认范围。',
         parts: [
           expect.objectContaining({ kind: 'text', content: '需要确认范围。' }),

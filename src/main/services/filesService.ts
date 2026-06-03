@@ -1,6 +1,6 @@
 import { access, mkdir, readdir, rename, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
-import { randomUUID } from 'node:crypto'
+import { createCompactUuid } from '../id'
 import { getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir } from '../paths'
 import { createMarkdownImageUrl, createPeopleAvatarUrl } from '../protocols/markdownImages'
 
@@ -244,7 +244,7 @@ const createTrashTargetPath = async (trashDir: string, fileName: string): Promis
   const extension = extname(fileName)
   const stem = basename(fileName, extension)
 
-  return join(trashDir, `${stem}-${randomUUID()}${extension}`)
+  return join(trashDir, `${stem}-${createCompactUuid()}${extension}`)
 }
 
 /**
@@ -290,7 +290,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
-      const fileName = `${createSafeFileStem(input.name)}-${randomUUID()}${extension}`
+      const fileName = `${createSafeFileStem(input.name)}-${createCompactUuid()}${extension}`
       const filePath = join(markdownImageDir, fileName)
 
       await mkdir(markdownImageDir, { recursive: true })
@@ -308,7 +308,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
-      const fileName = `${createSafeFileStem(input.name)}-${randomUUID()}${extension}`
+      const fileName = `${createSafeFileStem(input.name)}-${createCompactUuid()}${extension}`
       const filePath = join(peopleAvatarDir, fileName)
 
       await mkdir(peopleAvatarDir, { recursive: true })
