@@ -450,6 +450,101 @@ describe('App', () => {
     })
   })
 
+  it('Ask 等待态收到标题更新后切换历史仍会取消当前 Ask', async () => {
+    const user = userEvent.setup()
+    const listeners: Array<(event: AiChatEvent) => void> = []
+    let capturedPayload: AiChatStartPayload | null = null
+    const cancelAsk = vi.fn(async () => undefined)
+
+    window.api = {
+      ai: {
+        listSessions: vi.fn(async () => [
+          {
+            id: 'new-chat',
+            title: '新建对话',
+            time: '2026-06-03 10:00',
+            status: 'idle',
+            messages: []
+          },
+          {
+            id: 'other-chat',
+            title: '其他会话',
+            time: '2026-06-03 09:00',
+            status: 'completed',
+            messages: []
+          }
+        ]),
+        getSession: vi.fn(async (sessionId: string) => ({
+          id: sessionId,
+          title: sessionId === 'new-chat' ? '新建对话' : '其他会话',
+          time: sessionId === 'new-chat' ? '2026-06-03 10:00' : '2026-06-03 09:00',
+          status: sessionId === 'new-chat' ? 'idle' : 'completed',
+          messages: []
+        })),
+        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+          capturedPayload = payload
+          return {
+            runId: payload.runId ?? 'run-test'
+          }
+        }),
+        cancelAsk,
+        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+          listeners.push(listener)
+          return () => undefined
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    await user.type(screen.getByLabelText('AI Chat Input Area'), '我的女朋友是谁')
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    await waitFor(() => {
+      expect(window.api.ai?.startChat).toHaveBeenCalled()
+    })
+
+    act(() => {
+      listeners.forEach((listener) => {
+        listener({
+          type: 'tool_finished',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          id: 'ask-1',
+          name: 'ask_user',
+          observation: 'Ask request created: waiting for the user.',
+          data: {
+            kind: 'ask_request',
+            id: 'ask-request-1',
+            questions: [
+              {
+                header: '确认',
+                question: '你指的是哪一位？',
+                options: [
+                  {
+                    label: 'A',
+                    description: '第一位'
+                  }
+                ]
+              }
+            ]
+          }
+        })
+        listener({
+          type: 'session_title_updated',
+          runId: capturedPayload!.runId!,
+          sessionId: capturedPayload!.sessionId,
+          title: '关系人物查询'
+        })
+      })
+    })
+
+    await user.click(screen.getByRole('button', { name: /其他会话/ }))
+
+    expect(cancelAsk).toHaveBeenCalledWith(capturedPayload!.runId)
+  })
+
   it('启动时优先使用持久化 AI 会话', async () => {
     window.api = {
       ai: {

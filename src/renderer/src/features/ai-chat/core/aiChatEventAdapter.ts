@@ -19,6 +19,12 @@ const ASK_CANCELLED_MESSAGE = "Ask request was cancelled.";
 // 整个 AI run 被硬取消时的固定错误文本。
 const AI_CHAT_CANCELLED_MESSAGE = "AI chat request was cancelled";
 
+// AI run 主流程生命周期。
+type AiRunState = "running" | "finished";
+
+// AI run 标题生成生命周期。
+type AiRunTitleState = "not-required" | "pending" | "confirmed";
+
 // Agent 运行消息映射关系。
 export type AiRunMessageMapping = {
   // 会话标识。
@@ -27,8 +33,10 @@ export type AiRunMessageMapping = {
   messageId: string;
   // 用户发送后先写入的乐观标题。
   optimisticTitle?: string;
-  // 是否需要等待生成标题。
-  shouldUpdateTitle?: boolean;
+  // 主流程生命周期。
+  runState: AiRunState;
+  // 标题生成生命周期。
+  titleState: AiRunTitleState;
 };
 
 // 打字机定时器类型。
@@ -166,6 +174,12 @@ export const createAiChatEventHandler = ({
   };
 
   /**
+   * 判断 run 的异步尾巴是否全部收束，可以安全删除映射。
+   */
+  const canClearRunState = (mapping: AiRunMessageMapping): boolean =>
+    mapping.runState === "finished" && mapping.titleState !== "pending";
+
+  /**
    * 合并工具开始事件。
    */
   const applyToolStarted = (
@@ -297,16 +311,17 @@ export const createAiChatEventHandler = ({
         completeAiMessageReasoningParts(message),
       );
       updateChatSessionStatus(mapping.sessionId, "completed");
-      if (mapping.shouldUpdateTitle) {
+      mapping.runState = "finished";
+      if (!canClearRunState(mapping)) {
         const timer = typewriterTimerRef.current.get(event.runId);
         if (timer) {
           clearTimeout(timer);
           typewriterTimerRef.current.delete(event.runId);
         }
         textBufferRef.current.delete(event.runId);
-      } else {
-        clearRunState(event.runId);
+        return;
       }
+      clearRunState(event.runId);
       return;
     }
 
@@ -318,7 +333,10 @@ export const createAiChatEventHandler = ({
           event.title,
         );
       }
-      clearRunState(event.runId);
+      mapping.titleState = "confirmed";
+      if (canClearRunState(mapping)) {
+        clearRunState(event.runId);
+      }
       return;
     }
 

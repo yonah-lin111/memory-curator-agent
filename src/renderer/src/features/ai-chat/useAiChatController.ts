@@ -724,7 +724,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       sessionId,
       messageId: assistantMessageId,
       optimisticTitle: optimisticSessionTitle,
-      shouldUpdateTitle: isNewSession,
+      runState: "running",
+      titleState: isNewSession ? "pending" : "not-required",
     });
 
     dispatchChatState({

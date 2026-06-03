@@ -214,6 +214,22 @@ export const getActiveAiChatSession = (
   FALLBACK_EMPTY_SESSION;
 
 /**
+ * 判断详情替换是否会把本地终态回滚为迟到的运行中快照。
+ */
+const isStaleRunningSessionSnapshot = (
+  currentSession: AiChatSession,
+  nextSession: AiChatSession,
+): boolean => {
+  const isCurrentTerminal =
+    currentSession.status === "completed" || currentSession.status === "failed";
+
+  return (
+    isCurrentTerminal &&
+    nextSession.status === "running"
+  );
+};
+
+/**
  * aiChatSessionReducer - 统一管理会话列表和激活会话标识。
  */
 export const aiChatSessionReducer = (
@@ -263,7 +279,11 @@ export const aiChatSessionReducer = (
       return {
         ...state,
         sessions: state.sessions.map((session) =>
-          session.id === action.session.id ? action.session : session,
+          session.id === action.session.id
+            ? isStaleRunningSessionSnapshot(session, action.session)
+              ? session
+              : action.session
+            : session,
         ),
       };
     }
