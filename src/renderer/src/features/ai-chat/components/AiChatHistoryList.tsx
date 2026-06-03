@@ -563,17 +563,14 @@ export const AiChatHistoryList = ({
         />
       ) : null}
 
-      {/* 底部 Mock 状态卡片 */}
+      {/* 底部 Agent 状态卡片 */}
       <div className="mt-auto rounded-[6px] border border-white/5 bg-white/[0.02] p-3 flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5">
           <Bot className="h-3.5 w-3.5 text-white/60" />
           <span className="text-xs font-bold text-white/60 font-mono">
-            ReAct Mock Mode
+            ReAct Agent Mode
           </span>
         </div>
-        <p className="text-xs leading-relaxed text-white/35">
-          Plan &rarr; Tool &rarr; Observation &rarr; Answer
-        </p>
       </div>
     </div>
   );
