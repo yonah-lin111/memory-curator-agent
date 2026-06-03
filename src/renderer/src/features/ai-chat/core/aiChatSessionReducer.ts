@@ -44,6 +44,12 @@ export type AiChatSessionAction =
     }
   | {
       // 动作类型。
+      type: "append";
+      // 追加会话。
+      sessions: AiChatSession[];
+    }
+  | {
+      // 动作类型。
       type: "replace";
       // 要替换的会话。
       session: AiChatSession;
@@ -218,6 +224,19 @@ export const aiChatSessionReducer = (
         sessions: [action.session, ...state.sessions],
         activeId: action.session.id,
       };
+    case "append": {
+      const existingSessionIds = new Set(
+        state.sessions.map((session) => session.id),
+      );
+      const nextSessions = action.sessions.filter(
+        (session) => !existingSessionIds.has(session.id),
+      );
+
+      return {
+        ...state,
+        sessions: [...state.sessions, ...nextSessions],
+      };
+    }
     case "replace":
       return {
         ...state,

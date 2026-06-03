@@ -132,6 +132,12 @@ type AiChatStartPayload = {
   }>
 }
 
+type AiChatSessionListPayload = {
+  query?: string
+  limit?: number
+  offset?: number
+}
+
 // AI Ask 回答载荷类型。
 type AiAskAnswerPayload = {
   // Ask 请求唯一标识。
@@ -440,7 +446,8 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('people:delete', id)
   },
   ai: {
-    listSessions: (): Promise<AiChatSession[]> => ipcRenderer.invoke('ai:sessions:list'),
+    listSessions: (payload?: AiChatSessionListPayload): Promise<AiChatSession[]> =>
+      ipcRenderer.invoke('ai:sessions:list', payload),
     getSession: (sessionId: string): Promise<AiChatSession | null> =>
       ipcRenderer.invoke('ai:session:get', sessionId),
     updateSessionTitle: (sessionId: string, title: string): Promise<void> =>

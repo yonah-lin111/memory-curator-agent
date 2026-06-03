@@ -138,6 +138,16 @@ export type UpsertToolCallInput = {
   timestamp: string
 }
 
+// AI 会话列表查询输入。
+export type ListSessionsInput = {
+  // 搜索标题或摘要的关键词。
+  query?: string
+  // 最大返回数量。
+  limit?: number
+  // 跳过数量。
+  offset?: number
+}
+
 // 创建聊天 run 与初始消息输入。
 export type CreateRunWithMessagesInput = {
   // 会话写入输入。
@@ -232,7 +242,7 @@ export type PersistedContextSnapshot = {
 // AI 对话持久化服务。
 export type AiChatPersistenceService = {
   // 读取最近 AI 会话。
-  listSessions: () => AiChatSessionItem[]
+  listSessions: (input?: ListSessionsInput) => AiChatSessionItem[]
   // 读取单个 AI 会话详情。
   getSession: (sessionId: string) => AiChatSessionItem | null
   // 更新 AI 会话标题。
@@ -489,18 +499,37 @@ const runTransaction = <T>(database: DatabaseConnection, operation: () => T): T 
 export const createAiChatPersistenceService = (
   database: DatabaseConnection
 ): AiChatPersistenceService => {
-  const listSessions = (): AiChatSessionItem[] =>
-    (
+  const listSessions = (input: ListSessionsInput = {}): AiChatSessionItem[] => {
+    const query = input.query?.trim()
+    const limit = input.limit && input.limit > 0 ? Math.min(input.limit, 100) : undefined
+    const offset = input.offset && input.offset > 0 ? input.offset : 0
+    const whereClause = query ? 'WHERE title LIKE ? OR summary LIKE ?' : ''
+    const limitClause = limit ? 'LIMIT ? OFFSET ?' : ''
+    const values: unknown[] = []
+
+    if (query) {
+      const fuzzyQuery = `%${query}%`
+      values.push(fuzzyQuery, fuzzyQuery)
+    }
+
+    if (limit) {
+      values.push(limit, offset)
+    }
+
+    return (
       database
         .prepare(
           `
             SELECT id, title, summary, status, created_at, updated_at, last_message_at
             FROM ai_chat_sessions
+            ${whereClause}
             ORDER BY last_message_at DESC
+            ${limitClause}
           `
         )
-        .all() as AiChatSessionRow[]
+        .all(...values) as AiChatSessionRow[]
     ).map((row) => mapSessionRow(row))
+  }
 
   const getSession = (sessionId: string): AiChatSessionItem | null => {
     const session = database

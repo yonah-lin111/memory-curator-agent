@@ -40,6 +40,9 @@ import {
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
+// AI 历史每页读取数量。
+const AI_CHAT_HISTORY_PAGE_SIZE = 20;
+
 // AI 对话控制器返回值。
 type UseAiChatControllerResult = {
   // AI 对话模式打开状态。
@@ -60,6 +63,10 @@ type UseAiChatControllerResult = {
   aiAgentOption: AiAgentOption | null;
   // 当前选中的 AI provider 与模型。
   selectedAiModel: AiModelSelection | null;
+  // AI 历史是否还有下一页。
+  hasMoreChatSessions: boolean;
+  // AI 历史是否正在加载下一页。
+  isLoadingMoreChatSessions: boolean;
   // 切换 AI 对话模式。
   handleChatToggle: () => void;
   // 切换当前激活的 AI 对话会话。
@@ -72,6 +79,10 @@ type UseAiChatControllerResult = {
   handleRenameChat: (sessionId: string, title: string) => Promise<boolean>;
   // 删除 AI 对话会话。
   handleDeleteChat: (sessionId: string) => Promise<boolean>;
+  // 批量删除 AI 对话会话。
+  handleBatchDeleteChats: (sessionIds: string[]) => Promise<boolean>;
+  // 加载更多 AI 历史会话。
+  handleLoadMoreChatSessions: () => Promise<void>;
   // 发送用户消息。
   handleSendMessage: (text: string) => void;
   // 提交 Ask 回答。
@@ -138,6 +149,16 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   const [selectedAiModel, setSelectedAiModel] =
     useState<AiModelSelection | null>(null);
   const toast = useToast();
+
+  // 持久化历史已经加载的数量，不包含本地空白草稿。
+  const [loadedHistoryCount, setLoadedHistoryCount] = useState<number>(0);
+
+  // AI 历史是否还有下一页。
+  const [hasMoreChatSessions, setHasMoreChatSessions] = useState<boolean>(false);
+
+  // AI 历史是否正在加载下一页。
+  const [isLoadingMoreChatSessions, setIsLoadingMoreChatSessions] =
+    useState<boolean>(false);
 
   // Agent 运行与消息的映射关系。
   const runMessageMapRef = useRef<Map<string, AiRunMessageMapping>>(new Map());
@@ -270,7 +291,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    * 删除 AI 对话；删空后保留一个本地空白会话，避免主界面无激活对象。
    */
   const handleDeleteChat = async (sessionId: string): Promise<boolean> => {
-    return deleteAiChatSession({
+    const isDeleted = await deleteAiChatSession({
       sessionId,
       sessions: chatSessions,
       activeId: activeChatId,
@@ -278,6 +299,36 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       clearSessionContext: useAiChatContextStore.getState().clearSession,
       dispatch: dispatchChatState,
     });
+
+    if (isDeleted) {
+      setLoadedHistoryCount((currentCount) => Math.max(0, currentCount - 1));
+    }
+
+    return isDeleted;
+  };
+
+  /**
+   * 批量删除 AI 对话；删除失败时停止后续删除，避免本地状态与持久化状态继续分叉。
+   */
+  const handleBatchDeleteChats = async (
+    sessionIds: string[],
+  ): Promise<boolean> => {
+    const uniqueSessionIds = Array.from(new Set(sessionIds));
+
+    for (const sessionId of uniqueSessionIds) {
+      const isDeleted = await handleDeleteChat(sessionId);
+
+      if (!isDeleted) {
+        toast.error("批量删除对话失败");
+        return false;
+      }
+    }
+
+    if (uniqueSessionIds.length > 0) {
+      toast.success(`已删除 ${uniqueSessionIds.length} 个对话`);
+    }
+
+    return true;
   };
 
   /**
@@ -405,12 +456,20 @@ export const useAiChatController = (): UseAiChatControllerResult => {
 
     const listSessionsFn = window.api?.ai?.listSessions;
     if (listSessionsFn) {
-      void listSessionsFn()
+      void listSessionsFn({
+        limit: AI_CHAT_HISTORY_PAGE_SIZE + 1,
+        offset: 0,
+      })
         .then((sessions) => {
           if (!isMounted) {
             return;
           }
-          if (sessions.length === 0) {
+          const visibleSessions = sessions.slice(0, AI_CHAT_HISTORY_PAGE_SIZE);
+
+          setLoadedHistoryCount(visibleSessions.length);
+          setHasMoreChatSessions(sessions.length > AI_CHAT_HISTORY_PAGE_SIZE);
+
+          if (visibleSessions.length === 0) {
             const empty = createEmptyAiChatSession();
             dispatchChatState({
               type: "reset",
@@ -422,8 +481,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
 
           dispatchChatState({
             type: "reset",
-            sessions,
-            activeId: sessions[0].id,
+            sessions: visibleSessions,
+            activeId: visibleSessions[0].id,
           });
         })
         .catch(() => {
@@ -431,6 +490,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
             return;
           }
           const empty = createEmptyAiChatSession();
+          setLoadedHistoryCount(0);
+          setHasMoreChatSessions(false);
           dispatchChatState({
             type: "reset",
             sessions: [empty],
@@ -439,6 +500,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         });
     } else {
       const empty = createEmptyAiChatSession();
+      setLoadedHistoryCount(0);
+      setHasMoreChatSessions(false);
       dispatchChatState({
         type: "reset",
         sessions: [empty],
@@ -450,6 +513,35 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       isMounted = false;
     };
   }, []);
+
+  /**
+   * 触底加载下一页 AI 历史会话。
+   */
+  const handleLoadMoreChatSessions = async (): Promise<void> => {
+    if (
+      isLoadingMoreChatSessions ||
+      !hasMoreChatSessions ||
+      !window.api?.ai?.listSessions
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreChatSessions(true);
+
+    try {
+      const sessions = await window.api.ai.listSessions({
+        limit: AI_CHAT_HISTORY_PAGE_SIZE + 1,
+        offset: loadedHistoryCount,
+      });
+      const visibleSessions = sessions.slice(0, AI_CHAT_HISTORY_PAGE_SIZE);
+
+      dispatchChatState({ type: "append", sessions: visibleSessions });
+      setLoadedHistoryCount((currentCount) => currentCount + visibleSessions.length);
+      setHasMoreChatSessions(sessions.length > AI_CHAT_HISTORY_PAGE_SIZE);
+    } finally {
+      setIsLoadingMoreChatSessions(false);
+    }
+  };
 
   // 会话切换时按需补全消息详情，列表读取失败不阻塞现有对话。
   useEffect(() => {
@@ -649,12 +741,16 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     aiModelOptions,
     aiAgentOption,
     selectedAiModel,
+    hasMoreChatSessions,
+    isLoadingMoreChatSessions,
     handleChatToggle,
     setActiveChatId: handleActiveChatChange,
     setSelectedAiModel,
     handleNewChat,
     handleRenameChat,
     handleDeleteChat,
+    handleBatchDeleteChats,
+    handleLoadMoreChatSessions,
     handleSendMessage,
     handleSubmitAskAnswer,
     handleRegenerateLatestAnswer,

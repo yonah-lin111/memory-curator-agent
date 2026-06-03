@@ -32,6 +32,10 @@ const sessions: AiChatSession[] = [
 const renderHistoryList = (overrides?: {
   onRenameChat?: (sessionId: string, title: string) => Promise<boolean>
   onDeleteChat?: (sessionId: string) => Promise<boolean>
+  onBatchDeleteChats?: (sessionIds: string[]) => Promise<boolean>
+  onLoadMore?: () => Promise<void>
+  hasMore?: boolean
+  isLoadingMore?: boolean
 }): void => {
   render(
     <AiChatHistoryList
@@ -41,6 +45,10 @@ const renderHistoryList = (overrides?: {
       onNewChat={() => undefined}
       onRenameChat={overrides?.onRenameChat ?? vi.fn(async () => true)}
       onDeleteChat={overrides?.onDeleteChat ?? vi.fn(async () => true)}
+      onBatchDeleteChats={overrides?.onBatchDeleteChats ?? vi.fn(async () => true)}
+      onLoadMore={overrides?.onLoadMore ?? vi.fn(async () => undefined)}
+      hasMore={overrides?.hasMore ?? false}
+      isLoadingMore={overrides?.isLoadingMore ?? false}
     />
   )
 }
@@ -107,6 +115,53 @@ describe('AiChatHistoryList', () => {
 
     await waitFor(() => {
       expect(onDeleteChat).toHaveBeenCalledWith('s2')
+    })
+  })
+
+  it('搜索框只按标题过滤历史会话', async () => {
+    const user = userEvent.setup()
+    renderHistoryList()
+    const input = screen.getByPlaceholderText('搜索对话历史')
+
+    await user.type(input, '第二')
+
+    expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
+    expect(screen.getByText('第二会话')).toBeInTheDocument()
+
+    await user.clear(input)
+    await user.type(input, '第一条摘要')
+
+    expect(screen.queryByText('第一会话')).not.toBeInTheDocument()
+    expect(screen.getByText('没有匹配的对话')).toBeInTheDocument()
+  })
+
+  it('滚动触底时加载更多历史会话', () => {
+    const onLoadMore = vi.fn(async () => undefined)
+    renderHistoryList({ onLoadMore, hasMore: true })
+    const list = screen.getByLabelText('AI chat history sessions')
+
+    Object.defineProperties(list, {
+      scrollHeight: { configurable: true, value: 100 },
+      scrollTop: { configurable: true, value: 76 },
+      clientHeight: { configurable: true, value: 20 }
+    })
+    fireEvent.scroll(list)
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('批量模式选择多个会话后调用批量删除回调', async () => {
+    const user = userEvent.setup()
+    const onBatchDeleteChats = vi.fn(async () => true)
+    renderHistoryList({ onBatchDeleteChats })
+
+    await user.click(screen.getByRole('button', { name: 'Batch delete chats' }))
+    await user.click(screen.getByText('第一会话'))
+    await user.click(screen.getByText('第二会话'))
+    await user.click(screen.getByRole('button', { name: '删除' }))
+
+    await waitFor(() => {
+      expect(onBatchDeleteChats).toHaveBeenCalledWith(['s1', 's2'])
     })
   })
 })

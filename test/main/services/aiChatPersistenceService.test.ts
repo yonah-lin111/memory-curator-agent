@@ -88,6 +88,36 @@ describe('aiChatPersistenceService', () => {
     })
   })
 
+  it('按时间分页读取会话并支持标题与摘要搜索', () => {
+    const service = createService()
+
+    for (const session of [
+      { id: 's-old', title: '旧会话', summary: '普通摘要', timestamp: '2026-05-31 09:00' },
+      { id: 's-middle', title: 'Alpha 标题', summary: '普通摘要', timestamp: '2026-05-31 10:00' },
+      { id: 's-new', title: '新会话', summary: '包含 alpha 摘要', timestamp: '2026-05-31 11:00' }
+    ]) {
+      service.ensureSession({
+        id: session.id,
+        title: session.title,
+        summary: session.summary,
+        status: 'completed',
+        timestamp: session.timestamp
+      })
+    }
+
+    expect(service.listSessions({ limit: 2, offset: 0 }).map((session) => session.id)).toEqual([
+      's-new',
+      's-middle'
+    ])
+    expect(service.listSessions({ limit: 2, offset: 2 }).map((session) => session.id)).toEqual([
+      's-old'
+    ])
+    expect(service.listSessions({ query: 'alpha' }).map((session) => session.id)).toEqual([
+      's-new',
+      's-middle'
+    ])
+  })
+
   it('ensureSession 不覆盖已经生成的首个会话标题', () => {
     const service = createService()
 

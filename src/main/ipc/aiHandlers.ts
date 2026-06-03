@@ -31,6 +31,16 @@ type AiChatStartPayload = {
   context?: AgentContextPayloadItem[]
 }
 
+// AI 会话列表查询载荷。
+type AiChatSessionListPayload = {
+  // 搜索标题或摘要的关键词。
+  query?: string
+  // 最大返回数量。
+  limit?: number
+  // 跳过数量。
+  offset?: number
+}
+
 // AI Ask 回答载荷。
 type AiAskAnswerPayload = {
   // Ask 请求唯一标识。
@@ -506,7 +516,9 @@ export const registerAiHandlers = (): void => {
   const cancelAiChatAsk = (runId: string): boolean => cancelPendingAskAnswersByRun(runId)
 
   ipcMain.handle('ai:model-options:get', async () => createModelOptionsResponse())
-  ipcMain.handle('ai:sessions:list', async () => aiChatService.listSessions())
+  ipcMain.handle('ai:sessions:list', async (_, payload?: AiChatSessionListPayload) =>
+    aiChatService.listSessions(payload)
+  )
   ipcMain.handle('ai:session:get', async (_, sessionId: string) => aiChatService.getSession(sessionId))
   ipcMain.handle('ai:session:title:update', async (_, sessionId: string, title: string) => {
     aiChatService.updateSessionTitle(sessionId, title, new Date().toISOString())

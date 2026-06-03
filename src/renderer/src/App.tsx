@@ -114,12 +114,16 @@ const AppContent = (): React.JSX.Element => {
     aiModelOptions,
     aiAgentOption,
     selectedAiModel,
+    hasMoreChatSessions,
+    isLoadingMoreChatSessions,
     handleChatToggle,
     setActiveChatId,
     setSelectedAiModel,
     handleNewChat,
     handleRenameChat,
     handleDeleteChat,
+    handleBatchDeleteChats,
+    handleLoadMoreChatSessions,
     handleSendMessage,
     handleSubmitAskAnswer,
     handleRegenerateLatestAnswer,
@@ -163,6 +167,10 @@ const AppContent = (): React.JSX.Element => {
         onNewChat={handleNewChat}
         onRenameChat={handleRenameChat}
         onDeleteChat={handleDeleteChat}
+        onBatchDeleteChats={handleBatchDeleteChats}
+        onLoadMoreChatSessions={handleLoadMoreChatSessions}
+        hasMoreChatSessions={hasMoreChatSessions}
+        isLoadingMoreChatSessions={isLoadingMoreChatSessions}
       />
 
       {/* 中间主工作区 */}

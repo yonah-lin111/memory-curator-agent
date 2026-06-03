@@ -1,6 +1,6 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { Bot, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bot, CheckSquare, Plus, Search, Trash2, X } from "lucide-react";
 import type { AiChatSession } from "@renderer/features/ai-chat/types";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
@@ -19,6 +19,14 @@ type AiChatHistoryListProps = {
   onRenameChat: (sessionId: string, title: string) => Promise<boolean>;
   // 删除 AI 会话回调。
   onDeleteChat: (sessionId: string) => Promise<boolean>;
+  // 批量删除 AI 会话回调。
+  onBatchDeleteChats: (sessionIds: string[]) => Promise<boolean>;
+  // 加载更多历史回调。
+  onLoadMore: () => Promise<void>;
+  // 是否还有更多历史。
+  hasMore: boolean;
+  // 是否正在加载更多。
+  isLoadingMore: boolean;
   // 是否隐藏
   "aria-hidden"?: boolean;
 };
@@ -51,16 +59,39 @@ export const AiChatHistoryList = ({
   onNewChat,
   onRenameChat,
   onDeleteChat,
+  onBatchDeleteChats,
+  onLoadMore,
+  hasMore,
+  isLoadingMore,
   "aria-hidden": ariaHidden,
 }: AiChatHistoryListProps): React.JSX.Element => {
   // 当前行内标题编辑草稿。
   const [editingTitle, setEditingTitle] = useState<EditingAiChatTitleDraft | null>(null);
   // 当前打开的右键菜单；集中管理以保证视口内只存在一个菜单。
   const [contextMenu, setContextMenu] = useState<AiChatContextMenuState | null>(null);
+  // 历史搜索关键词。
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
+  // 是否进入批量选择模式。
+  const [isBatchMode, setIsBatchMode] = useState<boolean>(false);
+  // 批量选择的 AI 会话 ID。
+  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(() => new Set());
   // 刚从生成中转为完成的会话 ID，用于完成提醒红点。
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<string>>(() => new Set());
   // 上一次渲染后的会话状态快照，用于识别 running -> completed。
   const previousSessionStatusRef = useRef<Map<string, AiChatSession["status"]>>(new Map());
+  // 历史滚动容器引用，用于触底加载。
+  const historyListRef = useRef<HTMLDivElement | null>(null);
+
+  // 按标题过滤后的历史列表。
+  const filteredSessions = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) {
+      return sessions;
+    }
+
+    return sessions.filter((session) => session.title.toLowerCase().includes(keyword));
+  }, [searchKeyword, sessions]);
 
   useEffect(() => {
     const previousStatuses = previousSessionStatusRef.current;
@@ -108,6 +139,18 @@ export const AiChatHistoryList = ({
       previousStatuses.set(session.id, session.status);
     }
   }, [activeSessionId, sessions]);
+
+  useEffect(() => {
+    const liveSessionIds = new Set(sessions.map((session) => session.id));
+
+    setSelectedSessionIds((currentIds) => {
+      const nextIds = new Set(
+        Array.from(currentIds).filter((sessionId) => liveSessionIds.has(sessionId)),
+      );
+
+      return nextIds.size === currentIds.size ? currentIds : nextIds;
+    });
+  }, [sessions]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -224,6 +267,71 @@ export const AiChatHistoryList = ({
     setContextMenu(null);
   };
 
+  /**
+   * 滚动接近底部时加载下一页历史。
+   */
+  const handleHistoryScroll = (): void => {
+    const element = historyListRef.current;
+
+    if (!element || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+
+    if (distanceToBottom <= 24) {
+      void onLoadMore();
+    }
+  };
+
+  /**
+   * 切换批量选择模式。
+   */
+  const handleBatchModeToggle = (): void => {
+    setIsBatchMode((currentMode) => !currentMode);
+    setSelectedSessionIds(new Set());
+    setContextMenu(null);
+  };
+
+  /**
+   * 切换批量选择项。
+   */
+  const handleSelectSession = (session: AiChatSession): void => {
+    if (session.status === "running") {
+      return;
+    }
+
+    setSelectedSessionIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(session.id)) {
+        nextIds.delete(session.id);
+      } else {
+        nextIds.add(session.id);
+      }
+
+      return nextIds;
+    });
+  };
+
+  /**
+   * 执行批量删除。
+   */
+  const handleBatchDelete = async (): Promise<void> => {
+    const sessionIds = Array.from(selectedSessionIds);
+
+    if (sessionIds.length === 0) {
+      return;
+    }
+
+    const isDeleted = await onBatchDeleteChats(sessionIds);
+
+    if (isDeleted) {
+      setSelectedSessionIds(new Set());
+      setIsBatchMode(false);
+    }
+  };
+
   const contextMenuSession = contextMenu
     ? sessions.find((session) => session.id === contextMenu.sessionId)
     : undefined;
@@ -245,13 +353,23 @@ export const AiChatHistoryList = ({
         <h2 className="text-xs font-bold tracking-wider text-white/40 uppercase">
           AI DIALOGS
         </h2>
-        <IconButton
-          aria-label="New chat"
-          onClick={onNewChat}
-          className="text-white/45 hover:bg-white/5 hover:text-white"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </IconButton>
+        <div className="flex items-center gap-1">
+          <IconButton
+            aria-label={isBatchMode ? "Exit batch delete" : "Batch delete chats"}
+            highlighted={isBatchMode}
+            onClick={handleBatchModeToggle}
+            className={isBatchMode ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
+          >
+            {isBatchMode ? <X className="h-3.5 w-3.5" /> : <CheckSquare className="h-3.5 w-3.5" />}
+          </IconButton>
+          <IconButton
+            aria-label="New chat"
+            onClick={onNewChat}
+            className="text-white/45 hover:bg-white/5 hover:text-white"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </IconButton>
+        </div>
       </div>
 
       {/* 搜索框 (仅用于静态 Mock 展示) */}
@@ -260,17 +378,39 @@ export const AiChatHistoryList = ({
         <input
           type="text"
           placeholder="搜索对话历史"
-          disabled
-          className="w-full rounded-[6px] border border-white/5 bg-white/[0.02] py-1.5 pl-8 pr-3 text-xs text-white placeholder:text-white/20 outline-none cursor-not-allowed"
+          value={searchKeyword}
+          onChange={(event) => setSearchKeyword(event.target.value)}
+          className="w-full rounded-[6px] border border-white/5 bg-white/[0.02] py-1.5 pl-8 pr-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-white/15"
         />
       </div>
 
+      {isBatchMode ? (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs text-white/35">已选 {selectedSessionIds.size}</span>
+          <button
+            type="button"
+            disabled={selectedSessionIds.size === 0}
+            onClick={() => void handleBatchDelete()}
+            className="inline-flex items-center gap-1 rounded-[6px] border border-rose-400/20 px-2 py-1 text-xs font-bold text-rose-200 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:border-white/5 disabled:text-white/20 disabled:hover:bg-transparent"
+          >
+            <Trash2 className="h-3 w-3" />
+            删除
+          </button>
+        </div>
+      ) : null}
+
       {/* 历史对话列表 */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
-        {sessions.map((session) => {
+      <div
+        ref={historyListRef}
+        aria-label="AI chat history sessions"
+        className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1"
+        onScroll={handleHistoryScroll}
+      >
+        {filteredSessions.map((session) => {
           const isActive = session.id === activeSessionId;
           const isEditing = editingTitle?.id === session.id;
           const isGenerating = session.status === "running";
+          const isSelected = selectedSessionIds.has(session.id);
           const hasCompletionNotice =
             !isActive && !isGenerating && completedSessionIds.has(session.id);
           const itemStyleClass = isActive
@@ -287,11 +427,20 @@ export const AiChatHistoryList = ({
               role={isEditing ? undefined : "button"}
               tabIndex={isEditing ? undefined : 0}
               onClick={() => {
+                if (isBatchMode) {
+                  handleSelectSession(session);
+                  return;
+                }
+
                 if (!isEditing) {
                   onSessionChange(session.id);
                 }
               }}
-              onContextMenu={(event) => handleOpenContextMenu(event, session.id)}
+              onContextMenu={(event) => {
+                if (!isBatchMode) {
+                  handleOpenContextMenu(event, session.id);
+                }
+              }}
               onKeyDown={(event) => {
                 if (!isEditing) {
                   handleSessionKeyDown(event, session.id);
@@ -299,6 +448,22 @@ export const AiChatHistoryList = ({
               }}
             >
               <div className="flex items-center justify-between gap-2 w-full">
+                {isBatchMode ? (
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-[4px] border ${
+                      isSelected
+                        ? isActive
+                          ? "border-black bg-black text-white"
+                          : "border-white bg-white text-black"
+                        : isActive
+                          ? "border-black/30"
+                          : "border-white/15"
+                    }`}
+                  >
+                    {isSelected ? <CheckSquare className="h-3 w-3" /> : null}
+                  </span>
+                ) : null}
                 {isEditing ? (
                   <div className="relative min-w-0 flex-1">
                     <div
@@ -371,6 +536,21 @@ export const AiChatHistoryList = ({
             </div>
           );
         })}
+        {filteredSessions.length === 0 ? (
+          <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35">
+            没有匹配的对话
+          </div>
+        ) : null}
+        {hasMore && !searchKeyword.trim() ? (
+          <button
+            type="button"
+            className="rounded-[6px] border border-white/5 px-3 py-2 text-xs text-white/35 hover:bg-white/[0.03] hover:text-white/60"
+            disabled={isLoadingMore}
+            onClick={() => void onLoadMore()}
+          >
+            {isLoadingMore ? "加载中..." : "加载更多"}
+          </button>
+        ) : null}
       </div>
 
       {contextMenuSession ? (

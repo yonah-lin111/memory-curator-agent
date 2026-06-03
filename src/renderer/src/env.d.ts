@@ -168,6 +168,16 @@ type AiChatStartPayload = {
   }>
 }
 
+// AI 会话列表查询载荷。
+type AiChatSessionListPayload = {
+  // 搜索标题或摘要的关键词。
+  query?: string
+  // 最大返回数量。
+  limit?: number
+  // 跳过数量。
+  offset?: number
+}
+
 // AI Ask 回答载荷类型。
 type AiAskAnswerPayload = {
   // Ask 请求唯一标识。
@@ -549,7 +559,7 @@ type AppAPI = {
   // AI 对话 API。
   ai?: {
     // 读取持久化 AI 会话列表。
-    listSessions?: () => Promise<AiChatSession[]>
+    listSessions?: (payload?: AiChatSessionListPayload) => Promise<AiChatSession[]>
     // 读取持久化 AI 会话详情。
     getSession?: (sessionId: string) => Promise<AiChatSession | null>
     // 更新持久化 AI 会话标题。

@@ -123,7 +123,7 @@ describe('aiHandlers', () => {
 
   it('registers AI history handlers through persistence service', async () => {
     const service = {
-      listSessions: vi.fn(() => [
+      listSessions: vi.fn((_input?: { limit?: number; offset?: number; query?: string }) => [
         { id: 's1', title: '历史', summary: '摘要', time: '10:00', status: 'completed', messages: [] }
       ]),
       getSession: vi.fn((sessionId: string) => ({
@@ -155,7 +155,9 @@ describe('aiHandlers', () => {
     const updateTitleHandler = calls.find(([channel]) => channel === 'ai:session:title:update')?.[1]
     const deleteHandler = calls.find(([channel]) => channel === 'ai:session:delete')?.[1]
 
-    expect(await listHandler?.({} as never)).toEqual(service.listSessions())
+    expect(await listHandler?.({} as never, { limit: 20, offset: 10, query: '历史' })).toEqual(
+      service.listSessions({ limit: 20, offset: 10, query: '历史' })
+    )
     expect(await getHandler?.({} as never, 's1')).toEqual(service.getSession('s1'))
     await updateTitleHandler?.({} as never, 's1', '新标题')
     await deleteHandler?.({} as never, 's1')
