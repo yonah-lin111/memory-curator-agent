@@ -214,7 +214,7 @@ describe('toolRegistry', () => {
     ).toContain('people_tool.delete')
   })
 
-  it('工具回灌后的后续轮保留可用工具，避免工具链被截断', () => {
+  it('工具回灌后的后续轮不扩大当前用户意图之外的工具面', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
@@ -234,13 +234,7 @@ describe('toolRegistry', () => {
       ]).map((tool) => tool.name)
     ).toEqual([
       'ask_user',
-      'people_tool.query',
-      'people_tool.add',
-      'people_tool.update',
-      'people_tool.delete',
-      'common_time_now',
-      'common_date_offset',
-      'common_runtime_info'
+      'people_tool.query'
     ])
   })
 

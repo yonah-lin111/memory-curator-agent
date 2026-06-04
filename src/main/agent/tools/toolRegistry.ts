@@ -201,11 +201,6 @@ const getLatestUserContent = (messages: AgentMessage[]): string =>
   [...messages].reverse().find((message) => message.role === 'user')?.content ?? ''
 
 /**
- * 判断本轮是否已经有工具回灌。
- */
-const hasToolResult = (messages: AgentMessage[]): boolean => messages.some((message) => message.role === 'tool')
-
-/**
  * 获取工具意图关键词。
  */
 const getIntentKeywords = (tool: AgentTool): string[] => [
@@ -219,10 +214,6 @@ const getIntentKeywords = (tool: AgentTool): string[] => [
  */
 export const selectToolsForTurn = (tools: AgentTool[], messages: AgentMessage[]): AgentTool[] => {
   assertUniqueToolNames(tools)
-
-  if (hasToolResult(messages)) {
-    return [...tools]
-  }
 
   const content = getLatestUserContent(messages).trim().toLowerCase()
   if (!content) {
