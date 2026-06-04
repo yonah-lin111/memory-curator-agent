@@ -25,6 +25,8 @@ export type AskQuestion = {
 
 // Ask 工具入参。
 type AskToolInput = {
+  // Ask 用途，只允许澄清缺失信息。
+  purpose: 'clarification'
   // 问题列表。
   questions: AskQuestion[]
 }
@@ -153,11 +155,16 @@ const parseInput = (input: unknown): AskToolInput => {
     throw new Error('Ask input must be an object')
   }
 
+  if (input.purpose !== 'clarification') {
+    throw new Error('Ask purpose must be clarification')
+  }
+
   if (!Array.isArray(input.questions) || input.questions.length === 0) {
     throw new Error('Ask input must include at least one question')
   }
 
   return {
+    purpose: 'clarification',
     questions: input.questions.slice(0, MAX_ASK_QUESTIONS).map(parseQuestion)
   }
 }
@@ -227,15 +234,20 @@ export const createAskTool = (): AgentTool => ({
       'Do not present more than three questions or four options per question.'
     ],
     output:
-      'Return an ask_request. After the user answers, the answer is returned as this tool result; continue in the same assistant response and do not ask the same question again unless the answer is contradictory.',
+      'Return an ask_request with purpose="clarification". After the user answers, the answer is returned as this tool result; continue in the same assistant response and do not ask the same question again unless the answer is contradictory.',
     examples: [
-      '{"questions":[{"header":"Scope","question":"Which data source should I update?","options":[{"label":"Current project","description":"Only change files in the active workspace."},{"label":"Reference project","description":"Use the reference project as the source of truth."}],"custom":true}]}'
+      '{"purpose":"clarification","questions":[{"header":"Scope","question":"Which data source should I update?","options":[{"label":"Current project","description":"Only change files in the active workspace."},{"label":"Reference project","description":"Use the reference project as the source of truth."}],"custom":true}]}'
     ]
   },
   parameters: {
     type: 'object',
-    required: ['questions'],
+    required: ['purpose', 'questions'],
     properties: {
+      purpose: {
+        type: 'string',
+        enum: ['clarification'],
+        description: 'Must be "clarification". This tool is not a confirmation mechanism.'
+      },
       questions: {
         type: 'array',
         description: 'One to three concise clarification questions.',

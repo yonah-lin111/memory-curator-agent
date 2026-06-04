@@ -339,6 +339,77 @@ describe("reactAgent", () => {
     );
   });
 
+  it("common_tool.ask 非澄清 purpose 不产生前端工具事件", async () => {
+    const askExecute = vi.fn(async () => ({
+      observation: "Ask request created: waiting for the user.",
+      data: {
+        kind: "ask_request",
+        id: "ask-confirm",
+        questions: [],
+      },
+    }));
+    const providerInputs: ModelTurnInput[] = [];
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
+
+        if (providerInputs.length > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask-confirm",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"purpose":"confirmation","questions":[{"header":"确认","question":"继续？","options":[{"label":"继续","description":"继续执行。"},{"label":"取消","description":"停止执行。"}]}]}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: askExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "继续执行这个操作",
+          },
+        ],
+        tools: [askTool],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(askExecute).not.toHaveBeenCalled();
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        id: "call-ask-confirm",
+      }),
+    );
+    expect(providerInputs[1].messages.at(-1)?.content).toContain(
+      "Do not use common_tool.ask to confirm People add/update/delete operations.",
+    );
+  });
+
   it("people 写工具未先 explain 时拒绝执行且不触发内部确认", async () => {
     const addExecute = vi.fn(async () => ({
       observation: "Created people profile: 小陈.",

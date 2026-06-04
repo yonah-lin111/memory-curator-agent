@@ -168,7 +168,16 @@ const getNonEmptyString = (value: unknown): string | null => {
  * 判断 Ask 入参是否只是 People 写操作确认。
  */
 const isPeopleMutationConfirmationAskInput = (input: unknown): boolean => {
-  if (!isRecord(input) || !Array.isArray(input.questions)) {
+  if (!isRecord(input)) {
+    return false
+  }
+
+  const purpose = getNonEmptyString(input.purpose)
+  if (purpose && purpose !== 'clarification') {
+    return true
+  }
+
+  if (!Array.isArray(input.questions)) {
     return false
   }
 

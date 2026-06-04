@@ -17,6 +17,7 @@ describe('askTool', () => {
     const tool = createAskTool()
 
     const result = await tool.execute({
+      purpose: 'clarification',
       questions: [
         {
           header: '范围',
@@ -66,6 +67,31 @@ describe('askTool', () => {
   it('拒绝缺失问题列表的入参', async () => {
     const tool = createAskTool()
 
-    await expect(tool.execute({})).rejects.toThrow('Ask input must include at least one question')
+    await expect(tool.execute({ purpose: 'clarification' })).rejects.toThrow('Ask input must include at least one question')
+  })
+
+  it('拒绝非澄清用途', async () => {
+    const tool = createAskTool()
+
+    await expect(
+      tool.execute({
+        purpose: 'confirmation',
+        questions: [
+          {
+            header: '确认',
+            question: '确认修改人物档案？',
+            options: [
+              {
+                label: '确认',
+                description: '执行修改。'
+              }
+            ]
+          }
+        ]
+      })
+    ).rejects.toThrow('Ask purpose must be clarification')
+
+    expect(tool.parameters.required).toEqual(['purpose', 'questions'])
+    expect(tool.parameters.properties?.purpose?.enum).toEqual(['clarification'])
   })
 })
