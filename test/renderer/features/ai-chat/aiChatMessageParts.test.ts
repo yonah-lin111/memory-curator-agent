@@ -91,4 +91,50 @@ describe("aiChatMessageParts", () => {
       },
     ]);
   });
+
+  it("复用上游 reasoning ID 时仍保持已完成片段状态稳定", () => {
+    const message: AiChatMessage = {
+      id: "a4",
+      role: "assistant",
+      content: 'Processing: "分段思考"',
+      time: "12:03",
+      parts: [],
+    };
+
+    const firstReasoningMessage = appendAiMessageTextPart(
+      appendAiMessageReasoningPart(message, "reasoning-reused", "第一段思考。"),
+      "中间正文。",
+    );
+    const secondReasoningMessage = appendAiMessageReasoningPart(
+      firstReasoningMessage,
+      "reasoning-reused",
+      "第二段思考。",
+    );
+    const nextMessage = appendAiMessageReasoningPart(
+      secondReasoningMessage,
+      "reasoning-reused",
+      "继续输出。",
+    );
+
+    expect(nextMessage.parts).toEqual([
+      {
+        id: "reasoning-reused",
+        kind: "reasoning",
+        content: "第一段思考。",
+        status: "done",
+      },
+      {
+        id: "a4-text-1",
+        kind: "text",
+        content: "中间正文。",
+      },
+      {
+        id: "a4-reasoning-2",
+        kind: "reasoning",
+        sourceId: "reasoning-reused",
+        content: "第二段思考。继续输出。",
+        status: "streaming",
+      },
+    ]);
+  });
 });

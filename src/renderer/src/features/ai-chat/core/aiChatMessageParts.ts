@@ -7,6 +7,28 @@ import type {
 type AiChatMessage = AiChatSession["messages"][number];
 
 /**
+ * resolveReasoningSourceId - 获取 reasoning 片段对应的上游事件标识。
+ */
+const resolveReasoningSourceId = (
+  part: Extract<AiChatMessagePart, { kind: "reasoning" }>,
+): string => part.sourceId ?? part.id;
+
+/**
+ * resolveNextReasoningPartId - 生成不会与历史片段冲突的 UI 片段标识。
+ */
+const resolveNextReasoningPartId = (
+  message: AiChatMessage,
+  parts: AiChatMessagePart[],
+  reasoningId: string,
+): string => {
+  if (!parts.some((part) => part.id === reasoningId)) {
+    return reasoningId;
+  }
+
+  return `${message.id}-reasoning-${parts.length}`;
+};
+
+/**
  * completeAiMessageReasoningParts - 将仍在流式输出的思考片段标记为完成。
  */
 export const completeAiMessageReasoningParts = (
@@ -67,33 +89,38 @@ export const appendAiMessageReasoningPart = (
   reasoningId: string,
   chunk: string,
 ): AiChatMessage => {
-  const parts =
-    message.parts?.map((part) =>
-      part.kind === "reasoning" && part.id !== reasoningId
-        ? { ...part, status: "done" as const }
-        : part,
-    ) ?? [];
+  const parts = message.parts ?? [];
   const lastPart = parts[parts.length - 1];
-  const nextParts: AiChatMessagePart[] =
-    lastPart?.kind === "reasoning" && lastPart.id === reasoningId
-      ? parts.map((part) =>
-          part.id === reasoningId && part.kind === "reasoning"
+  const isContinuingLastReasoning =
+    lastPart?.kind === "reasoning" &&
+    resolveReasoningSourceId(lastPart) === reasoningId;
+  const nextPartId = isContinuingLastReasoning
+    ? lastPart.id
+    : resolveNextReasoningPartId(message, parts, reasoningId);
+  const nextParts: AiChatMessagePart[] = isContinuingLastReasoning
+    ? parts.map((part) =>
+        part.kind === "reasoning"
+          ? part.id === nextPartId
             ? {
                 ...part,
                 content: `${part.content}${chunk}`,
                 status: "streaming",
               }
-            : part,
-        )
-      : [
-          ...parts,
-          {
-            id: reasoningId,
-            kind: "reasoning",
-            content: chunk,
-            status: "streaming",
-          },
-        ];
+            : { ...part, status: "done" }
+          : part,
+      )
+    : [
+        ...parts.map((part) =>
+          part.kind === "reasoning" ? { ...part, status: "done" as const } : part,
+        ),
+        {
+          id: nextPartId,
+          sourceId: nextPartId === reasoningId ? undefined : reasoningId,
+          kind: "reasoning",
+          content: chunk,
+          status: "streaming",
+        },
+      ];
 
   return {
     ...message,

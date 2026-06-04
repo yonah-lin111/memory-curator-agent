@@ -243,6 +243,8 @@ export type AiChatMessagePart =
   | {
       // 片段唯一标识。
       id: string;
+      // 上游 reasoning 事件标识，用于合并同一连续流式段。
+      sourceId?: string;
       // 片段类型。
       kind: "reasoning";
       // Markdown 思考内容。
