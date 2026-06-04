@@ -43,24 +43,22 @@ describe('toolRegistry', () => {
     })
 
     expect(registry.ids()).toEqual([
-      'ask_user',
+      'common_tool.ask',
       'people_tool.query',
       'people_tool.add',
       'people_tool.update',
       'people_tool.delete',
-      'common_time_now',
-      'common_date_offset',
-      'common_runtime_info'
+      'common_tool.time_now',
+      'common_tool.date_offset'
     ])
-    expect(registry.get('ask_user')?.description).toContain('structured clarification')
+    expect(registry.get('common_tool.ask')?.description).toContain('structured clarification')
     expect(registry.get('people_tool.query')?.description).toContain('People table')
     expect(registry.get('people_tool.add')?.description).toContain('Create a people profile')
     expect(registry.get('people_tool.update')?.description).toContain('Update an existing people profile')
     expect(registry.get('people_tool.delete')?.description).toContain('Delete an existing people profile')
-    expect(registry.get('common_time_now')?.description).toContain('current date')
-    expect(registry.get('common_date_offset')?.description).toContain('date offsets')
-    expect(registry.get('common_runtime_info')?.description).toContain('runtime information')
-    expect(registry.all()).toHaveLength(8)
+    expect(registry.get('common_tool.time_now')?.description).toContain('current date')
+    expect(registry.get('common_tool.date_offset')?.description).toContain('date offsets')
+    expect(registry.all()).toHaveLength(7)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -121,11 +119,11 @@ describe('toolRegistry', () => {
     expect(prepared?.description).toContain('Markdown image syntax ![](...)')
   })
 
-  it('ask_user 使用结构化 prompt 并每轮常驻', () => {
+  it('common_tool.ask 使用结构化 prompt 并每轮常驻', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const askTool = registry.get('ask_user')
+    const askTool = registry.get('common_tool.ask')
     const [prepared] = prepareToolsForModel([askTool!])
 
     expect(askTool?.prompt?.alwaysAvailable).toBe(true)
@@ -139,40 +137,29 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }]).map((tool) => tool.name)).toEqual([
-      'ask_user'
+      'common_tool.ask'
     ])
   })
 
-  it('根据当前时间意图筛选工具，注入 common_time_now', () => {
+  it('根据当前时间意图筛选工具，注入 common_tool.time_now', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual([
-      'ask_user',
-      'common_time_now'
+      'common_tool.ask',
+      'common_tool.time_now'
     ])
   })
 
-  it('根据日期偏移意图筛选工具，注入 common_date_offset', () => {
+  it('根据日期偏移意图筛选工具，注入 common_tool.date_offset', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual([
-      'ask_user',
-      'common_date_offset'
-    ])
-  })
-
-  it('根据运行环境意图筛选工具，注入 common_runtime_info', () => {
-    const registry = createAgentToolRegistry({
-      peopleService
-    })
-
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '当前系统信息是什么？' }]).map((tool) => tool.name)).toEqual([
-      'ask_user',
-      'common_runtime_info'
+      'common_tool.ask',
+      'common_tool.date_offset'
     ])
   })
 
@@ -182,7 +169,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
-      'ask_user',
+      'common_tool.ask',
       'people_tool.query'
     ])
   })
@@ -193,7 +180,7 @@ describe('toolRegistry', () => {
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
-      'ask_user',
+      'common_tool.ask',
       'people_tool.query'
     ])
   })
@@ -233,7 +220,7 @@ describe('toolRegistry', () => {
         }
       ]).map((tool) => tool.name)
     ).toEqual([
-      'ask_user',
+      'common_tool.ask',
       'people_tool.query'
     ])
   })

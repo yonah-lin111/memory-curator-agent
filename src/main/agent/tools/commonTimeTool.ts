@@ -1,4 +1,3 @@
-import { arch, platform, release, type } from 'node:os'
 import type { AgentTool, AgentToolResult } from '../types'
 
 // 当前时间工具入参。
@@ -47,34 +46,11 @@ type DateOffsetToolData = TimeNowToolData & {
   offsetDays: number
 }
 
-// 运行环境工具结构化数据。
-type RuntimeInfoToolData = {
-  // Node.js 平台标识。
-  platform: NodeJS.Platform
-  // CPU 架构。
-  arch: string
-  // 操作系统类型。
-  osType: string
-  // 操作系统版本。
-  osRelease: string
-  // Node.js 版本。
-  nodeVersion: string
-  // Electron 版本。
-  electronVersion?: string
-  // 默认时区。
-  timeZone: string
-  // 默认语言区域。
-  locale: string
-}
-
 // 当前时间工具结果。
 type TimeNowToolResult = AgentToolResult & TimeNowToolData
 
 // 日期偏移工具结果。
 type DateOffsetToolResult = AgentToolResult & DateOffsetToolData
-
-// 运行环境工具结果。
-type RuntimeInfoToolResult = AgentToolResult & RuntimeInfoToolData
 
 // 默认语言区域。
 const DEFAULT_LOCALE = 'zh-CN'
@@ -103,11 +79,6 @@ const parseNumber = (value: unknown): number | undefined =>
  * 获取运行时默认时区。
  */
 const getDefaultTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-
-/**
- * 获取运行时默认语言区域。
- */
-const getDefaultLocale = (): string => Intl.DateTimeFormat().resolvedOptions().locale || DEFAULT_LOCALE
 
 /**
  * 归一化时区。
@@ -231,7 +202,7 @@ const parseBaseDate = (baseDate: string | undefined, now: Date): Date => {
  * 创建当前时间查询工具。
  */
 export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_time_now',
+  name: 'common_tool.time_now',
   description: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
   prompt: {
     summary: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
@@ -279,7 +250,7 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
  * 创建日期偏移计算工具。
  */
 export const createDateOffsetTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_date_offset',
+  name: 'common_tool.date_offset',
   description: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
   prompt: {
     summary: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
@@ -299,7 +270,7 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
       'Use when the user asks for yesterday, tomorrow, the day after tomorrow, N days earlier, or N days later.',
       'Use when the user needs a date offset from a given base date.'
     ],
-    whenNotToUse: ['Prefer common_time_now when the user only asks for the current date or current time.'],
+    whenNotToUse: ['Prefer common_tool.time_now when the user only asks for the current date or current time.'],
     safety: ['Only perform local date calculations. Do not access the network or user files.'],
     output: 'Return the calculated date, weekday, and time zone.',
     examples: ['{"offsetDays":1}', '{"baseDate":"2026-05-30T10:00:00+08:00","offsetDays":-7,"timeZone":"Asia/Shanghai"}']
@@ -345,48 +316,6 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
 
     return {
       observation: `Date/time after offsetting ${offsetDays} days: ${data.local} (${data.weekday}, ${data.timeZone}, ${data.offsetName}).`,
-      data,
-      ...data
-    }
-  }
-})
-
-/**
- * 创建运行环境信息工具。
- */
-export const createRuntimeInfoTool = (): AgentTool => ({
-  name: 'common_runtime_info',
-  description: 'Get non-sensitive basic runtime information for the current app. Read-only; does not return environment variables or secrets.',
-  prompt: {
-    summary: 'Get non-sensitive basic runtime information for the current app. Read-only; does not return environment variables or secrets.',
-    intentKeywords: ['运行环境', '系统信息', '平台', '操作系统', 'node', 'electron', 'runtime', 'platform', 'os'],
-    whenToUse: [
-      'Use when the user asks which platform the app is running on, Node/Electron versions, system architecture, or default time zone.',
-      'Use for troubleshooting runtime differences when reading files or environment variables is not needed.'
-    ],
-    whenNotToUse: ['Do not use when the user asks about business data, local memories, or people profiles.'],
-    safety: ['Do not return environment variables, secrets, file contents, or user directories.'],
-    output: 'Return only the necessary runtime fields.',
-    examples: ['{}']
-  },
-  parameters: {
-    type: 'object',
-    properties: {}
-  },
-  execute: async (): Promise<RuntimeInfoToolResult> => {
-    const data: RuntimeInfoToolData = {
-      platform: platform(),
-      arch: arch(),
-      osType: type(),
-      osRelease: release(),
-      nodeVersion: process.versions.node,
-      electronVersion: process.versions.electron,
-      timeZone: getDefaultTimeZone(),
-      locale: getDefaultLocale()
-    }
-
-    return {
-      observation: `Current runtime: ${data.osType} ${data.osRelease} (${data.platform}/${data.arch}), Node ${data.nodeVersion}.`,
       data,
       ...data
     }

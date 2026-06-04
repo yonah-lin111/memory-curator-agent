@@ -512,7 +512,7 @@ describe('App', () => {
           runId: capturedPayload!.runId!,
           sessionId: capturedPayload!.sessionId,
           id: 'ask-1',
-          name: 'ask_user',
+          name: 'common_tool.ask',
           observation: 'Ask request created: waiting for the user.',
           data: {
             kind: 'ask_request',

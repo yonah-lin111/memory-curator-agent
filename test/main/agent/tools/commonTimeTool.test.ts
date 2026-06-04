@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from '../../../../src/main/agent/tools/commonInfoTool'
+import { createDateOffsetTool, createTimeNowTool } from '../../../../src/main/agent/tools/commonTimeTool'
 
 // 固定当前时间，避免测试依赖真实时钟。
 const fixedNow = (): Date => new Date('2026-05-30T04:03:04.000Z')
 
-describe('commonInfoTool', () => {
-  it('common_time_now 返回当前时间结构化数据', async () => {
+describe('commonTimeTool', () => {
+  it('common_tool.time_now 返回当前时间结构化数据', async () => {
     const tool = createTimeNowTool(fixedNow)
 
     const result = await tool.execute({
@@ -24,7 +24,7 @@ describe('commonInfoTool', () => {
     expect(result.observation).toContain('Asia/Shanghai')
   })
 
-  it('common_time_now 拒绝无效时区', async () => {
+  it('common_tool.time_now 拒绝无效时区', async () => {
     const tool = createTimeNowTool(fixedNow)
 
     await expect(
@@ -34,7 +34,7 @@ describe('commonInfoTool', () => {
     ).rejects.toThrow('Invalid locale or time zone')
   })
 
-  it('common_date_offset 按天计算日期偏移', async () => {
+  it('common_tool.date_offset 按天计算日期偏移', async () => {
     const tool = createDateOffsetTool(fixedNow)
 
     const result = await tool.execute({
@@ -54,7 +54,7 @@ describe('commonInfoTool', () => {
     expect(result.observation).toContain('offsetting -1 days')
   })
 
-  it('common_date_offset 拒绝无效基准日期', async () => {
+  it('common_tool.date_offset 拒绝无效基准日期', async () => {
     const tool = createDateOffsetTool(fixedNow)
 
     await expect(
@@ -63,18 +63,5 @@ describe('commonInfoTool', () => {
         offsetDays: 1
       })
     ).rejects.toThrow('Invalid base date')
-  })
-
-  it('common_runtime_info 只返回非敏感运行环境信息', async () => {
-    const tool = createRuntimeInfoTool()
-
-    const result = await tool.execute({})
-
-    expect(result.data).toMatchObject({
-      platform: process.platform,
-      nodeVersion: process.versions.node
-    })
-    expect(JSON.stringify(result.data)).not.toContain('process.env')
-    expect(result.observation).toContain('Current runtime')
   })
 })

@@ -242,13 +242,13 @@ export const createAiChatEventHandler = ({
     event: Extract<AiChatEvent, { type: "tool_failed" }>,
   ): AiChatMessage => {
     const isAskCancelled =
-      event.name === "ask_user" && event.error === ASK_CANCELLED_MESSAGE;
+      event.name === "common_tool.ask" && event.error === ASK_CANCELLED_MESSAGE;
     const status = isAskCancelled ? "cancelled" : "failed";
     const observation = isAskCancelled
       ? "Ask was cancelled."
       : `Tool execution failed: ${event.error}`;
     const title = isAskCancelled
-      ? "Tool cancelled: ask_user"
+      ? "Tool cancelled: common_tool.ask"
       : `Tool failed: ${event.name}`;
 
     return {

@@ -310,7 +310,7 @@ describe('aiHandlers', () => {
     expect(service.updateSessionTitle).not.toHaveBeenCalled()
   })
 
-  it('persists ask_user tool state like other tools', async () => {
+  it('persists common_tool.ask tool state like other tools', async () => {
     const service = {
       listSessions: vi.fn(),
       getSession: vi.fn(() => ({
@@ -335,11 +335,11 @@ describe('aiHandlers', () => {
     vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
     vi.mocked(runReactAgent).mockImplementation(async function* () {
       yield { type: 'text_delta', delta: '需要确认范围。' } as never
-      yield { type: 'tool_started', id: 'call-ask', name: 'ask_user', input: {} } as never
+      yield { type: 'tool_started', id: 'call-ask', name: 'common_tool.ask', input: {} } as never
       yield {
         type: 'tool_finished',
         id: 'call-ask',
-        name: 'ask_user',
+        name: 'common_tool.ask',
         observation: 'Ask request created: waiting for the user.',
         data: {
           kind: 'ask_request',
@@ -356,7 +356,7 @@ describe('aiHandlers', () => {
       yield {
         type: 'tool_failed',
         id: 'call-ask',
-        name: 'ask_user',
+        name: 'common_tool.ask',
         input: {},
         error: 'Ask request was cancelled.'
       } as never
@@ -390,7 +390,7 @@ describe('aiHandlers', () => {
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
         toolCallId: askToolCallIds[0],
-        name: 'ask_user',
+        name: 'common_tool.ask',
         status: 'running',
         observation: 'Ask request created: waiting for the user.'
       })
@@ -398,7 +398,7 @@ describe('aiHandlers', () => {
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
         toolCallId: askToolCallIds[0],
-        name: 'ask_user',
+        name: 'common_tool.ask',
         status: 'failed',
         observation: 'Ask was cancelled.',
         error: 'Ask request was cancelled.'
@@ -415,7 +415,7 @@ describe('aiHandlers', () => {
         toolSteps: [
           expect.objectContaining({
             id: 'call-ask',
-            tool: 'ask_user',
+            tool: 'common_tool.ask',
             status: 'cancelled',
             observation: 'Ask was cancelled.'
           })

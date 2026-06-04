@@ -13,7 +13,7 @@ describe("AiToolCallBlock", () => {
       id: "ask-answer-1",
       title: "Ask user",
       status: "done",
-      tool: "ask_user",
+      tool: "common_tool.ask",
       observation:
         'User has answered your clarification questions: "请问您要添加的人物与您是什么关系？"="家人", "请提供该人物的姓名"="王小美".',
       data: {
@@ -57,9 +57,9 @@ describe("AiToolCallBlock", () => {
   it("ask 被取消时展示取消状态", () => {
     const step: AiToolStep = {
       id: "ask-cancel-1",
-      title: "Tool cancelled: ask_user",
+      title: "Tool cancelled: common_tool.ask",
       status: "cancelled",
-      tool: "ask_user",
+      tool: "common_tool.ask",
       observation: "Ask was cancelled.",
       data: {
         error: "Ask request was cancelled.",

@@ -17,6 +17,9 @@ const DEFAULT_MAX_TURNS = 5
 // Ask 被用户界面作废时的固定错误文本。
 const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 
+// Ask 工具名。
+const ASK_TOOL_NAME = 'common_tool.ask'
+
 // People 写入前需要用户二次确认的工具名。
 const PEOPLE_CONFIRMATION_REQUIRED_TOOLS = new Set(['people_tool.add', 'people_tool.update', 'people_tool.delete'])
 
@@ -179,7 +182,7 @@ const isPeopleMutationTargetConfirmed = (question: string, targets: string[]): b
   targets.length === 0 || targets.some((target) => question.includes(target))
 
 /**
- * 判断 ask_user 回答是否确认了指定 People 写入。
+ * 判断 common_tool.ask 回答是否确认了指定 People 写入。
  */
 const isMatchingPeopleMutationConfirmation = (
   content: string,
@@ -230,7 +233,7 @@ const getLatestUserMessageIndex = (messages: AgentMessage[]): number => {
 }
 
 /**
- * 判断当前用户请求后是否已有 ask_user 确认回答。
+ * 判断当前用户请求后是否已有 common_tool.ask 确认回答。
  */
 const hasAskConfirmationForCurrentUserRequest = (
   messages: AgentMessage[],
@@ -242,7 +245,7 @@ const hasAskConfirmationForCurrentUserRequest = (
   return messages.slice(latestUserIndex + 1).some(
     (message) =>
       message.role === 'tool' &&
-      message.name === 'ask_user' &&
+      message.name === ASK_TOOL_NAME &&
       message.content.includes(ASK_ANSWER_DATA_MARKER) &&
       isMatchingPeopleMutationConfirmation(message.content, toolName, toolInput)
   )
@@ -257,7 +260,7 @@ const assertPeopleMutationConfirmation = (toolName: string, messages: AgentMessa
   }
 
   if (!hasAskConfirmationForCurrentUserRequest(messages, toolName, toolInput)) {
-    throw new Error(`${toolName} requires ask_user confirmation before execution`)
+    throw new Error(`${toolName} requires ${ASK_TOOL_NAME} confirmation before execution`)
   }
 }
 
@@ -430,7 +433,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         }
       } catch (error) {
         const errorMessage = getToolErrorMessage(error)
-        const isAskCancelled = toolCall.name === 'ask_user' && errorMessage === ASK_CANCELLED_MESSAGE
+        const isAskCancelled = toolCall.name === ASK_TOOL_NAME && errorMessage === ASK_CANCELLED_MESSAGE
 
         yield {
           type: 'tool_failed',

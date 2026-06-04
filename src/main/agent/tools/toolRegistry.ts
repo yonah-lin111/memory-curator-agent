@@ -1,5 +1,5 @@
 import { createPeopleTools } from './peopleTool'
-import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from './commonInfoTool'
+import { createDateOffsetTool, createTimeNowTool } from './commonTimeTool'
 import { createAskTool } from './askTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '../types'
 import type { PeopleService } from '../../services/peopleService'
@@ -38,8 +38,7 @@ const builtinToolFactories: AgentToolFactory[] = [
   () => createAskTool(),
   ({ peopleService }) => createPeopleTools(peopleService),
   () => createTimeNowTool(),
-  () => createDateOffsetTool(),
-  () => createRuntimeInfoTool()
+  () => createDateOffsetTool()
 ]
 
 // 工具调用公共约束。

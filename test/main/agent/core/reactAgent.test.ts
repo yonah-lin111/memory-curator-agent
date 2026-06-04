@@ -106,7 +106,7 @@ describe("reactAgent", () => {
           expect(input.messages.at(-1)).toMatchObject({
             role: "tool",
             toolCallId: "call-ask",
-            name: "ask_user",
+            name: "common_tool.ask",
           });
           expect(input.messages.at(-1)?.content).toContain(
             "User has answered your clarification questions",
@@ -125,7 +125,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-ask",
-          name: "ask_user",
+          name: "common_tool.ask",
           argumentsText: "{}",
         };
         yield {
@@ -134,7 +134,7 @@ describe("reactAgent", () => {
       },
     };
     const askTool: AgentTool = {
-      name: "ask_user",
+      name: "common_tool.ask",
       description: "提问",
       parameters: {
         type: "object",
@@ -202,7 +202,7 @@ describe("reactAgent", () => {
     expect(providerInputs).toHaveLength(2);
   });
 
-  it("people 修改工具未经过 ask_user 二次确认时拒绝执行", async () => {
+  it("people 修改工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -272,11 +272,11 @@ describe("reactAgent", () => {
         name: "阿明",
       },
       error:
-        "people_tool.update requires ask_user confirmation before execution",
+        "people_tool.update requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 添加工具未经过 ask_user 二次确认时拒绝执行", async () => {
+  it("people 添加工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
     const addExecute = vi.fn(async () => ({
       observation: "Created people profile: 小陈.",
       data: {
@@ -345,11 +345,11 @@ describe("reactAgent", () => {
         name: "小陈",
         relationship: "朋友",
       },
-      error: "people_tool.add requires ask_user confirmation before execution",
+      error: "people_tool.add requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 删除工具未经过 ask_user 二次确认时拒绝执行", async () => {
+  it("people 删除工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
     const deleteExecute = vi.fn(async () => ({
       observation: "Deleted people profile: person-1.",
       data: {
@@ -415,11 +415,11 @@ describe("reactAgent", () => {
         id: "person-1",
       },
       error:
-        "people_tool.delete requires ask_user confirmation before execution",
+        "people_tool.delete requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 修改工具在 ask_user 二次确认后允许执行", async () => {
+  it("people 修改工具在 common_tool.ask 二次确认后允许执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -450,7 +450,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-ask",
-          name: "ask_user",
+          name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
         };
@@ -466,7 +466,7 @@ describe("reactAgent", () => {
       },
     };
     const askTool: AgentTool = {
-      name: "ask_user",
+      name: "common_tool.ask",
       description: "提问",
       parameters: {
         type: "object",
@@ -544,7 +544,7 @@ describe("reactAgent", () => {
     );
   });
 
-  it("people 写入工具在 ask_user 非确认回答后仍拒绝执行", async () => {
+  it("people 写入工具在 common_tool.ask 非确认回答后仍拒绝执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -571,7 +571,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-ask",
-          name: "ask_user",
+          name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
         };
@@ -587,7 +587,7 @@ describe("reactAgent", () => {
       },
     };
     const askTool: AgentTool = {
-      name: "ask_user",
+      name: "common_tool.ask",
       description: "提问",
       parameters: {
         type: "object",
@@ -660,7 +660,7 @@ describe("reactAgent", () => {
         id: "call-update",
         name: "people_tool.update",
         error:
-          "people_tool.update requires ask_user confirmation before execution",
+          "people_tool.update requires common_tool.ask confirmation before execution",
       }),
     );
   });
@@ -689,7 +689,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-ask",
-          name: "ask_user",
+          name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改 person-1 资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
         };
@@ -705,7 +705,7 @@ describe("reactAgent", () => {
       },
     };
     const askTool: AgentTool = {
-      name: "ask_user",
+      name: "common_tool.ask",
       description: "提问",
       parameters: {
         type: "object",
@@ -778,7 +778,7 @@ describe("reactAgent", () => {
         id: "call-delete",
         name: "people_tool.delete",
         error:
-          "people_tool.delete requires ask_user confirmation before execution",
+          "people_tool.delete requires common_tool.ask confirmation before execution",
       }),
     );
   });
@@ -793,7 +793,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-ask",
-          name: "ask_user",
+          name: "common_tool.ask",
           argumentsText: "{}",
         };
         yield {
@@ -802,7 +802,7 @@ describe("reactAgent", () => {
       },
     };
     const askTool: AgentTool = {
-      name: "ask_user",
+      name: "common_tool.ask",
       description: "提问",
       parameters: {
         type: "object",
@@ -859,7 +859,7 @@ describe("reactAgent", () => {
     expect(events[3]).toMatchObject({
       type: "tool_failed",
       id: "call-ask",
-      name: "ask_user",
+      name: "common_tool.ask",
       error: "Ask request was cancelled.",
     });
     expect(providerInputs).toHaveLength(1);
