@@ -5,6 +5,13 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+
+vi.mock("md-editor-rt", () => ({
+  MdPreview: ({ modelValue }: { modelValue: string }) => (
+    <div data-testid="md-preview">{modelValue}</div>
+  ),
+}));
+
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
 import type { AiToolStep } from "@renderer/features/ai-chat/types";
 
@@ -122,5 +129,31 @@ describe("AiToolCallBlock", () => {
       requestId: "confirm-1",
       action: "confirm",
     });
+  });
+
+  it("common_tool.explain 使用 Markdown 预览完整展示说明", () => {
+    const step: AiToolStep = {
+      id: "explain-1",
+      title: "Tool result: common_tool.explain",
+      status: "done",
+      tool: "common_tool.explain",
+      observation: "将删除人物资料：**阿明**（朋友）。",
+      data: {
+        kind: "explain",
+        targetTool: "people_tool.delete",
+        action: "delete",
+        content: "将删除人物资料：**阿明**（朋友）。",
+      },
+    };
+
+    render(<AiToolCallBlock steps={[step]} />);
+
+    const preview = screen.getByTestId("ai-tool-explain-preview");
+    expect(screen.getByText("common_tool.explain")).toBeInTheDocument();
+    expect(screen.getByTestId("md-preview")).toHaveTextContent(
+      "将删除人物资料：**阿明**（朋友）。",
+    );
+    expect(preview).toHaveClass("markdown-preview-container");
+    expect(preview).toHaveStyle({ fontSize: "13px" });
   });
 });

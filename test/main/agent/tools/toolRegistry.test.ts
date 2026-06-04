@@ -44,6 +44,7 @@ describe('toolRegistry', () => {
 
     expect(registry.ids()).toEqual([
       'common_tool.ask',
+      'common_tool.explain',
       'people_tool.query',
       'people_tool.add',
       'people_tool.update',
@@ -52,13 +53,14 @@ describe('toolRegistry', () => {
       'common_tool.date_offset'
     ])
     expect(registry.get('common_tool.ask')?.description).toContain('structured clarification')
+    expect(registry.get('common_tool.explain')?.description).toContain('Explain the pending write operation')
     expect(registry.get('people_tool.query')?.description).toContain('People table')
     expect(registry.get('people_tool.add')?.description).toContain('Create a people profile')
     expect(registry.get('people_tool.update')?.description).toContain('Update an existing people profile')
     expect(registry.get('people_tool.delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('common_tool.time_now')?.description).toContain('current date')
     expect(registry.get('common_tool.date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(7)
+    expect(registry.all()).toHaveLength(8)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -129,6 +131,20 @@ describe('toolRegistry', () => {
     expect(askTool?.prompt?.alwaysAvailable).toBe(true)
     expect(prepared.description).toContain('Capability: Ask the user structured clarification questions')
     expect(prepared.description).toContain('When to use:')
+  })
+
+  it('common_tool.explain 使用结构化 prompt 并声明写入前触发', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+    const explainTool = registry.get('common_tool.explain')
+    const [prepared] = prepareToolsForModel([explainTool!])
+
+    expect(explainTool?.prompt?.alwaysAvailable).toBe(true)
+    expect(prepared.description).toContain('Capability: Explain the pending write operation')
+    expect(prepared.description).toContain('before people_tool.add')
+    expect(prepared.description).toContain('before people_tool.update')
+    expect(prepared.description).toContain('before people_tool.delete')
   })
 
   it('注册工具默认对模型可见，普通闲聊不再硬过滤 People 工具', () => {

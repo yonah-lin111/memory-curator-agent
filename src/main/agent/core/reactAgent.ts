@@ -11,6 +11,11 @@ import {
   isAskRequestData
 } from '../tools/askTool'
 import {
+  isExplainToolData,
+  type ExplainAction,
+  type ExplainToolData
+} from '../tools/commonExplainTool'
+import {
   createToolConfirmationRequestData,
   type ToolConfirmationAnswerData
 } from '../tools/toolConfirmation'
@@ -24,8 +29,18 @@ const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 // Ask 工具名。
 const ASK_TOOL_NAME = 'common_tool.ask'
 
+// Explain 工具名。
+const EXPLAIN_TOOL_NAME = 'common_tool.explain'
+
 // People 写入前需要用户确认的工具名。
 const PEOPLE_CONFIRMATION_REQUIRED_TOOLS = new Set(['people_tool.add', 'people_tool.update', 'people_tool.delete'])
+
+// People 写入工具对应的 Explain 动作。
+const PEOPLE_MUTATION_EXPLAIN_ACTIONS: Record<string, ExplainAction> = {
+  'people_tool.add': 'add',
+  'people_tool.update': 'update',
+  'people_tool.delete': 'delete'
+}
 
 // People 写入工具完成后的默认提示前缀。
 const PEOPLE_MUTATION_COMPLETION_PREFIXES: Record<string, string> = {
@@ -55,6 +70,10 @@ const PEOPLE_MUTATION_CONFIRMATION_TEXT: Record<string, { header: string; questi
     cancel: '取消删除'
   }
 }
+
+// People 写入确认误用 Ask 时回灌模型的固定错误。
+const PEOPLE_MUTATION_ASK_REJECTION_MESSAGE =
+  'Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
 
 /**
  * 如果当前 run 已取消，直接中断 Agent 循环。
@@ -270,12 +289,46 @@ const renderToolFailureContent = (toolName: string, error: string): string =>
   )
 
 /**
+ * 只向模型回灌工具失败，不向前端暴露脏工具事件。
+ */
+const appendSilentToolFailureMessage = (
+  messages: AgentMessage[],
+  toolCall: ModelToolCallDoneEvent,
+  error: string
+): void => {
+  messages.push({
+    role: 'tool',
+    toolCallId: toolCall.id,
+    name: toolCall.name,
+    content: renderToolFailureContent(toolCall.name, error)
+  })
+}
+
+// 可消费的写入前说明。
+type PendingExplain = ExplainToolData & {
+  // Explain 对应的工具调用 ID。
+  toolCallId: string
+}
+
+/**
+ * 判断 Explain 是否匹配当前写入工具。
+ */
+const isMatchingExplain = (explain: PendingExplain, toolName: string): boolean =>
+  explain.targetTool === toolName && explain.action === PEOPLE_MUTATION_EXPLAIN_ACTIONS[toolName]
+
+/**
+ * 获取写入工具缺失 Explain 时的错误文本。
+ */
+const getMissingExplainMessage = (toolName: string): string => `Call ${EXPLAIN_TOOL_NAME} before ${toolName}.`
+
+/**
  * 运行 Claude Code 风格的 ReAct Agent Loop。
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
   const messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
   let pendingPeopleMutationCompletion: string | null = null
+  let pendingExplain: PendingExplain | null = null
 
   throwIfAborted(input.signal)
 
@@ -369,6 +422,11 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       const toolInput = parseToolArguments(toolCall)
+      if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
+        appendSilentToolFailureMessage(messages, toolCall, PEOPLE_MUTATION_ASK_REJECTION_MESSAGE)
+        continue
+      }
+
       yield {
         type: 'tool_started',
         id: toolCall.id,
@@ -377,10 +435,12 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       try {
-        if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
-          throw new Error(
-            'Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
-          )
+        if (PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolCall.name)) {
+          if (!pendingExplain || !isMatchingExplain(pendingExplain, toolCall.name)) {
+            throw new Error(getMissingExplainMessage(toolCall.name))
+          }
+
+          pendingExplain = null
         }
 
         if (PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolCall.name)) {
@@ -424,6 +484,13 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
+
+        if (toolCall.name === EXPLAIN_TOOL_NAME && isExplainToolData(result.data)) {
+          pendingExplain = {
+            ...result.data,
+            toolCallId: toolCall.id
+          }
+        }
 
         yield {
           type: 'tool_finished',

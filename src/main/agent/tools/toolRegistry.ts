@@ -1,6 +1,7 @@
 import { createPeopleTools } from './peopleTool'
 import { createDateOffsetTool, createTimeNowTool } from './commonTimeTool'
 import { createAskTool } from './askTool'
+import { createExplainTool } from './commonExplainTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '../types'
 import type { PeopleService } from '../../services/peopleService'
 
@@ -36,6 +37,7 @@ export type AgentToolRegistry = {
 // 内置工具工厂列表。
 const builtinToolFactories: AgentToolFactory[] = [
   () => createAskTool(),
+  () => createExplainTool(),
   ({ peopleService }) => createPeopleTools(peopleService),
   () => createTimeNowTool(),
   () => createDateOffsetTool()

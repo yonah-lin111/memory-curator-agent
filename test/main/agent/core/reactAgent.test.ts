@@ -22,6 +22,35 @@ const createToolConfirmationProvider = (
     action,
   }));
 
+/**
+ * 创建 Explain 工具测试桩。
+ */
+const createExplainToolFixture = (): AgentTool => ({
+  name: "common_tool.explain",
+  description: "说明",
+  parameters: {
+    type: "object",
+    properties: {},
+  },
+  execute: async (input) => {
+    const value = input as {
+      targetTool: "people_tool.add" | "people_tool.update" | "people_tool.delete";
+      action: "add" | "update" | "delete";
+      content: string;
+    };
+
+    return {
+      observation: value.content,
+      data: {
+        kind: "explain",
+        targetTool: value.targetTool,
+        action: value.action,
+        content: value.content,
+      },
+    };
+  },
+});
+
 describe("reactAgent", () => {
   it("执行模型请求的工具并把观察结果回灌到下一轮", async () => {
     const providerInputs: ModelTurnInput[] = [];
@@ -242,14 +271,14 @@ describe("reactAgent", () => {
         ],
       },
     }));
-    let turnCount = 0;
+    const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {
       id: "fake",
       type: "openai-compatible",
-      streamTurn: async function* () {
-        turnCount += 1;
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
 
-        if (turnCount > 1) {
+        if (providerInputs.length > 1) {
           yield {
             type: "done",
           };
@@ -294,13 +323,333 @@ describe("reactAgent", () => {
     );
 
     expect(askExecute).not.toHaveBeenCalled();
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        id: "call-ask",
+      }),
+    );
+    expect(providerInputs).toHaveLength(2);
+    expect(providerInputs[1].messages.at(-1)).toMatchObject({
+      role: "tool",
+      toolCallId: "call-ask",
+      name: "common_tool.ask",
+    });
+    expect(providerInputs[1].messages.at(-1)?.content).toContain(
+      "Do not use common_tool.ask to confirm People add/update/delete operations.",
+    );
+  });
+
+  it("people 写工具未先 explain 时拒绝执行且不触发内部确认", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 小陈.",
+      data: {
+        item: {
+          id: "person-new",
+          name: "小陈",
+        },
+      },
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-add",
+          name: "people_tool.add",
+          argumentsText: '{"name":"小陈","relationship":"朋友"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "记一下小陈是朋友",
+          },
+        ],
+        tools: [createExplainToolFixture(), addTool],
+        toolConfirmationProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(addExecute).not.toHaveBeenCalled();
+    expect(toolConfirmationProvider).not.toHaveBeenCalled();
     expect(events).toContainEqual(
       expect.objectContaining({
         type: "tool_failed",
-        id: "call-ask",
-        name: "common_tool.ask",
-        error:
-          "Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.",
+        id: "call-add",
+        name: "people_tool.add",
+        error: "Call common_tool.explain before people_tool.add.",
+      }),
+    );
+  });
+
+  it("people 写工具先 explain 后进入内部确认并执行", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 小陈.",
+      data: {
+        item: {
+          id: "person-new",
+          name: "小陈",
+        },
+      },
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.add","action":"add","content":"将添加人物资料：小陈（朋友）。"}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-add",
+          name: "people_tool.add",
+          argumentsText: '{"name":"小陈","relationship":"朋友"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "记一下小陈是朋友",
+          },
+        ],
+        tools: [createExplainToolFixture(), addTool],
+        toolConfirmationProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(addExecute).toHaveBeenCalledTimes(1);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_finished",
+        id: "call-explain",
+        name: "common_tool.explain",
+        observation: "将添加人物资料：小陈（朋友）。",
+      }),
+    );
+  });
+
+  it("people 写工具 explain 目标不匹配时拒绝执行", async () => {
+    const deleteExecute = vi.fn(async () => ({
+      observation: "Deleted people profile: person-1.",
+      data: {
+        id: "person-1",
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：阿明。"}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-delete",
+          name: "people_tool.delete",
+          argumentsText: '{"id":"person-1"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const deleteTool: AgentTool = {
+      name: "people_tool.delete",
+      description: "删除 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: deleteExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "删除阿明",
+          },
+        ],
+        tools: [createExplainToolFixture(), deleteTool],
+        toolConfirmationProvider: createToolConfirmationProvider(),
+        maxTurns: 2,
+      }),
+    );
+
+    expect(deleteExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-delete",
+        name: "people_tool.delete",
+        error: "Call common_tool.explain before people_tool.delete.",
+      }),
+    );
+  });
+
+  it("单次 explain 只放行一个匹配写工具", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 小陈.",
+      data: {
+        item: {
+          id: "person-new",
+          name: "小陈",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.add","action":"add","content":"将添加人物资料：小陈（朋友）。"}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-add-1",
+          name: "people_tool.add",
+          argumentsText: '{"name":"小陈","relationship":"朋友"}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-add-2",
+          name: "people_tool.add",
+          argumentsText: '{"name":"小王","relationship":"朋友"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "添加两个人",
+          },
+        ],
+        tools: [createExplainToolFixture(), addTool],
+        toolConfirmationProvider: createToolConfirmationProvider(),
+        maxTurns: 2,
+      }),
+    );
+
+    expect(addExecute).toHaveBeenCalledTimes(1);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-add-2",
+        error: "Call common_tool.explain before people_tool.add.",
       }),
     );
   });
@@ -329,6 +678,13 @@ describe("reactAgent", () => {
           return;
         }
 
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：阿明。"}',
+        };
         yield {
           type: "tool_call_done",
           id: "call-update",
@@ -362,7 +718,7 @@ describe("reactAgent", () => {
             content: "把阿明状态改成技术负责人",
           },
         ],
-        tools: [updateTool],
+        tools: [createExplainToolFixture(), updateTool],
         toolConfirmationProvider,
         maxTurns: 2,
       }),
@@ -418,6 +774,13 @@ describe("reactAgent", () => {
 
         yield {
           type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.add","action":"add","content":"将添加人物资料：小陈（朋友）。"}',
+        };
+        yield {
+          type: "tool_call_done",
           id: "call-add",
           name: "people_tool.add",
           argumentsText: '{"name":"小陈","relationship":"朋友"}',
@@ -449,7 +812,7 @@ describe("reactAgent", () => {
             content: "记一下小陈是朋友",
           },
         ],
-        tools: [addTool],
+        tools: [createExplainToolFixture(), addTool],
         toolConfirmationProvider,
         maxTurns: 2,
       }),
@@ -501,6 +864,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"数据","question":"您想使用默认的测试数据，还是自定义测试人物的信息？","options":[{"label":"默认测试数据","description":"使用默认测试档案。"},{"label":"自定义","description":"手动填写信息。"}]},{"header":"确认","question":"您是否确认要添加该测试人物档案？","options":[{"label":"确认创建","description":"创建测试档案。"},{"label":"取消","description":"不创建。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.add","action":"add","content":"将添加人物资料：测试助手（其他）。"}',
         };
         yield {
           type: "tool_call_done",
@@ -595,7 +965,7 @@ describe("reactAgent", () => {
             content: "添加一个测试人物档案",
           },
         ],
-        tools: [askTool, addTool],
+        tools: [askTool, createExplainToolFixture(), addTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 2,
@@ -635,6 +1005,13 @@ describe("reactAgent", () => {
 
         yield {
           type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.delete","action":"delete","content":"将删除人物资料：person-1。"}',
+        };
+        yield {
+          type: "tool_call_done",
           id: "call-delete",
           name: "people_tool.delete",
           argumentsText: '{"id":"person-1"}',
@@ -666,7 +1043,7 @@ describe("reactAgent", () => {
             content: "删除阿明",
           },
         ],
-        tools: [deleteTool],
+        tools: [createExplainToolFixture(), deleteTool],
         toolConfirmationProvider,
         maxTurns: 2,
       }),
@@ -712,6 +1089,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"你确定要删除你弟弟（林xx）的人物档案吗？","options":[{"label":"确认删除","description":"彻底删除档案。"},{"label":"取消","description":"保留档案。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.delete","action":"delete","content":"将删除人物资料：林xx（弟弟）。"}',
         };
         yield {
           type: "tool_call_done",
@@ -787,7 +1171,7 @@ describe("reactAgent", () => {
             content: "删除 我的弟弟 这个人物",
           },
         ],
-        tools: [askTool, deleteTool],
+        tools: [askTool, createExplainToolFixture(), deleteTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 2,
@@ -849,6 +1233,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：阿明。"}',
         };
         yield {
           type: "tool_call_done",
@@ -923,7 +1314,7 @@ describe("reactAgent", () => {
             content: "把阿明状态改成技术负责人",
           },
         ],
-        tools: [askTool, updateTool],
+        tools: [askTool, createExplainToolFixture(), updateTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 3,
@@ -974,6 +1365,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确定要为您弟弟“林xx”的档案中添加“喜欢打游戏”标签吗？","options":[{"label":"确认更新标签","description":"执行更新。"},{"label":"取消","description":"不更新。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：林xx，添加“喜欢打游戏”标签。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1049,7 +1447,7 @@ describe("reactAgent", () => {
             content: "修改我的弟弟的一些信息，添加喜欢打游戏这个tag",
           },
         ],
-        tools: [askTool, updateTool],
+        tools: [askTool, createExplainToolFixture(), updateTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 2,
@@ -1087,6 +1485,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认更新阿明资料？","options":[{"label":"确认","description":"执行更新。"},{"label":"取消","description":"不更新。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：阿明。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1169,7 +1574,7 @@ describe("reactAgent", () => {
             content: "把阿明状态改成技术负责人",
           },
         ],
-        tools: [askTool, updateTool],
+        tools: [askTool, createExplainToolFixture(), updateTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 3,
@@ -1215,6 +1620,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"您确定要彻底删除朋友【黄秀科】的档案吗？此操作无法撤销。","options":[{"label":"确认删除","description":"彻底删除档案。"},{"label":"取消","description":"保留档案。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.delete","action":"delete","content":"将删除人物资料：黄秀科（朋友）。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1316,7 +1728,7 @@ describe("reactAgent", () => {
             content: "删除这个新添加的人物",
           },
         ],
-        tools: [queryTool, askTool, deleteTool],
+        tools: [queryTool, askTool, createExplainToolFixture(), deleteTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 3,
@@ -1363,6 +1775,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认重新添加黄秀科的人物档案吗？","options":[{"label":"确认恢复","description":"重新添加档案。"},{"label":"取消","description":"不恢复。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.add","action":"add","content":"将重新添加人物资料：黄秀科（朋友）。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1438,7 +1857,7 @@ describe("reactAgent", () => {
             content: "就这样吧",
           },
         ],
-        tools: [askTool, addTool],
+        tools: [askTool, createExplainToolFixture(), addTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 3,
@@ -1485,6 +1904,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.update","action":"update","content":"将更新人物资料：阿明。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1559,7 +1985,7 @@ describe("reactAgent", () => {
             content: "把阿明状态改成技术负责人",
           },
         ],
-        tools: [askTool, updateTool],
+        tools: [askTool, createExplainToolFixture(), updateTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 2,
@@ -1605,6 +2031,13 @@ describe("reactAgent", () => {
           name: "common_tool.ask",
           argumentsText:
             '{"questions":[{"header":"确认","question":"确认修改 person-1 资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-explain",
+          name: "common_tool.explain",
+          argumentsText:
+            '{"targetTool":"people_tool.delete","action":"delete","content":"将删除人物资料：person-1。"}',
         };
         yield {
           type: "tool_call_done",
@@ -1679,7 +2112,7 @@ describe("reactAgent", () => {
             content: "把 person-1 的资料修改一下",
           },
         ],
-        tools: [askTool, deleteTool],
+        tools: [askTool, createExplainToolFixture(), deleteTool],
         askAnswerProvider,
         toolConfirmationProvider,
         maxTurns: 2,
