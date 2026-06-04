@@ -4,9 +4,22 @@ import type { AgentTool } from '../../../../src/main/agent/types'
 import type { PeopleService } from '../../../../src/main/services/peopleService'
 
 // People 服务桩。
-const peopleService: Pick<PeopleService, 'list' | 'querySql'> = {
+const peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'> = {
   list: () => [],
-  querySql: () => []
+  querySql: () => [],
+  create: (input) => ({
+    id: 'person-new',
+    createdAt: '2026-06-03 10:00',
+    updatedAt: '2026-06-03 10:00',
+    ...input
+  }),
+  update: (id, input) => ({
+    id,
+    createdAt: '2026-06-03 09:00',
+    updatedAt: '2026-06-03 10:00',
+    ...input
+  }),
+  delete: () => undefined
 }
 
 // 创建测试工具。
@@ -31,17 +44,23 @@ describe('toolRegistry', () => {
 
     expect(registry.ids()).toEqual([
       'ask_user',
-      'people_query',
+      'people_tool.query',
+      'people_tool.add',
+      'people_tool.update',
+      'people_tool.delete',
       'common_time_now',
       'common_date_offset',
       'common_runtime_info'
     ])
     expect(registry.get('ask_user')?.description).toContain('structured clarification')
-    expect(registry.get('people_query')?.description).toContain('People table')
+    expect(registry.get('people_tool.query')?.description).toContain('People table')
+    expect(registry.get('people_tool.add')?.description).toContain('Create a people profile')
+    expect(registry.get('people_tool.update')?.description).toContain('Update an existing people profile')
+    expect(registry.get('people_tool.delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('common_time_now')?.description).toContain('current date')
     expect(registry.get('common_date_offset')?.description).toContain('date offsets')
     expect(registry.get('common_runtime_info')?.description).toContain('runtime information')
-    expect(registry.all()).toHaveLength(5)
+    expect(registry.all()).toHaveLength(8)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -89,12 +108,12 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('Output requirements: Return a concise observation.')
   })
 
-  it('people_query 使用结构化 prompt 元数据', () => {
+  it('people_tool.query 使用结构化 prompt 元数据', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const peopleTool = registry.get('people_query')
-    const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_query')
+    const peopleTool = registry.get('people_tool.query')
+    const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_tool.query')
 
     expect(peopleTool?.prompt?.summary).toContain('People table')
     expect(prepared?.description).toContain('When to use:')
@@ -114,7 +133,7 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('When to use:')
   })
 
-  it('根据用户意图筛选工具，普通闲聊不注入 people_query', () => {
+  it('根据用户意图筛选工具，普通闲聊不注入 people_tool.query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
@@ -157,26 +176,42 @@ describe('toolRegistry', () => {
     ])
   })
 
-  it('根据用户意图筛选工具，人物关系问题注入 people_query', () => {
+  it('根据用户意图筛选工具，人物关系问题注入 people_tool.query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
       'ask_user',
-      'people_query'
+      'people_tool.query'
     ])
   })
 
-  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_query', () => {
+  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_tool.query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
       'ask_user',
-      'people_query'
+      'people_tool.query'
     ])
+  })
+
+  it('根据人物写入意图筛选工具，注入对应 People 写工具', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(
+      selectToolsForTurn(registry.all(), [{ role: 'user', content: '帮我添加一个朋友小陈' }]).map((tool) => tool.name)
+    ).toContain('people_tool.add')
+    expect(
+      selectToolsForTurn(registry.all(), [{ role: 'user', content: '把阿明的状态修改为技术负责人' }]).map((tool) => tool.name)
+    ).toContain('people_tool.update')
+    expect(
+      selectToolsForTurn(registry.all(), [{ role: 'user', content: '删除小陈这个人物资料' }]).map((tool) => tool.name)
+    ).toContain('people_tool.delete')
   })
 
   it('工具回灌后的后续轮保留可用工具，避免工具链被截断', () => {
@@ -193,11 +228,20 @@ describe('toolRegistry', () => {
         {
           role: 'tool',
           toolCallId: 'call-1',
-          name: 'people_query',
+          name: 'people_tool.query',
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)
-    ).toEqual(['ask_user', 'people_query', 'common_time_now', 'common_date_offset', 'common_runtime_info'])
+    ).toEqual([
+      'ask_user',
+      'people_tool.query',
+      'people_tool.add',
+      'people_tool.update',
+      'people_tool.delete',
+      'common_time_now',
+      'common_date_offset',
+      'common_runtime_info'
+    ])
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

@@ -1,4 +1,4 @@
-import { createPeopleQueryTool } from './peopleTool'
+import { createPeopleTools } from './peopleTool'
 import { createDateOffsetTool, createRuntimeInfoTool, createTimeNowTool } from './commonInfoTool'
 import { createAskTool } from './askTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '../types'
@@ -7,11 +7,11 @@ import type { PeopleService } from '../../services/peopleService'
 // Agent 工具注册上下文。
 export type AgentToolRegistryContext = {
   // People 服务。
-  peopleService: Pick<PeopleService, 'list' | 'querySql'>
+  peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'>
 }
 
 // Agent 工具工厂。
-export type AgentToolFactory = (context: AgentToolRegistryContext) => AgentTool
+export type AgentToolFactory = (context: AgentToolRegistryContext) => AgentTool | AgentTool[]
 
 // Agent 工具注册表。
 export type AgentToolRegistry = {
@@ -36,7 +36,7 @@ export type AgentToolRegistry = {
 // 内置工具工厂列表。
 const builtinToolFactories: AgentToolFactory[] = [
   () => createAskTool(),
-  ({ peopleService }) => createPeopleQueryTool(peopleService),
+  ({ peopleService }) => createPeopleTools(peopleService),
   () => createTimeNowTool(),
   () => createDateOffsetTool(),
   () => createRuntimeInfoTool()
@@ -267,7 +267,7 @@ export const createAgentToolRegistry = (
   context: AgentToolRegistryContext,
   factories: AgentToolFactory[] = builtinToolFactories
 ): AgentToolRegistry => {
-  const tools = factories.map((factory) => factory(context))
+  const tools = factories.flatMap((factory) => factory(context))
 
   assertUniqueToolNames(tools)
 

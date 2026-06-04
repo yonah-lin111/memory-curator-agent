@@ -4,6 +4,7 @@ import { Bot, CheckSquare, Plus, Search, Target, Trash2, X } from "lucide-react"
 import type { AiChatSession } from "@renderer/features/ai-chat/types";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
+import { isEmptyAiChatDraftSession } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
 
 // AI 对话历史列表组件属性类型。
 type AiChatHistoryListProps = {
@@ -63,10 +64,17 @@ const getSessionTimestampValue = (time: string): number => {
 };
 
 /**
- * 会话列表按最新消息时间倒序展示。
+ * 会话列表展示时，空白新建对话固定在顶部，其余按最新消息时间倒序展示。
  */
 const sortSessionsByUpdatedTime = (items: AiChatSession[]): AiChatSession[] =>
   [...items].sort((first, second) => {
+    const firstIsEmptyDraft = isEmptyAiChatDraftSession(first);
+    const secondIsEmptyDraft = isEmptyAiChatDraftSession(second);
+
+    if (firstIsEmptyDraft || secondIsEmptyDraft) {
+      return firstIsEmptyDraft === secondIsEmptyDraft ? 0 : firstIsEmptyDraft ? -1 : 1;
+    }
+
     const timeDiff =
       getSessionTimestampValue(second.time) - getSessionTimestampValue(first.time);
 

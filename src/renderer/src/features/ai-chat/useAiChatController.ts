@@ -280,6 +280,11 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       sessions: chatSessions,
       activeId: activeChatId,
       undoLastTurn: window.api?.ai?.undoLastTurn,
+      deleteSession: async (sessionId) => {
+        await window.api?.ai?.deleteSession?.(sessionId);
+        setLoadedHistoryCount((currentCount) => Math.max(0, currentCount - 1));
+      },
+      clearSessionContext: useAiChatContextStore.getState().clearSession,
       removeRunMappingsByMessageIds,
       dispatch: dispatchChatState,
       toast,

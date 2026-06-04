@@ -92,7 +92,7 @@ describe('aiHandlers', () => {
   it('system prompt 不硬编码具体工具名，避免工具被筛掉时诱导伪调用', () => {
     const systemPrompt = createSystemPrompt().content
 
-    expect(systemPrompt).not.toContain('people_query')
+    expect(systemPrompt).not.toContain('people_tool.query')
     expect(systemPrompt).toContain('已授权工具')
     expect(systemPrompt).toContain('工具边界：')
     expect(systemPrompt).toContain('事实边界：')
@@ -195,11 +195,11 @@ describe('aiHandlers', () => {
     vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
     vi.mocked(runReactAgent).mockImplementation(async function* () {
       yield { type: 'text_delta', delta: '你好' } as never
-      yield { type: 'tool_started', id: 'call-1', name: 'people_query', input: { query: '阿明' } } as never
+      yield { type: 'tool_started', id: 'call-1', name: 'people_tool.query', input: { query: '阿明' } } as never
       yield {
         type: 'tool_finished',
         id: 'call-1',
-        name: 'people_query',
+        name: 'people_tool.query',
         observation: '找到 1 位关联人物',
         data: [{ name: '阿明' }]
       } as never

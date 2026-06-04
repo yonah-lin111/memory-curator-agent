@@ -34,7 +34,7 @@ describe("AiChatMessageBubble", () => {
           id: "tool-1",
           title: "Query local People",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation: "找到 1 位关联人物：阿明",
         },
       ],
@@ -49,7 +49,7 @@ describe("AiChatMessageBubble", () => {
       />,
     );
 
-    expect(screen.getByText("people_query")).toBeInTheDocument();
+    expect(screen.getByText("people_tool.query")).toBeInTheDocument();
     expect(screen.getByText("找到 1 位关联人物：阿明")).toBeInTheDocument();
     expect(
       screen.getByText("阿明是你本地 People 中的朋友。"),
@@ -70,7 +70,7 @@ describe("AiChatMessageBubble", () => {
           id: "tool-1",
           title: "Query local People",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation:
             'SQL query returned 1 row: [{"id":"tolin","name":"黄酥梨","relationship":"女朋友","details":"喜欢笑，还是个小吃货"}]',
         },
@@ -85,7 +85,7 @@ describe("AiChatMessageBubble", () => {
       />,
     );
 
-    expect(screen.getByText("people_query")).toBeInTheDocument();
+    expect(screen.getByText("people_tool.query")).toBeInTheDocument();
     expect(
       screen.getByText(
         "SQL query returned 1 row and was normalized as structured results.",
@@ -104,9 +104,9 @@ describe("AiChatMessageBubble", () => {
       toolSteps: [
         {
           id: "tool-1",
-          title: "Tool result: people_query",
+          title: "Tool result: people_tool.query",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation: "SQL query returned 1 row.",
         },
       ],
@@ -161,7 +161,7 @@ describe("AiChatMessageBubble", () => {
           id: "tool-1",
           title: "Query local People",
           status: "failed",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation:
             "Tool execution failed: People SQL can only query the associated_people table",
         },
@@ -169,7 +169,7 @@ describe("AiChatMessageBubble", () => {
           id: "tool-2",
           title: "Query local People",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation: "SQL query returned no rows.",
         },
       ],
@@ -315,9 +315,9 @@ describe("AiChatMessageBubble", () => {
       toolSteps: [
         {
           id: "tool-1",
-          title: "Tool result: people_query",
+          title: "Tool result: people_tool.query",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation: "SQL query returned 1 row.",
         },
       ],
@@ -336,12 +336,12 @@ describe("AiChatMessageBubble", () => {
       1,
     );
     expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
-    expect(screen.getByText("people_query")).toBeInTheDocument();
+    expect(screen.getByText("people_tool.query")).toBeInTheDocument();
   });
 
   it("工具前后重复出现的 reasoning 片段只展示一次", () => {
     const repeatedReasoning =
-      "用户问我的女朋友是谁，我通过people_query查询了relationship为女朋友的人员，找到了1条记录。";
+      "用户问我的女朋友是谁，我通过people_tool.query查询了relationship为女朋友的人员，找到了1条记录。";
     const message: AiChatMessage = {
       id: "a-reasoning-tool-duplicate",
       role: "assistant",
@@ -372,9 +372,9 @@ describe("AiChatMessageBubble", () => {
       toolSteps: [
         {
           id: "tool-1",
-          title: "Tool result: people_query",
+          title: "Tool result: people_tool.query",
           status: "done",
-          tool: "people_query",
+          tool: "people_tool.query",
           observation: "SQL query returned 1 row.",
         },
       ],
@@ -390,7 +390,7 @@ describe("AiChatMessageBubble", () => {
 
     expect(screen.getAllByText("Thought Process")).toHaveLength(1);
     expect(screen.getByText("你的女朋友是黄酥梨。")).toBeInTheDocument();
-    expect(screen.getByText("people_query")).toBeInTheDocument();
+    expect(screen.getByText("people_tool.query")).toBeInTheDocument();
   });
 
   it("消息仍在生成时已结束的 reasoning 显示完成态", () => {

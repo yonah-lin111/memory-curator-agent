@@ -19,7 +19,7 @@ describe("reactAgent", () => {
           yield {
             type: "tool_call_done",
             id: "call-1",
-            name: "people_query",
+            name: "people_tool.query",
             argumentsText: '{"query":"阿明"}',
           };
           yield {
@@ -38,7 +38,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       parameters: {
         type: "object",
@@ -84,7 +84,7 @@ describe("reactAgent", () => {
     expect(providerInputs[1].messages.at(-1)).toMatchObject({
       role: "tool",
       toolCallId: "call-1",
-      name: "people_query",
+      name: "people_tool.query",
     });
     expect(providerInputs[1].messages.at(-1)?.content).toContain(
       "找到 1 位关联人物：阿明｜朋友｜技术狂热者",
@@ -202,6 +202,469 @@ describe("reactAgent", () => {
     expect(providerInputs).toHaveLength(2);
   });
 
+  it("people 修改工具未经过 ask_user 二次确认时拒绝执行", async () => {
+    const updateExecute = vi.fn(async () => ({
+      observation: "Updated people profile: 阿明.",
+      data: {
+        item: {
+          id: "person-1",
+          name: "阿明",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-update",
+          name: "people_tool.update",
+          argumentsText: '{"id":"person-1","name":"阿明"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const updateTool: AgentTool = {
+      name: "people_tool.update",
+      description: "修改 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: updateExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "把阿明状态改成技术负责人",
+          },
+        ],
+        tools: [updateTool],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(updateExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual({
+      type: "tool_failed",
+      id: "call-update",
+      name: "people_tool.update",
+      input: {
+        id: "person-1",
+        name: "阿明",
+      },
+      error:
+        "people_tool.update requires ask_user confirmation before execution",
+    });
+  });
+
+  it("people 添加工具未经过 ask_user 二次确认时拒绝执行", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 小陈.",
+      data: {
+        item: {
+          id: "person-new",
+          name: "小陈",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-add",
+          name: "people_tool.add",
+          argumentsText: '{"name":"小陈","relationship":"朋友"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "记一下小陈是朋友",
+          },
+        ],
+        tools: [addTool],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(addExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual({
+      type: "tool_failed",
+      id: "call-add",
+      name: "people_tool.add",
+      input: {
+        name: "小陈",
+        relationship: "朋友",
+      },
+      error: "people_tool.add requires ask_user confirmation before execution",
+    });
+  });
+
+  it("people 删除工具未经过 ask_user 二次确认时拒绝执行", async () => {
+    const deleteExecute = vi.fn(async () => ({
+      observation: "Deleted people profile: person-1.",
+      data: {
+        id: "person-1",
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-delete",
+          name: "people_tool.delete",
+          argumentsText: '{"id":"person-1"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const deleteTool: AgentTool = {
+      name: "people_tool.delete",
+      description: "删除 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: deleteExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "删除阿明",
+          },
+        ],
+        tools: [deleteTool],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(deleteExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual({
+      type: "tool_failed",
+      id: "call-delete",
+      name: "people_tool.delete",
+      input: {
+        id: "person-1",
+      },
+      error:
+        "people_tool.delete requires ask_user confirmation before execution",
+    });
+  });
+
+  it("people 修改工具在 ask_user 二次确认后允许执行", async () => {
+    const updateExecute = vi.fn(async () => ({
+      observation: "Updated people profile: 阿明.",
+      data: {
+        item: {
+          id: "person-1",
+          name: "阿明",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "text_delta",
+            delta: "已修改。",
+          };
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "ask_user",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-update",
+          name: "people_tool.update",
+          argumentsText: '{"id":"person-1","name":"阿明"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "ask_user",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-update",
+          questions: [
+            {
+              header: "确认",
+              question: "确认修改阿明资料？",
+              options: [
+                {
+                  label: "确认",
+                  description: "执行修改。",
+                },
+                {
+                  label: "取消",
+                  description: "不修改。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const updateTool: AgentTool = {
+      name: "people_tool.update",
+      description: "修改 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: updateExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-update",
+      answers: [
+        {
+          question: "确认修改阿明资料？",
+          answers: ["确认"],
+        },
+      ],
+    }));
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "把阿明状态改成技术负责人",
+          },
+        ],
+        tools: [askTool, updateTool],
+        askAnswerProvider,
+        maxTurns: 3,
+      }),
+    );
+
+    expect(askAnswerProvider).toHaveBeenCalledTimes(1);
+    expect(updateExecute).toHaveBeenCalledTimes(1);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_finished",
+        id: "call-update",
+        name: "people_tool.update",
+        observation: "Updated people profile: 阿明.",
+      }),
+    );
+  });
+
+  it("people 写入工具在 ask_user 非确认回答后仍拒绝执行", async () => {
+    const updateExecute = vi.fn(async () => ({
+      observation: "Updated people profile: 阿明.",
+      data: {
+        item: {
+          id: "person-1",
+          name: "阿明",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "ask_user",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"确认修改阿明资料？","options":[{"label":"确认","description":"执行修改。"},{"label":"取消","description":"不修改。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-update",
+          name: "people_tool.update",
+          argumentsText: '{"id":"person-1","name":"阿明"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "ask_user",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-update",
+          questions: [
+            {
+              header: "确认",
+              question: "确认修改阿明资料？",
+              options: [
+                {
+                  label: "确认",
+                  description: "执行修改。",
+                },
+                {
+                  label: "取消",
+                  description: "不修改。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const updateTool: AgentTool = {
+      name: "people_tool.update",
+      description: "修改 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: updateExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-update",
+      answers: [
+        {
+          question: "确认修改阿明资料？",
+          answers: ["取消"],
+        },
+      ],
+    }));
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "把阿明状态改成技术负责人",
+          },
+        ],
+        tools: [askTool, updateTool],
+        askAnswerProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(updateExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-update",
+        name: "people_tool.update",
+        error:
+          "people_tool.update requires ask_user confirmation before execution",
+      }),
+    );
+  });
+
   it("ask 工具被取消后标记失败并结束 run，不再继续请求模型", async () => {
     const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {
@@ -314,7 +777,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       parameters: {
         type: "object",
@@ -344,7 +807,7 @@ describe("reactAgent", () => {
     expect(events).toContainEqual({
       type: "tool_started",
       id: "call-1",
-      name: "people_query",
+      name: "people_tool.query",
       input: {},
     });
   });
@@ -430,7 +893,7 @@ describe("reactAgent", () => {
         yield {
           type: "tool_call_done",
           id: "call-1",
-          name: "people_query",
+          name: "people_tool.query",
           argumentsText: "undefined",
         };
         yield {
@@ -439,7 +902,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       parameters: {
         type: "object",
@@ -489,7 +952,7 @@ describe("reactAgent", () => {
           yield {
             type: "tool_call_done",
             id: "call-1",
-            name: "people_query",
+            name: "people_tool.query",
             argumentsText: '{"query":"阿明"}',
           };
           yield {
@@ -502,17 +965,17 @@ describe("reactAgent", () => {
           expect(input.messages.at(-1)).toMatchObject({
             role: "tool",
             toolCallId: "call-1",
-            name: "people_query",
+            name: "people_tool.query",
           });
           expect(input.messages.at(-1)?.content).toContain(
-            "Tool people_query execution failed",
+            "Tool people_tool.query execution failed",
           );
           expect(input.messages.at(-1)?.content).toContain("数据库暂时不可用");
 
           yield {
             type: "tool_call_done",
             id: "call-2",
-            name: "people_query",
+            name: "people_tool.query",
             argumentsText: '{"query":"阿明","retry":true}',
           };
           yield {
@@ -531,7 +994,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       parameters: {
         type: "object",
@@ -593,7 +1056,7 @@ describe("reactAgent", () => {
           yield {
             type: "tool_call_done",
             id: "call-1",
-            name: "people_query",
+            name: "people_tool.query",
             argumentsText: '{"sql":"SELECT * FROM nonexistent_table"}',
           };
           yield {
@@ -611,7 +1074,7 @@ describe("reactAgent", () => {
           yield {
             type: "tool_call_done",
             id: "call-2",
-            name: "people_query",
+            name: "people_tool.query",
             argumentsText: '{"sql":"SELECT * FROM associated_people LIMIT 5"}',
           };
           yield {
@@ -630,7 +1093,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       parameters: {
         type: "object",
@@ -688,7 +1151,7 @@ describe("reactAgent", () => {
       },
     };
     const peopleTool: AgentTool = {
-      name: "people_query",
+      name: "people_tool.query",
       description: "查询 People 表",
       prompt: {
         summary: "查询本地 People 表。",

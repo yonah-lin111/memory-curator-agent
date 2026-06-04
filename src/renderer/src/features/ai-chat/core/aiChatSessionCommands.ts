@@ -3,6 +3,7 @@ import {
   createEmptyAiChatSession,
   findChatTurnBoundsByMessageId,
   findLastChatTurnStartIndex,
+  isEmptyAiChatDraftSession,
   type AiChatSessionAction,
 } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
 
@@ -21,6 +22,9 @@ type AiChatToastPort = {
 
 // 删除运行映射端口。
 type RemoveRunMappingsByMessageIds = (messageIds: Set<string>) => void;
+
+// 删除会话持久化端口。
+type DeleteAiChatSessionPort = (sessionId: string) => Promise<void>;
 
 // 重新发送 AI 消息端口。
 type StartAiChatMessage = (
@@ -125,6 +129,51 @@ export const deleteAiChatSession = async ({
 };
 
 /**
+ * 删除当前会话后激活空白新建对话，避免撤销最后一轮后跳到旧历史。
+ */
+const deleteAiChatSessionAndOpenDraft = async ({
+  sessionId,
+  sessions,
+  deleteSession,
+  clearSessionContext,
+  dispatch,
+}: {
+  // 会话标识。
+  sessionId: string;
+  // 当前会话列表。
+  sessions: AiChatSession[];
+  // 持久化删除函数。
+  deleteSession?: DeleteAiChatSessionPort;
+  // 清理上下文函数。
+  clearSessionContext: (sessionId: string) => void;
+  // 会话状态派发函数。
+  dispatch: AiChatSessionDispatch;
+}): Promise<boolean> => {
+  const remainingSessions = sessions.filter((session) => session.id !== sessionId);
+  const existingDraft = remainingSessions.find(isEmptyAiChatDraftSession);
+  const draftSession = existingDraft ?? createEmptyAiChatSession();
+  const resolvedSessions = existingDraft
+    ? [
+        existingDraft,
+        ...remainingSessions.filter((session) => session.id !== existingDraft.id),
+      ]
+    : [draftSession, ...remainingSessions];
+
+  try {
+    await deleteSession?.(sessionId);
+    dispatch({
+      type: "reset",
+      sessions: resolvedSessions,
+      activeId: draftSession.id,
+    });
+    clearSessionContext(sessionId);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * 撤销当前会话最后一轮用户对话，并同步删除持久化 run、工具调用和上下文快照。
  */
 export const undoLastAiChatTurn = async ({
@@ -132,6 +181,8 @@ export const undoLastAiChatTurn = async ({
   sessions,
   activeId,
   undoLastTurn,
+  deleteSession,
+  clearSessionContext = () => undefined,
   removeRunMappingsByMessageIds,
   dispatch,
   toast,
@@ -144,6 +195,10 @@ export const undoLastAiChatTurn = async ({
   activeId: string;
   // 持久化撤销函数。
   undoLastTurn?: (sessionId: string) => Promise<AiChatSession | null>;
+  // 持久化删除会话函数。
+  deleteSession?: DeleteAiChatSessionPort;
+  // 清理上下文函数。
+  clearSessionContext?: (sessionId: string) => void;
   // 清理运行映射函数。
   removeRunMappingsByMessageIds: RemoveRunMappingsByMessageIds;
   // 会话状态派发函数。
@@ -170,6 +225,25 @@ export const undoLastAiChatTurn = async ({
 
   if (!undoLastTurn) {
     removeRunMappingsByMessageIds(removedMessageIds);
+    if (nextSession.messages.length === 0) {
+      const isDeleted = await deleteAiChatSessionAndOpenDraft({
+        sessionId: session.id,
+        sessions,
+        deleteSession,
+        clearSessionContext,
+        dispatch,
+      });
+
+      if (!isDeleted) {
+        dispatch({ type: "replace", session: nextSession });
+        toast.error("撤销后删除空对话失败");
+        return;
+      }
+
+      toast.success("已撤销上一轮并删除空对话，对应问题已回填");
+      return removedUserMessage?.content;
+    }
+
     dispatch({ type: "replace", session: nextSession });
     toast.success("已撤销上一轮，对应问题已回填");
     return removedUserMessage?.content;
@@ -177,10 +251,31 @@ export const undoLastAiChatTurn = async ({
 
   try {
     const persistedSession = await undoLastTurn(session.id);
+    const resolvedSession = persistedSession ?? nextSession;
+
     removeRunMappingsByMessageIds(removedMessageIds);
+    if (resolvedSession.messages.length === 0) {
+      const isDeleted = await deleteAiChatSessionAndOpenDraft({
+        sessionId: session.id,
+        sessions,
+        deleteSession,
+        clearSessionContext,
+        dispatch,
+      });
+
+      if (!isDeleted) {
+        dispatch({ type: "replace", session: resolvedSession });
+        toast.error("撤销后删除空对话失败");
+        return;
+      }
+
+      toast.success("已撤销上一轮并删除空对话，对应问题已回填");
+      return removedUserMessage?.content;
+    }
+
     dispatch({
       type: "replace",
-      session: persistedSession ?? nextSession,
+      session: resolvedSession,
     });
     toast.success("已撤销上一轮，对应问题已回填");
     return removedUserMessage?.content;

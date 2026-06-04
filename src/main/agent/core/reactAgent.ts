@@ -17,6 +17,18 @@ const DEFAULT_MAX_TURNS = 5
 // Ask 被用户界面作废时的固定错误文本。
 const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 
+// People 写入前需要用户二次确认的工具名。
+const PEOPLE_CONFIRMATION_REQUIRED_TOOLS = new Set(['people_tool.add', 'people_tool.update', 'people_tool.delete'])
+
+// Ask 回答数据标记。
+const ASK_ANSWER_DATA_MARKER = '"kind": "ask_answer"'
+
+// Ask 肯定确认关键词。
+const ASK_CONFIRMATION_POSITIVE_PATTERN = /确认|同意|允许|执行|继续|是|可以|添加|新建|创建|修改|更新|删除/i
+
+// Ask 否定确认关键词。
+const ASK_CONFIRMATION_NEGATIVE_PATTERN = /取消|否|不|不要|别|停止|拒绝/i
+
 /**
  * 如果当前 run 已取消，直接中断 Agent 循环。
  */
@@ -81,6 +93,95 @@ const renderToolResultContent = (observation: string, data: unknown): string => 
  */
 const getToolErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
+
+/**
+ * 判断值是否为普通对象。
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+/**
+ * 从工具消息中解析结构化数据。
+ */
+const parseToolData = (content: string): unknown => {
+  const marker = 'Tool data:\n'
+  const markerIndex = content.indexOf(marker)
+  if (markerIndex < 0) {
+    return null
+  }
+
+  try {
+    return JSON.parse(content.slice(markerIndex + marker.length)) as unknown
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 判断 ask_user 回答是否为肯定确认。
+ */
+const isPositiveAskConfirmation = (content: string): boolean => {
+  const data = parseToolData(content)
+  if (!isRecord(data) || data.kind !== 'ask_answer' || !Array.isArray(data.answers)) {
+    return false
+  }
+
+  return data.answers.some((answer) => {
+    if (!isRecord(answer) || !Array.isArray(answer.answers)) {
+      return false
+    }
+
+    return answer.answers.some((value) => {
+      if (typeof value !== 'string') {
+        return false
+      }
+
+      const normalizedValue = value.trim()
+      return ASK_CONFIRMATION_POSITIVE_PATTERN.test(normalizedValue) && !ASK_CONFIRMATION_NEGATIVE_PATTERN.test(normalizedValue)
+    })
+  })
+}
+
+/**
+ * 获取最近一条用户消息下标。
+ */
+const getLatestUserMessageIndex = (messages: AgentMessage[]): number => {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index].role === 'user') {
+      return index
+    }
+  }
+
+  return -1
+}
+
+/**
+ * 判断当前用户请求后是否已有 ask_user 确认回答。
+ */
+const hasAskConfirmationForCurrentUserRequest = (messages: AgentMessage[]): boolean => {
+  const latestUserIndex = getLatestUserMessageIndex(messages)
+
+  return messages.slice(latestUserIndex + 1).some(
+    (message) =>
+      message.role === 'tool' &&
+      message.name === 'ask_user' &&
+      message.content.includes(ASK_ANSWER_DATA_MARKER) &&
+      isPositiveAskConfirmation(message.content)
+  )
+}
+
+/**
+ * 校验 People 写入工具的用户二次确认。
+ */
+const assertPeopleMutationConfirmation = (toolName: string, messages: AgentMessage[]): void => {
+  if (!PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolName)) {
+    return
+  }
+
+  if (!hasAskConfirmationForCurrentUserRequest(messages)) {
+    throw new Error(`${toolName} requires ask_user confirmation before execution`)
+  }
+}
 
 /**
  * 构造回灌模型的工具失败结果。
@@ -194,6 +295,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       try {
+        assertPeopleMutationConfirmation(toolCall.name, messages)
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
 

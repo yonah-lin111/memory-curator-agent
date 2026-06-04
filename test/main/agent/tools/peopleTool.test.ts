@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
-import type { AssociatedPersonItem } from "../../../../src/main/db/schema";
-import { createPeopleQueryTool } from "../../../../src/main/agent/tools/peopleTool";
+import { describe, expect, it, vi } from "vitest";
+import type {
+  AssociatedPersonCreateInput,
+  AssociatedPersonItem,
+  AssociatedPersonUpdateInput,
+} from "../../../../src/main/db/schema";
+import {
+  createPeopleAddTool,
+  createPeopleDeleteTool,
+  createPeopleQueryTool,
+  createPeopleTools,
+  createPeopleUpdateTool,
+} from "../../../../src/main/agent/tools/peopleTool";
 import type { PeopleService } from "../../../../src/main/services/peopleService";
 
 const people: AssociatedPersonItem[] = [
@@ -124,7 +134,33 @@ const peopleService: Pick<PeopleService, "querySql"> = {
   },
 };
 
+const peopleWriteService: Pick<
+  PeopleService,
+  "querySql" | "create" | "update" | "delete"
+> = {
+  ...peopleService,
+  create: vi.fn((input: AssociatedPersonCreateInput) => ({
+    id: "person-new",
+    createdAt: "2026-06-03 10:00",
+    updatedAt: "2026-06-03 10:00",
+    ...input,
+  })),
+  update: vi.fn((id: string, input: AssociatedPersonUpdateInput) => ({
+    id,
+    createdAt: "2026-05-01 10:00",
+    updatedAt: "2026-06-03 10:00",
+    ...input,
+  })),
+  delete: vi.fn(),
+};
+
 describe("peopleTool", () => {
+  it("使用 people_tool.query 作为查询工具名", () => {
+    const tool = createPeopleQueryTool(peopleService);
+
+    expect(tool.name).toBe("people_tool.query");
+  });
+
   it("按 query 查询 people 表并返回观察文本", async () => {
     const tool = createPeopleQueryTool(peopleService);
 
@@ -240,5 +276,123 @@ describe("peopleTool", () => {
         sql: "DROP TABLE associated_people",
       }),
     ).rejects.toThrow("People SQL only allows SELECT queries");
+  });
+
+  it("添加人物并返回创建后的资料", async () => {
+    const tool = createPeopleAddTool(peopleWriteService);
+
+    const result = await tool.execute({
+      avatar: "",
+      name: "小陈",
+      gender: "女",
+      relationship: "朋友",
+      status: "新朋友",
+      birthday: "",
+      contact: "微信",
+      tags: ["设计"],
+      details: "# 小陈",
+    });
+
+    expect(tool.name).toBe("people_tool.add");
+    expect(peopleWriteService.create).toHaveBeenCalledWith({
+      avatar: "",
+      name: "小陈",
+      gender: "女",
+      relationship: "朋友",
+      status: "新朋友",
+      birthday: "",
+      contact: "微信",
+      tags: ["设计"],
+      details: "# 小陈",
+    });
+    expect(result.observation).toBe("Created people profile: 小陈.");
+    expect(result.data).toMatchObject({
+      item: {
+        id: "person-new",
+        name: "小陈",
+      },
+    });
+  });
+
+  it("添加人物提示词允许使用 ask_user 并要求 details 使用 Markdown", () => {
+    const tool = createPeopleAddTool(peopleWriteService);
+
+    expect(tool.prompt?.whenToUse.join("\n")).toContain("ask_user");
+    expect(tool.prompt?.whenToUse.join("\n")).toContain("confirmed");
+    expect(tool.prompt?.safety?.join("\n")).toContain("Before every creation");
+    expect(tool.prompt?.safety?.join("\n")).toContain("Markdown");
+    expect(tool.parameters.properties?.details.description).toContain(
+      "Markdown",
+    );
+  });
+
+  it("修改人物并返回更新后的资料", async () => {
+    const tool = createPeopleUpdateTool(peopleWriteService);
+
+    const result = await tool.execute({
+      id: "person-1",
+      avatar: "",
+      name: "阿明",
+      gender: "男",
+      relationship: "朋友",
+      status: "技术负责人",
+      birthday: "09月11日",
+      contact: "GitHub: aming-coder",
+      tags: ["极客"],
+      details: "# 阿明\n更新后的详情。",
+    });
+
+    expect(tool.name).toBe("people_tool.update");
+    expect(peopleWriteService.update).toHaveBeenCalledWith("person-1", {
+      avatar: "",
+      name: "阿明",
+      gender: "男",
+      relationship: "朋友",
+      status: "技术负责人",
+      birthday: "09月11日",
+      contact: "GitHub: aming-coder",
+      tags: ["极客"],
+      details: "# 阿明\n更新后的详情。",
+    });
+    expect(result.observation).toBe("Updated people profile: 阿明.");
+    expect(result.data).toMatchObject({
+      item: {
+        id: "person-1",
+        status: "技术负责人",
+      },
+    });
+  });
+
+  it("修改人物提示词要求用户明确指定更新", () => {
+    const tool = createPeopleUpdateTool(peopleWriteService);
+
+    expect(tool.prompt?.whenToUse.join("\n")).toContain("explicitly asks");
+    expect(tool.prompt?.whenNotToUse?.join("\n")).toContain(
+      "has not explicitly asked to update saved data",
+    );
+  });
+
+  it("删除人物并返回删除 ID", async () => {
+    const tool = createPeopleDeleteTool(peopleWriteService);
+
+    const result = await tool.execute({
+      id: "person-1",
+    });
+
+    expect(tool.name).toBe("people_tool.delete");
+    expect(peopleWriteService.delete).toHaveBeenCalledWith("person-1");
+    expect(result.observation).toBe("Deleted people profile: person-1.");
+    expect(result.data).toEqual({
+      id: "person-1",
+    });
+  });
+
+  it("集中创建四个 People 工具", () => {
+    expect(createPeopleTools(peopleWriteService).map((tool) => tool.name)).toEqual([
+      "people_tool.query",
+      "people_tool.add",
+      "people_tool.update",
+      "people_tool.delete",
+    ]);
   });
 });

@@ -1,4 +1,9 @@
-import type { AssociatedPersonItem, PersonRelationship } from "../../db/schema";
+import type {
+  AssociatedPersonCreateInput,
+  AssociatedPersonItem,
+  AssociatedPersonUpdateInput,
+  PersonRelationship,
+} from "../../db/schema";
 import type { PeopleService } from "../../services/peopleService";
 import type {
   AgentTool,
@@ -16,6 +21,22 @@ type PeopleQueryTool = Omit<AgentTool, "execute"> & {
   execute: (input: unknown) => Promise<PeopleQueryToolResult>;
 };
 
+// People 写入工具结果。
+type PeopleWriteToolResult = {
+  // 回灌模型的观察文本。
+  observation: string;
+  // 调试或 UI 可用结构化数据。
+  data: unknown;
+};
+
+// People 写入工具类型。
+type PeopleWriteTool = Omit<AgentTool, "execute"> & {
+  /**
+   * 执行 People 写入。
+   */
+  execute: (input: unknown) => Promise<PeopleWriteToolResult>;
+};
+
 // People 工具默认返回数量。
 const DEFAULT_PEOPLE_LIMIT = 8;
 
@@ -31,6 +52,68 @@ const PEOPLE_TABLE_NAME = "associated_people";
 // People 查询字段清单。
 const PEOPLE_COLUMNS =
   "external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at";
+
+// People 关系枚举 Schema。
+const PEOPLE_RELATIONSHIP_SCHEMA = {
+  type: "string",
+  enum: ["女朋友", "家人", "朋友", "同事", "其他"],
+  description: "Relationship category",
+};
+
+// People 完整资料字段 Schema。
+const PEOPLE_PROFILE_PROPERTIES = {
+  avatar: {
+    type: "string",
+    description: "Avatar URI. Use an empty string when absent.",
+  },
+  name: {
+    type: "string",
+    description: "Person name",
+  },
+  gender: {
+    type: "string",
+    description: "Gender text. Use an empty string when absent.",
+  },
+  relationship: PEOPLE_RELATIONSHIP_SCHEMA,
+  status: {
+    type: "string",
+    description:
+      "Current status or short summary. Use an empty string when absent.",
+  },
+  birthday: {
+    type: "string",
+    description: "Birthday text. Use an empty string when absent.",
+  },
+  contact: {
+    type: "string",
+    description: "Contact details. Use an empty string when absent.",
+  },
+  tags: {
+    type: "array",
+    items: {
+      type: "string",
+    },
+    description: "Profile tags",
+  },
+  details: {
+    type: "string",
+    description:
+      "Full profile details in Markdown format. Use headings, lists, paragraphs, and Markdown image syntax when useful. Use an empty string when absent.",
+  },
+};
+
+// People 完整资料必填字段。
+const PEOPLE_PROFILE_REQUIRED = [
+  "avatar",
+  "name",
+  "gender",
+  "relationship",
+  "status",
+  "birthday",
+  "contact",
+  "tags",
+  "details",
+];
 
 // People 默认查询字段清单，不包含 details。
 const DEFAULT_PEOPLE_COLUMNS =
@@ -160,6 +243,80 @@ const parseInput = (input: unknown): PeopleQueryToolInput => {
     sql: parseString(input.sql),
     limit: typeof input.limit === "number" ? input.limit : undefined,
   };
+};
+
+/**
+ * 解析字符串数组字段。
+ */
+const parseStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+
+/**
+ * 解析完整人物资料输入。
+ */
+const parsePersonProfileInput = (
+  input: Record<string, unknown>,
+): AssociatedPersonCreateInput => ({
+  avatar: parseString(input.avatar) ?? "",
+  name: parseString(input.name) ?? "",
+  gender: parseString(input.gender) ?? "",
+  relationship: (parseString(input.relationship) ??
+    "其他") as PersonRelationship,
+  status: parseString(input.status) ?? "",
+  birthday: parseString(input.birthday) ?? "",
+  contact: parseString(input.contact) ?? "",
+  tags: parseStringArray(input.tags),
+  details: parseString(input.details) ?? "",
+});
+
+/**
+ * 解析 People 新建入参。
+ */
+const parseCreateInput = (input: unknown): AssociatedPersonCreateInput => {
+  if (!isRecord(input)) {
+    throw new Error("People profile input must be an object");
+  }
+
+  return parsePersonProfileInput(input);
+};
+
+/**
+ * 解析 People 更新入参。
+ */
+const parseUpdateInput = (
+  input: unknown,
+): { id: string; profile: AssociatedPersonUpdateInput } => {
+  if (!isRecord(input)) {
+    throw new Error("People update input must be an object");
+  }
+
+  const id = parseString(input.id)?.trim();
+  if (!id) {
+    throw new Error("People update requires id");
+  }
+
+  return {
+    id,
+    profile: parsePersonProfileInput(input),
+  };
+};
+
+/**
+ * 解析 People 删除入参。
+ */
+const parseDeleteInput = (input: unknown): { id: string } => {
+  if (!isRecord(input)) {
+    throw new Error("People delete input must be an object");
+  }
+
+  const id = parseString(input.id)?.trim();
+  if (!id) {
+    throw new Error("People delete requires id");
+  }
+
+  return { id };
 };
 
 /**
@@ -385,7 +542,7 @@ const queryStructuredBySql = (
 export const createPeopleQueryTool = (
   peopleService: Pick<PeopleService, "querySql">,
 ): PeopleQueryTool => ({
-  name: "people_query",
+  name: "people_tool.query",
   description:
     "Query associated people profiles in the local People table. Read-only; never modifies data.",
   prompt: {
@@ -448,8 +605,7 @@ export const createPeopleQueryTool = (
           "Search by name, gender, relationship, status, birthday, contact, or tags. For a single-item query (limit = 1), or when base fields do not match, search with details as a fallback.",
       },
       relationship: {
-        type: "string",
-        enum: ["女朋友", "家人", "朋友", "同事", "其他"],
+        ...PEOPLE_RELATIONSHIP_SCHEMA,
         description: "Relationship category filter",
       },
       conditions: {
@@ -466,8 +622,7 @@ export const createPeopleQueryTool = (
             description: "Gender contains",
           },
           relationship: {
-            type: "string",
-            enum: ["女朋友", "家人", "朋友", "同事", "其他"],
+            ...PEOPLE_RELATIONSHIP_SCHEMA,
             description: "Exact relationship category filter",
           },
           status: {
@@ -536,3 +691,198 @@ export const createPeopleQueryTool = (
     };
   },
 });
+
+/**
+ * 创建 People 新建工具。
+ */
+export const createPeopleAddTool = (
+  peopleService: Pick<PeopleService, "create">,
+): PeopleWriteTool => ({
+  name: "people_tool.add",
+  description: "Create a people profile in the local People table.",
+  prompt: {
+    summary: "Create a new profile in the local People table.",
+    intentKeywords: [
+      "添加",
+      "新增",
+      "创建",
+      "记录",
+      "新建人物",
+      "add person",
+      "create person",
+    ],
+    whenToUse: [
+      "Use when the user explicitly asks to create or save a new people profile.",
+      "Use only after ask_user has confirmed the exact creation in the current request.",
+      "Use ask_user to ask for missing required facts when the create request is ambiguous or underspecified.",
+    ],
+    whenNotToUse: [
+      "Do not use for read-only questions about existing people profiles.",
+      "Do not use when the user has not asked to save data.",
+    ],
+    safety: [
+      "Before every creation, call ask_user for a second confirmation and wait for the user's answer.",
+      "Only create structured people profiles through PeopleService.",
+      "Use empty strings or an empty tags array for absent optional-looking fields.",
+      "Write details as Markdown content, not plain unstructured fragments.",
+      "Never invent profile facts the user did not provide or confirm.",
+    ],
+    output: "Return the created people profile facts needed by the user.",
+    examples: [
+      '{"name":"小陈","gender":"","relationship":"朋友","status":"","birthday":"","contact":"","tags":[],"details":"","avatar":""}',
+    ],
+  },
+  parameters: {
+    type: "object",
+    required: PEOPLE_PROFILE_REQUIRED,
+    properties: PEOPLE_PROFILE_PROPERTIES,
+  },
+  execute: async (input) => {
+    const created = peopleService.create(parseCreateInput(input));
+
+    return {
+      observation: `Created people profile: ${created.name}.`,
+      data: {
+        item: toToolItem(created),
+      },
+    };
+  },
+});
+
+/**
+ * 创建 People 更新工具。
+ */
+export const createPeopleUpdateTool = (
+  peopleService: Pick<PeopleService, "update">,
+): PeopleWriteTool => ({
+  name: "people_tool.update",
+  description:
+    "Update an existing people profile in the local People table by id.",
+  prompt: {
+    summary: "Update an existing profile in the local People table by id.",
+    intentKeywords: [
+      "修改",
+      "更新",
+      "改成",
+      "纠正",
+      "补充人物",
+      "update person",
+      "edit person",
+    ],
+    whenToUse: [
+      "Use when the user explicitly asks to update an existing people profile.",
+      "Use only after ask_user has confirmed the exact update in the current request.",
+      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then ask_user confirms the final update.",
+    ],
+    whenNotToUse: [
+      "Do not use for creating new people profiles.",
+      "Do not use when the user only states a fact or preference and has not explicitly asked to update saved data.",
+      "Do not use when the target profile id is unknown.",
+    ],
+    safety: [
+      "Before every update, call ask_user for a second confirmation and wait for the user's answer.",
+      "Require the profile id and a complete replacement profile.",
+      "Query first when the user only provides a name, then merge unchanged fields before updating.",
+      "Never overwrite fields with guesses.",
+    ],
+    output: "Return the updated people profile facts needed by the user.",
+    examples: [
+      '{"id":"person-1","name":"阿明","gender":"男","relationship":"朋友","status":"技术负责人","birthday":"09月11日","contact":"GitHub: aming-coder","tags":["极客"],"details":"# 阿明","avatar":""}',
+    ],
+  },
+  parameters: {
+    type: "object",
+    required: ["id", ...PEOPLE_PROFILE_REQUIRED],
+    properties: {
+      id: {
+        type: "string",
+        description: "People profile id",
+      },
+      ...PEOPLE_PROFILE_PROPERTIES,
+    },
+  },
+  execute: async (input) => {
+    const parsed = parseUpdateInput(input);
+    const updated = peopleService.update(parsed.id, parsed.profile);
+
+    return {
+      observation: `Updated people profile: ${updated.name}.`,
+      data: {
+        item: toToolItem(updated),
+      },
+    };
+  },
+});
+
+/**
+ * 创建 People 删除工具。
+ */
+export const createPeopleDeleteTool = (
+  peopleService: Pick<PeopleService, "delete">,
+): PeopleWriteTool => ({
+  name: "people_tool.delete",
+  description:
+    "Delete an existing people profile from the local People table by id.",
+  prompt: {
+    summary: "Delete an existing profile from the local People table by id.",
+    intentKeywords: [
+      "删除",
+      "移除",
+      "删掉",
+      "delete person",
+      "remove person",
+    ],
+    whenToUse: [
+      "Use when the user explicitly asks to delete a people profile.",
+      "Use only after ask_user has confirmed the exact deletion in the current request.",
+      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then ask_user confirms the final deletion.",
+    ],
+    whenNotToUse: [
+      "Do not use for temporary filtering or hiding.",
+      "Do not use when the target profile id is unknown or ambiguous.",
+    ],
+    safety: [
+      "Before every deletion, call ask_user for a second confirmation and wait for the user's answer.",
+      "Require the exact profile id.",
+      "Ask the user for clarification before deleting when multiple profiles may match.",
+    ],
+    output: "Return a concise deletion confirmation.",
+    examples: ['{"id":"person-1"}'],
+  },
+  parameters: {
+    type: "object",
+    required: ["id"],
+    properties: {
+      id: {
+        type: "string",
+        description: "People profile id",
+      },
+    },
+  },
+  execute: async (input) => {
+    const parsed = parseDeleteInput(input);
+    peopleService.delete(parsed.id);
+
+    return {
+      observation: `Deleted people profile: ${parsed.id}.`,
+      data: {
+        id: parsed.id,
+      },
+    };
+  },
+});
+
+/**
+ * 创建完整 People 工具组。
+ */
+export const createPeopleTools = (
+  peopleService: Pick<
+    PeopleService,
+    "querySql" | "create" | "update" | "delete"
+  >,
+): AgentTool[] => [
+  createPeopleQueryTool(peopleService),
+  createPeopleAddTool(peopleService),
+  createPeopleUpdateTool(peopleService),
+  createPeopleDeleteTool(peopleService),
+];

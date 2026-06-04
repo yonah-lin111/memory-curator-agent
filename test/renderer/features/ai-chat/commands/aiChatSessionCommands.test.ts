@@ -82,6 +82,78 @@ describe('aiChatSessionCommands', () => {
     expect(toast.success).toHaveBeenCalledWith('已撤销上一轮，对应问题已回填')
   })
 
+  it('撤销最后一轮 QA 后删除空会话', async () => {
+    const session = createSession({
+      messages: [
+        {
+          id: 'u1',
+          role: 'user',
+          content: '唯一问题',
+          time: '10:00'
+        },
+        {
+          id: 'a1',
+          role: 'assistant',
+          content: '处理中',
+          answer: '唯一回答',
+          time: '10:01'
+        }
+      ]
+    })
+    const nextSession = createSession({
+      id: 's2',
+      title: '下一会话',
+      time: '09:00',
+      status: 'completed',
+      messages: []
+    })
+    const dispatch = createDispatch()
+    const toast = createToast()
+    const deleteSession = vi.fn(async () => undefined)
+    const clearSessionContext = vi.fn()
+    const removeRunMappingsByMessageIds = vi.fn()
+
+    const result = await undoLastAiChatTurn({
+      session,
+      sessions: [session, nextSession],
+      activeId: session.id,
+      undoLastTurn: vi.fn(async () => ({
+        ...session,
+        title: '新建对话',
+        status: 'idle' as const,
+        messages: []
+      })),
+      deleteSession,
+      clearSessionContext,
+      removeRunMappingsByMessageIds,
+      dispatch,
+      toast
+    })
+
+    expect(result).toBe('唯一问题')
+    expect(removeRunMappingsByMessageIds).toHaveBeenCalledWith(new Set(['u1', 'a1']))
+    expect(deleteSession).toHaveBeenCalledWith('s1')
+    expect(clearSessionContext).toHaveBeenCalledWith('s1')
+    const resetAction = dispatch.mock.calls[0]?.[0]
+
+    expect(resetAction).toMatchObject({
+      type: 'reset',
+      sessions: [
+        {
+          title: '新建对话',
+          status: 'idle',
+          messages: []
+        },
+        nextSession
+      ]
+    })
+    expect(resetAction?.type).toBe('reset')
+    if (resetAction?.type === 'reset') {
+      expect(resetAction.activeId).toBe(resetAction.sessions[0].id)
+    }
+    expect(toast.success).toHaveBeenCalledWith('已撤销上一轮并删除空对话，对应问题已回填')
+  })
+
   it('删除 QA 持久化失败时回滚会话列表', async () => {
     const session = createSession()
     const dispatch = createDispatch()

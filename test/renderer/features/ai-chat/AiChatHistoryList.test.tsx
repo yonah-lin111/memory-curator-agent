@@ -153,6 +153,45 @@ describe('AiChatHistoryList', () => {
     expect(titles[1]).toContain('第一会话')
   })
 
+  it('空白新建对话始终展示在历史顶部', () => {
+    render(
+      <AiChatHistoryList
+        sessions={[
+          {
+            id: 'old-empty',
+            title: '新建对话',
+            time: '2026-05-30 09:00',
+            status: 'idle',
+            messages: []
+          },
+          {
+            id: 'latest',
+            title: '最新会话',
+            time: '2026-05-31 12:00',
+            status: 'completed',
+            messages: []
+          }
+        ]}
+        activeSessionId="old-empty"
+        onSessionChange={() => undefined}
+        onNewChat={() => undefined}
+        onRenameChat={vi.fn(async () => true)}
+        onDeleteChat={vi.fn(async () => true)}
+        onBatchDeleteChats={vi.fn(async () => true)}
+        onLoadMore={vi.fn(async () => undefined)}
+        hasMore={false}
+        isLoadingMore={false}
+      />
+    )
+    const titles = screen
+      .getAllByRole('button')
+      .map((item) => item.textContent ?? '')
+      .filter((text) => text.includes('对话') || text.includes('会话'))
+
+    expect(titles[0]).toContain('新建对话')
+    expect(titles[1]).toContain('最新会话')
+  })
+
   it('外部完成提醒会高亮非激活会话，点击后清理提醒', async () => {
     const user = userEvent.setup()
     const onCompletionNoticeClear = vi.fn()
