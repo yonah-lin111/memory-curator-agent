@@ -7,7 +7,10 @@ import type {
 } from "@renderer/features/ai-chat/types";
 import { AiChatThinkingBlock } from "@renderer/features/ai-chat/components/AiChatThinkingBlock";
 import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
-import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+import type {
+  AiAskAnswerSubmitPayload,
+  AiToolConfirmationAnswerSubmitPayload,
+} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import {
   resolveDedupedRenderablePartContents,
   resolveDedupedTextContents,
@@ -35,6 +38,10 @@ type AiChatMessageBubbleProps = {
   // 提交 Ask 回答回调。
   onSubmitAskAnswer?: (
     payload: AiAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
+  // 提交工具确认回答回调。
+  onSubmitToolConfirmationAnswer?: (
+    payload: AiToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
   // 打开消息右键菜单回调。
   onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
@@ -345,6 +352,7 @@ export const AiChatMessageBubble = ({
   isGenerating = false,
   canRegenerate = false,
   onSubmitAskAnswer,
+  onSubmitToolConfirmationAnswer,
   onOpenContextMenu,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
@@ -434,6 +442,9 @@ export const AiChatMessageBubble = ({
                         key={key}
                         steps={[...currentToolSteps]}
                         onSubmitAskAnswer={onSubmitAskAnswer}
+                        onSubmitToolConfirmationAnswer={
+                          onSubmitToolConfirmationAnswer
+                        }
                       />,
                     );
                     currentToolSteps = [];

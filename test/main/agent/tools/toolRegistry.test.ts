@@ -131,77 +131,77 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('When to use:')
   })
 
-  it('根据用户意图筛选工具，普通闲聊不注入 people_tool.query', () => {
+  it('注册工具默认对模型可见，普通闲聊不再硬过滤 People 工具', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }]).map((tool) => tool.name)).toEqual([
-      'common_tool.ask'
-    ])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
   })
 
-  it('根据当前时间意图筛选工具，注入 common_tool.time_now', () => {
+  it('注册工具默认对模型可见，当前时间工具无需关键词硬注入', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual([
-      'common_tool.ask',
-      'common_tool.time_now'
-    ])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual(registry.ids())
   })
 
-  it('根据日期偏移意图筛选工具，注入 common_tool.date_offset', () => {
+  it('注册工具默认对模型可见，日期偏移工具无需关键词硬注入', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual([
-      'common_tool.ask',
-      'common_tool.date_offset'
-    ])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual(registry.ids())
   })
 
-  it('根据用户意图筛选工具，人物关系问题注入 people_tool.query', () => {
+  it('注册工具默认对模型可见，人物关系问题不再依赖硬过滤注入 query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual([
-      'common_tool.ask',
-      'people_tool.query'
-    ])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
   })
 
-  it('根据亲密关系称谓筛选工具，女朋友偏好问题注入 people_tool.query', () => {
+  it('注册工具默认对模型可见，亲密关系称谓不再依赖硬过滤注入 query', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual([
-      'common_tool.ask',
-      'people_tool.query'
-    ])
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
   })
 
-  it('根据人物写入意图筛选工具，注入对应 People 写工具', () => {
+  it('注册工具默认对模型可见，人物写入工具不再依赖关键词注入', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
 
-    expect(
-      selectToolsForTurn(registry.all(), [{ role: 'user', content: '帮我添加一个朋友小陈' }]).map((tool) => tool.name)
-    ).toContain('people_tool.add')
-    expect(
-      selectToolsForTurn(registry.all(), [{ role: 'user', content: '把阿明的状态修改为技术负责人' }]).map((tool) => tool.name)
-    ).toContain('people_tool.update')
-    expect(
-      selectToolsForTurn(registry.all(), [{ role: 'user', content: '删除小陈这个人物资料' }]).map((tool) => tool.name)
-    ).toContain('people_tool.delete')
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '帮我添加一个朋友小陈' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '把阿明的状态修改为技术负责人' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '删除小陈这个人物资料' }]).map((tool) => tool.name)).toEqual(
+      registry.ids()
+    )
   })
 
-  it('工具回灌后的后续轮不扩大当前用户意图之外的工具面', () => {
+  it('注册工具默认对模型可见，人物恢复不再依赖关键词注入 add', () => {
+    const registry = createAgentToolRegistry({
+      peopleService
+    })
+
+    expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '恢复一下吧' }]).map((tool) => tool.name)).toEqual(registry.ids())
+  })
+
+  it('工具回灌后的后续轮仍保留完整注册工具面', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
@@ -219,10 +219,7 @@ describe('toolRegistry', () => {
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)
-    ).toEqual([
-      'common_tool.ask',
-      'people_tool.query'
-    ])
+    ).toEqual(registry.ids())
   })
 
   it('执行前统一校验工具入参，拒绝缺失必填字段', async () => {

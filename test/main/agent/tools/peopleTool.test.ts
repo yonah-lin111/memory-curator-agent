@@ -314,12 +314,12 @@ describe("peopleTool", () => {
     });
   });
 
-  it("添加人物提示词允许使用 common_tool.ask 并要求 details 使用 Markdown", () => {
+  it("添加人物提示词仅用 common_tool.ask 补充缺失信息并要求 details 使用 Markdown", () => {
     const tool = createPeopleAddTool(peopleWriteService);
 
     expect(tool.prompt?.whenToUse.join("\n")).toContain("common_tool.ask");
-    expect(tool.prompt?.whenToUse.join("\n")).toContain("confirmed");
-    expect(tool.prompt?.safety?.join("\n")).toContain("Before every creation");
+    expect(tool.prompt?.whenToUse.join("\n")).toContain("missing required facts");
+    expect(tool.prompt?.safety?.join("\n")).toContain("internal confirmation");
     expect(tool.prompt?.safety?.join("\n")).toContain("Markdown");
     expect(tool.parameters.properties?.details.description).toContain(
       "Markdown",

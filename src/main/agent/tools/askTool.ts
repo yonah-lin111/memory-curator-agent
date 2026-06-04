@@ -218,7 +218,8 @@ export const createAskTool = (): AgentTool => ({
     whenNotToUse: [
       'Do not use for casual conversation, rhetorical questions, or information you can infer safely from context.',
       'Do not use when you can make a conservative local assumption and proceed.',
-      'Do not use as a substitute for reading available project files, tool results, or prior conversation.'
+      'Do not use as a substitute for reading available project files, tool results, or prior conversation.',
+      'Do not use to confirm People add, update, or delete operations; call the relevant People write tool directly and let the system handle internal confirmation.'
     ],
     safety: [
       'Only ask for the minimum information needed to unblock the current task.',

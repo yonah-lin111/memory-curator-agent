@@ -707,13 +707,17 @@ export const createPeopleAddTool = (
       "新增",
       "创建",
       "记录",
+      "恢复",
+      "还原",
+      "找回",
+      "重新添加",
       "新建人物",
       "add person",
       "create person",
+      "restore person",
     ],
     whenToUse: [
       "Use when the user explicitly asks to create or save a new people profile.",
-      "Use only after common_tool.ask has confirmed the exact creation in the current request.",
       "Use common_tool.ask to ask for missing required facts when the create request is ambiguous or underspecified.",
     ],
     whenNotToUse: [
@@ -721,7 +725,7 @@ export const createPeopleAddTool = (
       "Do not use when the user has not asked to save data.",
     ],
     safety: [
-      "Before every creation, call common_tool.ask for a second confirmation and wait for the user's answer.",
+      "Do not call common_tool.ask only to confirm creation; the system will request internal confirmation before execution.",
       "Only create structured people profiles through PeopleService.",
       "Use empty strings or an empty tags array for absent optional-looking fields.",
       "Write details as Markdown content, not plain unstructured fragments.",
@@ -771,8 +775,7 @@ export const createPeopleUpdateTool = (
     ],
     whenToUse: [
       "Use when the user explicitly asks to update an existing people profile.",
-      "Use only after common_tool.ask has confirmed the exact update in the current request.",
-      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then common_tool.ask confirms the final update.",
+      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then update the resolved profile id.",
     ],
     whenNotToUse: [
       "Do not use for creating new people profiles.",
@@ -780,7 +783,7 @@ export const createPeopleUpdateTool = (
       "Do not use when the target profile id is unknown.",
     ],
     safety: [
-      "Before every update, call common_tool.ask for a second confirmation and wait for the user's answer.",
+      "Do not call common_tool.ask only to confirm updates; the system will request internal confirmation before execution.",
       "Require the profile id and a complete replacement profile.",
       "Query first when the user only provides a name, then merge unchanged fields before updating.",
       "Never overwrite fields with guesses.",
@@ -834,15 +837,14 @@ export const createPeopleDeleteTool = (
     ],
     whenToUse: [
       "Use when the user explicitly asks to delete a people profile.",
-      "Use only after common_tool.ask has confirmed the exact deletion in the current request.",
-      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then common_tool.ask confirms the final deletion.",
+      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then delete the resolved profile id.",
     ],
     whenNotToUse: [
       "Do not use for temporary filtering or hiding.",
       "Do not use when the target profile id is unknown or ambiguous.",
     ],
     safety: [
-      "Before every deletion, call common_tool.ask for a second confirmation and wait for the user's answer.",
+      "Do not call common_tool.ask only to confirm deletion; the system will request internal confirmation before execution.",
       "Require the exact profile id.",
       "Ask the user for clarification before deleting when multiple profiles may match.",
     ],

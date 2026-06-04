@@ -423,4 +423,125 @@ describe('aiHandlers', () => {
       })
     )
   })
+
+  it('cancels pending tool confirmation when ask cancel is requested', async () => {
+    const service = {
+      listSessions: vi.fn(),
+      getSession: vi.fn(() => ({
+        id: 's1',
+        title: '已有标题',
+        time: '10:00',
+        status: 'completed',
+        messages: [{ id: 'm1' }]
+      })),
+      updateSessionTitle: vi.fn(),
+      deleteSession: vi.fn(),
+      ensureSession: vi.fn(),
+      appendMessage: vi.fn(),
+      startRun: vi.fn(),
+      createRunWithMessages: vi.fn(),
+      finishRun: vi.fn(),
+      failRunWithAssistantMessage: vi.fn(),
+      updateAssistantMessage: vi.fn(),
+      upsertToolCall: vi.fn()
+    }
+    const send = vi.fn()
+    vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
+    vi.mocked(runReactAgent).mockImplementation(async function* ({ toolConfirmationProvider }) {
+      const request = {
+        kind: 'tool_confirmation_request',
+        id: 'confirm-1',
+        tool: 'people_tool.delete',
+        input: { id: 'p1' },
+        questions: [
+          {
+            header: '确认删除',
+            question: '确认删除人物档案？',
+            options: [
+              { label: '确认删除', description: '执行删除。' },
+              { label: '取消删除', description: '不执行删除。' }
+            ]
+          }
+        ]
+      }
+
+      yield { type: 'tool_started', id: 'call-delete', name: 'people_tool.delete', input: { id: 'p1' } } as never
+      yield {
+        type: 'tool_finished',
+        id: 'call-delete',
+        name: 'people_tool.delete',
+        observation: 'Tool confirmation required before executing people_tool.delete.',
+        data: request
+      } as never
+
+      try {
+        await toolConfirmationProvider?.(request as never)
+      } catch (error) {
+        yield {
+          type: 'tool_failed',
+          id: 'call-delete',
+          name: 'people_tool.delete',
+          input: { id: 'p1' },
+          error: error instanceof Error ? error.message : String(error)
+        } as never
+      }
+    })
+
+    registerAiHandlers()
+
+    const startHandler = vi
+      .mocked(ipcMain.handle)
+      .mock.calls.find(([channel]) => channel === 'ai:chat:start')?.[1]
+    const askCancelHandler = vi
+      .mocked(ipcMain.handle)
+      .mock.calls.find(([channel]) => channel === 'ai:chat:ask-cancel')?.[1]
+
+    await startHandler?.(
+      { sender: { send, once: vi.fn(), removeListener: vi.fn() } } as never,
+      {
+        runId: 'run-confirm-cancel',
+        userMessageId: '55555555555545558555555555555555',
+        assistantMessageId: '66666666666646668666666666666666',
+        sessionId: 's1',
+        message: '删除这个人',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: []
+      }
+    )
+
+    await vi.waitFor(() =>
+      expect(service.upsertToolCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'people_tool.delete',
+          status: 'running',
+          observation: 'Tool confirmation required before executing people_tool.delete.'
+        })
+      )
+    )
+    await askCancelHandler?.({} as never, 'run-confirm-cancel')
+    await vi.waitFor(() =>
+      expect(service.upsertToolCall).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'people_tool.delete',
+          status: 'failed',
+          observation: 'Tool confirmation was cancelled.',
+          error: 'Tool confirmation request was cancelled.'
+        })
+      )
+    )
+    expect(service.updateAssistantMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: '66666666666646668666666666666666',
+        toolSteps: [
+          expect.objectContaining({
+            id: 'call-delete',
+            tool: 'people_tool.delete',
+            status: 'cancelled',
+            observation: 'Tool confirmation was cancelled.'
+          })
+        ]
+      })
+    )
+  })
 })

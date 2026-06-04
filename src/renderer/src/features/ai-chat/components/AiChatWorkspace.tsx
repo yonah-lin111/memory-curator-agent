@@ -14,7 +14,10 @@ import {
   AiChatInput,
   type AiChatInputCommandId,
 } from "@renderer/features/ai-chat/components/AiChatInput";
-import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+import type {
+  AiAskAnswerSubmitPayload,
+  AiToolConfirmationAnswerSubmitPayload,
+} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import {
   buildMessageContextItems,
   getAiChatContextBudget,
@@ -63,6 +66,10 @@ type AiChatWorkspaceProps = {
   onSendMessage: (text: string) => void;
   // 提交 Ask 回答回调。
   onSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
+  // 提交工具确认回答回调。
+  onSubmitToolConfirmationAnswer?: (
+    payload: AiToolConfirmationAnswerSubmitPayload,
+  ) => void | Promise<void>;
   // 重新生成最新 AI 回答回调。
   onRegenerateLatestAnswer: () => void;
   // 删除指定消息所属 QA 回调。
@@ -82,6 +89,7 @@ export const AiChatWorkspace = ({
   selectedModel,
   onSendMessage,
   onSubmitAskAnswer,
+  onSubmitToolConfirmationAnswer,
   onRegenerateLatestAnswer,
   onDeleteChatTurn,
   onCommandExecute,
@@ -488,6 +496,9 @@ export const AiChatWorkspace = ({
                   isGenerating={isGenerating}
                   canRegenerate={canRegenerate}
                   onSubmitAskAnswer={onSubmitAskAnswer}
+                  onSubmitToolConfirmationAnswer={
+                    onSubmitToolConfirmationAnswer
+                  }
                   onOpenContextMenu={handleOpenMessageContextMenu}
                 />
               </div>

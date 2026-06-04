@@ -11,13 +11,55 @@ import {
   completeAiMessageReasoningParts,
 } from "@renderer/features/ai-chat/core/aiChatMessageParts";
 import type { AiChatMessageUpdater } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
-import { isAiAskRequest } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+import {
+  isAiAskRequest,
+  isAiToolConfirmationRequest,
+} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // Ask 被作废时主进程返回的固定错误文本。
 const ASK_CANCELLED_MESSAGE = "Ask request was cancelled.";
 
+// 工具确认被作废时主进程返回的固定错误文本。
+const TOOL_CONFIRMATION_CANCELLED_MESSAGE =
+  "Tool confirmation request was cancelled.";
+
 // 整个 AI run 被硬取消时的固定错误文本。
 const AI_CHAT_CANCELLED_MESSAGE = "AI chat request was cancelled";
+
+// 工具确认回答数据。
+type AiToolConfirmationAnswerData = {
+  // 工具数据类型。
+  kind: "tool_confirmation_answer";
+  // 工具确认请求唯一标识。
+  id: string;
+  // 用户确认动作。
+  action: "confirm" | "cancel";
+};
+
+/**
+ * 判断值是否为普通对象。
+ */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * 判断工具数据是否为工具确认回答。
+ */
+const isAiToolConfirmationAnswer = (
+  value: unknown,
+): value is AiToolConfirmationAnswerData =>
+  isRecord(value) &&
+  value.kind === "tool_confirmation_answer" &&
+  typeof value.id === "string" &&
+  (value.action === "confirm" || value.action === "cancel");
+
+/**
+ * 判断工具结果是否仍在等待后续输入或执行。
+ */
+const isToolStillRunning = (data: unknown): boolean =>
+  isAiAskRequest(data) ||
+  isAiToolConfirmationRequest(data) ||
+  (isAiToolConfirmationAnswer(data) && data.action === "confirm");
 
 // AI run 主流程生命周期。
 type AiRunState = "running" | "finished";
@@ -213,7 +255,7 @@ export const createAiChatEventHandler = ({
           step.id === event.id
             ? {
                 ...step,
-                status: isAiAskRequest(event.data) ? "running" : "done",
+                status: isToolStillRunning(event.data) ? "running" : "done",
                 input: step.input,
                 observation: event.observation,
                 data: event.data,
@@ -225,7 +267,7 @@ export const createAiChatEventHandler = ({
           {
             id: event.id,
             title: `Tool result: ${event.name}`,
-            status: isAiAskRequest(event.data) ? "running" : "done",
+            status: isToolStillRunning(event.data) ? "running" : "done",
             tool: event.name,
             input: {},
             observation: event.observation,
@@ -243,12 +285,17 @@ export const createAiChatEventHandler = ({
   ): AiChatMessage => {
     const isAskCancelled =
       event.name === "common_tool.ask" && event.error === ASK_CANCELLED_MESSAGE;
-    const status = isAskCancelled ? "cancelled" : "failed";
-    const observation = isAskCancelled
-      ? "Ask was cancelled."
+    const isToolConfirmationCancelled =
+      event.error === TOOL_CONFIRMATION_CANCELLED_MESSAGE;
+    const isCancelled = isAskCancelled || isToolConfirmationCancelled;
+    const status = isCancelled ? "cancelled" : "failed";
+    const observation = isCancelled
+      ? isAskCancelled
+        ? "Ask was cancelled."
+        : "Tool confirmation was cancelled."
       : `Tool execution failed: ${event.error}`;
-    const title = isAskCancelled
-      ? "Tool cancelled: common_tool.ask"
+    const title = isCancelled
+      ? `Tool cancelled: ${event.name}`
       : `Tool failed: ${event.name}`;
 
     return {

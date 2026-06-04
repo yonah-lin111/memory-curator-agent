@@ -45,9 +45,6 @@ const builtinToolFactories: AgentToolFactory[] = [
 const TOOL_CALL_GUARD =
   'Call constraints: provide arguments strictly according to the parameter schema; call only when the capability is actually needed; never invent information that the tool did not return.'
 
-// 默认工具意图关键词。
-const DEFAULT_INTENT_KEYWORDS = ['工具', '查询', '查找', '搜索', '读取']
-
 /**
  * 校验工具名唯一性。
  */
@@ -194,42 +191,12 @@ const prepareDescription = (tool: AgentTool): string => {
 }
 
 /**
- * 获取最近一条用户消息。
+ * 返回本轮可见工具。
  */
-const getLatestUserContent = (messages: AgentMessage[]): string =>
-  [...messages].reverse().find((message) => message.role === 'user')?.content ?? ''
-
-/**
- * 获取工具意图关键词。
- */
-const getIntentKeywords = (tool: AgentTool): string[] => [
-  ...(tool.prompt?.intentKeywords ?? []),
-  tool.name,
-  ...DEFAULT_INTENT_KEYWORDS
-]
-
-/**
- * 根据用户意图筛选本轮工具。
- */
-export const selectToolsForTurn = (tools: AgentTool[], messages: AgentMessage[]): AgentTool[] => {
+export const selectToolsForTurn = (tools: AgentTool[], _messages: AgentMessage[]): AgentTool[] => {
   assertUniqueToolNames(tools)
 
-  const content = getLatestUserContent(messages).trim().toLowerCase()
-  if (!content) {
-    return []
-  }
-
-  return tools.filter((tool) => {
-    if (!tool.prompt) {
-      return true
-    }
-
-    if (tool.prompt.alwaysAvailable) {
-      return true
-    }
-
-    return getIntentKeywords(tool).some((keyword) => content.includes(keyword.toLowerCase()))
-  })
+  return [...tools]
 }
 
 /**

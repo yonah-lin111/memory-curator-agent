@@ -150,6 +150,14 @@ type AiAskAnswerPayload = {
   answers: string[][]
 }
 
+// AI 工具确认回答载荷类型。
+type AiToolConfirmationAnswerPayload = {
+  // 工具确认请求唯一标识。
+  requestId: string
+  // 用户确认动作。
+  action: 'confirm' | 'cancel'
+}
+
 // AI 模型选项。
 type AiModelOption = {
   // 模型唯一标识。
@@ -474,6 +482,8 @@ const api = {
       ipcRenderer.invoke('ai:chat:ask-cancel', runId),
     submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
       ipcRenderer.invoke('ai:chat:ask-answer', payload),
+    submitToolConfirmationAnswer: (payload: AiToolConfirmationAnswerPayload): Promise<void> =>
+      ipcRenderer.invoke('ai:chat:tool-confirmation-answer', payload),
     onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {
       const wrappedListener = (_: Electron.IpcRendererEvent, event: AiChatEvent): void => {
         listener(event)

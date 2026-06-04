@@ -1,5 +1,6 @@
 import type { AssociatedPersonItem, PersonRelationship } from '../db/schema'
 import type { AskAnswerData, AskRequestData } from './tools/askTool'
+import type { ToolConfirmationAnswerData, ToolConfirmationRequestData } from './tools/toolConfirmation'
 
 // 模型 provider 传输格式类型。
 export type ProviderTransportType = 'openai-compatible' | 'openai' | 'anthropic' | 'google'
@@ -256,6 +257,10 @@ export type ReactAgentRunInput = {
    * 等待用户回答 Ask 请求。
    */
   askAnswerProvider?: (request: AskRequestData) => Promise<AskAnswerData>
+  /**
+   * 等待用户确认工具写操作。
+   */
+  toolConfirmationProvider?: (request: ToolConfirmationRequestData) => Promise<ToolConfirmationAnswerData>
 }
 
 // Agent 流式输出事件。

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
-import type { AiAskAnswerSubmitPayload } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+import type {
+  AiAskAnswerSubmitPayload,
+  AiToolConfirmationAnswerSubmitPayload,
+} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 import { useToast } from "@renderer/components/ui/Toast";
 import {
   buildMessageContextItems,
@@ -110,6 +113,10 @@ type UseAiChatControllerResult = {
   handleSendMessage: (text: string) => void;
   // 提交 Ask 回答。
   handleSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => Promise<void>;
+  // 提交工具确认回答。
+  handleSubmitToolConfirmationAnswer: (
+    payload: AiToolConfirmationAnswerSubmitPayload,
+  ) => Promise<void>;
   // 重新生成最新 AI 回答。
   handleRegenerateLatestAnswer: () => Promise<void>;
   // 删除指定消息所属 QA。
@@ -795,6 +802,19 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   };
 
   /**
+   * 提交工具确认回答，主进程会继续或取消对应工具执行。
+   */
+  const handleSubmitToolConfirmationAnswer = async (
+    payload: AiToolConfirmationAnswerSubmitPayload,
+  ): Promise<void> => {
+    if (!window.api?.ai?.submitToolConfirmationAnswer) {
+      throw new Error("AI tool confirmation bridge is not ready");
+    }
+
+    await window.api.ai.submitToolConfirmationAnswer(payload);
+  };
+
+  /**
    * 重新生成最新一轮 AI 回答：先删除最新 QA，再用原问题和清理后的上下文重发。
    */
   const handleRegenerateLatestAnswer = async (): Promise<void> => {
@@ -861,6 +881,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     handleLoadMoreChatSessions,
     handleSendMessage,
     handleSubmitAskAnswer,
+    handleSubmitToolConfirmationAnswer,
     handleRegenerateLatestAnswer,
     handleDeleteChatTurn,
     handleAiChatCommand,

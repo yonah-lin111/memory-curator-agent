@@ -34,6 +34,28 @@ export type AiAskRequest = {
   questions: AiAskQuestion[];
 };
 
+// 工具确认请求。
+export type AiToolConfirmationRequest = {
+  // 工具数据类型。
+  kind: "tool_confirmation_request";
+  // 确认请求唯一标识。
+  id: string;
+  // 待确认工具名称。
+  tool: string;
+  // 待确认工具输入。
+  input: unknown;
+  // 确认问题列表。
+  questions: AiAskQuestion[];
+};
+
+// 可复用问答请求。
+type AiQuestionRequest = {
+  // 请求唯一标识。
+  id: string;
+  // 问题列表。
+  questions: AiAskQuestion[];
+};
+
 // Ask 回答。
 export type AiAskAnswer = {
   // 问题文本。
@@ -60,6 +82,14 @@ export type AiAskAnswerSubmitPayload = {
   answers: string[][];
 };
 
+// 工具确认回答提交载荷。
+export type AiToolConfirmationAnswerSubmitPayload = {
+  // 工具确认请求唯一标识。
+  requestId: string;
+  // 用户确认动作。
+  action: "confirm" | "cancel";
+};
+
 // Ask 回答映射。
 type AiAskAnswerMap = Record<string, string[]>;
 
@@ -72,7 +102,7 @@ type AiAskCustomSelectionMap = Record<string, boolean>;
 // Ask 请求面板组件属性类型。
 type AiAskRequestPanelProps = {
   // Ask 请求数据。
-  request: AiAskRequest;
+  request: AiAskRequest | AiToolConfirmationRequest;
   // 提交回答回调。
   onSubmit: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
 };
@@ -114,6 +144,19 @@ export const isAiAskRequest = (value: unknown): value is AiAskRequest =>
   value.questions.every(isAskQuestion);
 
 /**
+ * 判断工具数据是否为工具确认请求。
+ */
+export const isAiToolConfirmationRequest = (
+  value: unknown,
+): value is AiToolConfirmationRequest =>
+  isRecord(value) &&
+  value.kind === "tool_confirmation_request" &&
+  typeof value.id === "string" &&
+  typeof value.tool === "string" &&
+  Array.isArray(value.questions) &&
+  value.questions.every(isAskQuestion);
+
+/**
  * 判断工具数据是否为 Ask 回答。
  */
 export const isAiAskAnswer = (value: unknown): value is AiAskAnswerData =>
@@ -139,7 +182,7 @@ const createAnswerKey = (requestId: string, index: number): string =>
  * 解析问题当前答案。
  */
 const resolveQuestionAnswers = (
-  request: AiAskRequest,
+  request: AiQuestionRequest,
   questionIndex: number,
   answers: AiAskAnswerMap,
   customInputs: AiAskCustomInputMap,
@@ -168,7 +211,7 @@ const resolveQuestionAnswers = (
  * 判断全部问题是否已回答。
  */
 const hasAnsweredAllQuestions = (
-  request: AiAskRequest,
+  request: AiQuestionRequest,
   answers: AiAskAnswerMap,
   customInputs: AiAskCustomInputMap,
   customSelections: AiAskCustomSelectionMap,

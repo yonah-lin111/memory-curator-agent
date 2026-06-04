@@ -8,7 +8,9 @@ import {
   AiAskRequestPanel,
   isAiAskAnswer,
   isAiAskRequest,
+  isAiToolConfirmationRequest,
   type AiAskAnswerSubmitPayload,
+  type AiToolConfirmationAnswerSubmitPayload,
 } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // 工具观察文本最大展示长度。
@@ -32,6 +34,10 @@ type AiToolCallBlockProps = {
   // 发送 Ask 回答回调。
   onSubmitAskAnswer?: (
     payload: AiAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
+  // 发送工具确认回答回调。
+  onSubmitToolConfirmationAnswer?: (
+    payload: AiToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
 };
 
@@ -170,6 +176,7 @@ const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
 export const AiToolCallBlock = ({
   steps,
   onSubmitAskAnswer,
+  onSubmitToolConfirmationAnswer,
 }: AiToolCallBlockProps): React.JSX.Element => {
   return (
     <div className="my-0.5 flex flex-col gap-2">
@@ -180,7 +187,25 @@ export const AiToolCallBlock = ({
           const StatusIcon = config.icon;
           const displayObservation = formatToolObservation(step);
           const askRequest = isAiAskRequest(step.data) ? step.data : null;
+          const toolConfirmationRequest = isAiToolConfirmationRequest(step.data)
+            ? step.data
+            : null;
           const askAnswerSummary = renderAskAnswerSummary(step.data);
+          const requestPanel = askRequest ?? toolConfirmationRequest;
+          const handleSubmitRequest = askRequest
+            ? onSubmitAskAnswer
+            : toolConfirmationRequest && onSubmitToolConfirmationAnswer
+              ? (payload: AiAskAnswerSubmitPayload): void | Promise<void> => {
+                  const selected = payload.answers[0]?.[0] ?? "";
+                  const cancelLabel =
+                    toolConfirmationRequest.questions[0]?.options[1]?.label;
+
+                  return onSubmitToolConfirmationAnswer({
+                    requestId: payload.requestId,
+                    action: selected === cancelLabel ? "cancel" : "confirm",
+                  });
+                }
+              : undefined;
 
           return (
             <div key={step.id} className="relative flex gap-2.5 items-start">
@@ -224,7 +249,7 @@ export const AiToolCallBlock = ({
                   <span className="flex-1">{displayObservation}</span>
                 </div>
                 {askAnswerSummary}
-                {askRequest && onSubmitAskAnswer ? (
+                {requestPanel && handleSubmitRequest ? (
                   <div className="mt-1 flex items-start gap-1 text-white/45">
                     <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
                       <svg
@@ -242,8 +267,8 @@ export const AiToolCallBlock = ({
                     </span>
                     <div className="min-w-0 flex-1">
                       <AiAskRequestPanel
-                        request={askRequest}
-                        onSubmit={onSubmitAskAnswer}
+                        request={requestPanel}
+                        onSubmit={handleSubmitRequest}
                       />
                     </div>
                   </div>

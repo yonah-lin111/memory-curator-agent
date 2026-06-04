@@ -190,6 +190,14 @@ type AiAskAnswerPayload = {
   answers: string[][]
 }
 
+// AI 工具确认回答载荷类型。
+type AiToolConfirmationAnswerPayload = {
+  // 工具确认请求唯一标识。
+  requestId: string
+  // 用户确认动作。
+  action: 'confirm' | 'cancel'
+}
+
 // AI 模型选项。
 type AiModelOption = {
   // 模型唯一标识。
@@ -588,6 +596,8 @@ type AppAPI = {
     cancelAsk?: (runId: string) => Promise<void>
     // 提交 Ask 回答。
     submitAskAnswer?: (payload: AiAskAnswerPayload) => Promise<void>
+    // 提交工具确认回答。
+    submitToolConfirmationAnswer?: (payload: AiToolConfirmationAnswerPayload) => Promise<void>
     // 监听 AI 对话事件。
     onChatEvent: (listener: (event: AiChatEvent) => void) => () => void
   }

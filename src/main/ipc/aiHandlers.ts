@@ -11,6 +11,13 @@ import { createModelProvider } from '../agent/providers/providerFactory'
 import { runReactAgent } from '../agent/core/reactAgent'
 import { createAgentToolRegistry } from '../agent/tools/toolRegistry'
 import { createAskAnswerData, isAskRequestData, type AskRequestData } from '../agent/tools/askTool'
+import {
+  createToolConfirmationAnswerData,
+  isToolConfirmationAnswerData,
+  isToolConfirmationRequestData,
+  type ToolConfirmationAction,
+  type ToolConfirmationRequestData
+} from '../agent/tools/toolConfirmation'
 import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/core/contextMessages'
 import type { AgentMessage, AgentStreamEvent } from '../agent/types'
 import type { AiChatMessagePart, AiToolStep } from '../db/schema'
@@ -51,6 +58,14 @@ type AiAskAnswerPayload = {
   requestId: string
   // 每个问题对应的回答列表。
   answers: string[][]
+}
+
+// AI 工具确认回答载荷。
+type AiToolConfirmationAnswerPayload = {
+  // 工具确认请求唯一标识。
+  requestId: string
+  // 用户确认动作。
+  action: ToolConfirmationAction
 }
 
 // AI 模型选项。
@@ -145,6 +160,23 @@ type PendingAskAnswer = {
 // 等待中的 Ask 回答表。
 const pendingAskAnswers = new Map<string, PendingAskAnswer>()
 
+// 等待用户确认的工具请求。
+type PendingToolConfirmation = {
+  // Agent 运行 ID。
+  runId: string
+  /**
+   * 完成工具确认。
+   */
+  resolve: (action: ToolConfirmationAction) => void
+  /**
+   * 拒绝工具确认。
+   */
+  reject: (error: Error) => void
+}
+
+// 等待中的工具确认表。
+const pendingToolConfirmations = new Map<string, PendingToolConfirmation>()
+
 // 运行中的 AI 对话请求。
 type ActiveAiChatRun = {
   // 会话 ID。
@@ -175,6 +207,9 @@ const AI_CHAT_CANCELLED_MESSAGE = 'AI chat request was cancelled'
 
 // 取消 Ask 请求的统一文案。
 const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
+
+// 取消工具确认请求的统一文案。
+const TOOL_CONFIRMATION_CANCELLED_MESSAGE = 'Tool confirmation request was cancelled.'
 
 // Agent 系统提示词段落。
 const SYSTEM_PROMPT_SECTIONS = [
@@ -257,6 +292,21 @@ const waitForAskAnswer = (runId: string, request: AskRequestData): Promise<Retur
   })
 
 /**
+ * 等待渲染进程提交工具确认。
+ */
+const waitForToolConfirmation = (
+  runId: string,
+  request: ToolConfirmationRequestData
+): Promise<ReturnType<typeof createToolConfirmationAnswerData>> =>
+  new Promise((resolve, reject) => {
+    pendingToolConfirmations.set(request.id, {
+      runId,
+      resolve: (action) => resolve(createToolConfirmationAnswerData(request, action)),
+      reject
+    })
+  })
+
+/**
  * 取消指定 run 下等待用户回答的 Ask 请求。
  */
 const cancelPendingAskAnswersByRun = (
@@ -268,6 +318,26 @@ const cancelPendingAskAnswersByRun = (
   for (const [requestId, entry] of pendingAskAnswers.entries()) {
     if (entry.runId === runId) {
       pendingAskAnswers.delete(requestId)
+      entry.reject(error)
+      hasCancelled = true
+    }
+  }
+
+  return hasCancelled
+}
+
+/**
+ * 取消指定 run 下等待用户确认的工具请求。
+ */
+const cancelPendingToolConfirmationsByRun = (
+  runId: string,
+  error = new Error(TOOL_CONFIRMATION_CANCELLED_MESSAGE)
+): boolean => {
+  let hasCancelled = false
+
+  for (const [requestId, entry] of pendingToolConfirmations.entries()) {
+    if (entry.runId === runId) {
+      pendingToolConfirmations.delete(requestId)
       entry.reject(error)
       hasCancelled = true
     }
@@ -473,11 +543,13 @@ export const registerAiHandlers = (): void => {
 
     if (!activeRun) {
       cancelPendingAskAnswersByRun(runId, new Error(message))
+      cancelPendingToolConfirmationsByRun(runId, new Error(message))
       return false
     }
 
     activeAiChatRuns.delete(runId)
     cancelPendingAskAnswersByRun(runId, new Error(message))
+    cancelPendingToolConfirmationsByRun(runId, new Error(message))
     activeRun.controller.abort(new Error(message))
 
     const failedTimestamp = createTimestamp()
@@ -516,9 +588,14 @@ export const registerAiHandlers = (): void => {
   }
 
   /**
-   * 只取消等待中的 ask，不中断 AI run 的流式输出和落库。
+   * 只取消等待用户输入的请求，不中断 AI run 的流式输出和落库。
    */
-  const cancelAiChatAsk = (runId: string): boolean => cancelPendingAskAnswersByRun(runId)
+  const cancelAiChatAsk = (runId: string): boolean => {
+    const hasCancelledAsk = cancelPendingAskAnswersByRun(runId)
+    const hasCancelledToolConfirmation = cancelPendingToolConfirmationsByRun(runId)
+
+    return hasCancelledAsk || hasCancelledToolConfirmation
+  }
 
   ipcMain.handle('ai:model-options:get', async () => createModelOptionsResponse())
   ipcMain.handle('ai:sessions:list', async (_, payload?: AiChatSessionListPayload) =>
@@ -549,6 +626,23 @@ export const registerAiHandlers = (): void => {
 
     pendingAskAnswers.delete(payload.requestId)
     pending.resolve(payload.answers)
+  })
+  ipcMain.handle('ai:chat:tool-confirmation-answer', async (_, payload: AiToolConfirmationAnswerPayload) => {
+    if (
+      !payload ||
+      typeof payload.requestId !== 'string' ||
+      (payload.action !== 'confirm' && payload.action !== 'cancel')
+    ) {
+      throw new Error('Invalid tool confirmation payload')
+    }
+
+    const pending = pendingToolConfirmations.get(payload.requestId)
+    if (!pending) {
+      throw new Error(`Tool confirmation request is not pending: ${payload.requestId}`)
+    }
+
+    pendingToolConfirmations.delete(payload.requestId)
+    pending.resolve(payload.action)
   })
   ipcMain.handle('ai:chat:cancel', async (_, runId: string) => {
     if (typeof runId !== 'string' || !runId.trim()) {
@@ -722,7 +816,8 @@ export const registerAiHandlers = (): void => {
           }),
           tools,
           signal: controller.signal,
-          askAnswerProvider: (request) => waitForAskAnswer(runId, request)
+          askAnswerProvider: (request) => waitForAskAnswer(runId, request),
+          toolConfirmationProvider: (request) => waitForToolConfirmation(runId, request)
         })) {
           if (agentEvent.type === 'text_delta') {
             activeRun.assistantAnswer += agentEvent.delta
@@ -777,10 +872,13 @@ export const registerAiHandlers = (): void => {
             const persistedToolCallId = resolveToolCallId(agentEvent.id)
             const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const isAskRequest = isAskRequestData(agentEvent.data)
+            const isToolConfirmationRequest = isToolConfirmationRequestData(agentEvent.data)
+            const isConfirmedToolConfirmationAnswer =
+              isToolConfirmationAnswerData(agentEvent.data) && agentEvent.data.action === 'confirm'
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
               title: `Tool result: ${agentEvent.name}`,
-              status: isAskRequest ? 'running' : 'done',
+              status: isAskRequest || isToolConfirmationRequest || isConfirmedToolConfirmationAnswer ? 'running' : 'done',
               tool: agentEvent.name,
               input: activeRun.assistantToolSteps[toolStepIndex]?.input,
               observation: agentEvent.observation,
@@ -804,7 +902,7 @@ export const registerAiHandlers = (): void => {
               messageId: assistantMessageId,
               toolCallId: persistedToolCallId,
               name: agentEvent.name,
-              status: isAskRequest ? 'running' : 'done',
+              status: isAskRequest || isToolConfirmationRequest || isConfirmedToolConfirmationAnswer ? 'running' : 'done',
               input: nextToolStep.input ?? {},
               observation: agentEvent.observation,
               data: agentEvent.data,
@@ -817,13 +915,16 @@ export const registerAiHandlers = (): void => {
             const persistedToolCallId = resolveToolCallId(agentEvent.id)
             const toolStepIndex = activeRun.assistantToolSteps.findIndex((step) => step.id === agentEvent.id)
             const isAskCancelled = agentEvent.name === 'common_tool.ask' && agentEvent.error === ASK_CANCELLED_MESSAGE
+            const isToolConfirmationCancelled = agentEvent.error === TOOL_CONFIRMATION_CANCELLED_MESSAGE
+            const isCancelled = isAskCancelled || isToolConfirmationCancelled
+            const cancelledObservation = isAskCancelled ? 'Ask was cancelled.' : 'Tool confirmation was cancelled.'
             const nextToolStep: AiToolStep = {
               id: agentEvent.id,
-              title: isAskCancelled ? `Tool cancelled: ${agentEvent.name}` : `Tool failed: ${agentEvent.name}`,
-              status: isAskCancelled ? 'cancelled' : 'failed',
+              title: isCancelled ? `Tool cancelled: ${agentEvent.name}` : `Tool failed: ${agentEvent.name}`,
+              status: isCancelled ? 'cancelled' : 'failed',
               tool: agentEvent.name,
               input: agentEvent.input,
-              observation: isAskCancelled ? 'Ask was cancelled.' : `Tool execution failed: ${agentEvent.error}`,
+              observation: isCancelled ? cancelledObservation : `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               }
@@ -848,7 +949,7 @@ export const registerAiHandlers = (): void => {
               name: agentEvent.name,
               status: 'failed',
               input: agentEvent.input,
-              observation: isAskCancelled ? 'Ask was cancelled.' : `Tool execution failed: ${agentEvent.error}`,
+              observation: isCancelled ? cancelledObservation : `Tool execution failed: ${agentEvent.error}`,
               data: {
                 error: agentEvent.error
               },
@@ -908,6 +1009,7 @@ export const registerAiHandlers = (): void => {
         }
 
         cancelPendingAskAnswersByRun(runId, new Error(message))
+        cancelPendingToolConfirmationsByRun(runId, new Error(message))
         const failedTimestamp = createTimestamp()
         aiChatService.failRunWithAssistantMessage({
           run: {

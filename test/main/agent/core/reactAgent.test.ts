@@ -4,7 +4,23 @@ import type {
   AgentTool,
   ModelProvider,
   ModelTurnInput,
+  ReactAgentRunInput,
 } from "../../../../src/main/agent/types";
+
+// 工具确认 Provider 类型。
+type ToolConfirmationProvider = NonNullable<
+  ReactAgentRunInput["toolConfirmationProvider"]
+>;
+
+// 创建固定确认的工具确认 Provider。
+const createToolConfirmationProvider = (
+  action: "confirm" | "cancel" = "confirm",
+): ReturnType<typeof vi.fn<ToolConfirmationProvider>> =>
+  vi.fn(async (request) => ({
+    kind: "tool_confirmation_answer" as const,
+    id: request.id,
+    action,
+  }));
 
 describe("reactAgent", () => {
   it("执行模型请求的工具并把观察结果回灌到下一轮", async () => {
@@ -202,7 +218,94 @@ describe("reactAgent", () => {
     expect(providerInputs).toHaveLength(2);
   });
 
-  it("people 修改工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
+  it("common_tool.ask 不允许作为 People 写操作确认入口", async () => {
+    const askExecute = vi.fn(async () => ({
+      observation: "Ask request created: waiting for the user.",
+      data: {
+        kind: "ask_request",
+        id: "ask-people-add-confirm",
+        questions: [
+          {
+            header: "确认",
+            question: "您是否确认要添加该测试人物档案？",
+            options: [
+              {
+                label: "确认创建",
+                description: "创建测试档案。",
+              },
+              {
+                label: "取消",
+                description: "不创建。",
+              },
+            ],
+          },
+        ],
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"您是否确认要添加该测试人物档案？","options":[{"label":"确认创建","description":"创建测试档案。"},{"label":"取消","description":"不创建。"}]}]}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: askExecute,
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "添加一个测试人物档案",
+          },
+        ],
+        tools: [askTool],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(askExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-ask",
+        name: "common_tool.ask",
+        error:
+          "Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.",
+      }),
+    );
+  });
+
+  it("people 修改工具经内部确认后执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -247,6 +350,8 @@ describe("reactAgent", () => {
       execute: updateExecute,
     };
 
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
     const events = await Array.fromAsync(
       runReactAgent({
         provider,
@@ -258,25 +363,36 @@ describe("reactAgent", () => {
           },
         ],
         tools: [updateTool],
+        toolConfirmationProvider,
         maxTurns: 2,
       }),
     );
 
-    expect(updateExecute).not.toHaveBeenCalled();
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(updateExecute).toHaveBeenCalledTimes(1);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_finished",
+        id: "call-update",
+        name: "people_tool.update",
+        observation: "User confirmed people_tool.update; execute the tool now.",
+      }),
+    );
     expect(events).toContainEqual({
-      type: "tool_failed",
+      type: "tool_finished",
       id: "call-update",
       name: "people_tool.update",
-      input: {
-        id: "person-1",
-        name: "阿明",
+      observation: "Updated people profile: 阿明.",
+      data: {
+        item: {
+          id: "person-1",
+          name: "阿明",
+        },
       },
-      error:
-        "people_tool.update requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 添加工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
+  it("people 添加工具经内部确认后执行", async () => {
     const addExecute = vi.fn(async () => ({
       observation: "Created people profile: 小陈.",
       data: {
@@ -321,6 +437,8 @@ describe("reactAgent", () => {
       execute: addExecute,
     };
 
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
     const events = await Array.fromAsync(
       runReactAgent({
         provider,
@@ -332,24 +450,169 @@ describe("reactAgent", () => {
           },
         ],
         tools: [addTool],
+        toolConfirmationProvider,
         maxTurns: 2,
       }),
     );
 
-    expect(addExecute).not.toHaveBeenCalled();
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(addExecute).toHaveBeenCalledTimes(1);
     expect(events).toContainEqual({
-      type: "tool_failed",
+      type: "tool_finished",
       id: "call-add",
       name: "people_tool.add",
-      input: {
-        name: "小陈",
-        relationship: "朋友",
+      observation: "Created people profile: 小陈.",
+      data: {
+        item: {
+          id: "person-new",
+          name: "小陈",
+        },
       },
-      error: "people_tool.add requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 删除工具未经过 common_tool.ask 二次确认时拒绝执行", async () => {
+  it("people 添加工具接受同一个 ask 中的泛化创建确认", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 测试助手.",
+      data: {
+        item: {
+          id: "person-test",
+          name: "测试助手",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"数据","question":"您想使用默认的测试数据，还是自定义测试人物的信息？","options":[{"label":"默认测试数据","description":"使用默认测试档案。"},{"label":"自定义","description":"手动填写信息。"}]},{"header":"确认","question":"您是否确认要添加该测试人物档案？","options":[{"label":"确认创建","description":"创建测试档案。"},{"label":"取消","description":"不创建。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-add",
+          name: "people_tool.add",
+          argumentsText:
+            '{"name":"测试助手","gender":"男","relationship":"其他","status":"测试中","birthday":"","contact":"","tags":["测试"],"details":"这是一个用于系统测试的默认档案。","avatar":""}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-add",
+          questions: [
+            {
+              header: "数据",
+              question: "您想使用默认的测试数据，还是自定义测试人物的信息？",
+              options: [
+                {
+                  label: "默认测试数据",
+                  description: "使用默认测试档案。",
+                },
+                {
+                  label: "自定义",
+                  description: "手动填写信息。",
+                },
+              ],
+            },
+            {
+              header: "确认",
+              question: "您是否确认要添加该测试人物档案？",
+              options: [
+                {
+                  label: "确认创建",
+                  description: "创建测试档案。",
+                },
+                {
+                  label: "取消",
+                  description: "不创建。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-add",
+      answers: [
+        {
+          question: "您想使用默认的测试数据，还是自定义测试人物的信息？",
+          answers: ["默认测试数据"],
+        },
+        {
+          question: "您是否确认要添加该测试人物档案？",
+          answers: ["确认创建"],
+        },
+      ],
+    }));
+
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "添加一个测试人物档案",
+          },
+        ],
+        tools: [askTool, addTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(addExecute).toHaveBeenCalledTimes(1);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-add",
+      }),
+    );
+  });
+
+  it("people 删除工具经内部确认后执行", async () => {
     const deleteExecute = vi.fn(async () => ({
       observation: "Deleted people profile: person-1.",
       data: {
@@ -391,6 +654,8 @@ describe("reactAgent", () => {
       execute: deleteExecute,
     };
 
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
     const events = await Array.fromAsync(
       runReactAgent({
         provider,
@@ -402,24 +667,155 @@ describe("reactAgent", () => {
           },
         ],
         tools: [deleteTool],
+        toolConfirmationProvider,
         maxTurns: 2,
       }),
     );
 
-    expect(deleteExecute).not.toHaveBeenCalled();
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(deleteExecute).toHaveBeenCalledTimes(1);
     expect(events).toContainEqual({
-      type: "tool_failed",
+      type: "tool_finished",
       id: "call-delete",
       name: "people_tool.delete",
-      input: {
+      observation: "Deleted people profile: person-1.",
+      data: {
         id: "person-1",
       },
-      error:
-        "people_tool.delete requires common_tool.ask confirmation before execution",
     });
   });
 
-  it("people 修改工具在 common_tool.ask 二次确认后允许执行", async () => {
+  it("people 删除工具在内部确认取消后不执行", async () => {
+    const deleteExecute = vi.fn(async () => ({
+      observation: "Deleted people profile: person-brother.",
+      data: {
+        id: "person-brother",
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"你确定要删除你弟弟（林xx）的人物档案吗？","options":[{"label":"确认删除","description":"彻底删除档案。"},{"label":"取消","description":"保留档案。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-delete",
+          name: "people_tool.delete",
+          argumentsText: '{"id":"person-brother"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-delete",
+          questions: [
+            {
+              header: "确认",
+              question: "你确定要删除你弟弟（林xx）的人物档案吗？",
+              options: [
+                {
+                  label: "确认删除",
+                  description: "彻底删除档案。",
+                },
+                {
+                  label: "取消",
+                  description: "保留档案。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const deleteTool: AgentTool = {
+      name: "people_tool.delete",
+      description: "删除 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: deleteExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-delete",
+      answers: [
+        {
+          question: "你确定要删除你弟弟（林xx）的人物档案吗？",
+          answers: ["确认删除"],
+        },
+      ],
+    }));
+
+    const toolConfirmationProvider = createToolConfirmationProvider("cancel");
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "删除 我的弟弟 这个人物",
+          },
+        ],
+        tools: [askTool, deleteTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(deleteExecute).not.toHaveBeenCalled();
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "tool_finished",
+        id: "call-delete",
+        name: "people_tool.delete",
+        observation: "User cancelled people_tool.delete; do not execute the tool.",
+      }),
+    );
+    expect(events).not.toContainEqual({
+      type: "tool_finished",
+      id: "call-delete",
+      name: "people_tool.delete",
+      observation: "Deleted people profile: person-brother.",
+      data: {
+        id: "person-brother",
+      },
+    });
+  });
+
+  it("people 修改工具不依赖 common_tool.ask 确认并由内部确认后执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -515,6 +911,7 @@ describe("reactAgent", () => {
         },
       ],
     }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
 
     const events = await Array.fromAsync(
       runReactAgent({
@@ -528,11 +925,13 @@ describe("reactAgent", () => {
         ],
         tools: [askTool, updateTool],
         askAnswerProvider,
+        toolConfirmationProvider,
         maxTurns: 3,
       }),
     );
 
-    expect(askAnswerProvider).toHaveBeenCalledTimes(1);
+    expect(askAnswerProvider).not.toHaveBeenCalled();
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
     expect(updateExecute).toHaveBeenCalledTimes(1);
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -544,7 +943,519 @@ describe("reactAgent", () => {
     );
   });
 
-  it("people 写入工具在 common_tool.ask 非确认回答后仍拒绝执行", async () => {
+  it("people 修改工具接受确认问题中的字段添加语义", async () => {
+    const updateExecute = vi.fn(async () => ({
+      observation: "Updated people profile: 林xx.",
+      data: {
+        item: {
+          id: "person-brother",
+          name: "林xx",
+          tags: ["弟弟", "喜欢打游戏"],
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"确定要为您弟弟“林xx”的档案中添加“喜欢打游戏”标签吗？","options":[{"label":"确认更新标签","description":"执行更新。"},{"label":"取消","description":"不更新。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-update",
+          name: "people_tool.update",
+          argumentsText:
+            '{"id":"person-brother","name":"林xx","gender":"男","relationship":"弟弟","status":"","birthday":"","contact":"","tags":["弟弟","喜欢打游戏"],"details":"# 林xx","avatar":""}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-update-tag",
+          questions: [
+            {
+              header: "确认",
+              question: "确定要为您弟弟“林xx”的档案中添加“喜欢打游戏”标签吗？",
+              options: [
+                {
+                  label: "确认更新标签",
+                  description: "执行更新。",
+                },
+                {
+                  label: "取消",
+                  description: "不更新。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const updateTool: AgentTool = {
+      name: "people_tool.update",
+      description: "修改 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: updateExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-update-tag",
+      answers: [
+        {
+          question: "确定要为您弟弟“林xx”的档案中添加“喜欢打游戏”标签吗？",
+          answers: ["确认更新标签"],
+        },
+      ],
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "修改我的弟弟的一些信息，添加喜欢打游戏这个tag",
+          },
+        ],
+        tools: [askTool, updateTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 2,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(updateExecute).toHaveBeenCalledTimes(1);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-update",
+      }),
+    );
+  });
+
+  it("people 写入工具完成后模型无文本时输出默认完成提示", async () => {
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"确认更新阿明资料？","options":[{"label":"确认","description":"执行更新。"},{"label":"取消","description":"不更新。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-update",
+          name: "people_tool.update",
+          argumentsText: '{"id":"person-1","name":"阿明"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-update",
+          questions: [
+            {
+              header: "确认",
+              question: "确认更新阿明资料？",
+              options: [
+                {
+                  label: "确认",
+                  description: "执行更新。",
+                },
+                {
+                  label: "取消",
+                  description: "不更新。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const updateTool: AgentTool = {
+      name: "people_tool.update",
+      description: "修改 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Updated people profile: 阿明.",
+        data: {
+          item: {
+            id: "person-1",
+            name: "阿明",
+          },
+        },
+      }),
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-update",
+      answers: [
+        {
+          question: "确认更新阿明资料？",
+          answers: ["确认"],
+        },
+      ],
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "把阿明状态改成技术负责人",
+          },
+        ],
+        tools: [askTool, updateTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 3,
+      }),
+    );
+
+    expect(events).toContainEqual({
+      type: "text_delta",
+      delta: "已更新人物资料：阿明。",
+    });
+  });
+
+  it("people 删除工具接受本轮查询结果中的人名确认", async () => {
+    const deleteExecute = vi.fn(async () => ({
+      observation: "Deleted people profile: person-new.",
+      data: {
+        id: "person-new",
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-query",
+          name: "people_tool.query",
+          argumentsText: '{"query":"新添加的人物","limit":1}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"您确定要彻底删除朋友【黄秀科】的档案吗？此操作无法撤销。","options":[{"label":"确认删除","description":"彻底删除档案。"},{"label":"取消","description":"保留档案。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-delete",
+          name: "people_tool.delete",
+          argumentsText: '{"id":"person-new"}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const queryTool: AgentTool = {
+      name: "people_tool.query",
+      description: "查询 People 表",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "SQL query returned 1 row.",
+        data: {
+          rows: [
+            {
+              id: "person-new",
+              name: "黄秀科",
+              relationship: "朋友",
+            },
+          ],
+          items: [
+            {
+              id: "person-new",
+              name: "黄秀科",
+              relationship: "朋友",
+            },
+          ],
+        },
+      }),
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-delete",
+          questions: [
+            {
+              header: "确认",
+              question: "您确定要彻底删除朋友【黄秀科】的档案吗？此操作无法撤销。",
+              options: [
+                {
+                  label: "确认删除",
+                  description: "彻底删除档案。",
+                },
+                {
+                  label: "取消",
+                  description: "保留档案。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const deleteTool: AgentTool = {
+      name: "people_tool.delete",
+      description: "删除 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: deleteExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-delete",
+      answers: [
+        {
+          question: "您确定要彻底删除朋友【黄秀科】的档案吗？此操作无法撤销。",
+          answers: ["确认删除"],
+        },
+      ],
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "删除这个新添加的人物",
+          },
+        ],
+        tools: [queryTool, askTool, deleteTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 3,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(deleteExecute).toHaveBeenCalledTimes(1);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: "tool_failed",
+        id: "call-delete",
+      }),
+    );
+  });
+
+  it("已注册 People 添加工具不因最新用户文本缺少关键词而被拒绝", async () => {
+    const addExecute = vi.fn(async () => ({
+      observation: "Created people profile: 黄秀科.",
+      data: {
+        item: {
+          id: "person-restored",
+          name: "黄秀科",
+        },
+      },
+    }));
+    let turnCount = 0;
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* () {
+        turnCount += 1;
+
+        if (turnCount > 1) {
+          yield {
+            type: "done",
+          };
+          return;
+        }
+
+        yield {
+          type: "tool_call_done",
+          id: "call-ask",
+          name: "common_tool.ask",
+          argumentsText:
+            '{"questions":[{"header":"确认","question":"确认重新添加黄秀科的人物档案吗？","options":[{"label":"确认恢复","description":"重新添加档案。"},{"label":"取消","description":"不恢复。"}]}]}',
+        };
+        yield {
+          type: "tool_call_done",
+          id: "call-add",
+          name: "people_tool.add",
+          argumentsText:
+            '{"name":"黄秀科","gender":"男","relationship":"朋友","status":"喜欢唱、跳、rap、篮球","birthday":"","contact":"","tags":["唱","跳","rap","篮球","猎奇视频"],"details":"# 黄秀科","avatar":""}',
+        };
+        yield {
+          type: "done",
+        };
+      },
+    };
+    const askTool: AgentTool = {
+      name: "common_tool.ask",
+      description: "提问",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: async () => ({
+        observation: "Ask request created: waiting for the user.",
+        data: {
+          kind: "ask_request",
+          id: "ask-people-restore",
+          questions: [
+            {
+              header: "确认",
+              question: "确认重新添加黄秀科的人物档案吗？",
+              options: [
+                {
+                  label: "确认恢复",
+                  description: "重新添加档案。",
+                },
+                {
+                  label: "取消",
+                  description: "不恢复。",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const addTool: AgentTool = {
+      name: "people_tool.add",
+      description: "添加 People",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+      execute: addExecute,
+    };
+    const askAnswerProvider = vi.fn(async () => ({
+      kind: "ask_answer" as const,
+      id: "ask-people-restore",
+      answers: [
+        {
+          question: "确认重新添加黄秀科的人物档案吗？",
+          answers: ["确认恢复"],
+        },
+      ],
+    }));
+    const toolConfirmationProvider = createToolConfirmationProvider();
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [
+          {
+            role: "user",
+            content: "就这样吧",
+          },
+        ],
+        tools: [askTool, addTool],
+        askAnswerProvider,
+        toolConfirmationProvider,
+        maxTurns: 3,
+      }),
+    );
+
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
+    expect(addExecute).toHaveBeenCalledTimes(1);
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        type: "error",
+        message: "The model requested an unauthorized tool: people_tool.add",
+      }),
+    );
+  });
+
+  it("people 写入工具在内部确认取消后不执行", async () => {
     const updateExecute = vi.fn(async () => ({
       observation: "Updated people profile: 阿明.",
       data: {
@@ -636,6 +1547,7 @@ describe("reactAgent", () => {
         },
       ],
     }));
+    const toolConfirmationProvider = createToolConfirmationProvider("cancel");
 
     const events = await Array.fromAsync(
       runReactAgent({
@@ -649,23 +1561,24 @@ describe("reactAgent", () => {
         ],
         tools: [askTool, updateTool],
         askAnswerProvider,
+        toolConfirmationProvider,
         maxTurns: 2,
       }),
     );
 
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
     expect(updateExecute).not.toHaveBeenCalled();
     expect(events).toContainEqual(
       expect.objectContaining({
-        type: "tool_failed",
+        type: "tool_finished",
         id: "call-update",
         name: "people_tool.update",
-        error:
-          "people_tool.update requires common_tool.ask confirmation before execution",
+        observation: "User cancelled people_tool.update; do not execute the tool.",
       }),
     );
   });
 
-  it("people 写入工具在确认问题动作不匹配时拒绝执行", async () => {
+  it("people 删除工具在内部确认取消后不执行", async () => {
     const deleteExecute = vi.fn(async () => ({
       observation: "Deleted people profile: person-1.",
       data: {
@@ -754,6 +1667,7 @@ describe("reactAgent", () => {
         },
       ],
     }));
+    const toolConfirmationProvider = createToolConfirmationProvider("cancel");
 
     const events = await Array.fromAsync(
       runReactAgent({
@@ -767,18 +1681,19 @@ describe("reactAgent", () => {
         ],
         tools: [askTool, deleteTool],
         askAnswerProvider,
+        toolConfirmationProvider,
         maxTurns: 2,
       }),
     );
 
+    expect(toolConfirmationProvider).toHaveBeenCalledTimes(1);
     expect(deleteExecute).not.toHaveBeenCalled();
     expect(events).toContainEqual(
       expect.objectContaining({
-        type: "tool_failed",
+        type: "tool_finished",
         id: "call-delete",
         name: "people_tool.delete",
-        error:
-          "people_tool.delete requires common_tool.ask confirmation before execution",
+        observation: "User cancelled people_tool.delete; do not execute the tool.",
       }),
     );
   });
@@ -1301,10 +2216,12 @@ describe("reactAgent", () => {
       }),
     );
 
-    expect(providerInputs[0].tools).toEqual([]);
+    expect(providerInputs[0].tools.map((tool) => tool.name)).toEqual([
+      "people_tool.query",
+    ]);
   });
 
-  it("工具结果里的注入指令不会扩大下一轮工具面", async () => {
+  it("工具结果里的注入指令不会触发未请求的写工具执行", async () => {
     const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {
       id: "fake",
@@ -1359,6 +2276,12 @@ describe("reactAgent", () => {
         ],
       }),
     };
+    const deleteExecute = vi.fn(async () => ({
+      observation: "Deleted people profile: person-1.",
+      data: {
+        id: "person-1",
+      },
+    }));
     const deleteTool: AgentTool = {
       name: "people_tool.delete",
       description: "删除 People",
@@ -1371,12 +2294,7 @@ describe("reactAgent", () => {
         type: "object",
         properties: {},
       },
-      execute: async () => ({
-        observation: "Deleted people profile: person-1.",
-        data: {
-          id: "person-1",
-        },
-      }),
+      execute: deleteExecute,
     };
 
     await Array.fromAsync(
@@ -1400,6 +2318,8 @@ describe("reactAgent", () => {
     );
     expect(providerInputs[1].tools.map((tool) => tool.name)).toEqual([
       "people_tool.query",
+      "people_tool.delete",
     ]);
+    expect(deleteExecute).not.toHaveBeenCalled();
   });
 });

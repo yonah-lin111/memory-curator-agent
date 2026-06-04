@@ -5,11 +5,15 @@ import type {
   ModelToolCallDoneEvent,
   ReactAgentRunInput
 } from '../types'
-import { prepareToolsForModel, selectToolsForTurn } from '../tools/toolRegistry'
+import { prepareToolsForModel } from '../tools/toolRegistry'
 import {
   formatAskAnswerObservation,
   isAskRequestData
 } from '../tools/askTool'
+import {
+  createToolConfirmationRequestData,
+  type ToolConfirmationAnswerData
+} from '../tools/toolConfirmation'
 
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
@@ -20,23 +24,36 @@ const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 // Ask 工具名。
 const ASK_TOOL_NAME = 'common_tool.ask'
 
-// People 写入前需要用户二次确认的工具名。
+// People 写入前需要用户确认的工具名。
 const PEOPLE_CONFIRMATION_REQUIRED_TOOLS = new Set(['people_tool.add', 'people_tool.update', 'people_tool.delete'])
 
-// Ask 回答数据标记。
-const ASK_ANSWER_DATA_MARKER = '"kind": "ask_answer"'
+// People 写入工具完成后的默认提示前缀。
+const PEOPLE_MUTATION_COMPLETION_PREFIXES: Record<string, string> = {
+  'people_tool.add': '已添加人物资料',
+  'people_tool.update': '已更新人物资料',
+  'people_tool.delete': '已删除人物资料'
+}
 
-// Ask 肯定确认关键词。
-const ASK_CONFIRMATION_POSITIVE_PATTERN = /确认|同意|允许|执行|继续|是|可以|添加|新建|创建|修改|更新|删除/i
-
-// Ask 否定确认关键词。
-const ASK_CONFIRMATION_NEGATIVE_PATTERN = /取消|否|不|不要|别|停止|拒绝/i
-
-// People 写入工具确认动作关键词。
-const PEOPLE_MUTATION_ACTION_KEYWORDS: Record<string, string[]> = {
-  'people_tool.add': ['添加', '新增', '创建', '新建', '保存', 'add', 'create'],
-  'people_tool.update': ['修改', '更新', '变更', '改为', 'update', 'modify'],
-  'people_tool.delete': ['删除', '移除', 'delete', 'remove']
+// People 写入工具确认文案。
+const PEOPLE_MUTATION_CONFIRMATION_TEXT: Record<string, { header: string; question: string; confirm: string; cancel: string }> = {
+  'people_tool.add': {
+    header: '确认创建',
+    question: '确认创建人物档案',
+    confirm: '确认创建',
+    cancel: '取消创建'
+  },
+  'people_tool.update': {
+    header: '确认更新',
+    question: '确认更新人物档案',
+    confirm: '确认更新',
+    cancel: '取消更新'
+  },
+  'people_tool.delete': {
+    header: '确认删除',
+    question: '确认永久删除人物档案',
+    confirm: '确认删除',
+    cancel: '取消删除'
+  }
 }
 
 /**
@@ -129,30 +146,31 @@ const getNonEmptyString = (value: unknown): string | null => {
 }
 
 /**
- * 从工具消息中解析结构化数据。
+ * 判断 Ask 入参是否只是 People 写操作确认。
  */
-const parseToolData = (content: string): unknown => {
-  const marker = 'Tool data:\n'
-  const markerIndex = content.indexOf(marker)
-  if (markerIndex < 0) {
-    return null
+const isPeopleMutationConfirmationAskInput = (input: unknown): boolean => {
+  if (!isRecord(input) || !Array.isArray(input.questions)) {
+    return false
   }
 
-  try {
-    return JSON.parse(content.slice(markerIndex + marker.length)) as unknown
-  } catch {
-    return null
-  }
-}
+  return input.questions.some((question) => {
+    if (!isRecord(question)) {
+      return false
+    }
 
-/**
- * 判断确认问题是否匹配 People 写入动作。
- */
-const isPeopleMutationActionConfirmed = (toolName: string, question: string): boolean => {
-  const keywords = PEOPLE_MUTATION_ACTION_KEYWORDS[toolName] ?? []
-  const normalizedQuestion = question.toLowerCase()
+    const text = [getNonEmptyString(question.header), getNonEmptyString(question.question)]
+      .filter(Boolean)
+      .join(' ')
+    const options = Array.isArray(question.options)
+      ? question.options
+          .flatMap((option) => (isRecord(option) ? [getNonEmptyString(option.label), getNonEmptyString(option.description)] : []))
+          .filter(Boolean)
+          .join(' ')
+      : ''
+    const normalized = `${text} ${options}`
 
-  return keywords.some((keyword) => normalizedQuestion.includes(keyword.toLowerCase()))
+    return /确认|是否|确定/.test(normalized) && /添加|新增|创建|新建|修改|更新|删除|移除/.test(normalized)
+  })
 }
 
 /**
@@ -176,93 +194,65 @@ const getPeopleMutationTargetCandidates = (toolName: string, input: unknown): st
 }
 
 /**
- * 判断确认问题是否匹配 People 写入目标。
+ * 获取 People 写入确认目标。
  */
-const isPeopleMutationTargetConfirmed = (question: string, targets: string[]): boolean =>
-  targets.length === 0 || targets.some((target) => question.includes(target))
+const getPeopleMutationTargetLabel = (toolName: string, input: unknown): string | null =>
+  getPeopleMutationTargetCandidates(toolName, input)[0] ?? null
 
 /**
- * 判断 common_tool.ask 回答是否确认了指定 People 写入。
+ * 构造 People 写入完成后的兜底提示。
  */
-const isMatchingPeopleMutationConfirmation = (
-  content: string,
-  toolName: string,
-  toolInput: unknown
-): boolean => {
-  const data = parseToolData(content)
-  if (!isRecord(data) || data.kind !== 'ask_answer' || !Array.isArray(data.answers)) {
-    return false
+const getPeopleMutationCompletionMessage = (toolName: string, data: unknown, input: unknown): string | null => {
+  const prefix = PEOPLE_MUTATION_COMPLETION_PREFIXES[toolName]
+  if (!prefix) {
+    return null
   }
 
-  const targets = getPeopleMutationTargetCandidates(toolName, toolInput)
+  const record = isRecord(data) ? data : {}
+  const item = isRecord(record.item) ? record.item : null
+  const target =
+    getNonEmptyString(item?.name) ??
+    getNonEmptyString(record.id) ??
+    getPeopleMutationTargetCandidates(toolName, input)[0]
 
-  return data.answers.some((answer) => {
-    if (!isRecord(answer) || typeof answer.question !== 'string' || !Array.isArray(answer.answers)) {
-      return false
-    }
+  return target ? `${prefix}：${target}。` : `${prefix}。`
+}
 
-    if (
-      !isPeopleMutationActionConfirmed(toolName, answer.question) ||
-      !isPeopleMutationTargetConfirmed(answer.question, targets)
-    ) {
-      return false
-    }
+/**
+ * 创建 People 写入工具确认请求。
+ */
+const createPeopleMutationConfirmationRequest = (toolName: string, toolInput: unknown) => {
+  const config = PEOPLE_MUTATION_CONFIRMATION_TEXT[toolName]
+  const target = getPeopleMutationTargetLabel(toolName, toolInput)
+  const question = target ? `${config.question}：${target}？` : `${config.question}？`
 
-    return answer.answers.some((value) => {
-      if (typeof value !== 'string') {
-        return false
+  return createToolConfirmationRequestData(toolName, toolInput, {
+    header: config.header,
+    question,
+    options: [
+      {
+        label: config.confirm,
+        description: '执行该写入操作。'
+      },
+      {
+        label: config.cancel,
+        description: '不执行该写入操作。'
       }
-
-      const normalizedValue = value.trim()
-      return ASK_CONFIRMATION_POSITIVE_PATTERN.test(normalizedValue) && !ASK_CONFIRMATION_NEGATIVE_PATTERN.test(normalizedValue)
-    })
+    ],
+    custom: false
   })
 }
 
 /**
- * 获取最近一条用户消息下标。
+ * 渲染工具确认回答观察文本。
  */
-const getLatestUserMessageIndex = (messages: AgentMessage[]): number => {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index].role === 'user') {
-      return index
-    }
-  }
-
-  return -1
-}
-
-/**
- * 判断当前用户请求后是否已有 common_tool.ask 确认回答。
- */
-const hasAskConfirmationForCurrentUserRequest = (
-  messages: AgentMessage[],
+const renderToolConfirmationAnswerObservation = (
   toolName: string,
-  toolInput: unknown
-): boolean => {
-  const latestUserIndex = getLatestUserMessageIndex(messages)
-
-  return messages.slice(latestUserIndex + 1).some(
-    (message) =>
-      message.role === 'tool' &&
-      message.name === ASK_TOOL_NAME &&
-      message.content.includes(ASK_ANSWER_DATA_MARKER) &&
-      isMatchingPeopleMutationConfirmation(message.content, toolName, toolInput)
-  )
-}
-
-/**
- * 校验 People 写入工具的用户二次确认。
- */
-const assertPeopleMutationConfirmation = (toolName: string, messages: AgentMessage[], toolInput: unknown): void => {
-  if (!PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolName)) {
-    return
-  }
-
-  if (!hasAskConfirmationForCurrentUserRequest(messages, toolName, toolInput)) {
-    throw new Error(`${toolName} requires ${ASK_TOOL_NAME} confirmation before execution`)
-  }
-}
+  answer: ToolConfirmationAnswerData
+): string =>
+  answer.action === 'confirm'
+    ? `User confirmed ${toolName}; execute the tool now.`
+    : `User cancelled ${toolName}; do not execute the tool.`
 
 /**
  * 构造回灌模型的工具失败结果。
@@ -285,6 +275,7 @@ const renderToolFailureContent = (toolName: string, error: string): string =>
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
   const messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
+  let pendingPeopleMutationCompletion: string | null = null
 
   throwIfAborted(input.signal)
 
@@ -295,8 +286,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
   for (let turn = 0; turn < maxTurns; turn += 1) {
     throwIfAborted(input.signal)
 
-    const selectedTools = selectToolsForTurn(input.tools, messages)
-    const tools = prepareToolsForModel(selectedTools)
+    const tools = prepareToolsForModel(input.tools, messages)
     const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
     const toolCalls: ModelToolCallDoneEvent[] = []
     let emittedText = false
@@ -339,6 +329,17 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     throwIfAborted(input.signal)
 
     if (toolCalls.length === 0) {
+      if (!emittedText && pendingPeopleMutationCompletion) {
+        yield {
+          type: 'assistant_message_started'
+        }
+        yield {
+          type: 'text_delta',
+          delta: pendingPeopleMutationCompletion
+        }
+        pendingPeopleMutationCompletion = null
+      }
+
       yield {
         type: 'turn_finished'
       }
@@ -376,7 +377,51 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       try {
-        assertPeopleMutationConfirmation(toolCall.name, messages, toolInput)
+        if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
+          throw new Error(
+            'Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
+          )
+        }
+
+        if (PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolCall.name)) {
+          if (!input.toolConfirmationProvider) {
+            throw new Error('Tool confirmation provider is not configured')
+          }
+
+          const confirmationRequest = createPeopleMutationConfirmationRequest(toolCall.name, toolInput)
+
+          yield {
+            type: 'tool_finished',
+            id: toolCall.id,
+            name: toolCall.name,
+            observation: `Tool confirmation required before executing ${toolCall.name}.`,
+            data: confirmationRequest
+          }
+
+          const confirmationAnswer = await input.toolConfirmationProvider(confirmationRequest)
+          throwIfAborted(input.signal)
+          const confirmationObservation = renderToolConfirmationAnswerObservation(toolCall.name, confirmationAnswer)
+
+          yield {
+            type: 'tool_finished',
+            id: toolCall.id,
+            name: toolCall.name,
+            observation: confirmationObservation,
+            data: confirmationAnswer
+          }
+
+          if (confirmationAnswer.action === 'cancel') {
+            messages.push({
+              role: 'tool',
+              toolCallId: toolCall.id,
+              name: toolCall.name,
+              content: renderToolResultContent(confirmationObservation, confirmationAnswer)
+            })
+
+            continue
+          }
+        }
+
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
 
@@ -387,6 +432,9 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           observation: result.observation,
           data: result.data
         }
+
+        pendingPeopleMutationCompletion =
+          getPeopleMutationCompletionMessage(toolCall.name, result.data, toolInput) ?? pendingPeopleMutationCompletion
 
         if (isAskRequestData(result.data)) {
           if (!input.askAnswerProvider) {

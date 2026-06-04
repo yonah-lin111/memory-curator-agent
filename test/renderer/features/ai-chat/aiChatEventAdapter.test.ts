@@ -146,4 +146,42 @@ describe('createAiChatEventHandler', () => {
     expect(updateChatSessionStatus).toHaveBeenCalledWith('s1', 'completed')
     expect(runMessageMapRef.current.has('run-1')).toBe(false)
   })
+
+  it('工具确认被取消时将工具步骤展示为取消状态', () => {
+    const { updateAiMessage, handleEvent } = createFixture({
+      sessionId: 's1',
+      messageId: 'a1',
+      runState: 'running',
+      titleState: 'not-required'
+    })
+
+    handleEvent({
+      type: 'tool_failed',
+      runId: 'run-1',
+      sessionId: 's1',
+      id: 'call-delete',
+      name: 'people_tool.delete',
+      input: { id: 'p1' },
+      error: 'Tool confirmation request was cancelled.'
+    })
+
+    const updater = updateAiMessage.mock.calls[0]?.[2]
+    const nextMessage = updater({
+      id: 'a1',
+      role: 'assistant',
+      content: '',
+      answer: '',
+      time: '10:00',
+      toolSteps: []
+    })
+
+    expect(nextMessage.toolSteps).toEqual([
+      expect.objectContaining({
+        id: 'call-delete',
+        title: 'Tool cancelled: people_tool.delete',
+        status: 'cancelled',
+        observation: 'Tool confirmation was cancelled.'
+      })
+    ])
+  })
 })
