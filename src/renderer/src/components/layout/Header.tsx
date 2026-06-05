@@ -2,6 +2,7 @@ import type React from "react";
 import { MessageSquare } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { useToast, getToastColorClass } from "@renderer/components/ui/Toast";
+import { useHeaderStore } from "@renderer/lib/headerStore";
 
 // 固定的顶部栏组件属性接口
 export interface HeaderProps {
@@ -31,6 +32,7 @@ export const Header = ({
   chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
+  const { customTitle, extraActions } = useHeaderStore();
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10">
@@ -41,6 +43,12 @@ export const Header = ({
         </span>
         <span className="text-white/20">/</span>
         <span className="text-white font-bold">{activePage}</span>
+        {!isChatOpen && customTitle && (
+          <>
+            <span className="text-white/20">/</span>
+            <span className="font-bold text-white/80">{customTitle}</span>
+          </>
+        )}
         {isChatOpen && chatTitle && (
           <>
             <span className="text-white/30 font-bold">·</span>
@@ -66,6 +74,7 @@ export const Header = ({
             );
           })}
         </div>
+        {!isChatOpen && extraActions}
         {chatLeadingAction}
         <IconButton
           aria-label={isChatOpen ? "Close chat" : "Open chat"}

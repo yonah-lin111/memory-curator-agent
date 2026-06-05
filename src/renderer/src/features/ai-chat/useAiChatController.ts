@@ -40,12 +40,19 @@ import {
   renameAiChatSession,
   undoLastAiChatTurn,
 } from "@renderer/features/ai-chat/core/aiChatSessionCommands";
+import {
+  toAiChatAgentHints,
+  type AiChatSendPayload,
+} from "@renderer/features/ai-chat/aiChatAgentMentions";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];
 
 // AI 历史每页读取数量。
 const AI_CHAT_HISTORY_PAGE_SIZE = 20;
+
+// AI 对话发送输入。
+type AiChatSendInput = string | AiChatSendPayload;
 
 /**
  * 创建列表使用的年月日时分时间戳。
@@ -64,6 +71,17 @@ const createSessionListTimestamp = (): string => {
 
   return `${dateStr} ${timeStr}`;
 };
+
+/**
+ * 归一化 AI 对话发送输入，历史重发路径不恢复旧 agent。
+ */
+const normalizeAiChatSendInput = (input: AiChatSendInput): AiChatSendPayload =>
+  typeof input === "string"
+    ? {
+        text: input,
+        agents: [],
+      }
+    : input;
 
 // AI 对话控制器返回值。
 type UseAiChatControllerResult = {
@@ -110,7 +128,7 @@ type UseAiChatControllerResult = {
   // 加载更多 AI 历史会话。
   handleLoadMoreChatSessions: () => Promise<void>;
   // 发送用户消息。
-  handleSendMessage: (text: string) => void;
+  handleSendMessage: (payload: AiChatSendPayload) => void;
   // 提交 Ask 回答。
   handleSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => Promise<void>;
   // 提交工具确认回答。
@@ -693,10 +711,18 @@ export const useAiChatController = (): UseAiChatControllerResult => {
    * 在指定会话中追加用户消息并触发 AI 回答。
    */
   const startAiChatMessage = (
-    text: string,
+    input: AiChatSendInput,
     sessionId: string,
     sourceSessions: AiChatSession[] = chatSessions,
   ): void => {
+    const sendPayload = normalizeAiChatSendInput(input);
+    const text = sendPayload.text.trim();
+    const agents = toAiChatAgentHints(sendPayload.agents);
+
+    if (!text) {
+      return;
+    }
+
     const userTime = new Date().toLocaleTimeString("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
@@ -770,6 +796,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         provider: selectedAiModel?.provider,
         model: selectedAiModel?.model,
         context: contextItems,
+        agents,
       })
       .catch((error: unknown) => {
         updateAiMessage(sessionId, assistantMessageId, (message) => ({
@@ -784,8 +811,8 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   /**
    * 发送用户消息并触发 AI 回答。
    */
-  const handleSendMessage = (text: string): void => {
-    startAiChatMessage(text, activeChatId);
+  const handleSendMessage = (payload: AiChatSendPayload): void => {
+    startAiChatMessage(payload, activeChatId);
   };
 
   /**

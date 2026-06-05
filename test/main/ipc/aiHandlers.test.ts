@@ -260,6 +260,74 @@ describe('aiHandlers', () => {
     expect(send).toHaveBeenCalledWith('ai:chat:event', expect.objectContaining({ type: 'done', runId: 'run-1', sessionId: 's1' }))
   })
 
+  it('passes selected agents as trusted system directive without persisting tokens', async () => {
+    const service = {
+      listSessions: vi.fn(),
+      getSession: vi.fn(() => ({
+        id: 's1',
+        title: '已有标题',
+        time: '10:00',
+        status: 'completed',
+        messages: []
+      })),
+      updateSessionTitle: vi.fn(),
+      deleteSession: vi.fn(),
+      ensureSession: vi.fn(),
+      appendMessage: vi.fn(),
+      startRun: vi.fn(),
+      createRunWithMessages: vi.fn(),
+      finishRun: vi.fn(),
+      failRunWithAssistantMessage: vi.fn(),
+      updateAssistantMessage: vi.fn(),
+      upsertToolCall: vi.fn()
+    }
+    const send = vi.fn()
+    vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
+
+    registerAiHandlers()
+
+    const startHandler = vi
+      .mocked(ipcMain.handle)
+      .mock.calls.find(([channel]) => channel === 'ai:chat:start')?.[1]
+    await startHandler?.(
+      { sender: { send } } as never,
+      {
+        runId: 'run-agent',
+        userMessageId: '55555555555545558555555555555555',
+        assistantMessageId: '66666666666646668666666666666666',
+        sessionId: 's1',
+        message: '查阿明',
+        provider: 'bailian',
+        model: 'MiniMax-M2.5',
+        context: [],
+        agents: [
+          { id: 'todo', priority: 2 },
+          { id: 'people', priority: 1 },
+          { id: 'unknown', priority: 3 }
+        ]
+      } as never
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const runInput = vi.mocked(runReactAgent).mock.calls[0][0]
+    const systemMessage = runInput.messages[0]
+
+    expect(systemMessage.role).toBe('system')
+    expect(systemMessage.content).toContain('Agent selection directive')
+    expect(systemMessage.content).toContain('1. people_agent')
+    expect(systemMessage.content).toContain('people_tool.query')
+    expect(systemMessage.content).toContain('2. todo_agent')
+    expect(systemMessage.content).not.toContain('unknown')
+    expect(service.createRunWithMessages).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userMessage: expect.objectContaining({
+          content: '查阿明'
+        })
+      })
+    )
+  })
+
   it('已有标题的会话继续使用第一次标题，不重新总结', async () => {
     const service = {
       listSessions: vi.fn(),

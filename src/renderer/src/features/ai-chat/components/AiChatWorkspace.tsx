@@ -14,6 +14,7 @@ import {
   AiChatInput,
   type AiChatInputCommandId,
 } from "@renderer/features/ai-chat/components/AiChatInput";
+import type { AiChatSendPayload } from "@renderer/features/ai-chat/aiChatAgentMentions";
 import type {
   AiAskAnswerSubmitPayload,
   AiToolConfirmationAnswerSubmitPayload,
@@ -63,7 +64,7 @@ type AiChatWorkspaceProps = {
   // 当前选中的 AI provider 与模型。
   selectedModel: AiModelSelection | null;
   // 发送消息回调。
-  onSendMessage: (text: string) => void;
+  onSendMessage: (payload: AiChatSendPayload) => void;
   // 提交 Ask 回答回调。
   onSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
   // 提交工具确认回答回调。

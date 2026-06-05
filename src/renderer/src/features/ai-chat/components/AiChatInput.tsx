@@ -4,6 +4,13 @@ import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select } from "@renderer/components/ui/Select";
 import { useToast } from "@renderer/components/ui/Toast";
+import {
+  createAiChatSendPayload,
+  getAiChatAgentMentionDeletionRange,
+  getMatchedAiChatAgentMentions,
+  type AiChatAgentMentionOption,
+  type AiChatSendPayload,
+} from "@renderer/features/ai-chat/aiChatAgentMentions";
 import type {
   AiModelProviderOption,
   AiModelSelection,
@@ -24,7 +31,7 @@ export type AiChatInputProps = {
   // 是否正在生成 AI 输出。
   isGenerating?: boolean;
   // 发送消息回调。
-  onSendMessage: (text: string) => void;
+  onSendMessage: (payload: AiChatSendPayload) => void;
   // 执行输入框斜杠命令回调。
   onCommandExecute: (command: AiChatInputCommandId) => string | void | Promise<string | void>;
   // AI 模型切换回调。
@@ -154,6 +161,47 @@ const mergePromptHistory = (history: string[], prompt: string): string[] => {
 const isTextareaCursorAt = (textarea: HTMLTextAreaElement, position: number): boolean =>
   textarea.selectionStart === position && textarea.selectionEnd === position;
 
+// Agent mention 面板状态。
+type AgentMentionPanelState = {
+  // 触发 @ 在输入文本中的位置。
+  start: number;
+  // @ 后的查询文本。
+  query: string;
+};
+
+/**
+ * 解析当前光标是否处在 agent mention 查询区间。
+ */
+const resolveAgentMentionPanelState = (
+  value: string,
+  cursor: number,
+  currentState: AgentMentionPanelState | null,
+): AgentMentionPanelState | null => {
+  if (isCommandInput(value)) {
+    return null;
+  }
+
+  const start = currentState?.start ?? (value.slice(0, cursor).endsWith("@") ? cursor - 1 : -1);
+  if (start < 0 || value[start] !== "@" || cursor <= start) {
+    return null;
+  }
+
+  const previousCharacter = start > 0 ? value[start - 1] : "";
+  if (previousCharacter && !/\s/.test(previousCharacter)) {
+    return null;
+  }
+
+  const query = value.slice(start + 1, cursor);
+  if (/[\s\n]/.test(query)) {
+    return null;
+  }
+
+  return {
+    start,
+    query,
+  };
+};
+
 /**
  * AiChatInput - AI 对话底部输入区域组件，包含模型切换、文本输入与辅助功能。
  */
@@ -176,11 +224,20 @@ export const AiChatInput = ({
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const [agentMentionPanelState, setAgentMentionPanelState] = useState<AgentMentionPanelState | null>(null);
+  const [activeAgentIndex, setActiveAgentIndex] = useState(0);
   const selectedModelValue = selectedModel
     ? `${selectedModel.provider}::${selectedModel.model}`
     : "";
   const matchedCommands = getMatchedCommands(inputText);
   const activeCommand = matchedCommands[activeCommandIndex] ?? matchedCommands[0];
+  const matchedAgentMentions = agentMentionPanelState
+    ? getMatchedAiChatAgentMentions(agentMentionPanelState.query)
+    : [];
+  const isAgentPanelOpen = Boolean(agentMentionPanelState && matchedAgentMentions.length > 0);
+  const activeAgent = matchedAgentMentions[activeAgentIndex] ?? matchedAgentMentions[0];
+  const inputSendPayload = createAiChatSendPayload(inputText);
+  const canSend = Boolean(inputSendPayload.text.trim());
   const hasModelOptions = modelOptions.some((provider) => provider.models.length > 0);
   const contextUsageValue = contextUsagePercent === null ? null : Math.min(Math.max(contextUsagePercent, 0), 100);
   const contextUsageLabel = contextUsageValue === null ? "Unknown context usage" : `Context usage ${contextUsageValue}%`;
@@ -307,22 +364,103 @@ export const AiChatInput = ({
     : [{ value: "", label: "无可用模型" }];
 
   /**
+   * 关闭 agent mention 面板。
+   */
+  const closeAgentMentionPanel = (): void => {
+    setAgentMentionPanelState(null);
+    setActiveAgentIndex(0);
+  };
+
+  /**
+   * 根据输入值和光标位置同步 agent mention 面板。
+   */
+  const syncAgentMentionPanel = (value: string, cursor: number): void => {
+    const nextState = resolveAgentMentionPanelState(value, cursor, agentMentionPanelState);
+    const nextMatches = nextState ? getMatchedAiChatAgentMentions(nextState.query) : [];
+
+    if (!nextState || nextMatches.length === 0) {
+      closeAgentMentionPanel();
+      return;
+    }
+
+    setAgentMentionPanelState(nextState);
+    setActiveAgentIndex(0);
+  };
+
+  /**
+   * 插入选中的 agent token 并恢复输入焦点。
+   */
+  const selectAgentMention = (agent: AiChatAgentMentionOption): void => {
+    const textarea = textareaRef.current;
+    if (!textarea || !agentMentionPanelState) {
+      return;
+    }
+
+    const cursor = textarea.selectionStart;
+    const nextValue = `${inputText.slice(0, agentMentionPanelState.start)}${agent.token} ${inputText.slice(cursor)}`;
+    const nextCursor = agentMentionPanelState.start + agent.token.length + 1;
+
+    setInputText(nextValue);
+    draftInputRef.current = nextValue;
+    historyCursorRef.current = null;
+    closeAgentMentionPanel();
+    requestAnimationFrame(() => {
+      adjustTextareaHeight();
+      textarea.focus();
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  /**
+   * 循环切换 agent mention 面板选中项。
+   */
+  const moveActiveAgent = (direction: 1 | -1): void => {
+    setActiveAgentIndex((currentIndex) => {
+      if (matchedAgentMentions.length === 0) {
+        return 0;
+      }
+
+      return (currentIndex + direction + matchedAgentMentions.length) % matchedAgentMentions.length;
+    });
+  };
+
+  /**
+   * 光标移动离开查询区间时关闭 agent mention 面板。
+   */
+  const handleTextareaCursorMove = (): void => {
+    const textarea = textareaRef.current;
+    if (!textarea || !agentMentionPanelState) {
+      return;
+    }
+
+    const nextState = resolveAgentMentionPanelState(
+      textarea.value,
+      textarea.selectionStart,
+      agentMentionPanelState,
+    );
+    if (!nextState) {
+      closeAgentMentionPanel();
+    }
+  };
+
+  /**
    * 发送消息处理函数。
    */
   const handleSend = (): void => {
-    const trimmedInputText = inputText.trim();
+    const nextPayload = createAiChatSendPayload(inputText);
 
-    if (!trimmedInputText) return;
+    if (!nextPayload.text.trim()) return;
     if (isGenerating) {
       toast.warning("请等待 AI 输出完成");
       return;
     }
-    onSendMessage(trimmedInputText);
-    savePromptHistory(trimmedInputText);
+    onSendMessage(nextPayload);
+    savePromptHistory(nextPayload.text);
     setInputText("");
     draftInputRef.current = "";
     historyCursorRef.current = null;
     setIsCommandPanelOpen(false);
+    closeAgentMentionPanel();
   };
 
   /**
@@ -334,6 +472,7 @@ export const AiChatInput = ({
       return;
     }
     setIsCommandPanelOpen(false);
+    closeAgentMentionPanel();
     void Promise.resolve(onCommandExecute(command.id))
       .then((nextInputText) => {
         if (!command.addToContext) {
@@ -453,7 +592,7 @@ export const AiChatInput = ({
   };
 
   /**
-   * 处理输入内容变化，并在斜杠命令模式下打开或关闭命令面板。
+   * 处理输入内容变化，并同步斜杠命令与 agent mention 面板。
    */
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const nextValue = e.target.value;
@@ -463,7 +602,14 @@ export const AiChatInput = ({
     draftInputRef.current = nextValue;
     historyCursorRef.current = null;
     setActiveCommandIndex(0);
-    setIsCommandPanelOpen(isCommandInput(nextValue) && nextMatchedCommands.length > 0);
+    const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0;
+    setIsCommandPanelOpen(shouldOpenCommandPanel);
+    if (shouldOpenCommandPanel) {
+      closeAgentMentionPanel();
+      return;
+    }
+
+    syncAgentMentionPanel(nextValue, e.target.selectionStart);
   };
 
   /**
@@ -486,6 +632,49 @@ export const AiChatInput = ({
       e.preventDefault();
       setIsCommandPanelOpen(false);
       return;
+    }
+
+    if (isAgentPanelOpen && e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveAgent(1);
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveAgent(-1);
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "Escape") {
+      e.preventDefault();
+      closeAgentMentionPanel();
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "Enter" && activeAgent) {
+      e.preventDefault();
+      selectAgentMention(activeAgent);
+      return;
+    }
+
+    if (e.key === "Backspace" && !isCommandPanelOpen && !isAgentPanelOpen) {
+      const textarea = textareaRef.current;
+      if (textarea && textarea.selectionStart === textarea.selectionEnd) {
+        const deletionRange = getAiChatAgentMentionDeletionRange(inputText, textarea.selectionStart);
+        if (deletionRange) {
+          e.preventDefault();
+          const nextValue = `${inputText.slice(0, deletionRange.start)}${inputText.slice(deletionRange.end)}`;
+          setInputText(nextValue);
+          draftInputRef.current = nextValue;
+          historyCursorRef.current = null;
+          requestAnimationFrame(() => {
+            adjustTextareaHeight();
+            textarea.setSelectionRange(deletionRange.start, deletionRange.start);
+          });
+          return;
+        }
+      }
     }
 
     if (!isCommandPanelOpen && e.key === "ArrowDown" && canMovePromptHistory(1)) {
@@ -617,6 +806,43 @@ export const AiChatInput = ({
           </div>
         ) : null}
 
+        {isAgentPanelOpen ? (
+          <div
+            role="listbox"
+            aria-label="AI Agent Mention Panel"
+            aria-activedescendant={`ai-chat-agent-${activeAgent?.id ?? matchedAgentMentions[0].id}`}
+            className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-hidden rounded-[6px] border border-white/10 bg-black shadow-2xl outline-none"
+          >
+            {matchedAgentMentions.map((agent, index) => {
+              const isActive = index === activeAgentIndex;
+
+              return (
+                <button
+                  key={agent.id}
+                  id={`ai-chat-agent-${agent.id}`}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onMouseEnter={() => setActiveAgentIndex(index)}
+                  onClick={() => selectAgentMention(agent)}
+                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
+                    isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-white">
+                      {agent.label} - {agent.token}
+                    </span>
+                    <span className="block truncate text-[12px] text-white/45">
+                      {agent.description}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         {/* 输入框 */}
         <textarea
           ref={textareaRef}
@@ -624,6 +850,8 @@ export const AiChatInput = ({
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onClick={handleTextareaCursorMove}
+          onKeyUp={handleTextareaCursorMove}
           placeholder="输入您的问题..."
           aria-label="AI Chat Input Area"
           className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
@@ -697,10 +925,10 @@ export const AiChatInput = ({
           <IconButton
             aria-label="Send message"
             onClick={handleSend}
-            disabled={!inputText.trim()}
-            highlighted={!!inputText.trim()}
+            disabled={!canSend}
+            highlighted={canSend}
             className={`h-6 w-6 rounded-full flex items-center justify-center transition-all ${
-              inputText.trim()
+              canSend
                 ? "bg-white text-black hover:bg-white/90"
                 : "bg-white/10 text-white/30 cursor-not-allowed"
             }`}

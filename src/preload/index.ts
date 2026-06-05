@@ -99,6 +99,14 @@ type AssociatedPersonPayload = {
   details: string
 }
 
+// AI 对话 agent hint 类型。
+type AiChatAgentHint = {
+  // Agent 唯一标识。
+  id: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+  // 本轮 agent 优先级，数字越小越优先。
+  priority: number
+}
+
 // AI 对话启动载荷类型。
 type AiChatStartPayload = {
   // Agent 运行 ID。
@@ -134,6 +142,8 @@ type AiChatStartPayload = {
     // 来源相关补充信息。
     meta?: Record<string, string | number | boolean | undefined>
   }>
+  // 本轮优先使用的 agent hints。
+  agents?: AiChatAgentHint[]
 }
 
 type AiChatSessionListPayload = {

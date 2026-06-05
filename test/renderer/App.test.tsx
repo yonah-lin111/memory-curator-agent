@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '@renderer/App'
@@ -658,6 +658,50 @@ describe('App', () => {
         })
       )
     })
+  })
+
+  it('AI 对话发送时剥离 agent token 并携带 agent hints', async () => {
+    const user = userEvent.setup()
+    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+      runId: payload.runId ?? 'run-test'
+    }))
+
+    window.api = {
+      ai: {
+        startChat,
+        onChatEvent: () => () => undefined
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: 'Open chat' }))
+    const input = screen.getByLabelText('AI Chat Input Area')
+    await user.type(input, '@pe')
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(input).toHaveValue('@people_agent '))
+    fireEvent.change(input, {
+      target: {
+        value: '@people_agent 查阿明'
+      }
+    })
+    await user.click(screen.getByRole('button', { name: 'Send message' }))
+
+    await waitFor(() => {
+      expect(startChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: '查阿明',
+          agents: [
+            {
+              id: 'people',
+              priority: 1
+            }
+          ]
+        })
+      )
+    })
+    expect(screen.getAllByText('查阿明').length).toBeGreaterThan(0)
+    expect(screen.queryByText('@people_agent 查阿明')).not.toBeInTheDocument()
   })
 
   it('AI 对话第二轮发送时携带上一轮消息上下文', async () => {

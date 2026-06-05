@@ -42,6 +42,14 @@ export type AiChatStartContextItem = {
   meta?: Record<string, string | number | boolean | undefined>;
 };
 
+// AI 对话 agent hint 类型。
+export type AiChatAgentHint = {
+  // Agent 唯一标识。
+  id: "people" | "todo" | "snippets" | "journal" | "notes" | "today";
+  // 本轮 agent 优先级，数字越小越优先。
+  priority: number;
+};
+
 // AI 对话启动载荷类型。
 export type AiChatStartPayload = {
   // Agent 运行 ID。
@@ -60,6 +68,8 @@ export type AiChatStartPayload = {
   model?: string;
   // 本轮请求可用上下文。
   context?: AiChatStartContextItem[];
+  // 本轮优先使用的 agent hints。
+  agents?: AiChatAgentHint[];
 };
 
 // AI 模型选择状态。

@@ -26,7 +26,7 @@ type RemoveRunMappingsByMessageIds = (messageIds: Set<string>) => void;
 // 删除会话持久化端口。
 type DeleteAiChatSessionPort = (sessionId: string) => Promise<void>;
 
-// 重新发送 AI 消息端口。
+// 重新发送 AI 消息端口。历史重发只使用原始用户问题，不恢复旧 agent 选择。
 type StartAiChatMessage = (
   text: string,
   sessionId: string,

@@ -5,6 +5,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AiChatInput } from '@renderer/features/ai-chat/components/AiChatInput'
+import type { AiChatSendPayload } from '@renderer/features/ai-chat/aiChatAgentMentions'
 
 const mockToastWarning = vi.fn()
 vi.mock('@renderer/components/ui/Toast', () => ({
@@ -51,7 +52,7 @@ const selectedModel: AiModelSelection = {
 const renderAiChatInput = (
   onCommandExecute: (command: 'clear' | 'undo') => string | void | Promise<string | void> = () => undefined,
   isGenerating = false,
-  onSendMessage: (text: string) => void = () => undefined
+  onSendMessage: (payload: AiChatSendPayload) => void = () => undefined
 ): void => {
   render(
     <AiChatInput
@@ -319,6 +320,131 @@ describe('AiChatInput', () => {
     })
 
     expect(textarea).toHaveValue('1\n\n')
+  })
+
+  it('输入 @ 后打开 agent 面板并支持过滤选择', async () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@'
+      }
+    })
+
+    expect(screen.getByRole('listbox', { name: 'AI Agent Mention Panel' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /people/ })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /today/ })).toBeInTheDocument()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@pe'
+      }
+    })
+
+    expect(screen.getByRole('option', { name: /people/ })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /todo/ })).not.toBeInTheDocument()
+
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    await waitFor(() => expect(textarea).toHaveValue('@people_agent '))
+    expect(textarea).toHaveClass('text-white')
+  })
+
+  it('发送时剥离 agent token 并保存干净 prompt history', async () => {
+    const onSendMessage = vi.fn()
+    const addPromptHistory = vi.fn().mockResolvedValue(['查阿明'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          addPromptHistory
+        }
+      }
+    })
+    renderAiChatInput(() => undefined, false, onSendMessage)
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@people_agent  @todo_agent 查阿明'
+      }
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onSendMessage).toHaveBeenCalledWith({
+      text: '查阿明',
+      agents: [
+        {
+          id: 'people',
+          token: '@people_agent',
+          label: 'people',
+          priority: 1
+        },
+        {
+          id: 'todo',
+          token: '@todo_agent',
+          label: 'todo',
+          priority: 2
+        }
+      ]
+    })
+    expect(addPromptHistory).toHaveBeenCalledWith('查阿明')
+    await waitFor(() => expect(textarea).toHaveValue(''))
+  })
+
+  it('输入框只有 agent token 时不发送', () => {
+    const onSendMessage = vi.fn()
+    renderAiChatInput(() => undefined, false, onSendMessage)
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@people_agent '
+      }
+    })
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onSendMessage).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+  })
+
+  it('Backspace 在 token 后一次删除完整 agent token', () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@people_agent 查阿明'
+      }
+    })
+    textarea.setSelectionRange('@people_agent '.length, '@people_agent '.length)
+    fireEvent.keyDown(textarea, {
+      key: 'Backspace'
+    })
+
+    expect(textarea).toHaveValue('查阿明')
+  })
+
+  it('斜杠命令面板打开时不打开 agent 面板', () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/'
+      }
+    })
+
+    expect(screen.getByRole('listbox', { name: 'AI Command Input Panel' })).toBeInTheDocument()
+    expect(screen.queryByRole('listbox', { name: 'AI Agent Mention Panel' })).not.toBeInTheDocument()
   })
 
   it('在 AI 正在输出时（isGenerating = true）尝试发送，会通过 Toast 提示并阻止发送', async () => {

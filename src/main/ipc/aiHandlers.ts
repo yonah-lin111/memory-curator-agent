@@ -9,6 +9,11 @@ import {
 import { loadProviderConfig } from '../agent/providers/providerConfig'
 import { createModelProvider } from '../agent/providers/providerFactory'
 import { runReactAgent } from '../agent/core/reactAgent'
+import {
+  appendAiChatAgentDirectiveToSystemMessage,
+  normalizeAiChatAgentHints,
+  type AiChatAgentHint
+} from '../agent/core/agentHints'
 import { createAgentToolRegistry } from '../agent/tools/toolRegistry'
 import { createAskAnswerData, isAskRequestData, type AskRequestData } from '../agent/tools/askTool'
 import {
@@ -40,6 +45,8 @@ type AiChatStartPayload = {
   model?: string
   // 本轮请求可用上下文。
   context?: AgentContextPayloadItem[]
+  // 本轮优先使用的 agent hints。
+  agents?: AiChatAgentHint[]
 }
 
 // AI 会话列表查询载荷。
@@ -684,6 +691,7 @@ export const registerAiHandlers = (): void => {
     }
 
     const tools = toolRegistry.all()
+    const agentHints = normalizeAiChatAgentHints(payload.agents)
     const modelConfig = providerConfig.models[modelId]
     const timestamp = createTimestamp()
     const userTime = createDisplayTime(timestamp)
@@ -807,7 +815,7 @@ export const registerAiHandlers = (): void => {
           provider,
           model: modelId,
           messages: buildContextAgentMessages({
-            systemMessage: createSystemPrompt(),
+            systemMessage: appendAiChatAgentDirectiveToSystemMessage(createSystemPrompt(), agentHints),
             userMessage: payload.message,
             contextItems: payload.context,
             contextLimit: modelConfig.limit?.context,

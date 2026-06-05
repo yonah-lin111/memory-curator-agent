@@ -1,11 +1,12 @@
 import type React from "react";
-import { useRef, useState } from "react";
-import { Plus, Save, Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Save, Upload, X } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select, type SelectOption } from "@renderer/components/ui/Select";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
 import { Tag } from "@renderer/components/ui/Tag";
 import { useToast } from "@renderer/components/ui/Toast";
+import { useHeaderStore } from "@renderer/lib/headerStore";
 import type {
   FormState,
   PeoplePageMode,
@@ -60,6 +61,42 @@ export const PeopleProfileForm = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // 消息提示实例。
   const toast = useToast();
+  // 全局头部状态。
+  const { setCustomTitle, setExtraActions, resetHeader } = useHeaderStore();
+
+  // 动态同步面包屑标题与操作按钮至全局 Header 顶栏。
+  useEffect(() => {
+    const title = mode === "create"
+      ? "录入新人物关系档案"
+      : `编辑 ${formState.name || "人物"} 档案`;
+    setCustomTitle(title);
+
+    setExtraActions(
+      <div className="flex items-center gap-1.5 animate-card-modal-in">
+        <IconButton
+          onClick={onCancel}
+          title="取消编辑"
+          aria-label="Cancel"
+          className="bg-white/5 border border-white/8 text-white/60 hover:bg-white/10 hover:text-white"
+        >
+          <X className="h-3.5 w-3.5" />
+        </IconButton>
+        <IconButton
+          highlighted
+          disabled={!formState.name.trim()}
+          onClick={onSave}
+          title="保存档案"
+          aria-label="Save"
+        >
+          <Save className="h-3.5 w-3.5" />
+        </IconButton>
+      </div>
+    );
+
+    return () => {
+      resetHeader();
+    };
+  }, [mode, formState.name, onCancel, onSave, setCustomTitle, setExtraActions, resetHeader]);
 
   /**
    * 处理文件选择与头像二进制落盘逻辑。
@@ -177,22 +214,8 @@ export const PeopleProfileForm = ({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in">
-      <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Plus className="h-4 w-4 text-white/60" />
-          <span className="text-sm font-bold text-white/80">
-            {mode === "create"
-              ? "录入新人物关系档案"
-              : `编辑 ${formState.name || "人物"} 档案`}
-          </span>
-        </div>
-        <IconButton aria-label="Cancel edit" onClick={onCancel}>
-          <X className="h-3.5 w-3.5" />
-        </IconButton>
-      </div>
-
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col gap-5">
-        <div className="grid grid-cols-1 md:grid-cols-[100px_1fr] gap-5 items-start">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[100px_1fr] gap-4 items-start">
           <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
             <span className="text-[10px] font-mono uppercase tracking-wider text-white/30">
               Avatar / 头像
@@ -422,26 +445,6 @@ export const PeopleProfileForm = ({
             />
           </div>
         </div>
-      </div>
-
-      <div className="p-4 border-t border-white/5 bg-black/30 flex items-center justify-end gap-3.5 flex-shrink-0">
-        <button
-          type="button"
-          className="rounded-[6px] border border-white/10 bg-black px-3.5 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors duration-150 cursor-pointer font-medium"
-          onClick={onCancel}
-        >
-          取消
-        </button>
-        <IconButton
-          iconOnly={false}
-          highlighted
-          className="px-4 py-1.5 text-xs font-bold gap-1.5"
-          disabled={!formState.name.trim()}
-          onClick={onSave}
-        >
-          <Save className="h-3.5 w-3.5" />
-          <span>保存档案</span>
-        </IconButton>
       </div>
     </div>
   );
