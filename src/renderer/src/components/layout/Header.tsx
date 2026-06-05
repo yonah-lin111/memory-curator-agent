@@ -32,7 +32,7 @@ export const Header = ({
   chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
-  const { customTitle, extraActions } = useHeaderStore();
+  const { customTitle, extraActions, hideChatButton } = useHeaderStore();
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10">
@@ -76,14 +76,16 @@ export const Header = ({
         </div>
         {!isChatOpen && extraActions}
         {chatLeadingAction}
-        <IconButton
-          aria-label={isChatOpen ? "Close chat" : "Open chat"}
-          highlighted={isChatOpen}
-          onClick={onChatToggle}
-          className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-        </IconButton>
+        {!hideChatButton && (
+          <IconButton
+            aria-label={isChatOpen ? "Close chat" : "Open chat"}
+            highlighted={isChatOpen}
+            onClick={onChatToggle}
+            className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </IconButton>
+        )}
       </div>
     </header>
   );

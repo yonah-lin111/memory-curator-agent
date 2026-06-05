@@ -62,7 +62,7 @@ export const PeopleProfileForm = ({
   // 消息提示实例。
   const toast = useToast();
   // 全局头部状态。
-  const { setCustomTitle, setExtraActions, resetHeader } = useHeaderStore();
+  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } = useHeaderStore();
 
   // 动态同步面包屑标题与操作按钮至全局 Header 顶栏。
   useEffect(() => {
@@ -70,17 +70,10 @@ export const PeopleProfileForm = ({
       ? "录入新人物关系档案"
       : `编辑 ${formState.name || "人物"} 档案`;
     setCustomTitle(title);
+    setHideChatButton(true);
 
     setExtraActions(
       <div className="flex items-center gap-1.5 animate-card-modal-in">
-        <IconButton
-          onClick={onCancel}
-          title="取消编辑"
-          aria-label="Cancel"
-          className="bg-white/5 border border-white/8 text-white/60 hover:bg-white/10 hover:text-white"
-        >
-          <X className="h-3.5 w-3.5" />
-        </IconButton>
         <IconButton
           highlighted
           disabled={!formState.name.trim()}
@@ -90,13 +83,21 @@ export const PeopleProfileForm = ({
         >
           <Save className="h-3.5 w-3.5" />
         </IconButton>
+        <IconButton
+          onClick={onCancel}
+          title="取消编辑"
+          aria-label="Cancel"
+          className="bg-white/5 border border-white/8 text-white/60 hover:bg-white/10 hover:text-white"
+        >
+          <X className="h-3.5 w-3.5" />
+        </IconButton>
       </div>
     );
 
     return () => {
       resetHeader();
     };
-  }, [mode, formState.name, onCancel, onSave, setCustomTitle, setExtraActions, resetHeader]);
+  }, [mode, formState.name, onCancel, onSave, setCustomTitle, setExtraActions, setHideChatButton, resetHeader]);
 
   /**
    * 处理文件选择与头像二进制落盘逻辑。
