@@ -35,7 +35,7 @@ export interface SelectProps<T> {
   align?: "left" | "center";
   // 下拉菜单弹出方向。默认为 "down"。
   position?: "up" | "down";
-  // 触发按钮背景类。默认为 "bg-black/35"。
+  // 触发按钮背景类。默认为 "bg-[#303030]"。
   bgClass?: string;
   // 是否禁用选择器。
   disabled?: boolean;
@@ -61,7 +61,7 @@ export const Select = <T extends string>({
   className = "",
   align = "left",
   position = "down",
-  bgClass = "bg-black/35",
+  bgClass = "bg-[#303030]",
   disabled = false,
 }: SelectProps<T>): React.JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
@@ -169,7 +169,7 @@ export const Select = <T extends string>({
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 z-50 min-w-full w-max rounded-[6px] border border-white/10 bg-black p-1 shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-card-modal-in ${positionStyles}`}
+          className={`absolute left-0 z-50 min-w-full w-max rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-card-modal-in ${positionStyles}`}
         >
           {options.map((item, index) => {
             if (isGroup(item)) {

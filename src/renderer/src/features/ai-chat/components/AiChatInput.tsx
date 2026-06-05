@@ -4,6 +4,7 @@ import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
+import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
 import {
   createAiChatSendPayload,
   getAiChatAgentMentionDeletionRange,
@@ -771,77 +772,48 @@ export const AiChatInput = ({
         onClick={handleContainerClick}
         className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2"
       >
-        {isCommandPanelOpen && matchedCommands.length > 0 ? (
-          <div
-            role="listbox"
-            aria-label="AI Command Input Panel"
-            aria-activedescendant={`ai-chat-command-${activeCommand?.id ?? matchedCommands[0].id}`}
-            onKeyDown={handleCommandPanelKeyDown}
-            className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-hidden rounded-[6px] border border-white/10 bg-black shadow-2xl outline-none"
-          >
-            {matchedCommands.map((command, index) => {
-              const isActive = index === activeCommandIndex;
+        <CommandPanel
+          isOpen={isCommandPanelOpen && matchedCommands.length > 0}
+          ariaLabel="AI Command Input Panel"
+          items={matchedCommands}
+          activeIndex={activeCommandIndex}
+          onActiveIndexChange={setActiveCommandIndex}
+          onItemSelect={executeCommand}
+          onKeyDown={handleCommandPanelKeyDown}
+          idPrefix="ai-chat-command"
+          renderItem={(command) => (
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="text-[13px] font-semibold text-white">
+                {command.name}
+              </span>
+              <span className="text-xs text-white/30">-</span>
+              <span className="truncate text-xs text-white/45">
+                {command.description}
+              </span>
+            </span>
+          )}
+        />
 
-              return (
-                <button
-                  key={command.id}
-                  id={`ai-chat-command-${command.id}`}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onMouseEnter={() => setActiveCommandIndex(index)}
-                  onClick={() => executeCommand(command)}
-                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
-                    isActive ? "bg-black text-white" : "text-white/70 hover:bg-white/5"
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
-                      {command.name} - {command.description}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {isAgentPanelOpen ? (
-          <div
-            role="listbox"
-            aria-label="AI Agent Mention Panel"
-            aria-activedescendant={`ai-chat-agent-${activeAgent?.id ?? matchedAgentMentions[0].id}`}
-            className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-hidden rounded-[6px] border border-white/10 bg-black shadow-2xl outline-none"
-          >
-            {matchedAgentMentions.map((agent, index) => {
-              const isActive = index === activeAgentIndex;
-
-              return (
-                <button
-                  key={agent.id}
-                  id={`ai-chat-agent-${agent.id}`}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onMouseEnter={() => setActiveAgentIndex(index)}
-                  onClick={() => selectAgentMention(agent)}
-                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
-                    isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
-                  }`}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium text-white">
-                      {agent.label} - {agent.token}
-                    </span>
-                    <span className="block truncate text-[12px] text-white/45">
-                      {agent.description}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
+        <CommandPanel
+          isOpen={isAgentPanelOpen}
+          ariaLabel="AI Agent Mention Panel"
+          items={matchedAgentMentions}
+          activeIndex={activeAgentIndex}
+          onActiveIndexChange={setActiveAgentIndex}
+          onItemSelect={selectAgentMention}
+          idPrefix="ai-chat-agent"
+          renderItem={(agent) => (
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="text-[13px] font-semibold text-white">
+                {agent.token}
+              </span>
+              <span className="text-xs text-white/30">-</span>
+              <span className="truncate text-xs text-white/45">
+                {agent.description}
+              </span>
+            </span>
+          )}
+        />
 
         {/* 输入框 */}
         <textarea
@@ -866,7 +838,7 @@ export const AiChatInput = ({
               onChange={handleModelChange}
               options={selectOptions}
               position="up"
-              bgClass="bg-black"
+              bgClass="bg-[#303030]"
               disabled={!hasModelOptions}
               className="!w-fit max-w-[220px]"
             />

@@ -128,7 +128,7 @@ export const PageDateNavigator = ({
           aria-expanded={isCalendarOpen}
           aria-haspopup="dialog"
           aria-label={`Open date picker, current date ${entryDate}`}
-          className="relative flex h-7 items-center gap-1.5 rounded-[6px] border border-white/5 bg-black/20 px-2.5 text-left text-xs font-semibold text-white/80 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.04]"
+          className="relative flex h-7 items-center gap-1.5 rounded-[6px] border border-white/5 bg-[#303030] px-2.5 text-left text-xs font-semibold text-white/80 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.04]"
           type="button"
           onClick={() => setIsCalendarOpen((currentOpen) => !currentOpen)}
         >
@@ -142,7 +142,7 @@ export const PageDateNavigator = ({
         {isCalendarOpen ? (
           <div
             aria-label="Date picker"
-            className="absolute left-0 top-[calc(100%+8px)] z-50 w-[296px] rounded-[6px] border border-white/10 bg-[#111111] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.62)]"
+            className="absolute left-0 top-[calc(100%+8px)] z-50 w-[296px] rounded-[6px] border border-white/10 bg-[#303030] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.62)]"
             role="dialog"
           >
             <div className="flex items-center justify-between">

@@ -75,37 +75,37 @@ export const AI_CHAT_AGENT_MENTION_OPTIONS: AiChatAgentMentionOption[] = [
     id: "people",
     token: "@people_agent",
     label: "people",
-    description: "优先使用人物档案与 People 工具",
+    description: "检索人物背景，关联社交网络与人脉档案",
   },
   {
     id: "todo",
     token: "@todo_agent",
     label: "todo",
-    description: "优先使用任务、计划与待办上下文",
+    description: "梳理待办任务，跟踪计划、目标与日程进度",
   },
   {
     id: "snippets",
     token: "@snippets_agent",
     label: "snippets",
-    description: "优先使用片段与灵感上下文",
+    description: "捕捉瞬时灵感、随笔片段与知识火花",
   },
   {
     id: "journal",
     token: "@journal_agent",
     label: "journal",
-    description: "优先使用日记与复盘上下文",
+    description: "回顾个人日记，串联生活随感与阶段复盘",
   },
   {
     id: "notes",
     token: "@notes_agent",
     label: "notes",
-    description: "优先使用长期笔记上下文",
+    description: "沉淀深度思考，管理长期笔记与知识体系",
   },
   {
     id: "today",
     token: "@today_agent",
     label: "today",
-    description: "优先使用今日记录与日输入上下文",
+    description: "聚焦当下，快速关联今天的即时记录与活动线索",
   },
 ];
 
