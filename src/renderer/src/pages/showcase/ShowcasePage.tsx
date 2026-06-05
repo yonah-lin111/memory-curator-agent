@@ -15,13 +15,26 @@ import {
 import { Tag } from "@/components/ui/Tag";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
-import { Select, type SelectOption, type SelectGroup } from "@/components/ui/Select";
+import {
+  Select,
+  type SelectOption,
+  type SelectGroup,
+} from "@/components/ui/Select";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { ConfirmTooltip } from "@/components/ui/ConfirmTooltip";
 
 // 局部导航标签。
-type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "button" | "tooltip";
+type ActiveSection =
+  | "all"
+  | "toast"
+  | "tag"
+  | "date"
+  | "select"
+  | "editor"
+  | "button"
+  | "tooltip";
 
 /**
  * ShowcasePage - 公共原子组件展示与 Playground 面板。
@@ -35,7 +48,11 @@ export const ShowcasePage = (): React.JSX.Element => {
   // Tag 交互状态
   const [isTag1Highlighted, setIsTag1Highlighted] = useState<boolean>(false);
   const [isTag2Highlighted, setIsTag2Highlighted] = useState<boolean>(true);
-  const [dynamicTags, setDynamicTags] = useState<string[]>(["Core", "Design", "Refactor"]);
+  const [dynamicTags, setDynamicTags] = useState<string[]>([
+    "Core",
+    "Design",
+    "Refactor",
+  ]);
 
   // PageDateNavigator 交互状态
   const [entryDate, setEntryDate] = useState<string>("2026-06-05");
@@ -93,7 +110,8 @@ export const ShowcasePage = (): React.JSX.Element => {
   /**
    * 判断某一分类是否需要被渲染显示。
    */
-  const isVisible = (sec: ActiveSection): boolean => activeSection === "all" || activeSection === sec;
+  const isVisible = (sec: ActiveSection): boolean =>
+    activeSection === "all" || activeSection === sec;
 
   return (
     <div className="flex h-full min-h-0 w-full gap-4 text-white">
@@ -101,7 +119,9 @@ export const ShowcasePage = (): React.JSX.Element => {
       <aside className="w-52 flex-shrink-0 flex flex-col gap-4 bg-[#212121] border border-white/5 rounded-[6px] p-4 select-none">
         <div className="flex items-center gap-2 border-b border-white/5 pb-3">
           <LayoutGrid className="h-4 w-4 text-white/70" />
-          <span className="text-sm font-bold tracking-wider text-white">UI WORKSHOP</span>
+          <span className="text-sm font-bold tracking-wider text-white">
+            UI WORKSHOP
+          </span>
         </div>
         <nav className="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
           {sections.map((sec) => (
@@ -140,7 +160,9 @@ export const ShowcasePage = (): React.JSX.Element => {
               </h3>
               <span className="text-xs font-mono text-white/30">Toast.tsx</span>
             </div>
-            <p className="text-xs text-white/50">全局唯一通知中心。每次触发新提示会直接替换，避免消息堆叠：</p>
+            <p className="text-xs text-white/50">
+              全局唯一通知中心。每次触发新提示会直接替换，避免消息堆叠：
+            </p>
             <div className="flex flex-wrap gap-2 mt-2">
               <button
                 type="button"
@@ -184,11 +206,15 @@ export const ShowcasePage = (): React.JSX.Element => {
               </h3>
               <span className="text-xs font-mono text-white/30">Tag.tsx</span>
             </div>
-            <p className="text-xs text-white/50 font-medium">支持多种尺寸、高亮/非高亮，以及丰富的交互前缀与关闭事件：</p>
-            
+            <p className="text-xs text-white/50 font-medium">
+              支持多种尺寸、高亮/非高亮，以及丰富的交互前缀与关闭事件：
+            </p>
+
             <div className="flex flex-col gap-3 mt-2">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-white/30 w-24">Sizes:</span>
+                <span className="text-xs font-mono text-white/30 w-24">
+                  Sizes:
+                </span>
                 <div className="flex items-center gap-2">
                   <Tag size="small">Small Tag</Tag>
                   <Tag size="default">Default Tag</Tag>
@@ -197,7 +223,9 @@ export const ShowcasePage = (): React.JSX.Element => {
               </div>
 
               <div className="flex items-start gap-3">
-                <span className="text-xs font-mono text-white/30 w-24 mt-1.5">Preset Colors:</span>
+                <span className="text-xs font-mono text-white/30 w-24 mt-1.5">
+                  Preset Colors:
+                </span>
                 <div className="flex flex-wrap gap-1.5 max-w-[500px]">
                   <Tag color="pink">Pink</Tag>
                   <Tag color="amber">Amber</Tag>
@@ -214,7 +242,9 @@ export const ShowcasePage = (): React.JSX.Element => {
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-white/30 w-24">Interactive:</span>
+                <span className="text-xs font-mono text-white/30 w-24">
+                  Interactive:
+                </span>
                 <div className="flex items-center gap-2">
                   <Tag
                     highlighted={isTag1Highlighted}
@@ -234,7 +264,9 @@ export const ShowcasePage = (): React.JSX.Element => {
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs font-mono text-white/30 w-24">Closable List:</span>
+                <span className="text-xs font-mono text-white/30 w-24">
+                  Closable List:
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {dynamicTags.map((t) => (
                     <Tag
@@ -251,7 +283,9 @@ export const ShowcasePage = (): React.JSX.Element => {
                   {dynamicTags.length === 0 && (
                     <button
                       type="button"
-                      onClick={() => setDynamicTags(["Core", "Design", "Refactor"])}
+                      onClick={() =>
+                        setDynamicTags(["Core", "Design", "Refactor"])
+                      }
                       className="text-xs text-white/45 hover:text-white hover:underline font-semibold"
                     >
                       Reset List
@@ -271,9 +305,13 @@ export const ShowcasePage = (): React.JSX.Element => {
                 <Calendar className="h-4 w-4 text-white/60" />
                 PageDateNavigator 日期导航与月历
               </h3>
-              <span className="text-xs font-mono text-white/30">PageDateNavigator.tsx</span>
+              <span className="text-xs font-mono text-white/30">
+                PageDateNavigator.tsx
+              </span>
             </div>
-            <p className="text-xs text-white/50">弹出式极简日历，内置角标聚合显示（右上角角标数支持超过99时显示“99+”）：</p>
+            <p className="text-xs text-white/50">
+              弹出式极简日历，内置角标聚合显示（右上角角标数支持超过99时显示“99+”）：
+            </p>
             <div className="mt-2 bg-black/20 rounded-[6px] border border-white/5 p-4 flex justify-start items-center">
               <PageDateNavigator
                 entryDate={entryDate}
@@ -297,13 +335,19 @@ export const ShowcasePage = (): React.JSX.Element => {
                 <ChevronDown className="h-4 w-4 text-white/60" />
                 Select 自定义下拉框
               </h3>
-              <span className="text-xs font-mono text-white/30">Select.tsx</span>
+              <span className="text-xs font-mono text-white/30">
+                Select.tsx
+              </span>
             </div>
-            <p className="text-xs text-white/50">支持标准的平铺选项和分组选项，配有精致的入场动画：</p>
-            
+            <p className="text-xs text-white/50">
+              支持标准的平铺选项和分组选项，配有精致的入场动画：
+            </p>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono text-white/30">Standard Select:</span>
+                <span className="text-xs font-mono text-white/30">
+                  Standard Select:
+                </span>
                 <Select
                   value={selectedValue}
                   onChange={(val) => {
@@ -314,7 +358,9 @@ export const ShowcasePage = (): React.JSX.Element => {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono text-white/30">Grouped Select:</span>
+                <span className="text-xs font-mono text-white/30">
+                  Grouped Select:
+                </span>
                 <Select
                   value={groupedValue}
                   onChange={(val) => {
@@ -336,9 +382,13 @@ export const ShowcasePage = (): React.JSX.Element => {
                 <Edit3 className="h-4 w-4 text-white/60" />
                 MarkdownEditor
               </h3>
-              <span className="text-xs font-mono text-white/30">MarkdownEditor.tsx</span>
+              <span className="text-xs font-mono text-white/30">
+                MarkdownEditor.tsx
+              </span>
             </div>
-            <p className="text-xs text-white/50">集成了高亮、字数统计等功能的暗色系编辑器（高度自适应）：</p>
+            <p className="text-xs text-white/50">
+              集成了高亮、字数统计等功能的暗色系编辑器（高度自适应）：
+            </p>
             <div className="mt-2" style={{ contentVisibility: "auto" }}>
               <MarkdownEditor
                 id="showcase-md-editor"
@@ -359,29 +409,46 @@ export const ShowcasePage = (): React.JSX.Element => {
                 <Star className="h-4 w-4 text-white/60" />
                 IconButton 图标按钮
               </h3>
-              <span className="text-xs font-mono text-white/30">IconButton.tsx</span>
+              <span className="text-xs font-mono text-white/30">
+                IconButton.tsx
+              </span>
             </div>
-            <p className="text-xs text-white/50 font-medium">微动画悬停效果，支持高亮、禁用属性，以及丰富的开箱即用预设：</p>
-            
+            <p className="text-xs text-white/50 font-medium">
+              微动画悬停效果，支持高亮、禁用属性，以及丰富的开箱即用预设：
+            </p>
+
             <div className="flex flex-col gap-4 mt-2">
               {/* 基础交互状态 */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-mono text-white/45">Basic States:</span>
+                <span className="text-xs font-mono text-white/45">
+                  Basic States:
+                </span>
                 <div className="flex items-center gap-4 bg-black/20 rounded-[6px] p-4 border border-white/5">
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">Default</span>
-                    <IconButton onClick={() => toast.info("点击了默认 IconButton")}>
+                    <span className="text-[10px] font-mono text-white/30">
+                      Default
+                    </span>
+                    <IconButton
+                      onClick={() => toast.info("点击了默认 IconButton")}
+                    >
                       <Settings className="h-4 w-4" />
                     </IconButton>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">Highlighted</span>
-                    <IconButton highlighted onClick={() => toast.info("点击了高亮 IconButton")}>
+                    <span className="text-[10px] font-mono text-white/30">
+                      Highlighted
+                    </span>
+                    <IconButton
+                      highlighted
+                      onClick={() => toast.info("点击了高亮 IconButton")}
+                    >
                       <Settings className="h-4 w-4" />
                     </IconButton>
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">Disabled</span>
+                    <span className="text-[10px] font-mono text-white/30">
+                      Disabled
+                    </span>
                     <IconButton disabled onClick={() => {}}>
                       <Settings className="h-4 w-4" />
                     </IconButton>
@@ -391,35 +458,72 @@ export const ShowcasePage = (): React.JSX.Element => {
 
               {/* 开箱即用预设 */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-mono text-white/45">Presets (开箱即用 + 智能语义 Hover):</span>
+                <span className="text-xs font-mono text-white/45">
+                  Presets (开箱即用 + 智能语义 Hover):
+                </span>
                 <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">add</span>
-                    <IconButton preset="add" onClick={() => toast.success("已触发：添加 (Add) 操作")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      add
+                    </span>
+                    <IconButton
+                      preset="add"
+                      onClick={() => toast.success("已触发：添加 (Add) 操作")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">close</span>
-                    <IconButton preset="close" onClick={() => toast.info("已触发：关闭 (Close) 操作")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      close
+                    </span>
+                    <IconButton
+                      preset="close"
+                      onClick={() => toast.info("已触发：关闭 (Close) 操作")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">save</span>
-                    <IconButton preset="save" onClick={() => toast.success("已保存配置！")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      save
+                    </span>
+                    <IconButton
+                      preset="save"
+                      onClick={() => toast.success("已保存配置！")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">confirm</span>
-                    <IconButton preset="confirm" onClick={() => toast.success("操作已确认")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      confirm
+                    </span>
+                    <IconButton
+                      preset="confirm"
+                      onClick={() => toast.success("操作已确认")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">delete</span>
-                    <IconButton preset="delete" onClick={() => toast.error("数据已删除！")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      delete
+                    </span>
+                    <IconButton
+                      preset="delete"
+                      onClick={() => toast.error("数据已删除！")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">edit</span>
-                    <IconButton preset="edit" onClick={() => toast.info("开始编辑内容")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      edit
+                    </span>
+                    <IconButton
+                      preset="edit"
+                      onClick={() => toast.info("开始编辑内容")}
+                    />
                   </div>
                   <div className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-mono text-white/30">default</span>
-                    <IconButton preset="default" onClick={() => toast.info("触发默认设置")} />
+                    <span className="text-[10px] font-mono text-white/30">
+                      default
+                    </span>
+                    <IconButton
+                      preset="default"
+                      onClick={() => toast.info("触发默认设置")}
+                    />
                   </div>
                 </div>
               </div>
@@ -435,34 +539,57 @@ export const ShowcasePage = (): React.JSX.Element => {
                 <Info className="h-4 w-4 text-white/60" />
                 Tooltip 文字提示
               </h3>
-              <span className="text-xs font-mono text-white/30">Tooltip.tsx</span>
+              <span className="text-xs font-mono text-white/30">
+                Tooltip.tsx
+              </span>
             </div>
-            <p className="text-xs text-white/50 font-medium">支持四个方位（top, bottom, left, right）、不同的触发模式（Hover, Click, Both）：</p>
+            <p className="text-xs text-white/50 font-medium">
+              支持四个方位（top, bottom, left, right）、不同的触发模式（Hover,
+              Click, Both）：
+            </p>
 
             <div className="flex flex-col gap-5 mt-2">
               {/* Placement options */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-mono text-white/45">Placements (Hover to Trigger):</span>
+                <span className="text-xs font-mono text-white/45">
+                  Placements (Hover to Trigger):
+                </span>
                 <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
-                  <Tooltip placement="top" content="Prompt text on top" trigger="hover">
+                  <Tooltip
+                    placement="top"
+                    content="Prompt text on top"
+                    trigger="hover"
+                  >
                     <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                       Top Tooltip
                     </button>
                   </Tooltip>
 
-                  <Tooltip placement="bottom" content="Prompt text on bottom" trigger="hover">
+                  <Tooltip
+                    placement="bottom"
+                    content="Prompt text on bottom"
+                    trigger="hover"
+                  >
                     <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                       Bottom Tooltip
                     </button>
                   </Tooltip>
 
-                  <Tooltip placement="left" content="Prompt text on left" trigger="hover">
+                  <Tooltip
+                    placement="left"
+                    content="Prompt text on left"
+                    trigger="hover"
+                  >
                     <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                       Left Tooltip
                     </button>
                   </Tooltip>
 
-                  <Tooltip placement="right" content="Prompt text on right" trigger="hover">
+                  <Tooltip
+                    placement="right"
+                    content="Prompt text on right"
+                    trigger="hover"
+                  >
                     <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                       Right Tooltip
                     </button>
@@ -472,10 +599,14 @@ export const ShowcasePage = (): React.JSX.Element => {
 
               {/* Trigger options */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-mono text-white/45">Triggers (Modes):</span>
+                <span className="text-xs font-mono text-white/45">
+                  Triggers (Modes):
+                </span>
                 <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
                   <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] font-mono text-white/30">trigger="hover"</span>
+                    <span className="text-[10px] font-mono text-white/30">
+                      trigger="hover"
+                    </span>
                     <Tooltip trigger="hover" content="Triggers purely on hover">
                       <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                         Hover Trigger
@@ -484,8 +615,13 @@ export const ShowcasePage = (): React.JSX.Element => {
                   </div>
 
                   <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] font-mono text-white/30">trigger="click"</span>
-                    <Tooltip trigger="click" content="Triggers purely on click (Click outside to close)">
+                    <span className="text-[10px] font-mono text-white/30">
+                      trigger="click"
+                    </span>
+                    <Tooltip
+                      trigger="click"
+                      content="Triggers purely on click (Click outside to close)"
+                    >
                       <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                         Click Trigger
                       </button>
@@ -493,12 +629,59 @@ export const ShowcasePage = (): React.JSX.Element => {
                   </div>
 
                   <div className="flex flex-col items-start gap-1">
-                    <span className="text-[10px] font-mono text-white/30">trigger="both"</span>
-                    <Tooltip trigger="both" content="Supports both Hover and Click triggers">
+                    <span className="text-[10px] font-mono text-white/30">
+                      trigger="both"
+                    </span>
+                    <Tooltip
+                      trigger="both"
+                      content="Supports both Hover and Click triggers"
+                    >
                       <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                         Both Trigger
                       </button>
                     </Tooltip>
+                  </div>
+                </div>
+              </div>
+
+              {/* ConfirmTooltip showcase */}
+              <div className="flex flex-col gap-2 border-t border-white/5 pt-4 mt-2">
+                <span className="text-xs font-mono text-white/45">
+                  ConfirmTooltip 行为二次确认:
+                </span>
+                <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-mono text-white/30">
+                      variant="primary" (自适应)
+                    </span>
+                    <ConfirmTooltip
+                      title="确定执行保存吗？"
+                      description="该操作会覆盖现有的云同步记录。"
+                      variant="primary"
+                      onConfirm={() => toast.success("主配置已成功保存！")}
+                      onCancel={() => toast.info("保存已取消")}
+                    >
+                      <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                        自适应确认
+                      </button>
+                    </ConfirmTooltip>
+                  </div>
+
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-mono text-white/30">
+                      variant="danger" (自适应)
+                    </span>
+                    <ConfirmTooltip
+                      title="确定清空所有人际档案？"
+                      description="清空后所有本地缓存亦将失效，这是一项无法恢复的高风险操作！"
+                      variant="danger"
+                      onConfirm={() => toast.error("数据已被全部清空！")}
+                      onCancel={() => toast.info("操作已安全取消")}
+                    >
+                      <button className="px-3 py-1.5 rounded-[6px] bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-all duration-150">
+                        自适应确认
+                      </button>
+                    </ConfirmTooltip>
                   </div>
                 </div>
               </div>

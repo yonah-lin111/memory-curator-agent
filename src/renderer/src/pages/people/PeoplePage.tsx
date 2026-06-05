@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
+import { ConfirmTooltip } from "@/components/ui/ConfirmTooltip";
 import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm";
 import { type RelationshipFilter } from "@/pages/people/components/peopleShared";
 import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles";
@@ -382,18 +383,24 @@ export const PeoplePage = (): React.JSX.Element => {
                         title="编辑档案"
                       />
 
-                      <IconButton
-                        iconOnly={false}
-                        preset="delete"
-                        className="h-7 w-7"
-                        onClick={() =>
+                      <ConfirmTooltip
+                        title="确认要删除该档案吗？"
+                        description={`删除后，将永久擦除 ${currentPerson.name} 的所有特征标签、联系方式及详细备注，此操作无法撤销。`}
+                        onConfirm={() =>
                           handleDeletePerson(
                             currentPerson.id,
                             currentPerson.name,
                           )
                         }
-                        title="删除档案"
-                      />
+                        variant="danger"
+                      >
+                        <IconButton
+                          iconOnly={false}
+                          preset="delete"
+                          className="h-7 w-7"
+                          title="删除档案"
+                        />
+                      </ConfirmTooltip>
                     </div>
                   </div>
 

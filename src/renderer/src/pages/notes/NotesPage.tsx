@@ -165,7 +165,9 @@ const NotesSidebar = ({
           >
             <div className="flex items-center gap-1.5 text-white/50">
               <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="text-[11px] font-medium leading-none">{stat.label}</span>
+              <span className="text-[11px] font-medium leading-none">
+                {stat.label}
+              </span>
             </div>
             <p className="mt-2 text-base font-bold font-mono text-white leading-none">
               {stat.value}
@@ -360,7 +362,10 @@ export const NotesPage = (): React.JSX.Element => {
   };
 
   return (
-    <section aria-label="Notes library page" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section
+      aria-label="Notes library page"
+      className="flex h-full min-h-0 flex-col gap-3 text-white"
+    >
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         {/* 左侧主素材展示区 */}
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
@@ -461,7 +466,9 @@ export const NotesPage = (): React.JSX.Element => {
                   暂无匹配笔记素材
                 </h2>
                 <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
-                  {activeTag ? "当前标签下无素材，试着清除标签过滤或新建素材。" : "点击右上角加号创建第一条 Markdown 素材，内容会写入本地 SQLite。"}
+                  {activeTag
+                    ? "当前标签下无素材，试着清除标签过滤或新建素材。"
+                    : "点击右上角加号创建第一条 Markdown 素材，内容会写入本地 SQLite。"}
                 </p>
               </div>
             ) : (
@@ -485,14 +492,14 @@ export const NotesPage = (): React.JSX.Element => {
                         <IconButton
                           iconOnly={false}
                           preset="edit"
-                          className="h-5 w-5 rounded-[4px] text-white/40"
+                          className="h-5 w-5"
                           onClick={() => handleEditNote(note)}
                           title="编辑笔记"
                         />
                         <IconButton
                           iconOnly={false}
                           preset="delete"
-                          className="h-5 w-5 rounded-[4px] text-white/40"
+                          className="h-5 w-5"
                           onClick={() => void handleDeleteNote(note.id)}
                           title="删除笔记"
                         />
