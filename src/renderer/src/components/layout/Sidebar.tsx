@@ -9,6 +9,7 @@ import {
   FileText,
   Home,
   Layers,
+  LayoutGrid,
   Settings,
   Sparkles,
   StickyNote,
@@ -31,7 +32,8 @@ export type SidebarPageId =
   | "memories"
   | "todo"
   | "snippets"
-  | "people";
+  | "people"
+  | "showcase";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -171,6 +173,18 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Memories",
         description: "记忆片段关联",
         icon: Sparkles,
+      },
+    ],
+  },
+  {
+    id: "developer",
+    label: "DEVELOPER",
+    items: [
+      {
+        id: "showcase",
+        label: "UI Showcase",
+        description: "公共组件展示与交互",
+        icon: LayoutGrid,
       },
     ],
   },

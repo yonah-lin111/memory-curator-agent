@@ -8,6 +8,7 @@ import { WeeklyReviewPage } from "@renderer/pages/weekly-review/WeeklyReviewPage
 import { TodoPage } from "@renderer/pages/todo/TodoPage";
 import { SnippetsPage } from "@renderer/pages/snippets/SnippetsPage";
 import { PeoplePage } from "@renderer/pages/people/PeoplePage";
+import { ShowcasePage } from "@renderer/pages/showcase/ShowcasePage";
 import {
   Sidebar,
   type SidebarPageId,
@@ -30,6 +31,7 @@ const VALID_PAGES: SidebarPageId[] = [
   "todo",
   "snippets",
   "people",
+  "showcase",
 ];
 
 /**
@@ -61,6 +63,8 @@ const getPageCategory = (pageId: SidebarPageId): string => {
     case "themes":
     case "memories":
       return "CURATION";
+    case "showcase":
+      return "DEVELOPER";
     default:
       return "DAILY";
   }
@@ -89,6 +93,8 @@ const renderPageById = (pageId: SidebarPageId): React.JSX.Element => {
       return <SnippetsPage />;
     case "people":
       return <PeoplePage />;
+    case "showcase":
+      return <ShowcasePage />;
   }
 };
 
