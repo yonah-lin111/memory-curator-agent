@@ -23,7 +23,6 @@ import {
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { ConfirmTooltip } from "@/components/ui/ConfirmTooltip";
 
 // 局部导航标签。
 type ActiveSection =
@@ -720,14 +719,14 @@ export const ShowcasePage = (): React.JSX.Element => {
               {/* ConfirmTooltip showcase */}
               <div className="flex flex-col gap-2 border-t border-white/5 pt-4 mt-2">
                 <span className="text-xs font-mono text-white/45">
-                  ConfirmTooltip 行为二次确认:
+                  Tooltip 行为二次确认 (Popconfirm):
                 </span>
                 <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
                   <div className="flex flex-col items-start gap-1">
                     <span className="text-[10px] font-mono text-white/30">
                       variant="primary" (自适应)
                     </span>
-                    <ConfirmTooltip
+                    <Tooltip
                       title="确定执行保存吗？"
                       description="该操作会覆盖现有的云同步记录。"
                       variant="primary"
@@ -737,14 +736,14 @@ export const ShowcasePage = (): React.JSX.Element => {
                       <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
                         自适应确认
                       </button>
-                    </ConfirmTooltip>
+                    </Tooltip>
                   </div>
 
                   <div className="flex flex-col items-start gap-1">
                     <span className="text-[10px] font-mono text-white/30">
                       variant="danger" (自适应)
                     </span>
-                    <ConfirmTooltip
+                    <Tooltip
                       title="确定清空所有人际档案？"
                       description="清空后所有本地缓存亦将失效，这是一项无法恢复的高风险操作！"
                       variant="danger"
@@ -754,7 +753,7 @@ export const ShowcasePage = (): React.JSX.Element => {
                       <button className="px-3 py-1.5 rounded-[6px] bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-all duration-150">
                         自适应确认
                       </button>
-                    </ConfirmTooltip>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
