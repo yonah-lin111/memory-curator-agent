@@ -4,6 +4,7 @@ import { ArrowUpDown, CheckSquare, Square } from "lucide-react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
 import { TodoControlTower } from "@/pages/todo/components/TodoControlTower";
 import {
   sortTodoItems,
@@ -434,66 +435,50 @@ export const TodoPage = (): React.JSX.Element => {
           </div>
 
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
-            <div className="flex items-center gap-2 rounded-[6px] border border-white/8 bg-black/30 px-2 py-2 transition-all duration-300 ease-out focus-within:border-white/20 focus-within:bg-black">
-              <button
-                aria-label={`Toggle new todo priority ${composerDraft.priority}`}
-                className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(composerDraft.priority, false)}`}
-                type="button"
-                onClick={handleCycleComposerPriority}
-              >
-                {composerDraft.priority}
-              </button>
-              <div className="relative min-w-0 flex-1">
-                <div
-                  className="invisible text-sm px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
-                  aria-hidden="true"
-                  style={{
-                    fontSize: "13px",
-                    lineHeight: "19.5px",
-                    maxHeight: "58.5px",
-                  }}
+            <Input
+              as="textarea"
+              autosize
+              ref={composerInputRef}
+              placeholder="添加一个待办，回车保存"
+              value={composerDraft.text}
+              onChange={(event) =>
+                setComposerDraft((currentDraft) => ({
+                  ...currentDraft,
+                  text: event.target.value,
+                }))
+              }
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing) {
+                  return;
+                }
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void handleAddTodo();
+                }
+                if (event.key === "Tab") {
+                  event.preventDefault();
+                  handleCycleComposerPriority();
+                }
+              }}
+              prefix={
+                <button
+                  aria-label={`Toggle new todo priority ${composerDraft.priority}`}
+                  className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(composerDraft.priority, false)}`}
+                  type="button"
+                  onClick={handleCycleComposerPriority}
                 >
-                  {composerDraft.text || " "}
-                </div>
-                <textarea
-                  ref={composerInputRef}
-                  className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
-                  style={{
-                    fontSize: "13px",
-                    lineHeight: "19.5px",
-                    maxHeight: "58.5px",
-                  }}
-                  onChange={(event) =>
-                    setComposerDraft((currentDraft) => ({
-                      ...currentDraft,
-                      text: event.target.value,
-                    }))
-                  }
-                  onKeyDown={(event) => {
-                    if (event.nativeEvent.isComposing) {
-                      return;
-                    }
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      void handleAddTodo();
-                    }
-                    if (event.key === "Tab") {
-                      event.preventDefault();
-                      handleCycleComposerPriority();
-                    }
-                  }}
-                  placeholder="添加一个待办，回车保存"
-                  rows={1}
-                  value={composerDraft.text}
+                  {composerDraft.priority}
+                </button>
+              }
+              suffix={
+                <IconButton
+                  aria-label="Add todo"
+                  preset="add"
+                  disabled={!composerDraft.text.trim()}
+                  onClick={() => void handleAddTodo()}
                 />
-              </div>
-              <IconButton
-                aria-label="Add todo"
-                preset="add"
-                disabled={!composerDraft.text.trim()}
-                onClick={() => void handleAddTodo()}
-              />
-            </div>
+              }
+            />
 
             {errorMessage ? (
               <div className="rounded-[6px] border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs text-rose-300">

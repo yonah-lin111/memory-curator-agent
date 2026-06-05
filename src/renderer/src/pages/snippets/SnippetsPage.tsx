@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Tag as TagIcon } from "lucide-react";
+import { Tag as TagIcon } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useToast } from "@/components/ui/Toast";
@@ -18,11 +18,13 @@ import {
 } from "@/lib/dailyShared";
 
 // Daily 片段记录类型，直接从 bridge 签名反推。
-type DailySnippetRecord =
-  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["snippets"][number];
+type DailySnippetRecord = Awaited<
+  ReturnType<Window["api"]["daily"]["listDay"]>
+>["snippets"][number];
 
 // 生成本地回退时间标签。
-const createFallbackTimestamp = (entryDate: string): string => `${entryDate} 00:00`;
+const createFallbackTimestamp = (entryDate: string): string =>
+  `${entryDate} 00:00`;
 
 /**
  * SnippetsPage 组件 - 当日片段档案页。
@@ -31,15 +33,17 @@ export const SnippetsPage = (): React.JSX.Element => {
   // 全局提示实例。
   const toast = useToast();
   // 当前页面日期。
-  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  const [entryDate, setEntryDate] = useState<string>(() =>
+    createTodayEntryDate(),
+  );
   // 当前月历可见月份。
   const [visibleMonth, setVisibleMonth] = useState<string>(() =>
     getEntryMonth(createTodayEntryDate()),
   );
   // 当前可见月份的片段角标映射。
-  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [monthEntryCounts, setMonthEntryCounts] = useState<
+    Record<string, number>
+  >({});
   // 当前片段列表。
   const [snippets, setSnippets] = useState<DailySnippetRecord[]>([]);
   // 当前激活标签。
@@ -127,7 +131,9 @@ export const SnippetsPage = (): React.JSX.Element => {
   const tagItems = useMemo(() => {
     const counts = new Map<string, number>();
     snippets.forEach((snippet) => {
-      snippet.tags.forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1));
+      snippet.tags.forEach((tag) =>
+        counts.set(tag, (counts.get(tag) ?? 0) + 1),
+      );
     });
 
     return [...counts.entries()].map(([value, count]) => ({ value, count }));
@@ -311,7 +317,10 @@ export const SnippetsPage = (): React.JSX.Element => {
   };
 
   return (
-    <section aria-label="Snippets Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section
+      aria-label="Snippets Page"
+      className="flex h-full min-h-0 flex-col gap-3 text-white"
+    >
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -367,7 +376,9 @@ export const SnippetsPage = (): React.JSX.Element => {
                         setIsNoteModalOpen(true);
                       }}
                       className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 cursor-pointer hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
-                        isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
+                        isDeleting
+                          ? "animate-todo-item-exit"
+                          : "animate-todo-item-enter"
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -378,14 +389,11 @@ export const SnippetsPage = (): React.JSX.Element => {
                           <span className="text-xs font-mono text-white/30">
                             {snippet.time}
                           </span>
-                          <button
+                          <IconButton
                             aria-label={`Delete snippet ${snippet.title || "Untitled snippet"}`}
-                            className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
-                            type="button"
+                            preset="delete"
                             onClick={(e) => handleDeleteNote(e, snippet.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          />
                         </div>
                       </div>
                       <p className="text-xs text-white/50 leading-relaxed whitespace-pre-wrap">
