@@ -102,9 +102,7 @@ export const TodaySnippetsPanel = ({
               key={note.id}
               onClick={() => onEditNote(note)}
               className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 cursor-pointer hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
-                isDeleting
-                  ? "animate-todo-item-exit"
-                  : "animate-todo-item-enter"
+                isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -118,7 +116,6 @@ export const TodaySnippetsPanel = ({
                   <IconButton
                     aria-label={`Delete snippet ${note.title || "Untitled snippet"}`}
                     preset="delete"
-                    size="small"
                     className="opacity-0 group-hover/card:opacity-100"
                     onClick={(e) => handleDeleteNote(e, note.id)}
                   />

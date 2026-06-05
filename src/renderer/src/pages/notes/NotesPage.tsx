@@ -490,13 +490,11 @@ export const NotesPage = (): React.JSX.Element => {
                       </div>
                       <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
                         <IconButton
-                          size="small"
                           preset="edit"
                           onClick={() => handleEditNote(note)}
                           title="编辑笔记"
                         />
                         <IconButton
-                          size="small"
                           preset="delete"
                           onClick={() => void handleDeleteNote(note.id)}
                           title="删除笔记"
