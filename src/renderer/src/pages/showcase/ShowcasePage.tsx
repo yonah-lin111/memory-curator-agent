@@ -418,6 +418,79 @@ export const ShowcasePage = (): React.JSX.Element => {
             </p>
 
             <div className="flex flex-col gap-4 mt-2">
+              {/* 基础尺寸选择 */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-mono text-white/45">
+                  Sizes (支持大中小尺寸自适应):
+                </span>
+                <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      small (h-5 w-5)
+                    </span>
+                    <IconButton
+                      size="small"
+                      onClick={() => toast.info("点击了小尺寸按钮")}
+                    >
+                      <Settings className="h-3 w-3" />
+                    </IconButton>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      medium (h-6 w-6, 默认)
+                    </span>
+                    <IconButton
+                      size="medium"
+                      onClick={() => toast.info("点击了默认中等尺寸按钮")}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      large (h-7 w-7)
+                    </span>
+                    <IconButton
+                      size="large"
+                      onClick={() => toast.info("点击了大尺寸按钮")}
+                    >
+                      <Settings className="h-[18px] w-[18px]" />
+                    </IconButton>
+                  </div>
+                  <div className="h-6 w-px bg-white/5 mx-2" />
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      preset small
+                    </span>
+                    <IconButton
+                      preset="delete"
+                      size="small"
+                      onClick={() => toast.error("触发了小尺寸删除")}
+                    />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      preset medium
+                    </span>
+                    <IconButton
+                      preset="delete"
+                      size="medium"
+                      onClick={() => toast.error("触发了中等尺寸删除")}
+                    />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">
+                      preset large
+                    </span>
+                    <IconButton
+                      preset="delete"
+                      size="large"
+                      onClick={() => toast.error("触发了大尺寸删除")}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* 基础交互状态 */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-mono text-white/45">

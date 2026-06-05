@@ -908,14 +908,14 @@ export const AiChatInput = ({
             <IconButton
               aria-label="Add attachment"
               disabled
-              className="text-white/30 h-6 w-6 cursor-not-allowed"
+              className="text-white/30 cursor-not-allowed"
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
             <IconButton
               aria-label="Set tool mode"
               disabled
-              className="text-white/30 h-6 w-6 cursor-not-allowed"
+              className="text-white/30 cursor-not-allowed"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" />
             </IconButton>
@@ -927,7 +927,7 @@ export const AiChatInput = ({
             onClick={handleSend}
             disabled={!canSend}
             highlighted={canSend}
-            className={`h-6 w-6 rounded-full flex items-center justify-center transition-all ${
+            className={`rounded-full flex items-center justify-center transition-all ${
               canSend
                 ? "bg-white text-black hover:bg-white/90"
                 : "bg-white/10 text-white/30 cursor-not-allowed"

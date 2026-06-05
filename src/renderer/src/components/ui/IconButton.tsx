@@ -4,6 +4,30 @@ import { Plus, X, Save, Check, Trash2, Edit3, Settings } from "lucide-react";
 // 预设类型
 export type IconButtonPreset = "add" | "close" | "save" | "confirm" | "delete" | "edit" | "default";
 
+// 按钮尺寸类型
+export type IconButtonSize = "small" | "medium" | "large";
+
+// 尺寸对应的容器类名映射
+const SIZE_CONTAINER_CLASSES: Record<IconButtonSize, string> = {
+  small: "h-5 w-5",
+  medium: "h-6 w-6",
+  large: "h-7 w-7",
+};
+
+// 尺寸对应的纯图标类名映射
+const SIZE_ICON_CLASSES: Record<IconButtonSize, string> = {
+  small: "h-3 w-3",
+  medium: "h-4 w-4",
+  large: "h-[18px] w-[18px]",
+};
+
+// 尺寸对应的伴随文字图标类名映射
+const SIZE_CHIP_ICON_CLASSES: Record<IconButtonSize, string> = {
+  small: "h-2.5 w-2.5",
+  medium: "h-3.5 w-3.5",
+  large: "h-4 w-4",
+};
+
 // 预设图标组件映射
 const PRESET_ICONS: Record<IconButtonPreset, React.ComponentType<{ className?: string }>> = {
   add: Plus,
@@ -64,6 +88,8 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   iconOnly?: boolean;
   // 预设属性
   preset?: IconButtonPreset;
+  // 按钮尺寸，可选 small | medium | large，默认为 medium
+  size?: IconButtonSize;
 }
 
 /**
@@ -79,6 +105,7 @@ export const IconButton = ({
   hoverTextClass,
   iconOnly = true,
   preset,
+  size = "medium",
   disabled,
   ...props
 }: IconButtonProps): React.JSX.Element => {
@@ -86,7 +113,7 @@ export const IconButton = ({
   const baseStyles = "flex items-center justify-center rounded-[6px] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 disabled:opacity-35 disabled:cursor-not-allowed";
 
   // 尺寸样式
-  const sizeStyles = iconOnly ? "h-6 w-6 flex-shrink-0" : "";
+  const sizeStyles = iconOnly ? `${SIZE_CONTAINER_CLASSES[size]} flex-shrink-0` : "";
 
   // 悬停样式（若存在预设则以预设样式为默认值，同时也完美支持用户通过属性显式覆盖）
   const finalHoverBg = hoverBgClass ?? (preset ? PRESET_BG_CLASSES[preset] : "hover:bg-white/5");
@@ -105,18 +132,18 @@ export const IconButton = ({
   const PresetIcon = preset ? PRESET_ICONS[preset] : null;
 
   if (PresetIcon && !iconOnly && children) {
-    // 当非纯图标且有 children 时，智能在最前方自动拼接预设图标，大小微调为极其协调的 h-3.5 w-3.5
+    // 当非纯图标且有 children 时，智能在最前方自动拼接预设图标，大小随 size 参数自动缩放
     renderContent = (
       <>
-        <PresetIcon className="h-3.5 w-3.5 flex-shrink-0" />
+        <PresetIcon className={`${SIZE_CHIP_ICON_CLASSES[size]} flex-shrink-0`} />
         {children}
       </>
     );
   } else if (!renderContent && preset) {
-    renderContent = PresetIcon ? <PresetIcon className="h-4 w-4" /> : null;
+    renderContent = PresetIcon ? <PresetIcon className={SIZE_ICON_CLASSES[size]} /> : null;
   } else if (!renderContent) {
     const DefaultIcon = PRESET_ICONS.default;
-    renderContent = <DefaultIcon className="h-4 w-4" />;
+    renderContent = <DefaultIcon className={SIZE_ICON_CLASSES[size]} />;
   }
 
   return (

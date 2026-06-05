@@ -6,7 +6,6 @@ import {
   ClipboardList,
   HelpCircle,
   Square,
-  Trash2,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import {
@@ -448,14 +447,11 @@ export const TodayTodoPanel = ({
                 </button>
               )}
 
-              <button
+              <IconButton
                 aria-label={`Delete todo ${todo.text}`}
-                className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/30 transition-colors hover:bg-white/5 hover:text-rose-400"
-                type="button"
+                preset="delete"
                 onClick={() => handleDeleteTodo(todo.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              />
             </div>
           );
         })}

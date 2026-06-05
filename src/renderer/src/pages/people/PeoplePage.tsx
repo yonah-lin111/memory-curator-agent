@@ -376,9 +376,7 @@ export const PeoplePage = (): React.JSX.Element => {
                     {/* 操作按钮组 */}
                     <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                       <IconButton
-                        iconOnly={false}
                         preset="edit"
-                        className="h-7 w-7"
                         onClick={enterEditMode}
                         title="编辑档案"
                       />
@@ -395,9 +393,7 @@ export const PeoplePage = (): React.JSX.Element => {
                         variant="danger"
                       >
                         <IconButton
-                          iconOnly={false}
                           preset="delete"
-                          className="h-7 w-7"
                           title="删除档案"
                         />
                       </ConfirmTooltip>

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState, useRef } from "react";
-import { ArrowUpDown, CheckSquare, Square, Trash2 } from "lucide-react";
+import { ArrowUpDown, CheckSquare, Square } from "lucide-react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
@@ -627,14 +627,11 @@ export const TodoPage = (): React.JSX.Element => {
                     </button>
                   )}
 
-                  <button
+                  <IconButton
                     aria-label={`Delete todo ${todo.text}`}
-                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/30 transition-colors hover:bg-white/5 hover:text-rose-400"
-                    type="button"
+                    preset="delete"
                     onClick={() => handleDeleteTodoWithAnimation(todo.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  />
                 </div>
               );
             })}

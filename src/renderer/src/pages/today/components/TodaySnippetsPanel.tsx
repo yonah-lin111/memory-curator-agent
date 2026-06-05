@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { StickyNote, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
+import { StickyNote, Tag as TagIcon, HelpCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
@@ -113,14 +113,12 @@ export const TodaySnippetsPanel = ({
                   <span className="text-xs font-mono text-white/30">
                     {note.time}
                   </span>
-                  <button
+                  <IconButton
                     aria-label={`Delete snippet ${note.title || "Untitled snippet"}`}
-                    className="opacity-0 group-hover/card:opacity-100 flex h-5 w-5 items-center justify-center rounded-[4px] text-white/30 transition-all hover:bg-white/5 hover:text-rose-400"
-                    type="button"
+                    preset="delete"
+                    className="opacity-0 group-hover/card:opacity-100"
                     onClick={(e) => handleDeleteNote(e, note.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                  />
                 </div>
               </div>
               <p className="text-xs text-white/50 leading-relaxed line-clamp-2">

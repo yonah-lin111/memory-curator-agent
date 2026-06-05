@@ -176,7 +176,7 @@ export const NoteMarkdownModal = ({
               iconOnly={false}
               hoverBgClass=""
               hoverTextClass=""
-              className={`flex items-center gap-1.5 h-7 border px-2.5 text-xs font-medium outline-none ${
+              className={`flex items-center gap-1.5 border px-2.5 py-1.5 text-xs font-medium outline-none ${
                 isPopoverOpen
                   ? "border-white/20 bg-white/10 text-white"
                   : "border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:text-white"

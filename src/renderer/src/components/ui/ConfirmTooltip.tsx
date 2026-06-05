@@ -207,7 +207,6 @@ export const ConfirmTooltip = ({
               <div className="flex items-center justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
                 <IconButton
                   preset="close"
-                  className="h-6 w-6"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsVisible(false);
@@ -216,7 +215,6 @@ export const ConfirmTooltip = ({
                   title="取消"
                 />
                 <IconButton
-                  className="h-6 w-6"
                   preset={variant === "danger" ? "delete" : "confirm"}
                   onClick={(e) => {
                     e.stopPropagation();
