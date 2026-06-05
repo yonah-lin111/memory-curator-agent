@@ -449,6 +449,7 @@ export const TodayTodoPanel = ({
 
               <IconButton
                 aria-label={`Delete todo ${todo.text}`}
+                size="small"
                 preset="delete"
                 onClick={() => handleDeleteTodo(todo.id)}
               />
