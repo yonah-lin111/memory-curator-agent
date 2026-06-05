@@ -4,6 +4,21 @@ import { X } from "lucide-react";
 // Tag 组件尺寸类型
 export type TagSize = "small" | "default" | "large";
 
+// Tag 组件颜色类型
+export type TagColor =
+  | "default"
+  | "pink"
+  | "amber"
+  | "blue"
+  | "teal"
+  | "emerald"
+  | "rose"
+  | "gray"
+  | "purple"
+  | "indigo"
+  | "sky"
+  | "orange";
+
 // Tag 组件属性接口
 export interface TagProps {
   // 标签文本内容
@@ -18,6 +33,8 @@ export interface TagProps {
   onClick?: (event: React.MouseEvent<HTMLSpanElement>) => void;
   // 点击关闭按钮回调（可选，存在时展示关闭按钮）
   onClose?: (event: React.MouseEvent<HTMLSpanElement>) => void;
+  // 标签颜色预设
+  color?: TagColor;
   // 基础背景与边框颜色样式（未高亮时）
   bgClass?: string;
   // 高亮背景与边框颜色样式
@@ -27,6 +44,70 @@ export interface TagProps {
   // 额外的样式类名
   className?: string;
 }
+
+// 颜色样式映射。
+const COLOR_STYLES: Record<TagColor, { bg: string; highlightBg: string; hover: string }> = {
+  default: {
+    bg: "border-white/5 bg-white/[0.03] text-white/45",
+    highlightBg: "border-white/15 bg-white/10 text-white/90",
+    hover: "hover:border-white/20 hover:text-white/80",
+  },
+  pink: {
+    bg: "border-pink-500/10 bg-pink-500/[0.03] text-pink-400/80",
+    highlightBg: "border-pink-500/20 bg-pink-500/10 text-pink-400",
+    hover: "hover:border-pink-500/30 hover:text-pink-300",
+  },
+  amber: {
+    bg: "border-amber-500/10 bg-amber-500/[0.03] text-amber-400/80",
+    highlightBg: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+    hover: "hover:border-amber-500/30 hover:text-amber-300",
+  },
+  blue: {
+    bg: "border-blue-500/10 bg-blue-500/[0.03] text-blue-400/80",
+    highlightBg: "border-blue-500/20 bg-blue-500/10 text-blue-400",
+    hover: "hover:border-blue-500/30 hover:text-blue-300",
+  },
+  teal: {
+    bg: "border-teal-500/10 bg-teal-500/[0.03] text-teal-400/80",
+    highlightBg: "border-teal-500/20 bg-teal-500/10 text-teal-400",
+    hover: "hover:border-teal-500/30 hover:text-teal-300",
+  },
+  emerald: {
+    bg: "border-emerald-500/10 bg-emerald-500/[0.03] text-emerald-400/80",
+    highlightBg: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
+    hover: "hover:border-emerald-500/30 hover:text-emerald-300",
+  },
+  rose: {
+    bg: "border-rose-500/10 bg-rose-500/[0.03] text-rose-400/80",
+    highlightBg: "border-rose-500/20 bg-rose-500/10 text-rose-400",
+    hover: "hover:border-rose-500/30 hover:text-rose-300",
+  },
+  gray: {
+    bg: "border-neutral-500/10 bg-neutral-500/[0.03] text-neutral-400/80",
+    highlightBg: "border-neutral-500/20 bg-neutral-500/10 text-neutral-400",
+    hover: "hover:border-neutral-500/30 hover:text-neutral-300",
+  },
+  purple: {
+    bg: "border-purple-500/10 bg-purple-500/[0.03] text-purple-400/80",
+    highlightBg: "border-purple-500/20 bg-purple-500/10 text-purple-400",
+    hover: "hover:border-purple-500/30 hover:text-purple-300",
+  },
+  indigo: {
+    bg: "border-indigo-500/10 bg-indigo-500/[0.03] text-indigo-400/80",
+    highlightBg: "border-indigo-500/20 bg-indigo-500/10 text-indigo-400",
+    hover: "hover:border-indigo-500/30 hover:text-indigo-300",
+  },
+  sky: {
+    bg: "border-sky-500/10 bg-sky-500/[0.03] text-sky-400/80",
+    highlightBg: "border-sky-500/20 bg-sky-500/10 text-sky-400",
+    hover: "hover:border-sky-500/30 hover:text-sky-300",
+  },
+  orange: {
+    bg: "border-orange-500/10 bg-orange-500/[0.03] text-orange-400/80",
+    highlightBg: "border-orange-500/20 bg-orange-500/10 text-orange-400",
+    hover: "hover:border-orange-500/30 hover:text-orange-300",
+  },
+};
 
 // 尺寸映射配置。
 const SIZE_STYLES: Record<TagSize, { container: string; closeIconSize: string }> = {
@@ -55,14 +136,21 @@ export const Tag = ({
   highlighted = false,
   onClick,
   onClose,
-  bgClass = "border-white/5 bg-white/[0.03] text-white/45",
-  highlightBgClass = "border-white/15 bg-white/10 text-white/90",
-  hoverClass = "hover:border-white/20 hover:text-white/80",
+  color,
+  bgClass,
+  highlightBgClass,
+  hoverClass,
   className = "",
 }: TagProps): React.JSX.Element => {
   const currentStyles = SIZE_STYLES[size];
   const isClickable = typeof onClick === "function";
   const isInteractive = isClickable || typeof onClose === "function";
+
+  // 获取预设颜色样式，如果显式传递了 bgClass 等，则进行覆盖
+  const resolvedColor = color || "default";
+  const defaultBg = bgClass ?? COLOR_STYLES[resolvedColor].bg;
+  const defaultHighlightBg = highlightBgClass ?? COLOR_STYLES[resolvedColor].highlightBg;
+  const defaultHover = hoverClass ?? COLOR_STYLES[resolvedColor].hover;
 
   return (
     <span
@@ -71,7 +159,7 @@ export const Tag = ({
       className={`inline-flex items-center justify-center border font-semibold select-none transition-all duration-150 ${
         currentStyles.container
       } ${
-        highlighted ? highlightBgClass : `${bgClass} ${isInteractive ? hoverClass : ""}`
+        highlighted ? defaultHighlightBg : `${defaultBg} ${isInteractive ? defaultHover : ""}`
       } ${isInteractive ? "cursor-pointer" : "cursor-default"} ${className}`}
       onClick={onClick}
     >

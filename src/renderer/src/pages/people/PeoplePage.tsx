@@ -15,13 +15,81 @@ import {
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
 import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm";
-import {
-  RELATIONSHIP_COLORS,
-  type RelationshipFilter,
-} from "@/pages/people/components/peopleShared";
+import { type RelationshipFilter } from "@/pages/people/components/peopleShared";
 import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
+
+/**
+ * 根据标签文本内容生成一致的预设颜色
+ * @param tag 标签文本
+ * @returns 预设颜色类型
+ */
+const getTagColor = (
+  tag: string,
+):
+  | "pink"
+  | "amber"
+  | "blue"
+  | "teal"
+  | "emerald"
+  | "rose"
+  | "purple"
+  | "indigo"
+  | "sky"
+  | "orange" => {
+  const colors: Array<
+    | "pink"
+    | "amber"
+    | "blue"
+    | "teal"
+    | "emerald"
+    | "rose"
+    | "purple"
+    | "indigo"
+    | "sky"
+    | "orange"
+  > = [
+    "pink",
+    "amber",
+    "blue",
+    "teal",
+    "emerald",
+    "rose",
+    "purple",
+    "indigo",
+    "sky",
+    "orange",
+  ];
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+/**
+ * 获取关系类型的预设颜色类型
+ * @param relationship 关系文本
+ * @returns 预设颜色类型
+ */
+const getRelationshipTagColor = (
+  relationship: string,
+): "pink" | "amber" | "blue" | "teal" | "default" => {
+  switch (relationship) {
+    case "女朋友":
+      return "pink";
+    case "家人":
+      return "amber";
+    case "朋友":
+      return "blue";
+    case "同事":
+      return "teal";
+    default:
+      return "default";
+  }
+};
 
 /**
  * PeoplePage 组件 - 个人关系链与人际档案管理
@@ -174,7 +242,6 @@ export const PeoplePage = (): React.JSX.Element => {
                 <div className="flex flex-col gap-1.5">
                   {filteredPeople.map((person) => {
                     const isActive = person.id === selectedId;
-                    const colors = RELATIONSHIP_COLORS[person.relationship];
                     const hasCustomAvatar = Boolean(person.avatar);
 
                     return (
@@ -221,11 +288,15 @@ export const PeoplePage = (): React.JSX.Element => {
                             <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
                               {person.name}
                             </span>
-                            <span
-                              className={`rounded-[4px] px-1 py-0.2 text-[9px] font-bold border leading-none ${colors.bg} ${colors.text}`}
+                            <Tag
+                              size="default"
+                              color={getRelationshipTagColor(
+                                person.relationship,
+                              )}
+                              className="font-bold leading-none scale-[0.9] origin-right"
                             >
                               {person.relationship}
-                            </span>
+                            </Tag>
                           </div>
                           <span className="text-[11px] text-white/40 truncate group-hover:text-white/65">
                             {person.status || "暂无一句话描述"}
@@ -284,13 +355,15 @@ export const PeoplePage = (): React.JSX.Element => {
                           <span className="text-xs text-white/30">
                             ({currentPerson.gender})
                           </span>
-                          <span
-                            className={`rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold border leading-none ${
-                              RELATIONSHIP_COLORS[currentPerson.relationship].bg
-                            } ${RELATIONSHIP_COLORS[currentPerson.relationship].text}`}
+                          <Tag
+                            size="default"
+                            color={getRelationshipTagColor(
+                              currentPerson.relationship,
+                            )}
+                            className="font-bold"
                           >
                             {currentPerson.relationship}
-                          </span>
+                          </Tag>
                         </div>
                         <p className="text-xs text-white/60 font-medium leading-relaxed mt-0.5 flex items-center gap-1">
                           <Sparkles className="h-3.5 w-3.5 text-white/40 flex-shrink-0" />
@@ -338,7 +411,7 @@ export const PeoplePage = (): React.JSX.Element => {
                             <Tag
                               key={tag}
                               size="default"
-                              bgClass="border-white/5 bg-white/[0.02] text-white/50"
+                              color={getTagColor(tag)}
                             >
                               {tag}
                             </Tag>

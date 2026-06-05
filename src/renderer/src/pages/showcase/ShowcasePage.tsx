@@ -196,6 +196,23 @@ export const ShowcasePage = (): React.JSX.Element => {
                 </div>
               </div>
 
+              <div className="flex items-start gap-3">
+                <span className="text-xs font-mono text-white/30 w-24 mt-1.5">Preset Colors:</span>
+                <div className="flex flex-wrap gap-1.5 max-w-[500px]">
+                  <Tag color="pink">Pink</Tag>
+                  <Tag color="amber">Amber</Tag>
+                  <Tag color="blue">Blue</Tag>
+                  <Tag color="teal">Teal</Tag>
+                  <Tag color="emerald">Emerald</Tag>
+                  <Tag color="rose">Rose</Tag>
+                  <Tag color="gray">Gray</Tag>
+                  <Tag color="purple">Purple</Tag>
+                  <Tag color="indigo">Indigo</Tag>
+                  <Tag color="sky">Sky</Tag>
+                  <Tag color="orange">Orange</Tag>
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 <span className="text-xs font-mono text-white/30 w-24">Interactive:</span>
                 <div className="flex items-center gap-2">
