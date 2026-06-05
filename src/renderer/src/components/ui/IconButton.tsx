@@ -1,9 +1,46 @@
 import type React from "react";
+import { Plus, X, Save, Check, Trash2, Edit3, Settings } from "lucide-react";
+
+// 预设类型
+export type IconButtonPreset = "add" | "close" | "save" | "confirm" | "delete" | "edit" | "default";
+
+// 预设图标组件映射
+const PRESET_ICONS: Record<IconButtonPreset, React.ComponentType<{ className?: string }>> = {
+  add: Plus,
+  close: X,
+  save: Save,
+  confirm: Check,
+  delete: Trash2,
+  edit: Edit3,
+  default: Settings,
+};
+
+// 预设悬停背景样式映射
+const PRESET_BG_CLASSES: Record<IconButtonPreset, string> = {
+  add: "hover:bg-white/5",
+  close: "hover:bg-white/5",
+  save: "hover:bg-emerald-500/10",
+  confirm: "hover:bg-emerald-500/10",
+  delete: "hover:bg-rose-500/10",
+  edit: "hover:bg-white/5",
+  default: "hover:bg-white/5",
+};
+
+// 预设悬停文本颜色样式映射
+const PRESET_TEXT_CLASSES: Record<IconButtonPreset, string> = {
+  add: "hover:text-white",
+  close: "hover:text-white",
+  save: "hover:text-emerald-400",
+  confirm: "hover:text-emerald-400",
+  delete: "hover:text-rose-400",
+  edit: "hover:text-white",
+  default: "hover:text-white",
+};
 
 // 图标按钮组件属性接口
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  // 按钮内部图标或内容
-  children: React.ReactNode;
+  // 按钮内部图标或内容（若传了 preset，则为可选）
+  children?: React.ReactNode;
   // 额外的样式类名
   className?: string;
   // 是否处于高亮状态
@@ -14,6 +51,8 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   hoverTextClass?: string;
   // 是否仅显示图标（默认为 true，若为 false 则不强制 w-6 h-6）
   iconOnly?: boolean;
+  // 预设属性
+  preset?: IconButtonPreset;
 }
 
 /**
@@ -25,9 +64,10 @@ export const IconButton = ({
   className = "",
   type = "button",
   highlighted = false,
-  hoverBgClass = "hover:bg-white/5",
-  hoverTextClass = "hover:text-white",
+  hoverBgClass,
+  hoverTextClass,
   iconOnly = true,
+  preset,
   ...props
 }: IconButtonProps): React.JSX.Element => {
   // 基础样式
@@ -36,10 +76,24 @@ export const IconButton = ({
   // 尺寸样式
   const sizeStyles = iconOnly ? "h-6 w-6 flex-shrink-0" : "";
 
+  // 悬停样式（若存在预设则以预设样式为默认值，同时也完美支持用户通过属性显式覆盖）
+  const finalHoverBg = hoverBgClass ?? (preset ? PRESET_BG_CLASSES[preset] : "hover:bg-white/5");
+  const finalHoverText = hoverTextClass ?? (preset ? PRESET_TEXT_CLASSES[preset] : "hover:text-white");
+
   // 状态样式
   const stateStyles = highlighted
     ? "bg-white text-black hover:bg-white/90"
-    : `text-white/45 ${hoverBgClass} ${hoverTextClass}`;
+    : `text-white/45 ${finalHoverBg} ${finalHoverText}`;
+
+  // 确定最终需要渲染的图标或子元素
+  let renderContent = children;
+  if (!renderContent && preset) {
+    const PresetIcon = PRESET_ICONS[preset];
+    renderContent = <PresetIcon className="h-4 w-4" />;
+  } else if (!renderContent) {
+    const DefaultIcon = PRESET_ICONS.default;
+    renderContent = <DefaultIcon className="h-4 w-4" />;
+  }
 
   return (
     <button
@@ -47,7 +101,7 @@ export const IconButton = ({
       className={`${baseStyles} ${sizeStyles} ${stateStyles} ${className}`}
       {...props}
     >
-      {children}
+      {renderContent}
     </button>
   );
 };

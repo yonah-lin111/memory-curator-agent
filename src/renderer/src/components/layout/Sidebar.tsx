@@ -216,23 +216,23 @@ export const Sidebar = ({
   const shouldUseCollapsedLayout = mode === "navigation" && isCollapsed;
 
   return (
-    <div className="relative flex h-auto lg:h-full flex-shrink-0">
+    <div className="relative flex h-auto min-h-0 lg:h-full flex-shrink-0">
       <aside
-        className={`relative w-full h-auto lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`relative w-full h-auto min-h-0 lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
           shouldUseCollapsedLayout ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
         }`}
       >
         {/* 导航与设置面板主体（带覆盖式滑出过渡） */}
         <div
           aria-hidden={mode !== "navigation"}
-          className={`w-full flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
+          className={`w-full min-h-0 flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
             mode === "navigation"
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
           }`}
         >
           <div
-            className={`flex flex-col gap-5 w-full ${
+            className={`flex min-h-0 flex-1 flex-col gap-5 w-full ${
               shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
             }`}
           >
@@ -255,7 +255,10 @@ export const Sidebar = ({
             </div>
 
             {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
-            <nav className="flex flex-col gap-3 w-full" aria-label="Sidebar main navigation">
+            <nav
+              className="flex min-h-0 flex-1 flex-col gap-3 w-full overflow-y-auto scrollbar-hidden"
+              aria-label="Sidebar main navigation"
+            >
               {NAVIGATION_GROUPS.map((group) => (
                 <section key={group.id} className="flex flex-col gap-1.5">
                   {!shouldUseCollapsedLayout && (

@@ -7,7 +7,6 @@ import {
   Calendar,
   ChevronDown,
   Edit3,
-  FileQuestion,
   Sparkles,
   Star,
   Settings,
@@ -18,10 +17,9 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select, type SelectOption, type SelectGroup } from "@renderer/components/ui/Select";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
-import { EmptyState } from "@renderer/components/ui/EmptyState";
 
 // 局部导航标签。
-type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "empty" | "button";
+type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "button";
 
 /**
  * ShowcasePage - 公共原子组件展示与 Playground 面板。
@@ -86,7 +84,6 @@ export const ShowcasePage = (): React.JSX.Element => {
     { id: "date", label: "Date Navigator", desc: "日期选择与月历" },
     { id: "select", label: "Select 下拉框", desc: "自定义单选与分组" },
     { id: "editor", label: "Markdown Editor", desc: "统一Markdown编辑器" },
-    { id: "empty", label: "EmptyState", desc: "通用空状态卡片" },
     { id: "button", label: "IconButton", desc: "极简圆角图标按钮" },
   ] as const;
 
@@ -334,46 +331,6 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: EmptyState */}
-        {isVisible("empty") && (
-          <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
-            <div className="flex justify-between items-center border-b border-white/5 pb-2">
-              <h3 className="text-sm font-bold flex items-center gap-2">
-                <FileQuestion className="h-4 w-4 text-white/60" />
-                EmptyState 通用空状态
-              </h3>
-              <span className="text-xs font-mono text-white/30">EmptyState.tsx</span>
-            </div>
-            <p className="text-xs text-white/50">支持设置自定义的操作区域组件：</p>
-            
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono text-white/30">Without Action Button:</span>
-                <EmptyState
-                  title="无任何标签记录"
-                  description="请尝试在随笔或笔记中输入 # 进行标签捕获。"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-mono text-white/30">With Action Button:</span>
-                <EmptyState
-                  title="未找到匹配的记忆片段"
-                  description="该时期内暂时没有记录。现在就创建一个吗？"
-                  action={
-                    <button
-                      type="button"
-                      onClick={() => toast.success("触发创建流程！")}
-                      className="px-3 py-1 rounded-[6px] bg-white text-black text-xs font-bold hover:bg-white/90 transition-colors"
-                    >
-                      立即创建
-                    </button>
-                  }
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Section: IconButton */}
         {isVisible("button") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
@@ -384,26 +341,67 @@ export const ShowcasePage = (): React.JSX.Element => {
               </h3>
               <span className="text-xs font-mono text-white/30">IconButton.tsx</span>
             </div>
-            <p className="text-xs text-white/50 font-medium">微动画悬停效果，支持高亮和禁用属性：</p>
+            <p className="text-xs text-white/50 font-medium">微动画悬停效果，支持高亮、禁用属性，以及丰富的开箱即用预设：</p>
             
-            <div className="flex items-center gap-4 mt-2 bg-black/20 rounded-[6px] p-4 border border-white/5">
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[10px] font-mono text-white/30">Default</span>
-                <IconButton onClick={() => toast.info("点击了默认 IconButton")}>
-                  <Settings className="h-4 w-4" />
-                </IconButton>
+            <div className="flex flex-col gap-4 mt-2">
+              {/* 基础交互状态 */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-mono text-white/45">Basic States:</span>
+                <div className="flex items-center gap-4 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">Default</span>
+                    <IconButton onClick={() => toast.info("点击了默认 IconButton")}>
+                      <Settings className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">Highlighted</span>
+                    <IconButton highlighted onClick={() => toast.info("点击了高亮 IconButton")}>
+                      <Settings className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">Disabled</span>
+                    <IconButton disabled onClick={() => {}}>
+                      <Settings className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[10px] font-mono text-white/30">Highlighted</span>
-                <IconButton highlighted onClick={() => toast.info("点击了高亮 IconButton")}>
-                  <Settings className="h-4 w-4" />
-                </IconButton>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[10px] font-mono text-white/30">Disabled</span>
-                <IconButton disabled onClick={() => {}}>
-                  <Settings className="h-4 w-4" />
-                </IconButton>
+
+              {/* 开箱即用预设 */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-mono text-white/45">Presets (开箱即用 + 智能语义 Hover):</span>
+                <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">add</span>
+                    <IconButton preset="add" onClick={() => toast.success("已触发：添加 (Add) 操作")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">close</span>
+                    <IconButton preset="close" onClick={() => toast.info("已触发：关闭 (Close) 操作")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">save</span>
+                    <IconButton preset="save" onClick={() => toast.success("已保存配置！")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">confirm</span>
+                    <IconButton preset="confirm" onClick={() => toast.success("操作已确认")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">delete</span>
+                    <IconButton preset="delete" onClick={() => toast.error("数据已删除！")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">edit</span>
+                    <IconButton preset="edit" onClick={() => toast.info("开始编辑内容")} />
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-mono text-white/30">default</span>
+                    <IconButton preset="default" onClick={() => toast.info("触发默认设置")} />
+                  </div>
+                </div>
               </div>
             </div>
           </section>
