@@ -48,7 +48,6 @@ export const Tooltip = ({
   children,
   content,
   title,
-  description,
   onConfirm,
   onCancel,
   placement = "top",
@@ -59,12 +58,16 @@ export const Tooltip = ({
   className = "",
 }: TooltipProps): React.JSX.Element => {
   const [isVisible, setIsVisible] = useState<boolean>(false);
-  const [activePlacement, setActivePlacement] = useState<TooltipPlacement>(placement);
+  const [activePlacement, setActivePlacement] =
+    useState<TooltipPlacement>(placement);
   const [coords, setCoords] = useState<{ top: number; left: number }>({
     top: 0,
     left: 0,
   });
-  const [arrowOffset, setArrowOffset] = useState<{ left?: number; top?: number }>({});
+  const [arrowOffset, setArrowOffset] = useState<{
+    left?: number;
+    top?: number;
+  }>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -96,13 +99,29 @@ export const Tooltip = ({
 
       // 1. 自动决定是否翻转 (自适应定位)
       let resolvedPlacement = placement;
-      if (placement === "top" && spaceAbove < tooltipHeight + 12 && spaceBelow > spaceAbove) {
+      if (
+        placement === "top" &&
+        spaceAbove < tooltipHeight + 12 &&
+        spaceBelow > spaceAbove
+      ) {
         resolvedPlacement = "bottom";
-      } else if (placement === "bottom" && spaceBelow < tooltipHeight + 12 && spaceAbove > spaceBelow) {
+      } else if (
+        placement === "bottom" &&
+        spaceBelow < tooltipHeight + 12 &&
+        spaceAbove > spaceBelow
+      ) {
         resolvedPlacement = "top";
-      } else if (placement === "left" && spaceLeft < tooltipWidth + 12 && spaceRight > spaceLeft) {
+      } else if (
+        placement === "left" &&
+        spaceLeft < tooltipWidth + 12 &&
+        spaceRight > spaceLeft
+      ) {
         resolvedPlacement = "right";
-      } else if (placement === "right" && spaceRight < tooltipWidth + 12 && spaceLeft > spaceRight) {
+      } else if (
+        placement === "right" &&
+        spaceRight < tooltipWidth + 12 &&
+        spaceLeft > spaceRight
+      ) {
         resolvedPlacement = "left";
       }
 
@@ -113,17 +132,27 @@ export const Tooltip = ({
       let targetLeft = 0;
 
       if (resolvedPlacement === "top") {
-        targetTop = window.scrollY + triggerRect.top - tooltipHeight - 8;
-        targetLeft = triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
+        targetTop = window.scrollY + triggerRect.top - tooltipHeight - 16;
+        targetLeft =
+          triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
       } else if (resolvedPlacement === "bottom") {
-        targetTop = window.scrollY + triggerRect.bottom + 8;
-        targetLeft = triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
+        targetTop = window.scrollY + triggerRect.bottom + 16;
+        targetLeft =
+          triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
       } else if (resolvedPlacement === "left") {
-        targetTop = window.scrollY + triggerRect.top + triggerRect.height / 2 - tooltipHeight / 2;
-        targetLeft = triggerRect.left - tooltipWidth - 8;
+        targetTop =
+          window.scrollY +
+          triggerRect.top +
+          triggerRect.height / 2 -
+          tooltipHeight / 2;
+        targetLeft = triggerRect.left - tooltipWidth - 16;
       } else if (resolvedPlacement === "right") {
-        targetTop = window.scrollY + triggerRect.top + triggerRect.height / 2 - tooltipHeight / 2;
-        targetLeft = triggerRect.right + 8;
+        targetTop =
+          window.scrollY +
+          triggerRect.top +
+          triggerRect.height / 2 -
+          tooltipHeight / 2;
+        targetLeft = triggerRect.right + 16;
       }
 
       // 3. 执行边界纠偏修正
@@ -276,10 +305,10 @@ export const Tooltip = ({
     };
   }, []);
 
-  // 气泡卡片基础样式 (使用完全不透明的 bg-[#212121] 解决半透明叠影透底问题，完美对齐 Naive UI)
+  // 气泡卡片基础样式 (使用完全不透明的 bg-[#303030] 且无边框，与主次色区分)
   const cardClassName = isConfirmMode
-    ? "w-56 p-3 text-white border border-white/8 bg-[#212121]"
-    : "px-2.5 py-1.5 text-xs font-semibold text-white border border-white/5 bg-[#212121] whitespace-nowrap";
+    ? "w-48 p-2.5 text-white bg-[#303030]"
+    : "px-2.5 py-1.5 text-xs font-semibold text-white bg-[#303030] whitespace-nowrap";
 
   // 子级元素代理 onClick 与事件处理
   let triggerElement: React.ReactNode = children;
@@ -287,7 +316,10 @@ export const Tooltip = ({
     triggerElement = React.cloneElement(children as React.ReactElement<any>, {
       onClick: (e: React.MouseEvent) => {
         handleTriggerClick(e);
-        if (typeof (children as React.ReactElement<any>).props.onClick === "function") {
+        if (
+          typeof (children as React.ReactElement<any>).props.onClick ===
+          "function"
+        ) {
           (children as React.ReactElement<any>).props.onClick(e);
         }
       },
@@ -297,31 +329,32 @@ export const Tooltip = ({
   // 决定小三角箭头 SVG 容器的绝对定位样式
   const arrowStyle: React.CSSProperties = {
     position: "absolute",
-    width: "16px",
-    height: "16px",
+    width: "20px",
+    height: "20px",
     pointerEvents: "none",
   };
 
   if (activePlacement === "top") {
-    arrowStyle.bottom = "-8px";
-    arrowStyle.left = arrowOffset.left !== undefined ? `${arrowOffset.left}px` : "50%";
+    arrowStyle.bottom = "-14px";
+    arrowStyle.left =
+      arrowOffset.left !== undefined ? `${arrowOffset.left}px` : "50%";
     arrowStyle.transform = "translateX(-50%) rotate(180deg)";
   } else if (activePlacement === "bottom") {
-    arrowStyle.top = "-8px";
-    arrowStyle.left = arrowOffset.left !== undefined ? `${arrowOffset.left}px` : "50%";
+    arrowStyle.top = "-14px";
+    arrowStyle.left =
+      arrowOffset.left !== undefined ? `${arrowOffset.left}px` : "50%";
     arrowStyle.transform = "translateX(-50%)";
   } else if (activePlacement === "left") {
-    arrowStyle.right = "-8px";
-    arrowStyle.top = arrowOffset.top !== undefined ? `${arrowOffset.top}px` : "50%";
+    arrowStyle.right = "-14px";
+    arrowStyle.top =
+      arrowOffset.top !== undefined ? `${arrowOffset.top}px` : "50%";
     arrowStyle.transform = "translateY(-50%) rotate(90deg)";
   } else if (activePlacement === "right") {
-    arrowStyle.left = "-8px";
-    arrowStyle.top = arrowOffset.top !== undefined ? `${arrowOffset.top}px` : "50%";
+    arrowStyle.left = "-14px";
+    arrowStyle.top =
+      arrowOffset.top !== undefined ? `${arrowOffset.top}px` : "50%";
     arrowStyle.transform = "translateY(-50%) rotate(270deg)";
   }
-
-  // 箭头边边描边颜色
-  const arrowStroke = isConfirmMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)";
 
   return (
     <div
@@ -349,16 +382,9 @@ export const Tooltip = ({
           >
             {isConfirmMode ? (
               /* 二次确认气泡模式 */
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-bold text-white/90 leading-snug">
-                  {title}
-                </span>
-                {description && (
-                  <span className="text-[12px] text-white/40 leading-relaxed font-medium">
-                    {description}
-                  </span>
-                )}
-                <div className="flex items-center justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
+              <div className="flex flex-col">
+                <span className="text-sm leading-snug">{title || content}</span>
+                <div className="flex items-center justify-end mt-0.5 gap-1">
                   <IconButton
                     preset="close"
                     onClick={(e) => {
@@ -385,22 +411,12 @@ export const Tooltip = ({
             )}
 
             {/* 精美自适应圆滑三角形小凸起 (自定义 SVG 黄金曲线 + 无缝融边设计) */}
-            <svg
-              viewBox="0 0 16 16"
-              style={arrowStyle}
-            >
-              {/* 填充路径：完全实心颜色，与卡片无缝接合 */}
+            <svg viewBox="0 0 20 20" style={arrowStyle}>
+              {/* 填充路径：完全实心的全圆角三角形 */}
               <path
-                d="M 0,8 Q 3,8 6,4 L 7,2.5 Q 8,1 9,2.5 L 10,4 Q 13,8 16,8 Z"
-                fill="#212121"
+                d="M 5,14 L 15,14 Q 17,14 16,12 L 11.5,4 Q 10,1 8.5,4 L 4,12 Q 3,14 5,14 Z"
+                fill="#303030"
                 stroke="none"
-              />
-              {/* 边框路径：仅在三角形的两条斜边和顶角圆弧描边，底部完全镂空不描边，实现物理融边效果 */}
-              <path
-                d="M 0,8 Q 3,8 6,4 L 7,2.5 Q 8,1 9,2.5 L 10,4 Q 13,8 16,8"
-                fill="none"
-                stroke={arrowStroke}
-                strokeWidth="1"
               />
             </svg>
           </div>,
