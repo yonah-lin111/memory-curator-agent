@@ -4,13 +4,10 @@ import {
   Brain,
   CheckCircle2,
   Clock,
-  Edit2,
   FileText,
   HelpCircle,
-  Plus,
   Sparkles,
   Tag as TagIcon,
-  Trash2,
   X,
 } from "lucide-react";
 import { useToast } from "@renderer/components/ui/Toast";
@@ -417,11 +414,9 @@ export const NotesPage = (): React.JSX.Element => {
             <div className="flex items-center gap-2">
               <IconButton
                 aria-label="New Markdown note"
-                className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                preset="add"
                 onClick={() => setIsMarkdownModalOpen(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </IconButton>
+              />
             </div>
           </div>
 
@@ -489,22 +484,18 @@ export const NotesPage = (): React.JSX.Element => {
                       <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
                         <IconButton
                           iconOnly={false}
+                          preset="edit"
                           className="h-5 w-5 rounded-[4px] text-white/40"
                           onClick={() => handleEditNote(note)}
                           title="编辑笔记"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </IconButton>
+                        />
                         <IconButton
                           iconOnly={false}
+                          preset="delete"
                           className="h-5 w-5 rounded-[4px] text-white/40"
-                          hoverBgClass="hover:bg-red-500/10"
-                          hoverTextClass="hover:text-red-400"
                           onClick={() => void handleDeleteNote(note.id)}
                           title="删除笔记"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </IconButton>
+                        />
                       </div>
                     </div>
 

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, Tag as TagIcon } from "lucide-react";
+import { Trash2, Tag as TagIcon } from "lucide-react";
 import { EmptyState } from "@renderer/components/ui/EmptyState";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
@@ -330,14 +330,12 @@ export const SnippetsPage = (): React.JSX.Element => {
             </div>
             <IconButton
               aria-label="Add snippet"
-              className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+              preset="add"
               onClick={() => {
                 setEditingNote(null);
                 setIsNoteModalOpen(true);
               }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </IconButton>
+            />
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5">

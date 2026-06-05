@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { StickyNote, Plus, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
+import { StickyNote, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
@@ -69,11 +69,9 @@ export const TodaySnippetsPanel = ({
         <div className="flex items-center gap-2">
           <IconButton
             aria-label="Add free snippet"
-            className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+            preset="add"
             onClick={onAddNote}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </IconButton>
+          />
         </div>
       </div>
 

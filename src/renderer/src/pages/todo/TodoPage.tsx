@@ -1,12 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState, useRef } from "react";
-import {
-  ArrowUpDown,
-  CheckSquare,
-  Plus,
-  Square,
-  Trash2,
-} from "lucide-react";
+import { ArrowUpDown, CheckSquare, Square, Trash2 } from "lucide-react";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { useToast } from "@renderer/components/ui/Toast";
 import { IconButton } from "@renderer/components/ui/IconButton";
@@ -22,12 +16,14 @@ import {
 } from "@renderer/lib/dailyShared";
 
 // 待办记录类型，直接从 bridge 签名反推。
-type DailyTodoRecord =
-  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["todos"][number];
+type DailyTodoRecord = Awaited<
+  ReturnType<Window["api"]["daily"]["listDay"]>
+>["todos"][number];
 
 // 待办优先级类型，直接从 createTodo 签名反推。
-type DailyTodoPriorityValue =
-  Parameters<Window["api"]["daily"]["createTodo"]>[0]["priority"];
+type DailyTodoPriorityValue = Parameters<
+  Window["api"]["daily"]["createTodo"]
+>[0]["priority"];
 
 // 新建待办草稿，仅保留必要字段。
 interface TodoComposerDraft {
@@ -74,15 +70,17 @@ export const TodoPage = (): React.JSX.Element => {
   // 全局提示实例。
   const toast = useToast();
   // 当前页面日期。
-  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  const [entryDate, setEntryDate] = useState<string>(() =>
+    createTodayEntryDate(),
+  );
   // 当前月历可见月份。
   const [visibleMonth, setVisibleMonth] = useState<string>(() =>
     getEntryMonth(createTodayEntryDate()),
   );
   // 当前可见月份的待办角标映射。
-  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [monthEntryCounts, setMonthEntryCounts] = useState<
+    Record<string, number>
+  >({});
   // 当前待办列表。
   const [todos, setTodos] = useState<DailyTodoRecord[]>([]);
   // 加载状态。
@@ -170,7 +168,8 @@ export const TodoPage = (): React.JSX.Element => {
   );
   // 未完成 P0 数量。
   const p0Count = useMemo(
-    () => todos.filter((todo) => !todo.completed && todo.priority === "P0").length,
+    () =>
+      todos.filter((todo) => !todo.completed && todo.priority === "P0").length,
     [todos],
   );
 
@@ -204,7 +203,11 @@ export const TodoPage = (): React.JSX.Element => {
    */
   const handleUpdateTodo = async (
     id: number,
-    patch: { text: string; priority: DailyTodoPriorityValue; completed: boolean },
+    patch: {
+      text: string;
+      priority: DailyTodoPriorityValue;
+      completed: boolean;
+    },
   ): Promise<boolean> => {
     try {
       const updated = await window.api.daily.updateTodo(id, patch);
@@ -227,7 +230,10 @@ export const TodoPage = (): React.JSX.Element => {
       await window.api.daily.deleteTodo(id);
       setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
       setMonthEntryCounts((currentCounts) => {
-        const nextCount = Math.max((currentCounts[entryDate] ?? todos.length) - 1, 0);
+        const nextCount = Math.max(
+          (currentCounts[entryDate] ?? todos.length) - 1,
+          0,
+        );
 
         if (nextCount === 0) {
           const nextCounts = { ...currentCounts };
@@ -279,7 +285,9 @@ export const TodoPage = (): React.JSX.Element => {
   const handleCycleComposerPriority = (): void => {
     setComposerDraft((currentDraft) => ({
       ...currentDraft,
-      priority: getNextTodoPriority(currentDraft.priority) as DailyTodoPriorityValue,
+      priority: getNextTodoPriority(
+        currentDraft.priority,
+      ) as DailyTodoPriorityValue,
     }));
   };
 
@@ -323,7 +331,9 @@ export const TodoPage = (): React.JSX.Element => {
   /**
    * 直接切换单条待办的优先级，无需进入编辑态。
    */
-  const handleCycleTodoPriority = async (todo: DailyTodoRecord): Promise<void> => {
+  const handleCycleTodoPriority = async (
+    todo: DailyTodoRecord,
+  ): Promise<void> => {
     await handleUpdateTodo(todo.id, {
       text: todo.text,
       priority: getNextTodoPriority(todo.priority) as DailyTodoPriorityValue,
@@ -389,7 +399,10 @@ export const TodoPage = (): React.JSX.Element => {
   };
 
   return (
-    <section aria-label="Todo Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
+    <section
+      aria-label="Todo Page"
+      className="flex h-full min-h-0 flex-col gap-3 text-white"
+    >
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 min-h-0 flex-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -412,7 +425,6 @@ export const TodoPage = (): React.JSX.Element => {
               </span>
               <IconButton
                 aria-label="One-click sort"
-                className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                 onClick={() => void handleSortTodos()}
                 title="手动排序"
               >
@@ -435,14 +447,22 @@ export const TodoPage = (): React.JSX.Element => {
                 <div
                   className="invisible text-sm px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
                   aria-hidden="true"
-                  style={{ fontSize: "13px", lineHeight: "19.5px", maxHeight: "58.5px" }}
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: "19.5px",
+                    maxHeight: "58.5px",
+                  }}
                 >
                   {composerDraft.text || " "}
                 </div>
                 <textarea
                   ref={composerInputRef}
                   className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
-                  style={{ fontSize: "13px", lineHeight: "19.5px", maxHeight: "58.5px" }}
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: "19.5px",
+                    maxHeight: "58.5px",
+                  }}
                   onChange={(event) =>
                     setComposerDraft((currentDraft) => ({
                       ...currentDraft,
@@ -469,12 +489,10 @@ export const TodoPage = (): React.JSX.Element => {
               </div>
               <IconButton
                 aria-label="Add todo"
-                className="bg-white/6 text-white/55 hover:bg-white/12 hover:text-white"
+                preset="add"
                 disabled={!composerDraft.text.trim()}
                 onClick={() => void handleAddTodo()}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </IconButton>
+              />
             </div>
 
             {errorMessage ? (
@@ -503,7 +521,9 @@ export const TodoPage = (): React.JSX.Element => {
                 <div
                   key={todo.id}
                   className={`group flex items-center gap-2.5 rounded-[6px] border px-2 py-2 transition-all duration-300 ease-out ${
-                    isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
+                    isDeleting
+                      ? "animate-todo-item-exit"
+                      : "animate-todo-item-enter"
                   } ${
                     todo.completed
                       ? "border-white/[0.03] bg-white/[0.02]"
@@ -512,7 +532,11 @@ export const TodoPage = (): React.JSX.Element => {
                   data-testid="today-todo-item"
                 >
                   <button
-                    aria-label={todo.completed ? "Mark as incomplete" : "Mark as completed"}
+                    aria-label={
+                      todo.completed
+                        ? "Mark as incomplete"
+                        : "Mark as completed"
+                    }
                     className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
                       todo.completed
                         ? "text-emerald-500"

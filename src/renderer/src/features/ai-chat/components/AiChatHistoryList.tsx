@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckSquare, Plus, Search, Target, Trash2, X } from "lucide-react";
+import { Bot, CheckSquare, Search, Target, Trash2 } from "lucide-react";
 import type { AiChatSession } from "@renderer/features/ai-chat/types";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
@@ -498,25 +498,22 @@ export const AiChatHistoryList = ({
           <IconButton
             aria-label={isBatchMode ? "Exit batch delete" : "Batch delete chats"}
             highlighted={isBatchMode}
+            preset={isBatchMode ? "close" : undefined}
             onClick={handleBatchModeToggle}
-            className={isBatchMode ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
           >
-            {isBatchMode ? <X className="h-3.5 w-3.5" /> : <CheckSquare className="h-3.5 w-3.5" />}
+            {isBatchMode ? null : <CheckSquare className="h-3.5 w-3.5" />}
           </IconButton>
           <IconButton
             aria-label="Locate active chat"
             onClick={handleLocateActiveSession}
-            className="text-white/45 hover:bg-white/5 hover:text-white"
           >
             <Target className="h-3.5 w-3.5" />
           </IconButton>
           <IconButton
             aria-label="New chat"
+            preset="add"
             onClick={onNewChat}
-            className="text-white/45 hover:bg-white/5 hover:text-white"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </IconButton>
+          />
         </div>
       </div>
 

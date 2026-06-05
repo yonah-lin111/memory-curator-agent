@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { FileText, Plus, X } from "lucide-react";
+import { FileText } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Tag } from "@renderer/components/ui/Tag";
 
@@ -107,10 +107,9 @@ export const TodayNoteEntryModal = ({
           </div>
           <IconButton
             aria-label="Close modal"
+            preset="close"
             onClick={onClose}
-          >
-            <X className="h-3.5 w-3.5" />
-          </IconButton>
+          />
         </div>
 
         <div className="flex flex-col gap-2.5 p-3.5">
@@ -184,13 +183,13 @@ export const TodayNoteEntryModal = ({
             ESC 关闭 / 已接入本地持久化
           </span>
           <IconButton
+            preset="save"
             iconOnly={false}
             highlighted
             className="px-3 py-1.5 text-xs font-bold gap-1.5"
             disabled={isSaving || (!title.trim() && !content.trim())}
             onClick={() => void handleSubmit()}
           >
-            <Plus className="h-3 w-3" />
             {isSaving ? "保存中..." : "保存随记卡片"}
           </IconButton>
         </div>

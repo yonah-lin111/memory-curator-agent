@@ -3,9 +3,6 @@ import {
   Heart,
   User,
   Search,
-  Plus,
-  Trash2,
-  Edit2,
   Calendar,
   Phone,
   Clock,
@@ -76,11 +73,9 @@ export const PeoplePage = (): React.JSX.Element => {
               </div>
               <IconButton
                 aria-label="Add person profile"
-                className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                preset="add"
                 onClick={enterCreateMode}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </IconButton>
+              />
             </div>
 
             {/* 2. 搜索框 */}
@@ -308,16 +303,16 @@ export const PeoplePage = (): React.JSX.Element => {
                     <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
                       <IconButton
                         iconOnly={false}
-                        className="h-7 px-2.5 rounded-[6px] bg-white/5 border border-white/8 hover:bg-white/10 text-xs text-white/70 hover:text-white flex items-center gap-1 font-semibold"
+                        preset="edit"
+                        className="h-7 w-7"
                         onClick={enterEditMode}
                         title="编辑档案"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>编辑档案</span>
-                      </IconButton>
+                      />
+
                       <IconButton
                         iconOnly={false}
-                        className="h-7 px-2.5 rounded-[6px] border border-transparent hover:border-red-500/10 hover:bg-red-500/5 text-xs text-white/30 hover:text-red-400 flex items-center gap-1 font-semibold"
+                        preset="delete"
+                        className="h-7 w-7"
                         onClick={() =>
                           handleDeletePerson(
                             currentPerson.id,
@@ -325,10 +320,7 @@ export const PeoplePage = (): React.JSX.Element => {
                           )
                         }
                         title="删除档案"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>删除</span>
-                      </IconButton>
+                      />
                     </div>
                   </div>
 
@@ -409,7 +401,7 @@ export const PeoplePage = (): React.JSX.Element => {
                               modelValue={currentPerson.details}
                               previewTheme="default"
                               codeTheme="atom"
-                              style={{ backgroundColor: 'transparent' }}
+                              style={{ backgroundColor: "transparent" }}
                             />
                           </div>
                         ) : (

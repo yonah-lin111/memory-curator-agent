@@ -5,7 +5,6 @@ import {
   CheckSquare,
   ClipboardList,
   HelpCircle,
-  Plus,
   Square,
   Trash2,
 } from "lucide-react";
@@ -25,7 +24,10 @@ interface TodayTodoPanelProps {
   // 当前错误文案。
   errorMessage: string | null;
   // 新建待办回调。
-  onCreateTodo: (draft: { text: string; priority: TodoPriority }) => Promise<boolean>;
+  onCreateTodo: (draft: {
+    text: string;
+    priority: TodoPriority;
+  }) => Promise<boolean>;
   // 更新待办回调。
   onUpdateTodo: (
     id: number,
@@ -246,7 +248,6 @@ export const TodayTodoPanel = ({
           </span>
           <IconButton
             aria-label="One-click sort"
-            className="bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
             onClick={() => void onSortTodos()}
             title="手动排序"
           >
@@ -269,14 +270,22 @@ export const TodayTodoPanel = ({
             <div
               className="invisible text-sm px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
               aria-hidden="true"
-              style={{ fontSize: "13px", lineHeight: "19.5px", maxHeight: "58.5px" }}
+              style={{
+                fontSize: "13px",
+                lineHeight: "19.5px",
+                maxHeight: "58.5px",
+              }}
             >
               {composerDraft.text || " "}
             </div>
             <textarea
               ref={composerInputRef}
               className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
-              style={{ fontSize: "13px", lineHeight: "19.5px", maxHeight: "58.5px" }}
+              style={{
+                fontSize: "13px",
+                lineHeight: "19.5px",
+                maxHeight: "58.5px",
+              }}
               onChange={(event) =>
                 setComposerDraft((currentDraft) => ({
                   ...currentDraft,
@@ -303,12 +312,10 @@ export const TodayTodoPanel = ({
           </div>
           <IconButton
             aria-label="Add todo"
-            className="bg-white/6 text-white/55 hover:bg-white/12 hover:text-white"
+            preset="add"
             disabled={!composerDraft.text.trim()}
             onClick={() => void handleAddTodo()}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </IconButton>
+          />
         </div>
 
         {errorMessage ? (
@@ -337,7 +344,9 @@ export const TodayTodoPanel = ({
             <div
               key={todo.id}
               className={`group flex items-center gap-2.5 rounded-[6px] border px-2 py-2 transition-all duration-300 ease-out ${
-                isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
+                isDeleting
+                  ? "animate-todo-item-exit"
+                  : "animate-todo-item-enter"
               } ${
                 todo.completed
                   ? "border-white/[0.03] bg-white/[0.02]"
@@ -346,7 +355,9 @@ export const TodayTodoPanel = ({
               data-testid="today-todo-item"
             >
               <button
-                aria-label={todo.completed ? "Mark as incomplete" : "Mark as completed"}
+                aria-label={
+                  todo.completed ? "Mark as incomplete" : "Mark as completed"
+                }
                 className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
                   todo.completed
                     ? "text-emerald-500"
@@ -437,8 +448,8 @@ export const TodayTodoPanel = ({
                 </button>
               )}
 
-                  <button
-                    aria-label={`Delete todo ${todo.text}`}
+              <button
+                aria-label={`Delete todo ${todo.text}`}
                 className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] text-white/30 transition-colors hover:bg-white/5 hover:text-rose-400"
                 type="button"
                 onClick={() => handleDeleteTodo(todo.id)}

@@ -118,7 +118,7 @@ export const PageDateNavigator = ({
     <div ref={navigatorRef} className="flex items-center gap-1">
       <IconButton
         aria-label={`View previous day ${previousDate}`}
-        className="h-7 w-7 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+        className="h-7 w-7"
         onClick={() => onChange(previousDate)}
       >
         <ChevronLeft className="h-3.5 w-3.5" />
@@ -167,7 +167,7 @@ export const PageDateNavigator = ({
                 </IconButton>
                 <IconButton
                   aria-label={`View next month ${shiftEntryMonth(visibleMonth, 1)}`}
-                  className="h-7 w-7 bg-white/[0.03] text-white/56 hover:bg-white/[0.08] hover:text-white"
+                  className="h-7 w-7"
                   onClick={() =>
                     onVisibleMonthChange(shiftEntryMonth(visibleMonth, 1))
                   }
@@ -215,7 +215,9 @@ export const PageDateNavigator = ({
                       onChange(dayItem.entryDate);
                     }}
                   >
-                    <span className="text-xs font-medium">{dayItem.dayNumber}</span>
+                    <span className="text-xs font-medium">
+                      {dayItem.dayNumber}
+                    </span>
                     {isToday ? (
                       <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white opacity-80" />
                     ) : null}
@@ -240,7 +242,7 @@ export const PageDateNavigator = ({
 
       <IconButton
         aria-label={`View next day ${nextDate}`}
-        className="h-7 w-7 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+        className="h-7 w-7"
         onClick={() => onChange(nextDate)}
       >
         <ChevronRight className="h-3.5 w-3.5" />

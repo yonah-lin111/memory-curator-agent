@@ -1,13 +1,10 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  Check,
   ChevronDown,
   Clock,
   FileText,
-  Plus,
   Tag as TagIcon,
-  X,
 } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
@@ -155,10 +152,9 @@ export const NoteMarkdownModal = ({
             {/* 关闭按钮 */}
             <IconButton
               aria-label="Close Markdown note modal"
+              preset="close"
               onClick={onClose}
-            >
-              <X className="h-3.5 w-3.5" />
-            </IconButton>
+            />
           </div>
         </div>
 
@@ -263,17 +259,13 @@ export const NoteMarkdownModal = ({
           </div>
 
           <IconButton
+            preset={initialDraft ? "confirm" : "add"}
             iconOnly={false}
             highlighted
             className="px-3 py-1.5 text-xs font-bold gap-1.5"
             disabled={!draft.title.trim() || !draft.content.trim()}
             onClick={handleSave}
           >
-            {initialDraft ? (
-              <Check className="h-3.5 w-3.5" />
-            ) : (
-              <Plus className="h-3.5 w-3.5" />
-            )}
             {initialDraft ? "更新 Markdown 笔记" : "保存 Markdown 笔记"}
           </IconButton>
         </div>

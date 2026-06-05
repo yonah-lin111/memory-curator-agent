@@ -80,10 +80,10 @@ export const Header = ({
           <IconButton
             aria-label={isChatOpen ? "Close chat" : "Open chat"}
             highlighted={isChatOpen}
+            preset={isChatOpen ? "close" : undefined}
             onClick={onChatToggle}
-            className={isChatOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
           >
-            <MessageSquare className="h-3.5 w-3.5" />
+            {isChatOpen ? null : <MessageSquare className="h-3.5 w-3.5" />}
           </IconButton>
         )}
       </div>

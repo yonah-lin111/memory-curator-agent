@@ -87,9 +87,18 @@ export const IconButton = ({
 
   // 确定最终需要渲染的图标或子元素
   let renderContent = children;
-  if (!renderContent && preset) {
-    const PresetIcon = PRESET_ICONS[preset];
-    renderContent = <PresetIcon className="h-4 w-4" />;
+  const PresetIcon = preset ? PRESET_ICONS[preset] : null;
+
+  if (PresetIcon && !iconOnly && children) {
+    // 当非纯图标且有 children 时，智能在最前方自动拼接预设图标，大小微调为极其协调的 h-3.5 w-3.5
+    renderContent = (
+      <>
+        <PresetIcon className="h-3.5 w-3.5 flex-shrink-0" />
+        {children}
+      </>
+    );
+  } else if (!renderContent && preset) {
+    renderContent = PresetIcon ? <PresetIcon className="h-4 w-4" /> : null;
   } else if (!renderContent) {
     const DefaultIcon = PRESET_ICONS.default;
     renderContent = <DefaultIcon className="h-4 w-4" />;

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Save, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select, type SelectOption } from "@renderer/components/ui/Select";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
@@ -62,42 +62,49 @@ export const PeopleProfileForm = ({
   // 消息提示实例。
   const toast = useToast();
   // 全局头部状态。
-  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } = useHeaderStore();
+  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
+    useHeaderStore();
 
   // 动态同步面包屑标题与操作按钮至全局 Header 顶栏。
   useEffect(() => {
-    const title = mode === "create"
-      ? "录入新人物关系档案"
-      : `编辑 ${formState.name || "人物"} 档案`;
+    const title =
+      mode === "create"
+        ? "录入新人物关系档案"
+        : `编辑 ${formState.name || "人物"} 档案`;
     setCustomTitle(title);
     setHideChatButton(true);
 
     setExtraActions(
       <div className="flex items-center gap-1.5 animate-card-modal-in">
         <IconButton
-          highlighted
           disabled={!formState.name.trim()}
+          preset="save"
           onClick={onSave}
           title="保存档案"
           aria-label="Save"
-        >
-          <Save className="h-3.5 w-3.5" />
-        </IconButton>
+        />
         <IconButton
+          preset="close"
           onClick={onCancel}
           title="取消编辑"
           aria-label="Cancel"
-          className="bg-white/5 border border-white/8 text-white/60 hover:bg-white/10 hover:text-white"
-        >
-          <X className="h-3.5 w-3.5" />
-        </IconButton>
-      </div>
+        />
+      </div>,
     );
 
     return () => {
       resetHeader();
     };
-  }, [mode, formState.name, onCancel, onSave, setCustomTitle, setExtraActions, setHideChatButton, resetHeader]);
+  }, [
+    mode,
+    formState.name,
+    onCancel,
+    onSave,
+    setCustomTitle,
+    setExtraActions,
+    setHideChatButton,
+    resetHeader,
+  ]);
 
   /**
    * 处理文件选择与头像二进制落盘逻辑。
@@ -143,7 +150,9 @@ export const PeopleProfileForm = ({
   /**
    * 文件改变监听。
    */
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ): void => {
     const file = event.target.files?.[0];
     if (file) {
       void handleFileProcess(file);
@@ -286,7 +295,10 @@ export const PeopleProfileForm = ({
                 className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
                 value={formState.name}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -372,7 +384,10 @@ export const PeopleProfileForm = ({
               className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
               value={formState.status}
               onChange={(event) =>
-                setFormState((prev) => ({ ...prev, status: event.target.value }))
+                setFormState((prev) => ({
+                  ...prev,
+                  status: event.target.value,
+                }))
               }
             />
           </div>
@@ -391,7 +406,10 @@ export const PeopleProfileForm = ({
               className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
               value={formState.contact}
               onChange={(event) =>
-                setFormState((prev) => ({ ...prev, contact: event.target.value }))
+                setFormState((prev) => ({
+                  ...prev,
+                  contact: event.target.value,
+                }))
               }
             />
           </div>
@@ -404,7 +422,11 @@ export const PeopleProfileForm = ({
           <div className="rounded-[6px] border border-white/10 bg-black/40 p-2">
             <div className="mb-1.5 flex flex-wrap gap-1">
               {formState.tags.map((tag) => (
-                <Tag key={tag} prefix="#" onClose={() => handleRemoveFormTag(tag)}>
+                <Tag
+                  key={tag}
+                  prefix="#"
+                  onClose={() => handleRemoveFormTag(tag)}
+                >
                   {tag}
                 </Tag>
               ))}
