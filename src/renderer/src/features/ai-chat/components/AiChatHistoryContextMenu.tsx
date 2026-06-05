@@ -89,10 +89,10 @@ export const AiChatHistoryContextMenu = ({
         <span>编辑标题</span>
       </button>
       <button
-        className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-300/45 ${
+        className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400/45 ${
           isConfirmingDelete
             ? "bg-rose-600 text-white hover:bg-rose-500"
-            : "text-rose-300/85 hover:bg-rose-500/10 hover:text-rose-200"
+            : "text-rose-400/80 hover:bg-rose-400/10 hover:text-rose-300"
         }`}
         role="menuitem"
         type="button"
@@ -100,7 +100,7 @@ export const AiChatHistoryContextMenu = ({
       >
         <Trash2
           className={`h-3.5 w-3.5 ${
-            isConfirmingDelete ? "text-white" : "text-rose-300/70"
+            isConfirmingDelete ? "text-white" : "text-rose-400/80"
           }`}
         />
         <span>{isConfirmingDelete ? "确认删除" : "删除聊天"}</span>

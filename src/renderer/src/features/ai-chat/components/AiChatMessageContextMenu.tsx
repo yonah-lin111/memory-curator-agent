@@ -138,10 +138,10 @@ export const AiChatMessageContextMenu = ({
       </button>
       {canRegenerate ? (
         <button
-          className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200/45 ${
+          className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/45 ${
             isConfirmingRegenerate
               ? "bg-amber-500 text-black hover:bg-amber-400"
-              : "text-amber-200/85 hover:bg-amber-400/10 hover:text-amber-100"
+              : "text-amber-400/80 hover:bg-amber-400/10 hover:text-amber-300"
           }`}
           role="menuitem"
           type="button"
@@ -149,17 +149,17 @@ export const AiChatMessageContextMenu = ({
         >
           <RotateCcw
             className={`h-3.5 w-3.5 ${
-              isConfirmingRegenerate ? "text-black" : "text-amber-200/70"
+              isConfirmingRegenerate ? "text-black" : "text-amber-400/80"
             }`}
           />
           <span>{isConfirmingRegenerate ? "确认重新生成" : "重新生成"}</span>
         </button>
       ) : null}
       <button
-        className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-300/45 ${
+        className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400/45 ${
           isConfirmingDeleteQa
             ? "bg-rose-600 text-white hover:bg-rose-500"
-            : "text-rose-300/85 hover:bg-rose-500/10 hover:text-rose-200"
+            : "text-rose-400/80 hover:bg-rose-400/10 hover:text-rose-300"
         }`}
         role="menuitem"
         type="button"
@@ -167,7 +167,7 @@ export const AiChatMessageContextMenu = ({
       >
         <Trash2
           className={`h-3.5 w-3.5 ${
-            isConfirmingDeleteQa ? "text-white" : "text-rose-300/70"
+            isConfirmingDeleteQa ? "text-white" : "text-rose-400/80"
           }`}
         />
         <span>{isConfirmingDeleteQa ? "确认删除QA" : "删除QA"}</span>

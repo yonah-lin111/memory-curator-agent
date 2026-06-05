@@ -21,8 +21,8 @@ const PRESET_BG_CLASSES: Record<IconButtonPreset, string> = {
   close: "hover:bg-white/5",
   save: "hover:bg-emerald-500/10",
   confirm: "hover:bg-emerald-500/10",
-  delete: "hover:bg-rose-500/10",
-  edit: "hover:bg-amber-500/10",
+  delete: "hover:bg-rose-400/10",
+  edit: "hover:bg-amber-400/10",
   default: "hover:bg-white/5",
 };
 
@@ -32,8 +32,8 @@ const PRESET_TEXT_CLASSES: Record<IconButtonPreset, string> = {
   close: "hover:text-white",
   save: "hover:text-emerald-400",
   confirm: "hover:text-emerald-400",
-  delete: "hover:text-rose-400",
-  edit: "hover:text-amber-400",
+  delete: "hover:text-rose-300",
+  edit: "hover:text-amber-300",
   default: "hover:text-white",
 };
 
@@ -43,8 +43,8 @@ const PRESET_DEFAULT_TEXT_CLASSES: Record<IconButtonPreset, string> = {
   close: "text-white/45",
   save: "text-emerald-500/70",
   confirm: "text-emerald-500/70",
-  delete: "text-rose-500/70",
-  edit: "text-amber-500/70",
+  delete: "text-rose-400/80",
+  edit: "text-amber-400/80",
   default: "text-white/45",
 };
 
