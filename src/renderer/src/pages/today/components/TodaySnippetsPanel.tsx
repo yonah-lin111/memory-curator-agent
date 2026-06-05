@@ -89,8 +89,14 @@ export const TodaySnippetsPanel = ({
         ) : null}
 
         {!isLoading && notes.length === 0 ? (
-          <div className="rounded-[6px] border border-dashed border-white/8 bg-black/20 px-3 py-4 text-xs text-white/30">
-            今天还没有片段，捕捉第一条瞬时想法。
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <StickyNote className="h-7 w-7 text-white/30" />
+            <h2 className="mt-3 text-sm font-bold text-white/80">
+              暂无自由随记
+            </h2>
+            <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+              今天还没有片段，点击右上角加号，捕捉第一条瞬时想法。
+            </p>
           </div>
         ) : null}
 

@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import {
   ArrowUpDown,
   CheckSquare,
-  ClipboardList,
   HelpCircle,
   Square,
 } from "lucide-react";
@@ -95,6 +94,8 @@ export const TodayTodoPanel = ({
     text: "",
     priority: "P1",
   });
+  // 控制是否显示快速录入输入框。
+  const [showComposer, setShowComposer] = useState(false);
   // 当前行内编辑草稿。
   const [editingTodo, setEditingTodo] = useState<EditingTodoDraft | null>(null);
   // 正在执行删除动画的待办 ID 列表。
@@ -231,7 +232,7 @@ export const TodayTodoPanel = ({
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
         <div className="flex items-center gap-2">
-          <ClipboardList className="h-4 w-4 text-white/60" />
+          <CheckSquare className="h-4 w-4 text-white/60" />
           <span className="text-sm font-bold tracking-wide text-white/80">
             每日待办计划
           </span>
@@ -253,54 +254,73 @@ export const TodayTodoPanel = ({
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
           </IconButton>
+          <IconButton
+            aria-label="Toggle add todo composer"
+            preset="add"
+            className={showComposer ? "bg-white/5 text-white" : ""}
+            onClick={() => {
+              setShowComposer((prev) => {
+                const next = !prev;
+                if (next) {
+                  window.setTimeout(() => {
+                    focusComposer();
+                  }, 50);
+                }
+                return next;
+              });
+            }}
+            title="添加待办"
+          />
         </div>
       </div>
 
       <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
-        <Input
-          as="textarea"
-          autosize
-          ref={composerInputRef}
-          placeholder="添加一个待办，回车保存"
-          value={composerDraft.text}
-          onChange={(event) =>
-            setComposerDraft((currentDraft) => ({
-              ...currentDraft,
-              text: event.target.value,
-            }))
-          }
-          onKeyDown={(event) => {
-            if (event.nativeEvent.isComposing) {
-              return;
+        {showComposer && (
+          <Input
+            as="textarea"
+            autosize
+            ref={composerInputRef}
+            placeholder="添加一个待办，回车保存"
+            value={composerDraft.text}
+            onChange={(event) =>
+              setComposerDraft((currentDraft) => ({
+                ...currentDraft,
+                text: event.target.value,
+              }))
             }
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void handleAddTodo();
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) {
+                return;
+              }
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void handleAddTodo();
+              }
+              if (event.key === "Tab") {
+                event.preventDefault();
+                handleCycleComposerPriority();
+              }
+            }}
+            prefix={
+              <button
+                aria-label={`Toggle new todo priority ${composerDraft.priority}`}
+                className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(composerDraft.priority, false)}`}
+                type="button"
+                onClick={handleCycleComposerPriority}
+              >
+                {composerDraft.priority}
+              </button>
             }
-            if (event.key === "Tab") {
-              event.preventDefault();
-              handleCycleComposerPriority();
+            suffix={
+              <IconButton
+                aria-label="Add todo"
+                preset="add"
+                disabled={!composerDraft.text.trim()}
+                onClick={() => void handleAddTodo()}
+              />
             }
-          }}
-          prefix={
-            <button
-              aria-label={`Toggle new todo priority ${composerDraft.priority}`}
-              className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(composerDraft.priority, false)}`}
-              type="button"
-              onClick={handleCycleComposerPriority}
-            >
-              {composerDraft.priority}
-            </button>
-          }
-          suffix={
-            <IconButton
-              aria-label="Add todo"
-              preset="add"
-              disabled={!composerDraft.text.trim()}
-              onClick={() => void handleAddTodo()}
-            />
-          }
-        />
+          />
+        )}
 
         {errorMessage ? (
           <div className="rounded-[6px] border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs text-rose-300">
@@ -315,8 +335,14 @@ export const TodayTodoPanel = ({
         ) : null}
 
         {!isLoading && todos.length === 0 ? (
-          <div className="rounded-[6px] border border-dashed border-white/8 bg-black/20 px-3 py-4 text-xs text-white/30">
-            今天还没有待办，先写下第一条。
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <CheckSquare className="h-7 w-7 text-white/30" />
+            <h2 className="mt-3 text-sm font-bold text-white/80">
+              暂无每日待办
+            </h2>
+            <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+              今天还没有待办，点击右上角加号，写下第一条。
+            </p>
           </div>
         ) : null}
 

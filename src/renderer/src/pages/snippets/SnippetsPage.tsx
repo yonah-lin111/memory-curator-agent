@@ -1,7 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Tag as TagIcon } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Tag as TagIcon, StickyNote } from "lucide-react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
@@ -347,16 +346,21 @@ export const SnippetsPage = (): React.JSX.Element => {
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col">
             {isLoading ? (
               <div className="rounded-[6px] border border-white/5 bg-black/20 px-3 py-3 text-xs text-white/35">
                 正在读取当日片段...
               </div>
             ) : visibleSnippets.length === 0 ? (
-              <EmptyState
-                description="从零散想法里挑一条值得保存的记录。"
-                title="这一天还没有片段"
-              />
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <StickyNote className="h-7 w-7 text-white/30" />
+                <h2 className="mt-3 text-sm font-bold text-white/80">
+                  这一天还没有片段
+                </h2>
+                <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+                  从零散想法里挑一条值得保存的记录。
+                </p>
+              </div>
             ) : (
               <div className="grid gap-2">
                 {visibleSnippets.map((snippet) => {

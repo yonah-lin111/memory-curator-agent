@@ -18,9 +18,9 @@ export const EmptyState = ({
   description,
   action,
 }: EmptyStateProps): React.JSX.Element => (
-  <div className="rounded-[6px] border border-dashed border-white/10 bg-white/[0.015] px-4 py-5">
-    <p className="text-sm font-semibold text-white/82">{title}</p>
-    <p className="mt-1 text-xs leading-5 text-white/42">{description}</p>
+  <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8">
+    <p className="text-sm font-semibold text-white/80">{title}</p>
+    <p className="mt-1 text-xs leading-5 text-white/40">{description}</p>
     {action ? <div className="mt-3">{action}</div> : null}
   </div>
 );

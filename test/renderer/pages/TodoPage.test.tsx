@@ -235,6 +235,9 @@ describe("TodoPage", () => {
 
     renderTodoPage();
 
+    const toggleAddBtn = await screen.findByRole('button', { name: 'Toggle add todo composer' });
+    await user.click(toggleAddBtn);
+
     await user.type(
       await screen.findByPlaceholderText("添加一个待办，回车保存"),
       "新任务{enter}",

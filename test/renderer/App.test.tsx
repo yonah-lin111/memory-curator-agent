@@ -121,7 +121,7 @@ describe('App', () => {
     expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Todo/ }))
-    expect(screen.getByPlaceholderText('添加一个待办，回车保存')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Toggle add todo composer' })).toBeInTheDocument()
     expect(screen.queryByText(/COMING SOON/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Snippets/ }))
@@ -135,8 +135,13 @@ describe('App', () => {
     expect(screen.getByLabelText('Main content container')).toHaveClass('px-1', 'lg:px-2')
   })
 
-  it('待办快速录入框默认常驻，一键排序按钮可对列表进行排序', async () => {
+  it('点击添加按钮可显示待办录入框，一键排序按钮可对列表进行排序', async () => {
+    const user = userEvent.setup()
     render(<App />)
+
+    const toggleBtn = screen.getByRole('button', { name: 'Toggle add todo composer' })
+    expect(toggleBtn).toBeInTheDocument()
+    await user.click(toggleBtn)
 
     const input = screen.getByPlaceholderText('添加一个待办，回车保存')
     expect(input).toBeInTheDocument()
@@ -152,6 +157,9 @@ describe('App', () => {
 
     // 初始应该有 "已完成 3/5"
     expect(screen.getByText('已完成 3/5')).toBeInTheDocument()
+
+    const toggleBtn = screen.getByRole('button', { name: 'Toggle add todo composer' })
+    await user.click(toggleBtn)
 
     const input = screen.getByPlaceholderText('添加一个待办，回车保存')
     // 默认优先级是 P1

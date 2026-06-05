@@ -441,7 +441,7 @@ export const NotesPage = (): React.JSX.Element => {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col">
             {isLoadingNotes ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from({ length: 3 }).map((_, index) => (
@@ -460,7 +460,7 @@ export const NotesPage = (): React.JSX.Element => {
                 ))}
               </div>
             ) : visibleNotes.length === 0 ? (
-              <div className="flex min-h-[240px] flex-col items-center justify-center rounded-[6px] border border-white/5 bg-black/10 p-8 text-center">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <FileText className="h-7 w-7 text-white/30" />
                 <h2 className="mt-3 text-sm font-bold text-white/80">
                   暂无匹配笔记素材
