@@ -4,8 +4,8 @@ import type {
   AssociatedPersonRow,
   AssociatedPersonUpdateInput,
   PersonRelationship
-} from '../db/schema'
-import { createCompactUuid } from '../id'
+} from '@/db/schema'
+import { createCompactUuid } from '@/id'
 
 // 数据库语句接口。
 export type DatabaseStatement = {

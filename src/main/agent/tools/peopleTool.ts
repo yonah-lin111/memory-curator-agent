@@ -3,16 +3,16 @@ import type {
   AssociatedPersonItem,
   AssociatedPersonUpdateInput,
   PersonRelationship,
-} from "../../db/schema";
-import type { PeopleService } from "../../services/peopleService";
-import type { ToolConfirmationConfig } from "./toolConfirmation";
+} from '@/db/schema';
+import type { PeopleService } from '@/services/peopleService';
+import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation';
 import type {
   AgentTool,
   PeopleQueryConditions,
   PeopleQueryToolInput,
   PeopleQueryToolItem,
   PeopleQueryToolResult,
-} from "../types";
+} from '@/agent/types';
 
 // People 查询工具类型。
 type PeopleQueryTool = Omit<AgentTool, "execute"> & {

@@ -1,9 +1,9 @@
 import { ipcMain } from 'electron'
-import { getDatabase } from '../db'
-import type { NoteCreateInput, NoteUpdateInput } from '../db/schema'
-import { createNotesService, type DatabaseConnection } from '../services/notesService'
-import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '../services/filesService'
-import { scheduleMarkdownImageMaintenance } from '../services/markdownImageMaintenance'
+import { getDatabase } from '@/db'
+import type { NoteCreateInput, NoteUpdateInput } from '@/db/schema'
+import { createNotesService, type DatabaseConnection } from '@/services/notesService'
+import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
+import { scheduleMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
 
 /**
  * 注册 Notes IPC 处理器。

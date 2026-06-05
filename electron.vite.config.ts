@@ -7,15 +7,25 @@ import { resolve } from 'node:path'
 export default defineConfig(() => {
   return {
     main: {
+      resolve: {
+        alias: {
+          '@': resolve('src/main')
+        }
+      },
       plugins: [externalizeDepsPlugin()]
     },
     preload: {
+      resolve: {
+        alias: {
+          '@': resolve('src/preload')
+        }
+      },
       plugins: [externalizeDepsPlugin()]
     },
     renderer: {
       resolve: {
         alias: {
-          '@renderer': resolve('src/renderer/src')
+          '@': resolve('src/renderer/src')
         }
       },
       plugins: [

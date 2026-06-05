@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
-import { getDatabase } from '../db'
+import { getDatabase } from '@/db'
 import {
   createFilesService,
   type DatabaseConnection,
   type MarkdownImageSaveInput
-} from '../services/filesService'
+} from '@/services/filesService'
 
 /**
  * 注册文件 IPC 处理器。

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildContextAgentMessages,
   type AgentContextPayloadItem
-} from '../../../../src/main/agent/core/contextMessages'
-import type { AgentMessage } from '../../../../src/main/agent/types'
+} from '@/agent/core/contextMessages'
+import type { AgentMessage } from '@/agent/types'
 
 // 系统消息基线。
 const systemMessage: AgentMessage = {

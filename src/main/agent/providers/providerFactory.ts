@@ -1,5 +1,5 @@
-import { createAiSdkModelProvider, type AiSdkProviderRuntime } from './aiSdkProvider'
-import type { ModelProvider, NormalizedProviderConfig } from '../types'
+import { createAiSdkModelProvider, type AiSdkProviderRuntime } from '@/agent/providers/aiSdkProvider'
+import type { ModelProvider, NormalizedProviderConfig } from '@/agent/types'
 
 /**
  * 根据 provider 配置创建模型 provider。

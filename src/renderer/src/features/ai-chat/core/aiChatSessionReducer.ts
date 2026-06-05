@@ -1,8 +1,8 @@
 import type {
   AiChatSession,
   AiChatSessionStatus,
-} from "@renderer/features/ai-chat/types";
-import { createAiChatUuid } from "@renderer/features/ai-chat/core/aiChatIds";
+} from "@/features/ai-chat/types";
+import { createAiChatUuid } from "@/features/ai-chat/core/aiChatIds";
 
 // AI 对话消息类型。
 type AiChatMessage = AiChatSession["messages"][number];

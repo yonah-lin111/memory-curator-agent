@@ -10,10 +10,10 @@ import {
   Tag as TagIcon,
   X,
 } from "lucide-react";
-import { useToast } from "@renderer/components/ui/Toast";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Tag } from "@renderer/components/ui/Tag";
-import { NoteMarkdownModal } from "@renderer/pages/notes/components/NoteMarkdownModal";
+import { useToast } from "@/components/ui/Toast";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
+import { NoteMarkdownModal } from "@/pages/notes/components/NoteMarkdownModal";
 
 /* ==========================================
  * TS 类型定义

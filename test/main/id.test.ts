@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCompactUuid } from '../../src/main/id'
+import { createCompactUuid } from '@/id'
 
 // 无连接符 UUID 格式。
 const COMPACT_UUID_PATTERN = /^[\da-f]{32}$/i

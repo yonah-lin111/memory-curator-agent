@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { runReactAgent } from '../../../src/main/agent/core/reactAgent'
-import { createModelProvider } from '../../../src/main/agent/providers/providerFactory'
-import { getDatabase } from '../../../src/main/db'
-import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '../../../src/main/ipc/aiHandlers'
-import { createAiChatPersistenceService } from '../../../src/main/services/aiChatPersistenceService'
+import { runReactAgent } from '@/agent/core/reactAgent'
+import { createModelProvider } from '@/agent/providers/providerFactory'
+import { getDatabase } from '@/db'
+import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '@/ipc/aiHandlers'
+import { createAiChatPersistenceService } from '@/services/aiChatPersistenceService'
 
 // 无连接符 UUID 形态。
 const UUID_PATTERN = /^[\da-f]{32}$/i

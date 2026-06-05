@@ -1,8 +1,8 @@
 import type React from "react";
 import { useState } from "react";
 import { StickyNote, Trash2, Tag as TagIcon, HelpCircle } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Tag } from "@renderer/components/ui/Tag";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
 import type { NoteItem } from "./TodayNoteEntryModal";
 
 interface TodaySnippetsPanelProps {

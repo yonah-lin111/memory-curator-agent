@@ -1,8 +1,8 @@
 import type React from "react";
 import { MessageSquare } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { useToast, getToastColorClass } from "@renderer/components/ui/Toast";
-import { useHeaderStore } from "@renderer/lib/headerStore";
+import { IconButton } from "@/components/ui/IconButton";
+import { useToast, getToastColorClass } from "@/components/ui/Toast";
+import { useHeaderStore } from "@/lib/headerStore";
 
 // 固定的顶部栏组件属性接口
 export interface HeaderProps {

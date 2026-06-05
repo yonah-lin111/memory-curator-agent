@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createAgentToolRegistry, prepareToolsForModel, selectToolsForTurn } from '../../../../src/main/agent/tools/toolRegistry'
-import type { AgentTool } from '../../../../src/main/agent/types'
-import type { PeopleService } from '../../../../src/main/services/peopleService'
+import { createAgentToolRegistry, prepareToolsForModel, selectToolsForTurn } from '@/agent/tools/toolRegistry'
+import type { AgentTool } from '@/agent/types'
+import type { PeopleService } from '@/services/peopleService'
 
 // People 服务桩。
 const peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'> = {

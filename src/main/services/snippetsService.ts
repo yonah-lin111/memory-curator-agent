@@ -3,7 +3,7 @@ import type {
   SnippetItem,
   SnippetRow,
   SnippetUpdateInput
-} from '../db/schema'
+} from '@/db/schema'
 
 // 数据库语句接口。
 export type DatabaseStatement = {

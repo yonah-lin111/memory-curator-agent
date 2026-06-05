@@ -1,21 +1,21 @@
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Trash2, Tag as TagIcon } from "lucide-react";
-import { EmptyState } from "@renderer/components/ui/EmptyState";
-import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
-import { useToast } from "@renderer/components/ui/Toast";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Tag } from "@renderer/components/ui/Tag";
-import { SnippetsTagMap } from "@renderer/pages/snippets/components/SnippetsTagMap";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useToast } from "@/components/ui/Toast";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
+import { SnippetsTagMap } from "@/pages/snippets/components/SnippetsTagMap";
 import {
   TodayNoteEntryModal,
   type NoteItem,
-} from "@renderer/pages/today/components/TodayNoteEntryModal";
+} from "@/pages/today/components/TodayNoteEntryModal";
 import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
-} from "@renderer/lib/dailyShared";
+} from "@/lib/dailyShared";
 
 // Daily 片段记录类型，直接从 bridge 签名反推。
 type DailySnippetRecord =

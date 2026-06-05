@@ -3,8 +3,8 @@ import type {
   AiModelOption,
   AiModelProviderOption,
   AiModelSelection
-} from "@renderer/features/ai-chat/types";
-import { resolveDedupedTextContents } from "@renderer/features/ai-chat/core/aiChatReasoningDedupe";
+} from "@/features/ai-chat/types";
+import { resolveDedupedTextContents } from "@/features/ai-chat/core/aiChatReasoningDedupe";
 
 // 运行级异常 assistant 消息正文集合，用于识别不能进入后续上下文的失败 QA。
 const RUN_ERROR_ASSISTANT_CONTENTS = new Set([

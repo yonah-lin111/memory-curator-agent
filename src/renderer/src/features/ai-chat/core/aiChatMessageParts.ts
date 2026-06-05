@@ -1,7 +1,7 @@
 import type {
   AiChatMessagePart,
   AiChatSession,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 
 // AI 对话消息类型。
 type AiChatMessage = AiChatSession["messages"][number];

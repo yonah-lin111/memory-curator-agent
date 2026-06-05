@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { TodoRow } from '../../../src/main/db/schema'
-import { createTodosService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/todosService'
+import type { TodoRow } from '@/db/schema'
+import { createTodosService, type DatabaseConnection, type DatabaseStatement } from '@/services/todosService'
 
 let sqlite: MemoryTodosDatabase
 

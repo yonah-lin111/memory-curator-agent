@@ -4,7 +4,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
 // MdEditor 最近一次接收的属性。
 let latestMdEditorProps: {

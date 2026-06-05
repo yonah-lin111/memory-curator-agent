@@ -45,15 +45,11 @@
 
 ## 目录结构与导入规范
 
-### 目录层级规范
+### 目录层级规范 (`src/renderer/src/`)
+- **`pages/`**：按业务领域划分，主页面组件大驼峰（子组件在 `pages/<page>/components/`）
+- **`features/`**：高内聚、自包含的业务功能模块
+- **`components/`**：`ui/`（基础原子组件）及 `layout/`（页面框架与布局组件）
+- **`lib/`**：可复用工具函数与共享常量
 
-- **`src/renderer/src/pages/`**：按业务领域划分，每个页面对应一个独立文件夹（如 `pages/today/`, `pages/journal/`），其主页面组件命名为对应的大驼峰（如 `TodayPage.tsx`）。
-- **`src/renderer/src/pages/<page>/components/`**：存放该页面独占、强业务属性的子组件。
-- **`src/renderer/src/features/`**：存放高内聚、自包含的业务功能模块（如 `features/ai-chat/`）。
-- **`src/renderer/src/components/ui/`**：存放高复用、无业务逻辑的基础原子 UI 组件（如 `IconButton.tsx`, `Toast.tsx`）。
-- **`src/renderer/src/components/layout/`**：存放通用的页面框架/布局级组件（如 `Sidebar.tsx`, `Header.tsx`）。
-- **`src/renderer/src/lib/`**：存放可复用的业务/非业务工具函数与共享常量定义（如 `lib/dailyShared.ts`）。
-
-### 绝对路径导入
-
-- 渲染层内一律使用以 `@renderer/` 为前缀的绝对路径别名导入，**禁止使用任何 `../` 或 `../../` 等较深的相对路径**。
+### 导入规范
+- 项目内所有模块一律使用 `@/` 前缀的绝对路径别名导入（对应各进程的源码根目录），**严禁使用任何 `../` 等相对路径**。

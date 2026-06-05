@@ -1,4 +1,4 @@
-import type { NoteCreateInput, NoteMaterialItem, NoteRow, NoteUpdateInput } from '../db/schema'
+import type { NoteCreateInput, NoteMaterialItem, NoteRow, NoteUpdateInput } from '@/db/schema'
 
 // 数据库语句接口。
 export type DatabaseStatement = {

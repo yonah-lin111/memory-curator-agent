@@ -1,17 +1,17 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Select, type SelectOption } from "@renderer/components/ui/Select";
-import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
-import { Tag } from "@renderer/components/ui/Tag";
-import { useToast } from "@renderer/components/ui/Toast";
-import { useHeaderStore } from "@renderer/lib/headerStore";
+import { IconButton } from "@/components/ui/IconButton";
+import { Select, type SelectOption } from "@/components/ui/Select";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
+import { Tag } from "@/components/ui/Tag";
+import { useToast } from "@/components/ui/Toast";
+import { useHeaderStore } from "@/lib/headerStore";
 import type {
   FormState,
   PeoplePageMode,
   PersonProfile,
-} from "@renderer/pages/people/components/peopleShared";
+} from "@/pages/people/components/peopleShared";
 
 // 人物表单组件属性。
 type PeopleProfileFormProps = {

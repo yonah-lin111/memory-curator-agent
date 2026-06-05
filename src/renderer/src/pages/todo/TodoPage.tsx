@@ -1,19 +1,19 @@
 import type React from "react";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { ArrowUpDown, CheckSquare, Square, Trash2 } from "lucide-react";
-import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
-import { useToast } from "@renderer/components/ui/Toast";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { TodoControlTower } from "@renderer/pages/todo/components/TodoControlTower";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useToast } from "@/components/ui/Toast";
+import { IconButton } from "@/components/ui/IconButton";
+import { TodoControlTower } from "@/pages/todo/components/TodoControlTower";
 import {
   sortTodoItems,
   getNextTodoPriority,
-} from "@renderer/pages/todo/components/todoShared";
+} from "@/pages/todo/components/todoShared";
 import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
-} from "@renderer/lib/dailyShared";
+} from "@/lib/dailyShared";
 
 // 待办记录类型，直接从 bridge 签名反推。
 type DailyTodoRecord = Awaited<

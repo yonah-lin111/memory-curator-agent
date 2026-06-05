@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createPromptHistoryService } from './promptHistoryService'
+import { createPromptHistoryService } from '@/services/promptHistoryService'
 
 // 测试期间创建的临时目录。
 let tempDirs: string[] = []

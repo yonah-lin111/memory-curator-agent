@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { registerDailyHandlers } from '../../../src/main/ipc/dailyHandlers'
+import { registerDailyHandlers } from '@/ipc/dailyHandlers'
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),

@@ -1,30 +1,30 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { AiChatInputCommandId } from "@renderer/features/ai-chat/components/AiChatInput";
+import type { AiChatInputCommandId } from "@/features/ai-chat/components/AiChatInput";
 import type {
   AiAskAnswerSubmitPayload,
   AiToolConfirmationAnswerSubmitPayload,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
-import { useToast } from "@renderer/components/ui/Toast";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
+import { useToast } from "@/components/ui/Toast";
 import {
   buildMessageContextItems,
   getAiChatContextBudget,
   type AiChatContextBudget,
   type AiChatContextItem,
-} from "@renderer/features/ai-chat/aiChatContextBuilder";
-import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
+} from "@/features/ai-chat/aiChatContextBuilder";
+import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 import {
   type AiAgentOption,
   type AiChatSession,
   type AiModelProviderOption,
   type AiModelSelection,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 import {
   clearAiChatTypewriterTimers,
   createAiChatEventHandler,
   type AiRunMessageMapping,
   type AiTypewriterTimer,
-} from "@renderer/features/ai-chat/core/aiChatEventAdapter";
-import { createAiChatUuid } from "@renderer/features/ai-chat/core/aiChatIds";
+} from "@/features/ai-chat/core/aiChatEventAdapter";
+import { createAiChatUuid } from "@/features/ai-chat/core/aiChatIds";
 import {
   aiChatSessionReducer,
   createEmptyAiChatSession,
@@ -32,18 +32,18 @@ import {
   INITIAL_AI_CHAT_SESSION_STATE,
   isEmptyAiChatDraftSession,
   type AiChatMessageUpdater,
-} from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+} from "@/features/ai-chat/core/aiChatSessionReducer";
 import {
   deleteAiChatSession,
   deleteAiChatTurn,
   regenerateLatestAiChatAnswer,
   renameAiChatSession,
   undoLastAiChatTurn,
-} from "@renderer/features/ai-chat/core/aiChatSessionCommands";
+} from "@/features/ai-chat/core/aiChatSessionCommands";
 import {
   toAiChatAgentHints,
   type AiChatSendPayload,
-} from "@renderer/features/ai-chat/aiChatAgentMentions";
+} from "@/features/ai-chat/aiChatAgentMentions";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_AI_CHAT_CONTEXT_ITEMS: AiChatContextItem[] = [];

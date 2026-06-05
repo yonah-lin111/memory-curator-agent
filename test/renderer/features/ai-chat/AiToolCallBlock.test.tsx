@@ -12,8 +12,8 @@ vi.mock("md-editor-rt", () => ({
   ),
 }));
 
-import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
-import type { AiToolStep } from "@renderer/features/ai-chat/types";
+import { AiToolCallBlock } from "@/features/ai-chat/components/AiToolCallBlock";
+import type { AiToolStep } from "@/features/ai-chat/types";
 
 describe("AiToolCallBlock", () => {
   it("ask answer 只展示固定描述并追加键值选择摘要", () => {

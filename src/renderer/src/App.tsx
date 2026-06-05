@@ -1,24 +1,24 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { JournalPage } from "@renderer/pages/journal/JournalPage";
-import { MemoriesPage } from "@renderer/pages/memories/MemoriesPage";
-import { NotesPage } from "@renderer/pages/notes/NotesPage";
-import { ThemesPage } from "@renderer/pages/themes/ThemesPage";
-import { WeeklyReviewPage } from "@renderer/pages/weekly-review/WeeklyReviewPage";
-import { TodoPage } from "@renderer/pages/todo/TodoPage";
-import { SnippetsPage } from "@renderer/pages/snippets/SnippetsPage";
-import { PeoplePage } from "@renderer/pages/people/PeoplePage";
-import { ShowcasePage } from "@renderer/pages/showcase/ShowcasePage";
+import { JournalPage } from "@/pages/journal/JournalPage";
+import { MemoriesPage } from "@/pages/memories/MemoriesPage";
+import { NotesPage } from "@/pages/notes/NotesPage";
+import { ThemesPage } from "@/pages/themes/ThemesPage";
+import { WeeklyReviewPage } from "@/pages/weekly-review/WeeklyReviewPage";
+import { TodoPage } from "@/pages/todo/TodoPage";
+import { SnippetsPage } from "@/pages/snippets/SnippetsPage";
+import { PeoplePage } from "@/pages/people/PeoplePage";
+import { ShowcasePage } from "@/pages/showcase/ShowcasePage";
 import {
   Sidebar,
   type SidebarPageId,
-} from "@renderer/components/layout/Sidebar";
-import { Header } from "@renderer/components/layout/Header";
-import { TodayPage } from "@renderer/pages/today/TodayPage";
-import { ToastProvider } from "@renderer/components/ui/Toast";
-import { AiChatWorkspace } from "@renderer/features/ai-chat/components/AiChatWorkspace";
-import { AiChatContextBar } from "@renderer/features/ai-chat/components/AiChatContextBar";
-import { useAiChatController } from "@renderer/features/ai-chat/useAiChatController";
+} from "@/components/layout/Sidebar";
+import { Header } from "@/components/layout/Header";
+import { TodayPage } from "@/pages/today/TodayPage";
+import { ToastProvider } from "@/components/ui/Toast";
+import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
+import { AiChatContextBar } from "@/features/ai-chat/components/AiChatContextBar";
+import { useAiChatController } from "@/features/ai-chat/useAiChatController";
 
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [

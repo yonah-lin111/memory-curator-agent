@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createAiChatEventHandler,
   type AiRunMessageMapping
-} from '@renderer/features/ai-chat/core/aiChatEventAdapter'
-import type { AiChatSessionStatus } from '@renderer/features/ai-chat/types'
+} from '@/features/ai-chat/core/aiChatEventAdapter'
+import type { AiChatSessionStatus } from '@/features/ai-chat/types'
 
 // 事件适配器测试夹具。
 type EventHandlerFixture = {

@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
-import { getDatabase } from '../db'
-import type { AssociatedPersonCreateInput, AssociatedPersonUpdateInput } from '../db/schema'
-import { createPeopleService, type DatabaseConnection } from '../services/peopleService'
+import { getDatabase } from '@/db'
+import type { AssociatedPersonCreateInput, AssociatedPersonUpdateInput } from '@/db/schema'
+import { createPeopleService, type DatabaseConnection } from '@/services/peopleService'
 
 /**
  * 注册 People IPC 处理器。

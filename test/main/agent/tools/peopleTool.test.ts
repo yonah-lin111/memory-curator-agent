@@ -3,15 +3,15 @@ import type {
   AssociatedPersonCreateInput,
   AssociatedPersonItem,
   AssociatedPersonUpdateInput,
-} from "../../../../src/main/db/schema";
+} from '@/db/schema';
 import {
   createPeopleAddTool,
   createPeopleDeleteTool,
   createPeopleQueryTool,
   createPeopleTools,
   createPeopleUpdateTool,
-} from "../../../../src/main/agent/tools/peopleTool";
-import type { PeopleService } from "../../../../src/main/services/peopleService";
+} from '@/agent/tools/peopleTool';
+import type { PeopleService } from '@/services/peopleService';
 
 const people: AssociatedPersonItem[] = [
   {

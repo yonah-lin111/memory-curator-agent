@@ -5,13 +5,13 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { App } from '@renderer/App'
+import { App } from '@/App'
 import type {
   AiChatEvent,
   AiChatSession,
   AiChatStartPayload
-} from '@renderer/features/ai-chat/types'
-import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
+} from '@/features/ai-chat/types'
+import { useAiChatContextStore } from '@/features/ai-chat/aiChatContextStore'
 
 describe('App', () => {
   afterEach(() => {

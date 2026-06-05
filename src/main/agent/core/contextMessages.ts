@@ -1,4 +1,4 @@
-import type { AgentMessage, AgentMessageRole } from '../types'
+import type { AgentMessage, AgentMessageRole } from '@/agent/types'
 
 // Agent 上下文载荷来源类型。
 export type AgentContextKind = 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'

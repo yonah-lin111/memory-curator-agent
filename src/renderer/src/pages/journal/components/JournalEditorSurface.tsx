@@ -1,5 +1,5 @@
 import type React from "react";
-import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
 // 日记编辑器区域属性。
 interface JournalEditorSurfaceProps {

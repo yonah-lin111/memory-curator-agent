@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { AiChatSession } from '@renderer/features/ai-chat/types'
+import type { AiChatSession } from '@/features/ai-chat/types'
 import {
   aiChatSessionReducer,
   type AiChatSessionState
-} from '@renderer/features/ai-chat/core/aiChatSessionReducer'
+} from '@/features/ai-chat/core/aiChatSessionReducer'
 
 // 测试用会话构造参数。
 type CreateSessionOptions = {

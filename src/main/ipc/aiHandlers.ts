@@ -1,31 +1,31 @@
 import { ipcMain, type WebContents } from 'electron'
-import { getDatabase } from '../db'
-import { createCompactUuid } from '../id'
-import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '../services/peopleService'
+import { getDatabase } from '@/db'
+import { createCompactUuid } from '@/id'
+import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '@/services/peopleService'
 import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection
-} from '../services/aiChatPersistenceService'
-import { loadProviderConfig } from '../agent/providers/providerConfig'
-import { createModelProvider } from '../agent/providers/providerFactory'
-import { runReactAgent } from '../agent/core/reactAgent'
+} from '@/services/aiChatPersistenceService'
+import { loadProviderConfig } from '@/agent/providers/providerConfig'
+import { createModelProvider } from '@/agent/providers/providerFactory'
+import { runReactAgent } from '@/agent/core/reactAgent'
 import {
   appendAiChatAgentDirectiveToSystemMessage,
   normalizeAiChatAgentHints,
   type AiChatAgentHint
-} from '../agent/core/agentHints'
-import { createAgentToolRegistry } from '../agent/tools/toolRegistry'
-import { createAskAnswerData, isAskRequestData, type AskRequestData } from '../agent/tools/askTool'
+} from '@/agent/core/agentHints'
+import { createAgentToolRegistry } from '@/agent/tools/toolRegistry'
+import { createAskAnswerData, isAskRequestData, type AskRequestData } from '@/agent/tools/askTool'
 import {
   createToolConfirmationAnswerData,
   isToolConfirmationAnswerData,
   isToolConfirmationRequestData,
   type ToolConfirmationAction,
   type ToolConfirmationRequestData
-} from '../agent/tools/toolConfirmation'
-import { buildContextAgentMessages, type AgentContextPayloadItem } from '../agent/core/contextMessages'
-import type { AgentMessage, AgentStreamEvent } from '../agent/types'
-import type { AiChatMessagePart, AiToolStep } from '../db/schema'
+} from '@/agent/tools/toolConfirmation'
+import { buildContextAgentMessages, type AgentContextPayloadItem } from '@/agent/core/contextMessages'
+import type { AgentMessage, AgentStreamEvent } from '@/agent/types'
+import type { AiChatMessagePart, AiToolStep } from '@/db/schema'
 
 // AI 对话启动载荷。
 type AiChatStartPayload = {

@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { getPromptHistoryDir } from '../paths'
+import { getPromptHistoryDir } from '@/paths'
 
 // 提示词历史文件名。
 const PROMPT_HISTORY_FILE_NAME = 'ai-chat-prompts.json'

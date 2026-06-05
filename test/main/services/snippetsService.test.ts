@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { SnippetRow } from '../../../src/main/db/schema'
-import { createSnippetsService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/snippetsService'
+import type { SnippetRow } from '@/db/schema'
+import { createSnippetsService, type DatabaseConnection, type DatabaseStatement } from '@/services/snippetsService'
 
 let sqlite: MemorySnippetsDatabase
 

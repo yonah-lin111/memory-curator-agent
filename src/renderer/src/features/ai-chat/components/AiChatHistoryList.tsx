@@ -1,10 +1,10 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckSquare, Search, Target, Trash2 } from "lucide-react";
-import type { AiChatSession } from "@renderer/features/ai-chat/types";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { AiChatHistoryContextMenu } from "@renderer/features/ai-chat/components/AiChatHistoryContextMenu";
-import { isEmptyAiChatDraftSession } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+import type { AiChatSession } from "@/features/ai-chat/types";
+import { IconButton } from "@/components/ui/IconButton";
+import { AiChatHistoryContextMenu } from "@/features/ai-chat/components/AiChatHistoryContextMenu";
+import { isEmptyAiChatDraftSession } from "@/features/ai-chat/core/aiChatSessionReducer";
 
 // AI 对话历史列表组件属性类型。
 type AiChatHistoryListProps = {

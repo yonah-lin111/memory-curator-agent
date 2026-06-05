@@ -8,12 +8,12 @@ import {
   Square,
   Trash2,
 } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
+import { IconButton } from "@/components/ui/IconButton";
 import {
   getNextTodoPriority,
   type TodoItem,
   type TodoPriority,
-} from "@renderer/pages/todo/components/todoShared";
+} from "@/pages/todo/components/todoShared";
 
 // Todo 面板属性，交由页面层托管真实持久化状态。
 interface TodayTodoPanelProps {

@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { getDatabase } from '../db'
+import { getDatabase } from '@/db'
 import type {
   JournalSaveInput,
   SnippetCreateInput,
@@ -7,10 +7,10 @@ import type {
   TodoCreateInput,
   TodoReorderInput,
   TodoUpdateInput
-} from '../db/schema'
-import { createDailyService, type DatabaseConnection } from '../services/dailyService'
-import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '../services/filesService'
-import { scheduleMarkdownImageMaintenance } from '../services/markdownImageMaintenance'
+} from '@/db/schema'
+import { createDailyService, type DatabaseConnection } from '@/services/dailyService'
+import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
+import { scheduleMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
 
 /**
  * 注册 Daily IPC 处理器。

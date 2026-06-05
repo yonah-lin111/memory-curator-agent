@@ -1,11 +1,11 @@
-import type { AiChatSession } from "@renderer/features/ai-chat/types";
+import type { AiChatSession } from "@/features/ai-chat/types";
 import {
   createEmptyAiChatSession,
   findChatTurnBoundsByMessageId,
   findLastChatTurnStartIndex,
   isEmptyAiChatDraftSession,
   type AiChatSessionAction,
-} from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+} from "@/features/ai-chat/core/aiChatSessionReducer";
 
 // 会话状态派发函数。
 type AiChatSessionDispatch = (action: AiChatSessionAction) => void;

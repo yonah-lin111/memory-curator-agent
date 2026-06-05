@@ -4,27 +4,27 @@ import type {
   AiChatSession,
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 import {
   AiChatMessageBubble,
   type AiChatMessageContextMenuRequest,
-} from "@renderer/features/ai-chat/components/AiChatMessageBubble";
-import { AiChatMessageContextMenu } from "@renderer/features/ai-chat/components/AiChatMessageContextMenu";
+} from "@/features/ai-chat/components/AiChatMessageBubble";
+import { AiChatMessageContextMenu } from "@/features/ai-chat/components/AiChatMessageContextMenu";
 import {
   AiChatInput,
   type AiChatInputCommandId,
-} from "@renderer/features/ai-chat/components/AiChatInput";
-import type { AiChatSendPayload } from "@renderer/features/ai-chat/aiChatAgentMentions";
+} from "@/features/ai-chat/components/AiChatInput";
+import type { AiChatSendPayload } from "@/features/ai-chat/aiChatAgentMentions";
 import type {
   AiAskAnswerSubmitPayload,
   AiToolConfirmationAnswerSubmitPayload,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
 import {
   buildMessageContextItems,
   getAiChatContextBudget,
   type AiChatContextItem,
-} from "@renderer/features/ai-chat/aiChatContextBuilder";
-import { useAiChatContextStore } from "@renderer/features/ai-chat/aiChatContextStore";
+} from "@/features/ai-chat/aiChatContextBuilder";
+import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];

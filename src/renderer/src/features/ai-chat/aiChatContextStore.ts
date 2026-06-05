@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AiChatContextItem } from "@renderer/features/ai-chat/aiChatContextBuilder";
+import type { AiChatContextItem } from "@/features/ai-chat/aiChatContextBuilder";
 
 // 全局上下文最多缓存的会话数量。
 const MAX_AI_CHAT_CONTEXT_SESSIONS = 20;

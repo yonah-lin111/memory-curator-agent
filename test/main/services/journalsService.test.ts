@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { JournalRow } from '../../../src/main/db/schema'
-import { createJournalsService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/journalsService'
+import type { JournalRow } from '@/db/schema'
+import { createJournalsService, type DatabaseConnection, type DatabaseStatement } from '@/services/journalsService'
 
 let sqlite: MemoryJournalsDatabase
 

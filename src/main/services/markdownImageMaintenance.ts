@@ -1,4 +1,4 @@
-import type { FilesService } from './filesService'
+import type { FilesService } from '@/services/filesService'
 
 // 自动清理延迟，给用户撤回删除保留缓冲窗口。
 export const MARKDOWN_IMAGE_CLEANUP_DELAY_MS = 30_000

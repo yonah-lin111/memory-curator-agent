@@ -11,6 +11,11 @@
     "moduleResolution": "bundler",
     "types": [
       "node"
-    ]
+    ],
+    "paths": {
+      "@/*": [
+        "./src/main/*"
+      ]
+    }
   }
 }

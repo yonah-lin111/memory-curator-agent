@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { runReactAgent } from "../../../../src/main/agent/core/reactAgent";
+import { runReactAgent } from '@/agent/core/reactAgent';
 import type {
   AgentTool,
   ModelProvider,
   ModelTurnInput,
   ReactAgentRunInput,
-} from "../../../../src/main/agent/types";
+} from '@/agent/types';
 
 // 工具确认 Provider 类型。
 type ToolConfirmationProvider = NonNullable<

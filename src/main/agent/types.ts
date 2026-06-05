@@ -1,10 +1,10 @@
-import type { AssociatedPersonItem, PersonRelationship } from '../db/schema'
-import type { AskAnswerData, AskRequestData } from './tools/askTool'
+import type { AssociatedPersonItem, PersonRelationship } from '@/db/schema'
+import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
   ToolConfirmationConfig,
   ToolConfirmationRequestData
-} from './tools/toolConfirmation'
+} from '@/agent/tools/toolConfirmation'
 
 // 模型 provider 传输格式类型。
 export type ProviderTransportType = 'openai-compatible' | 'openai' | 'anthropic' | 'google'

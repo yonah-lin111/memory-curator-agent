@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { createPromptHistoryService } from '../services/promptHistoryService'
+import { createPromptHistoryService } from '@/services/promptHistoryService'
 
 /**
  * 注册提示词历史 IPC 处理器。

@@ -3,13 +3,13 @@ import type {
   AiChatMessage,
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/types'
+} from '@/features/ai-chat/types'
 import {
   buildMessageContextItems,
   estimateAiChatContextTokens,
   getAiChatContextBudget,
   resolveAiChatSelectedModelOption
-} from '@renderer/features/ai-chat/aiChatContextBuilder'
+} from '@/features/ai-chat/aiChatContextBuilder'
 
 describe('aiChatContextBuilder', () => {
   it('从用户与助手消息派生稳定上下文条目', () => {

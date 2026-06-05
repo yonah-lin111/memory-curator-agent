@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
+import { IconButton } from "@/components/ui/IconButton";
 
 // 下拉菜单单个选项接口。
 export interface SelectOption<T> {

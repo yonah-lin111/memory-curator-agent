@@ -4,8 +4,8 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AiChatMessageBubble } from "@renderer/features/ai-chat/components/AiChatMessageBubble";
-import type { AiChatMessage } from "@renderer/features/ai-chat/types";
+import { AiChatMessageBubble } from "@/features/ai-chat/components/AiChatMessageBubble";
+import type { AiChatMessage } from "@/features/ai-chat/types";
 
 vi.mock("md-editor-rt", () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => (

@@ -12,14 +12,14 @@ import {
   Sparkles,
   Info,
 } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Tag } from "@renderer/components/ui/Tag";
-import { PeopleProfileForm } from "@renderer/pages/people/components/PeopleProfileForm";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
+import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm";
 import {
   RELATIONSHIP_COLORS,
   type RelationshipFilter,
-} from "@renderer/pages/people/components/peopleShared";
-import { usePeopleProfiles } from "@renderer/pages/people/components/usePeopleProfiles";
+} from "@/pages/people/components/peopleShared";
+import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 

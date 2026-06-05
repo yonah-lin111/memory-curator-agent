@@ -2,7 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
-import { loadProviderConfig } from '../../../../src/main/agent/providers/providerConfig'
+import { loadProviderConfig } from '@/agent/providers/providerConfig'
 
 describe('providerConfig', () => {
   it('从 mc 配置中读取默认 provider 和模型', () => {

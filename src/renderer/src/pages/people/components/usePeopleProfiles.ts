@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useToast } from "@renderer/components/ui/Toast";
+import { useToast } from "@/components/ui/Toast";
 import {
   createDisplayTime,
   createInitialFormState,
@@ -11,7 +11,7 @@ import {
   type PeoplePageMode,
   type PersonProfile,
   type RelationshipFilter,
-} from "@renderer/pages/people/components/peopleShared";
+} from "@/pages/people/components/peopleShared";
 
 // 标签统计项。
 type TagStat = {

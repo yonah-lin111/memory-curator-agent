@@ -1,12 +1,12 @@
 import type React from "react";
 import { useState } from "react";
 import { Layers3 } from "lucide-react";
-import type { AiAgentOption } from "@renderer/features/ai-chat/types";
+import type { AiAgentOption } from "@/features/ai-chat/types";
 import type {
   AiChatContextBudget,
   AiChatContextItem,
-} from "@renderer/features/ai-chat/aiChatContextBuilder";
-import { IconButton } from "@renderer/components/ui/IconButton";
+} from "@/features/ai-chat/aiChatContextBuilder";
+import { IconButton } from "@/components/ui/IconButton";
 
 // AI 对话上下文栏组件属性类型。
 type AiChatContextBarProps = {

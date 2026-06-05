@@ -15,8 +15,8 @@ import {
   StickyNote,
   Users,
 } from "lucide-react";
-import { AiChatHistoryList } from "@renderer/features/ai-chat/components/AiChatHistoryList";
-import type { AiChatSession } from "@renderer/features/ai-chat/types";
+import { AiChatHistoryList } from "@/features/ai-chat/components/AiChatHistoryList";
+import type { AiChatSession } from "@/features/ai-chat/types";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)

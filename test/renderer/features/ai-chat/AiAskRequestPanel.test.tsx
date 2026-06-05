@@ -9,7 +9,7 @@ import {
   AiAskRequestPanel,
   type AiAskRequest,
   type AiToolConfirmationRequest,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
 
 // 多问题 Ask 请求。
 const request: AiAskRequest = {

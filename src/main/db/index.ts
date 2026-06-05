@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { mkdirSync } from 'node:fs'
-import { getDatabaseDir, getDatabasePath } from '../paths'
+import { getDatabaseDir, getDatabasePath } from '@/paths'
 
 // 数据库迁移依赖的最小连接接口。
 type MigrationDatabase = Pick<Database.Database, 'exec' | 'prepare'>

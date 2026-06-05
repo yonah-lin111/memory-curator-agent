@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
-import { createAiChatPersistenceTables } from '../../../src/main/db'
-import { createAiChatPersistenceService } from '../../../src/main/services/aiChatPersistenceService'
+import { createAiChatPersistenceTables } from '@/db'
+import { createAiChatPersistenceService } from '@/services/aiChatPersistenceService'
 
 /**
  * 创建内存数据库服务。

@@ -3,7 +3,7 @@ import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import type {
   AiToolStep,
   AiToolStepStatus,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 import {
   AiAskRequestPanel,
   isAiAskAnswer,
@@ -11,8 +11,8 @@ import {
   isAiToolConfirmationRequest,
   type AiAskAnswerSubmitPayload,
   type AiToolConfirmationAnswerSubmitPayload,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
-import { AiToolExplainPreview } from "@renderer/features/ai-chat/components/AiToolExplainPreview";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
+import { AiToolExplainPreview } from "@/features/ai-chat/components/AiToolExplainPreview";
 
 // 工具观察文本最大展示长度。
 const TOOL_OBSERVATION_MAX_LENGTH = 96;

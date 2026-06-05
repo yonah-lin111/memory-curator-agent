@@ -4,17 +4,17 @@ import type {
   AiChatMessage,
   AiChatMessagePart,
   AiToolStep,
-} from "@renderer/features/ai-chat/types";
-import { AiChatThinkingBlock } from "@renderer/features/ai-chat/components/AiChatThinkingBlock";
-import { AiToolCallBlock } from "@renderer/features/ai-chat/components/AiToolCallBlock";
+} from "@/features/ai-chat/types";
+import { AiChatThinkingBlock } from "@/features/ai-chat/components/AiChatThinkingBlock";
+import { AiToolCallBlock } from "@/features/ai-chat/components/AiToolCallBlock";
 import type {
   AiAskAnswerSubmitPayload,
   AiToolConfirmationAnswerSubmitPayload,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
 import {
   resolveDedupedRenderablePartContents,
   resolveDedupedTextContents,
-} from "@renderer/features/ai-chat/core/aiChatReasoningDedupe";
+} from "@/features/ai-chat/core/aiChatReasoningDedupe";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 

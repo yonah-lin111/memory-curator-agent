@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AiChatSession } from '@renderer/features/ai-chat/types'
-import type { AiChatSessionAction } from '@renderer/features/ai-chat/core/aiChatSessionReducer'
+import type { AiChatSession } from '@/features/ai-chat/types'
+import type { AiChatSessionAction } from '@/features/ai-chat/core/aiChatSessionReducer'
 import {
   deleteAiChatTurn,
   regenerateLatestAiChatAnswer,
   undoLastAiChatTurn
-} from '@renderer/features/ai-chat/core/aiChatSessionCommands'
+} from '@/features/ai-chat/core/aiChatSessionCommands'
 
 const createToast = () => ({
   success: vi.fn(),

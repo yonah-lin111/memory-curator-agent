@@ -1,4 +1,4 @@
-import type { AgentMessage } from '../types'
+import type { AgentMessage } from '@/agent/types'
 
 // AI 对话 agent 标识。
 export type AiChatAgentId = 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'

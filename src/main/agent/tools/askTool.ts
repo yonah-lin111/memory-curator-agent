@@ -1,5 +1,5 @@
-import { createCompactUuid } from '../../id'
-import type { AgentTool, AgentToolResult } from '../types'
+import { createCompactUuid } from '@/id'
+import type { AgentTool, AgentToolResult } from '@/agent/types'
 
 // Ask 选项。
 export type AskOption = {

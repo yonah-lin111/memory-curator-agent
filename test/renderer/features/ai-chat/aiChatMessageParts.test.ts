@@ -3,8 +3,8 @@ import {
   appendAiMessageReasoningPart,
   appendAiMessageTextPart,
   appendAiMessageToolPart,
-} from "@renderer/features/ai-chat/core/aiChatMessageParts";
-import type { AiChatMessage } from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/core/aiChatMessageParts";
+import type { AiChatMessage } from "@/features/ai-chat/types";
 
 describe("aiChatMessageParts", () => {
   it("追加 reasoning 片段时合并连续同 ID 增量且不污染 answer", () => {

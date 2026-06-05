@@ -5,8 +5,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@renderer/components/ui/Toast";
-import { SnippetsPage } from "@renderer/pages/snippets/SnippetsPage";
+import { ToastProvider } from "@/components/ui/Toast";
+import { SnippetsPage } from "@/pages/snippets/SnippetsPage";
 
 // Today 单日数据类型，直接从 bridge 签名反推。
 type DailyDayDataShape =

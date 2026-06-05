@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { AssociatedPersonRow } from '../../../src/main/db/schema'
-import { createPeopleService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/peopleService'
+import type { AssociatedPersonRow } from '@/db/schema'
+import { createPeopleService, type DatabaseConnection, type DatabaseStatement } from '@/services/peopleService'
 
 // 测试数据库连接。
 let sqlite: MemoryPeopleDatabase

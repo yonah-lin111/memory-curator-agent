@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
+import { useAiChatContextStore } from '@/features/ai-chat/aiChatContextStore'
 
 const item = {
   key: 'message:m1',

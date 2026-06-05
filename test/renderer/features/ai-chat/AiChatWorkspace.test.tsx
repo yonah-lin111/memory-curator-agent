@@ -4,10 +4,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AiChatWorkspace } from '@renderer/features/ai-chat/components/AiChatWorkspace'
-import { useAiChatContextStore } from '@renderer/features/ai-chat/aiChatContextStore'
+import { AiChatWorkspace } from '@/features/ai-chat/components/AiChatWorkspace'
+import { useAiChatContextStore } from '@/features/ai-chat/aiChatContextStore'
 
-vi.mock('@renderer/components/ui/Toast', () => ({
+vi.mock('@/components/ui/Toast', () => ({
   useToast: () => ({
     warning: vi.fn(),
     success: vi.fn(),
@@ -21,7 +21,7 @@ import type {
   AiChatSession,
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/types'
+} from '@/features/ai-chat/types'
 
 vi.mock('md-editor-rt', () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => <div>{modelValue}</div>

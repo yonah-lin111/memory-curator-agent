@@ -11,10 +11,10 @@ import type {
   TodoItem,
   TodoReorderInput,
   TodoUpdateInput
-} from '../db/schema'
-import { createTodosService } from './todosService'
-import { createSnippetsService } from './snippetsService'
-import { createJournalsService } from './journalsService'
+} from '@/db/schema'
+import { createTodosService } from '@/services/todosService'
+import { createSnippetsService } from '@/services/snippetsService'
+import { createJournalsService } from '@/services/journalsService'
 
 // 数据库语句接口。
 export type DatabaseStatement = {

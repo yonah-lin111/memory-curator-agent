@@ -1,6 +1,6 @@
 import type React from "react";
 import { BookOpen, HelpCircle } from "lucide-react";
-import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
 // TodayJournalPanel 组件的 Props 接口定义。
 interface TodayJournalPanelProps {

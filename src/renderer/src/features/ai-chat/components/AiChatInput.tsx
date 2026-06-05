@@ -1,20 +1,20 @@
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Select } from "@renderer/components/ui/Select";
-import { useToast } from "@renderer/components/ui/Toast";
+import { IconButton } from "@/components/ui/IconButton";
+import { Select } from "@/components/ui/Select";
+import { useToast } from "@/components/ui/Toast";
 import {
   createAiChatSendPayload,
   getAiChatAgentMentionDeletionRange,
   getMatchedAiChatAgentMentions,
   type AiChatAgentMentionOption,
   type AiChatSendPayload,
-} from "@renderer/features/ai-chat/aiChatAgentMentions";
+} from "@/features/ai-chat/aiChatAgentMentions";
 import type {
   AiModelProviderOption,
   AiModelSelection,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 
 // AI 对话输入框组件属性类型。
 export type AiChatInputProps = {

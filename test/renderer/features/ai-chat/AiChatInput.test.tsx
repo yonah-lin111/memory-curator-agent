@@ -4,11 +4,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AiChatInput } from '@renderer/features/ai-chat/components/AiChatInput'
-import type { AiChatSendPayload } from '@renderer/features/ai-chat/aiChatAgentMentions'
+import { AiChatInput } from '@/features/ai-chat/components/AiChatInput'
+import type { AiChatSendPayload } from '@/features/ai-chat/aiChatAgentMentions'
 
 const mockToastWarning = vi.fn()
-vi.mock('@renderer/components/ui/Toast', () => ({
+vi.mock('@/components/ui/Toast', () => ({
   useToast: () => ({
     warning: mockToastWarning,
     success: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('@renderer/components/ui/Toast', () => ({
 import type {
   AiModelProviderOption,
   AiModelSelection
-} from '@renderer/features/ai-chat/types'
+} from '@/features/ai-chat/types'
 
 const modelOptions: AiModelProviderOption[] = [
   {

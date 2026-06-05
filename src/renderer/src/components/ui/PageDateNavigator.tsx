@@ -6,7 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
+import { IconButton } from "@/components/ui/IconButton";
 import {
   CALENDAR_WEEKDAY_LABELS,
   createMonthCalendarDays,
@@ -16,7 +16,7 @@ import {
   getEntryMonth,
   shiftEntryDate,
   shiftEntryMonth,
-} from "@renderer/lib/dailyShared";
+} from "@/lib/dailyShared";
 
 // 页面顶部日期切换器属性。
 interface PageDateNavigatorProps {

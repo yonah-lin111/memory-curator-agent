@@ -1,14 +1,14 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
-import { useToast } from "@renderer/components/ui/Toast";
-import { JournalDateRail } from "@renderer/pages/journal/components/JournalDateRail";
-import { JournalEditorSurface } from "@renderer/pages/journal/components/JournalEditorSurface";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useToast } from "@/components/ui/Toast";
+import { JournalDateRail } from "@/pages/journal/components/JournalDateRail";
+import { JournalEditorSurface } from "@/pages/journal/components/JournalEditorSurface";
 import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
-} from "@renderer/lib/dailyShared";
+} from "@/lib/dailyShared";
 
 // 生成当前时间戳，供无 bridge 环境回退使用。
 const createCurrentTimestamp = (entryDate: string): string => {

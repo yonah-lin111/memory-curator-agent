@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createFilesService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/filesService'
+import { createFilesService, type DatabaseConnection, type DatabaseStatement } from '@/services/filesService'
 
 // 临时图片目录。
 let tempImageDir: string | null = null

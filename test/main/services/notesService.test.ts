@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { NoteRow } from '../../../src/main/db/schema'
-import { createNotesService, type DatabaseConnection, type DatabaseStatement } from '../../../src/main/services/notesService'
+import type { NoteRow } from '@/db/schema'
+import { createNotesService, type DatabaseConnection, type DatabaseStatement } from '@/services/notesService'
 
 // 测试数据库连接。
 let sqlite: MemoryNotesDatabase

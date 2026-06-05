@@ -1,8 +1,8 @@
-import { createPeopleTools } from './peopleTool'
-import { createDateOffsetTool, createTimeNowTool } from './commonTimeTool'
-import { createAskTool } from './askTool'
-import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '../types'
-import type { PeopleService } from '../../services/peopleService'
+import { createPeopleTools } from '@/agent/tools/peopleTool'
+import { createDateOffsetTool, createTimeNowTool } from '@/agent/tools/commonTimeTool'
+import { createAskTool } from '@/agent/tools/askTool'
+import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
+import type { PeopleService } from '@/services/peopleService'
 
 // Agent 工具注册上下文。
 export type AgentToolRegistryContext = {

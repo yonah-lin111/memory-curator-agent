@@ -1,4 +1,4 @@
-import type { AgentContextPayloadItem } from '../agent/core/contextMessages'
+import type { AgentContextPayloadItem } from '@/agent/core/contextMessages'
 import type {
   AiAgentRunStatus,
   AiAgentToolCallStatus,
@@ -10,7 +10,7 @@ import type {
   AiChatSessionRow,
   AiChatSessionStatus,
   AiToolStep
-} from '../db/schema'
+} from '@/db/schema'
 
 // 数据库语句最小接口。
 export type DatabaseStatement = {

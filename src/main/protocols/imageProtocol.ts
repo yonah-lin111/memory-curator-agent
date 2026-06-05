@@ -2,13 +2,13 @@ import { net, protocol } from 'electron'
 import { access, mkdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { getMarkdownImageDir, getMarkdownImageTrashDir } from '../paths'
+import { getMarkdownImageDir, getMarkdownImageTrashDir } from '@/paths'
 import {
   MARKDOWN_IMAGE_PROTOCOL,
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
-} from './markdownImages'
+} from '@/protocols/markdownImages'
 
 /**
  * 判断文件是否存在。

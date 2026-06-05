@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAskTool } from '../../../../src/main/agent/tools/askTool'
+import { createAskTool } from '@/agent/tools/askTool'
 
 // 无连接符 UUID 形态。
 const UUID_PATTERN = /^[\da-f]{32}$/i

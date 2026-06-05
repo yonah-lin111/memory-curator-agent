@@ -3,7 +3,7 @@ import {
   appendAiChatAgentDirectiveToSystemMessage,
   normalizeAiChatAgentHints,
   renderAiChatAgentDirective
-} from '../../../../src/main/agent/core/agentHints'
+} from '@/agent/core/agentHints'
 
 describe('agentHints', () => {
   it('只保留白名单 agent，按 priority 排序并去重', () => {

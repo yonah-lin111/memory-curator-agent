@@ -1,8 +1,8 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { FileText } from "lucide-react";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Tag } from "@renderer/components/ui/Tag";
+import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
 
 export type NoteItem = {
   // 片段唯一标识。

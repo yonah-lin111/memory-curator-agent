@@ -5,7 +5,7 @@ import {
   getAiChatAgentMentionDeletionRange,
   getMatchedAiChatAgentMentions,
   parseAiChatAgentMentionText
-} from '@renderer/features/ai-chat/aiChatAgentMentions'
+} from '@/features/ai-chat/aiChatAgentMentions'
 
 describe('aiChatAgentMentions', () => {
   it('声明 6 个内置 agent mention 选项', () => {

@@ -12,13 +12,13 @@ import {
   Settings,
   Info,
 } from "lucide-react";
-import { Tag } from "@renderer/components/ui/Tag";
-import { useToast } from "@renderer/components/ui/Toast";
-import { IconButton } from "@renderer/components/ui/IconButton";
-import { Select, type SelectOption, type SelectGroup } from "@renderer/components/ui/Select";
-import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
-import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
-import { Tooltip } from "@renderer/components/ui/Tooltip";
+import { Tag } from "@/components/ui/Tag";
+import { useToast } from "@/components/ui/Toast";
+import { IconButton } from "@/components/ui/IconButton";
+import { Select, type SelectOption, type SelectGroup } from "@/components/ui/Select";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 // 局部导航标签。
 type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "button" | "tooltip";

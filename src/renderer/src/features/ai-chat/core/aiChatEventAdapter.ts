@@ -3,18 +3,18 @@ import type {
   AiChatEvent,
   AiChatSession,
   AiChatSessionStatus,
-} from "@renderer/features/ai-chat/types";
+} from "@/features/ai-chat/types";
 import {
   appendAiMessageReasoningPart,
   appendAiMessageTextPart,
   appendAiMessageToolPart,
   completeAiMessageReasoningParts,
-} from "@renderer/features/ai-chat/core/aiChatMessageParts";
-import type { AiChatMessageUpdater } from "@renderer/features/ai-chat/core/aiChatSessionReducer";
+} from "@/features/ai-chat/core/aiChatMessageParts";
+import type { AiChatMessageUpdater } from "@/features/ai-chat/core/aiChatSessionReducer";
 import {
   isAiAskRequest,
   isAiToolConfirmationRequest,
-} from "@renderer/features/ai-chat/components/AiAskRequestPanel";
+} from "@/features/ai-chat/components/AiAskRequestPanel";
 
 // Ask 被作废时主进程返回的固定错误文本。
 const ASK_CANCELLED_MESSAGE = "Ask request was cancelled.";

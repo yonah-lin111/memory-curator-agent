@@ -1,5 +1,5 @@
-import { createCompactUuid } from '../../id'
-import type { AskQuestion } from './askTool'
+import { createCompactUuid } from '@/id'
+import type { AskQuestion } from '@/agent/tools/askTool'
 
 // 工具确认动作类型。
 export type ToolConfirmationAction = 'confirm' | 'cancel'
