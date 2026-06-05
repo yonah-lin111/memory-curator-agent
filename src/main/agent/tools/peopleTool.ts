@@ -5,6 +5,7 @@ import type {
   PersonRelationship,
 } from "../../db/schema";
 import type { PeopleService } from "../../services/peopleService";
+import type { ToolConfirmationConfig } from "./toolConfirmation";
 import type {
   AgentTool,
   PeopleQueryConditions,
@@ -37,6 +38,9 @@ type PeopleWriteTool = Omit<AgentTool, "execute"> & {
   execute: (input: unknown) => Promise<PeopleWriteToolResult>;
 };
 
+// People 写入动作。
+type PeopleWriteAction = "add" | "update" | "delete";
+
 // People 工具默认返回数量。
 const DEFAULT_PEOPLE_LIMIT = 8;
 
@@ -62,6 +66,11 @@ const PEOPLE_RELATIONSHIP_SCHEMA = {
 
 // People 完整资料字段 Schema。
 const PEOPLE_PROFILE_PROPERTIES = {
+  confirmationSummary: {
+    type: "string",
+    description:
+      "Concise Markdown Chinese explanation shown above the internal confirmation. Include key add/update/delete facts: target name/relationship and important fields or facts being created, changed, or removed. Avoid generic text like only 'will update' or profile ids unless no readable target is available.",
+  },
   avatar: {
     type: "string",
     description: "Avatar URI. Use an empty string when absent.",
@@ -201,6 +210,132 @@ const sqlRowToToolItem = (row: PeopleSqlRow): PeopleQueryToolItem =>
  */
 const parseString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
+
+/**
+ * 读取 People 写入输入中的非空字符串字段。
+ */
+const getPeopleInputString = (input: unknown, key: string): string | null => {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const value = parseString(input[key])?.trim();
+
+  return value || null;
+};
+
+/**
+ * 生成 People 写入目标名称。
+ */
+const renderPeopleMutationTarget = (input: unknown): string | null =>
+  getPeopleInputString(input, "name") ?? getPeopleInputString(input, "id");
+
+/**
+ * 生成 People 写入前确认说明。
+ */
+const renderPeopleMutationSummary = (
+  action: PeopleWriteAction,
+  input: unknown,
+): string | null => {
+  const aiSummary = getPeopleInputString(input, "confirmationSummary");
+  const name = getPeopleInputString(input, "name");
+  const id = getPeopleInputString(input, "id");
+  const relationship = getPeopleInputString(input, "relationship");
+  const target = name ?? id;
+
+  if (aiSummary) {
+    return aiSummary;
+  }
+
+  if (!target) {
+    return null;
+  }
+
+  if (action === "add") {
+    const relationshipSuffix = relationship ? `（${relationship}）` : "";
+
+    return `将创建人物档案：${target}${relationshipSuffix}。`;
+  }
+
+  if (action === "update") {
+    return `将更新人物档案：${target}。`;
+  }
+
+  return `将删除人物档案：${target}。`;
+};
+
+/**
+ * 读取 People 写入结果中的可读名称。
+ */
+const getPeopleMutationResultName = (result: {
+  data: unknown;
+}): string | null => {
+  const record = isRecord(result.data) ? result.data : {};
+  const item = isRecord(record.item) ? record.item : null;
+
+  return getPeopleInputString(item, "name");
+};
+
+/**
+ * 生成 People 写入完成提示。
+ */
+const renderPeopleMutationCompletion = (
+  action: PeopleWriteAction,
+  input: unknown,
+  result: { data: unknown },
+): string | null => {
+  const prefixes: Record<PeopleWriteAction, string> = {
+    add: "已添加人物资料",
+    update: "已更新人物资料",
+    delete: "已删除人物资料",
+  };
+  const target =
+    getPeopleMutationResultName(result) ?? getPeopleInputString(input, "name");
+
+  return target ? `${prefixes[action]}：${target}。` : `${prefixes[action]}。`;
+};
+
+// People 创建确认配置。
+const PEOPLE_ADD_CONFIRMATION: ToolConfirmationConfig = {
+  header: "确认创建",
+  question: "确认创建人物档案",
+  confirm: "确认创建",
+  cancel: "取消创建",
+  renderTarget: renderPeopleMutationTarget,
+  renderSummary: (input) => renderPeopleMutationSummary("add", input),
+  completion: {
+    renderMessage: (input, result) =>
+      renderPeopleMutationCompletion("add", input, result),
+  },
+};
+
+// People 更新确认配置。
+const PEOPLE_UPDATE_CONFIRMATION: ToolConfirmationConfig = {
+  header: "确认更新",
+  question: "确认更新人物档案",
+  confirm: "确认更新",
+  cancel: "取消更新",
+  renderTarget: renderPeopleMutationTarget,
+  renderSummary: (input) => renderPeopleMutationSummary("update", input),
+  completion: {
+    renderMessage: (input, result) =>
+      renderPeopleMutationCompletion("update", input, result),
+  },
+};
+
+// People 删除确认配置。
+const PEOPLE_DELETE_CONFIRMATION: ToolConfirmationConfig = {
+  header: "确认删除",
+  question: "确认永久删除人物档案",
+  confirm: "确认删除",
+  cancel: "取消删除",
+  renderTarget: renderPeopleMutationTarget,
+  renderSummary: (input) => renderPeopleMutationSummary("delete", input),
+  completion: {
+    renderMessage: (input, result) =>
+      renderPeopleMutationCompletion("delete", input, result),
+  },
+};
 
 /**
  * 解析 People 条件查询入参。
@@ -700,6 +835,7 @@ export const createPeopleAddTool = (
 ): PeopleWriteTool => ({
   name: "people_tool.add",
   description: "Create a people profile in the local People table.",
+  confirmation: PEOPLE_ADD_CONFIRMATION,
   prompt: {
     summary: "Create a new profile in the local People table.",
     intentKeywords: [
@@ -726,14 +862,17 @@ export const createPeopleAddTool = (
     ],
     safety: [
       "Do not call common_tool.ask only to confirm creation; the system will request internal confirmation before execution.",
+      "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
+      "For creation, confirmationSummary must include the target name, relationship, and key known profile facts or fields being added; do not write only a generic create sentence.",
+      "Use human-readable names and relationships in confirmationSummary; do not use profile ids unless there is no readable target.",
       "Only create structured people profiles through PeopleService.",
       "Use empty strings or an empty tags array for absent optional-looking fields.",
       "Write details as Markdown content, not plain unstructured fragments.",
       "Never invent profile facts the user did not provide or confirm.",
     ],
-    output: "Return the created people profile facts needed by the user.",
+    output: "Include confirmationSummary in the tool arguments with key created facts; return the created people profile facts needed by the user.",
     examples: [
-      '{"name":"小陈","gender":"","relationship":"朋友","status":"","birthday":"","contact":"","tags":[],"details":"","avatar":""}',
+      '{"confirmationSummary":"将创建人物档案：**小陈**（朋友）。\\n- 状态：新朋友\\n- 标签：设计","name":"小陈","gender":"","relationship":"朋友","status":"新朋友","birthday":"","contact":"","tags":["设计"],"details":"","avatar":""}',
     ],
   },
   parameters: {
@@ -762,6 +901,7 @@ export const createPeopleUpdateTool = (
   name: "people_tool.update",
   description:
     "Update an existing people profile in the local People table by id.",
+  confirmation: PEOPLE_UPDATE_CONFIRMATION,
   prompt: {
     summary: "Update an existing profile in the local People table by id.",
     intentKeywords: [
@@ -784,13 +924,16 @@ export const createPeopleUpdateTool = (
     ],
     safety: [
       "Do not call common_tool.ask only to confirm updates; the system will request internal confirmation before execution.",
+      "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
+      "For updates, confirmationSummary must name the target and list the key fields or facts that will change; do not write only a generic update sentence.",
+      "Use human-readable names, relationships, and changed fields in confirmationSummary; do not use profile ids unless there is no readable target.",
       "Require the profile id and a complete replacement profile.",
       "Query first when the user only provides a name, then merge unchanged fields before updating.",
       "Never overwrite fields with guesses.",
     ],
-    output: "Return the updated people profile facts needed by the user.",
+    output: "Include confirmationSummary in the tool arguments with key changed fields; return the updated people profile facts needed by the user.",
     examples: [
-      '{"id":"person-1","name":"阿明","gender":"男","relationship":"朋友","status":"技术负责人","birthday":"09月11日","contact":"GitHub: aming-coder","tags":["极客"],"details":"# 阿明","avatar":""}',
+      '{"confirmationSummary":"将更新 **阿明** 的人物档案。\\n- 状态：技术负责人\\n- 联系方式：GitHub: aming-coder","id":"person-1","name":"阿明","gender":"男","relationship":"朋友","status":"技术负责人","birthday":"09月11日","contact":"GitHub: aming-coder","tags":["极客"],"details":"# 阿明","avatar":""}',
     ],
   },
   parameters: {
@@ -826,6 +969,7 @@ export const createPeopleDeleteTool = (
   name: "people_tool.delete",
   description:
     "Delete an existing people profile from the local People table by id.",
+  confirmation: PEOPLE_DELETE_CONFIRMATION,
   prompt: {
     summary: "Delete an existing profile from the local People table by id.",
     intentKeywords: [
@@ -845,11 +989,14 @@ export const createPeopleDeleteTool = (
     ],
     safety: [
       "Do not call common_tool.ask only to confirm deletion; the system will request internal confirmation before execution.",
+      "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
+      "For deletion, confirmationSummary must identify the readable target and any key relationship or distinguishing facts known from query results; do not write only a generic delete sentence.",
+      "Use human-readable names and relationships in confirmationSummary; do not use profile ids unless there is no readable target.",
       "Require the exact profile id.",
       "Ask the user for clarification before deleting when multiple profiles may match.",
     ],
-    output: "Return a concise deletion confirmation.",
-    examples: ['{"id":"person-1"}'],
+    output: "Include confirmationSummary in the tool arguments with key deletion target facts; return a concise deletion confirmation.",
+    examples: ['{"confirmationSummary":"将删除人物档案：**阿明**（朋友）。\\n- 这是本次查询确认到的目标人物","id":"person-1"}'],
   },
   parameters: {
     type: "object",

@@ -42,18 +42,6 @@ type AiToolCallBlockProps = {
   ) => void | Promise<void>;
 };
 
-// Explain 工具数据。
-type AiExplainToolData = {
-  // 工具数据类型。
-  kind: "explain";
-  // 目标写入工具。
-  targetTool: string;
-  // 写入动作。
-  action: string;
-  // Markdown 说明内容。
-  content: string;
-};
-
 // 根据工具步骤状态返回状态展示配置。
 const getStatusConfig = (
   status: AiToolStepStatus,
@@ -98,22 +86,6 @@ const getStatusConfig = (
       };
   }
 };
-
-/**
- * isRecord - 判断值是否为普通对象。
- */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-/**
- * isAiExplainToolData - 判断值是否为 Explain 工具数据。
- */
-const isAiExplainToolData = (value: unknown): value is AiExplainToolData =>
-  isRecord(value) &&
-  value.kind === "explain" &&
-  typeof value.targetTool === "string" &&
-  typeof value.action === "string" &&
-  typeof value.content === "string";
 
 /**
  * formatToolObservation - 将工具原始观察压缩成用户可读摘要。
@@ -219,12 +191,8 @@ export const AiToolCallBlock = ({
           const toolConfirmationRequest = isAiToolConfirmationRequest(step.data)
             ? step.data
             : null;
+          const operationSummary = toolConfirmationRequest?.summary?.trim();
           const askAnswerSummary = renderAskAnswerSummary(step.data);
-          const explainContent = isAiExplainToolData(step.data)
-            ? step.data.content
-            : step.tool === "common_tool.explain"
-              ? step.observation
-              : null;
           const requestPanel = askRequest ?? toolConfirmationRequest;
           const handleSubmitRequest = askRequest
             ? onSubmitAskAnswer
@@ -265,31 +233,30 @@ export const AiToolCallBlock = ({
                   </span>
                 </div>
 
-                {explainContent ? (
-                  <div className="mt-1 flex items-start gap-1 text-white/45">
-                    <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
-                      <svg
-                        className="h-3 w-3 stroke-current"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 1v5h7"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <AiToolExplainPreview
-                        content={explainContent}
-                        isGenerating={step.status === "running"}
+                <div
+                  className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
+                >
+                  <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
+                    <svg
+                      className="w-3 h-3 stroke-current"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                    >
+                      <path
+                        d="M3 1v5h7"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
+                    </svg>
+                  </span>
+                  <span className="flex-1">{displayObservation}</span>
+                </div>
+                {operationSummary ? (
+                  <div
+                    className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
+                    data-testid="tool-operation-summary"
+                  >
                     <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
                       <svg
                         className="w-3 h-3 stroke-current"
@@ -304,9 +271,14 @@ export const AiToolCallBlock = ({
                         />
                       </svg>
                     </span>
-                    <span className="flex-1">{displayObservation}</span>
+                    <div className="min-w-0 flex-1">
+                      <AiToolExplainPreview
+                        content={operationSummary}
+                        isGenerating={step.status === "running"}
+                      />
+                    </div>
                   </div>
-                )}
+                ) : null}
                 {askAnswerSummary}
                 {requestPanel && handleSubmitRequest ? (
                   <div className="mt-1 flex items-start gap-1 text-white/45">

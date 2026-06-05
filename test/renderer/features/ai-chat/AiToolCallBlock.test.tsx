@@ -131,29 +131,65 @@ describe("AiToolCallBlock", () => {
     });
   });
 
-  it("common_tool.explain 使用 Markdown 预览完整展示说明", () => {
+  it("工具确认请求展示写入前说明", () => {
     const step: AiToolStep = {
-      id: "explain-1",
-      title: "Tool result: common_tool.explain",
-      status: "done",
-      tool: "common_tool.explain",
-      observation: "将删除人物资料：**阿明**（朋友）。",
+      id: "confirm-1",
+      title: "Tool result: people_tool.delete",
+      status: "running",
+      tool: "people_tool.delete",
+      observation: "Tool confirmation required before executing people_tool.delete.",
       data: {
-        kind: "explain",
-        targetTool: "people_tool.delete",
-        action: "delete",
-        content: "将删除人物资料：**阿明**（朋友）。",
+        kind: "tool_confirmation_request",
+        id: "confirm-delete",
+        tool: "people_tool.delete",
+        input: {
+          id: "person-1",
+        },
+        summary: "将删除人物档案：**阿明**（朋友）。\n- 这是本次查询确认到的目标人物",
+        questions: [
+          {
+            header: "确认删除",
+            question: "确认永久删除人物档案：person-1？",
+            options: [
+              {
+                label: "确认删除",
+                description: "执行该写入操作。",
+              },
+              {
+                label: "取消删除",
+                description: "不执行该写入操作。",
+              },
+            ],
+            custom: false,
+          },
+        ],
       },
     };
 
-    render(<AiToolCallBlock steps={[step]} />);
+    render(<AiToolCallBlock steps={[step]} onSubmitToolConfirmationAnswer={vi.fn()} />);
+
+    const summary = screen.getByTestId("tool-operation-summary");
+    const header = screen.getAllByText("确认删除")[0];
 
     const preview = screen.getByTestId("ai-tool-explain-preview");
-    expect(screen.getByText("common_tool.explain")).toBeInTheDocument();
+
+    expect(screen.queryByText("AI 输出说明")).not.toBeInTheDocument();
+    expect(summary).toHaveTextContent("将删除人物档案：**阿明**（朋友）。");
     expect(screen.getByTestId("md-preview")).toHaveTextContent(
-      "将删除人物资料：**阿明**（朋友）。",
+      "将删除人物档案：**阿明**（朋友）。",
     );
     expect(preview).toHaveClass("markdown-preview-container");
     expect(preview).toHaveStyle({ fontSize: "13px" });
+    expect(
+      screen.getByText(
+        "Tool confirmation required before executing people_tool.delete.",
+      ),
+    ).toBeInTheDocument();
+    expect(summary.querySelector("svg path")).toHaveAttribute("d", "M3 1v5h7");
+    expect(screen.queryByTestId("tool-confirmation-summary")).toBeNull();
+    expect(
+      summary.compareDocumentPosition(header) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });

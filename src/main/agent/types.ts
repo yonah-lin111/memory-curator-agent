@@ -1,6 +1,10 @@
 import type { AssociatedPersonItem, PersonRelationship } from '../db/schema'
 import type { AskAnswerData, AskRequestData } from './tools/askTool'
-import type { ToolConfirmationAnswerData, ToolConfirmationRequestData } from './tools/toolConfirmation'
+import type {
+  ToolConfirmationAnswerData,
+  ToolConfirmationConfig,
+  ToolConfirmationRequestData
+} from './tools/toolConfirmation'
 
 // 模型 provider 传输格式类型。
 export type ProviderTransportType = 'openai-compatible' | 'openai' | 'anthropic' | 'google'
@@ -164,6 +168,8 @@ export type AgentTool = {
   description: string
   // 工具提示词元数据。
   prompt?: AgentToolPrompt
+  // 需要执行前内部确认时使用的配置。
+  confirmation?: ToolConfirmationConfig
   // 工具参数 Schema。
   parameters: JsonSchema
   /**

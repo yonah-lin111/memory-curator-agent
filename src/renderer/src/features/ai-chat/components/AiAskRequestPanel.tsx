@@ -44,6 +44,8 @@ export type AiToolConfirmationRequest = {
   tool: string;
   // 待确认工具输入。
   input: unknown;
+  // 写入前说明。
+  summary?: string;
   // 确认问题列表。
   questions: AiAskQuestion[];
 };
@@ -153,6 +155,7 @@ export const isAiToolConfirmationRequest = (
   value.kind === "tool_confirmation_request" &&
   typeof value.id === "string" &&
   typeof value.tool === "string" &&
+  (value.summary === undefined || typeof value.summary === "string") &&
   Array.isArray(value.questions) &&
   value.questions.every(isAskQuestion);
 
@@ -249,6 +252,8 @@ export const AiAskRequestPanel = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const questionCount = request.questions.length;
   const currentQuestion = request.questions[currentIndex] ?? request.questions[0];
+  const isToolConfirmationRequest =
+    request.kind === "tool_confirmation_request";
   const canSubmit = useMemo(
     () =>
       hasAnsweredAllQuestions(
@@ -404,9 +409,11 @@ export const AiAskRequestPanel = ({
                 <div className="text-[12px] font-semibold text-white/85">
                   {currentQuestion.header}
                 </div>
-                <div className="mt-0.5 leading-relaxed text-white/55">
-                  {currentQuestion.question}
-                </div>
+                {!isToolConfirmationRequest ? (
+                  <div className="mt-0.5 leading-relaxed text-white/55">
+                    {currentQuestion.question}
+                  </div>
+                ) : null}
               </div>
             </div>
 

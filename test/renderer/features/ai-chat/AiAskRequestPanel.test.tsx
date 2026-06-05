@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AiAskRequestPanel,
   type AiAskRequest,
+  type AiToolConfirmationRequest,
 } from "@renderer/features/ai-chat/components/AiAskRequestPanel";
 
 // 多问题 Ask 请求。
@@ -41,6 +42,33 @@ const request: AiAskRequest = {
         {
           label: "全部列出",
           description: "所有问题同时展示。",
+        },
+      ],
+      custom: false,
+    },
+  ],
+};
+
+// 工具确认请求。
+const toolConfirmationRequest: AiToolConfirmationRequest = {
+  kind: "tool_confirmation_request",
+  id: "confirm_test_1",
+  tool: "people_tool.update",
+  input: {
+    name: "阿明",
+  },
+  questions: [
+    {
+      header: "确认更新",
+      question: "确认更新人物档案：阿明？",
+      options: [
+        {
+          label: "确认更新",
+          description: "执行该写入操作。",
+        },
+        {
+          label: "取消更新",
+          description: "不执行该写入操作。",
         },
       ],
       custom: false,
@@ -154,5 +182,18 @@ describe("AiAskRequestPanel", () => {
       requestId: "ask_test_1",
       answers: [["整个工作区"], ["箭头切换"]],
     });
+  });
+
+  it("工具确认请求不展示问题正文", () => {
+    render(
+      <AiAskRequestPanel
+        request={toolConfirmationRequest}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(screen.getAllByText("确认更新")[0]).toBeInTheDocument();
+    expect(screen.queryByText("确认更新人物档案：阿明？")).not.toBeInTheDocument();
+    expect(screen.getByText("执行该写入操作。")).toBeInTheDocument();
   });
 });

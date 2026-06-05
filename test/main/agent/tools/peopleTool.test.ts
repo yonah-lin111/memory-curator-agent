@@ -320,10 +320,76 @@ describe("peopleTool", () => {
     expect(tool.prompt?.whenToUse.join("\n")).toContain("common_tool.ask");
     expect(tool.prompt?.whenToUse.join("\n")).toContain("missing required facts");
     expect(tool.prompt?.safety?.join("\n")).toContain("internal confirmation");
+    expect(tool.prompt?.safety?.join("\n")).toContain("confirmationSummary");
+    expect(tool.prompt?.safety?.join("\n")).toContain("do not use profile ids");
+    expect(tool.prompt?.safety?.join("\n")).toContain("key known profile facts");
+    expect(tool.prompt?.safety?.join("\n")).toContain("do not write only a generic create sentence");
     expect(tool.prompt?.safety?.join("\n")).toContain("Markdown");
+    expect(tool.parameters.properties?.confirmationSummary.description).toContain(
+      "key add/update/delete facts",
+    );
     expect(tool.parameters.properties?.details.description).toContain(
       "Markdown",
     );
+  });
+
+  it("优先使用 AI 输出的 People 写入确认说明", () => {
+    const tool = createPeopleUpdateTool(peopleWriteService);
+
+    expect(
+      tool.confirmation?.renderSummary({
+        confirmationSummary: "将更新阿明的人物档案：状态改为技术负责人。",
+        id: "person-1",
+        name: "阿明",
+        status: "技术负责人",
+      }),
+    ).toBe("将更新阿明的人物档案：状态改为技术负责人。");
+  });
+
+  it("People 写入完成提示来自 confirmation.completion 配置", () => {
+    const addTool = createPeopleAddTool(peopleWriteService);
+    const updateTool = createPeopleUpdateTool(peopleWriteService);
+    const deleteTool = createPeopleDeleteTool(peopleWriteService);
+
+    expect(
+      addTool.confirmation?.completion?.renderMessage(
+        { name: "小陈" },
+        {
+          observation: "Created people profile: 小陈.",
+          data: {
+            item: {
+              id: "person-new",
+              name: "小陈",
+            },
+          },
+        },
+      ),
+    ).toBe("已添加人物资料：小陈。");
+    expect(
+      updateTool.confirmation?.completion?.renderMessage(
+        { id: "person-1", name: "阿明" },
+        {
+          observation: "Updated people profile: 阿明.",
+          data: {
+            item: {
+              id: "person-1",
+              name: "阿明",
+            },
+          },
+        },
+      ),
+    ).toBe("已更新人物资料：阿明。");
+    expect(
+      deleteTool.confirmation?.completion?.renderMessage(
+        { id: "person-1" },
+        {
+          observation: "Deleted people profile: person-1.",
+          data: {
+            id: "person-1",
+          },
+        },
+      ),
+    ).toBe("已删除人物资料。");
   });
 
   it("修改人物并返回更新后的资料", async () => {

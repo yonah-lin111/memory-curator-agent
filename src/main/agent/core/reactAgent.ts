@@ -11,12 +11,8 @@ import {
   isAskRequestData
 } from '../tools/askTool'
 import {
-  isExplainToolData,
-  type ExplainAction,
-  type ExplainToolData
-} from '../tools/commonExplainTool'
-import {
-  createToolConfirmationRequestData,
+  createConfiguredToolConfirmationRequestData,
+  type ToolConfirmationConfig,
   type ToolConfirmationAnswerData
 } from '../tools/toolConfirmation'
 
@@ -28,48 +24,6 @@ const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 
 // Ask 工具名。
 const ASK_TOOL_NAME = 'common_tool.ask'
-
-// Explain 工具名。
-const EXPLAIN_TOOL_NAME = 'common_tool.explain'
-
-// People 写入前需要用户确认的工具名。
-const PEOPLE_CONFIRMATION_REQUIRED_TOOLS = new Set(['people_tool.add', 'people_tool.update', 'people_tool.delete'])
-
-// People 写入工具对应的 Explain 动作。
-const PEOPLE_MUTATION_EXPLAIN_ACTIONS: Record<string, ExplainAction> = {
-  'people_tool.add': 'add',
-  'people_tool.update': 'update',
-  'people_tool.delete': 'delete'
-}
-
-// People 写入工具完成后的默认提示前缀。
-const PEOPLE_MUTATION_COMPLETION_PREFIXES: Record<string, string> = {
-  'people_tool.add': '已添加人物资料',
-  'people_tool.update': '已更新人物资料',
-  'people_tool.delete': '已删除人物资料'
-}
-
-// People 写入工具确认文案。
-const PEOPLE_MUTATION_CONFIRMATION_TEXT: Record<string, { header: string; question: string; confirm: string; cancel: string }> = {
-  'people_tool.add': {
-    header: '确认创建',
-    question: '确认创建人物档案',
-    confirm: '确认创建',
-    cancel: '取消创建'
-  },
-  'people_tool.update': {
-    header: '确认更新',
-    question: '确认更新人物档案',
-    confirm: '确认更新',
-    cancel: '取消更新'
-  },
-  'people_tool.delete': {
-    header: '确认删除',
-    question: '确认永久删除人物档案',
-    confirm: '确认删除',
-    cancel: '取消删除'
-  }
-}
 
 // People 写入确认误用 Ask 时回灌模型的固定错误。
 const PEOPLE_MUTATION_ASK_REJECTION_MESSAGE =
@@ -202,76 +156,6 @@ const isPeopleMutationConfirmationAskInput = (input: unknown): boolean => {
 }
 
 /**
- * 从 People 写入参数提取可核对目标。
- */
-const getPeopleMutationTargetCandidates = (toolName: string, input: unknown): string[] => {
-  if (!isRecord(input)) {
-    return []
-  }
-
-  const values = [
-    getNonEmptyString(input.name),
-    getNonEmptyString(input.id)
-  ].filter((value): value is string => Boolean(value))
-
-  if (toolName === 'people_tool.add') {
-    return values.filter((value) => value !== getNonEmptyString(input.id))
-  }
-
-  return values
-}
-
-/**
- * 获取 People 写入确认目标。
- */
-const getPeopleMutationTargetLabel = (toolName: string, input: unknown): string | null =>
-  getPeopleMutationTargetCandidates(toolName, input)[0] ?? null
-
-/**
- * 构造 People 写入完成后的兜底提示。
- */
-const getPeopleMutationCompletionMessage = (toolName: string, data: unknown, input: unknown): string | null => {
-  const prefix = PEOPLE_MUTATION_COMPLETION_PREFIXES[toolName]
-  if (!prefix) {
-    return null
-  }
-
-  const record = isRecord(data) ? data : {}
-  const item = isRecord(record.item) ? record.item : null
-  const target =
-    getNonEmptyString(item?.name) ??
-    getNonEmptyString(record.id) ??
-    getPeopleMutationTargetCandidates(toolName, input)[0]
-
-  return target ? `${prefix}：${target}。` : `${prefix}。`
-}
-
-/**
- * 创建 People 写入工具确认请求。
- */
-const createPeopleMutationConfirmationRequest = (toolName: string, toolInput: unknown) => {
-  const config = PEOPLE_MUTATION_CONFIRMATION_TEXT[toolName]
-  const target = getPeopleMutationTargetLabel(toolName, toolInput)
-  const question = target ? `${config.question}：${target}？` : `${config.question}？`
-
-  return createToolConfirmationRequestData(toolName, toolInput, {
-    header: config.header,
-    question,
-    options: [
-      {
-        label: config.confirm,
-        description: '执行该写入操作。'
-      },
-      {
-        label: config.cancel,
-        description: '不执行该写入操作。'
-      }
-    ],
-    custom: false
-  })
-}
-
-/**
  * 渲染工具确认回答观察文本。
  */
 const renderToolConfirmationAnswerObservation = (
@@ -281,6 +165,19 @@ const renderToolConfirmationAnswerObservation = (
   answer.action === 'confirm'
     ? `User confirmed ${toolName}; execute the tool now.`
     : `User cancelled ${toolName}; do not execute the tool.`
+
+/**
+ * 渲染工具确认执行成功后的完成提示。
+ */
+const renderToolConfirmationCompletionMessage = (
+  confirmation: ToolConfirmationConfig | undefined,
+  input: unknown,
+  result: { observation: string; data: unknown }
+): string | null => {
+  const message = confirmation?.completion?.renderMessage(input, result)?.trim()
+
+  return message || null
+}
 
 /**
  * 构造回灌模型的工具失败结果。
@@ -313,31 +210,13 @@ const appendSilentToolFailureMessage = (
   })
 }
 
-// 可消费的写入前说明。
-type PendingExplain = ExplainToolData & {
-  // Explain 对应的工具调用 ID。
-  toolCallId: string
-}
-
-/**
- * 判断 Explain 是否匹配当前写入工具。
- */
-const isMatchingExplain = (explain: PendingExplain, toolName: string): boolean =>
-  explain.targetTool === toolName && explain.action === PEOPLE_MUTATION_EXPLAIN_ACTIONS[toolName]
-
-/**
- * 获取写入工具缺失 Explain 时的错误文本。
- */
-const getMissingExplainMessage = (toolName: string): string => `Call ${EXPLAIN_TOOL_NAME} before ${toolName}.`
-
 /**
  * 运行 Claude Code 风格的 ReAct Agent Loop。
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
   const messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
-  let pendingPeopleMutationCompletion: string | null = null
-  let pendingExplain: PendingExplain | null = null
+  let pendingToolConfirmationCompletion: string | null = null
 
   throwIfAborted(input.signal)
 
@@ -391,15 +270,15 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     throwIfAborted(input.signal)
 
     if (toolCalls.length === 0) {
-      if (!emittedText && pendingPeopleMutationCompletion) {
+      if (!emittedText && pendingToolConfirmationCompletion) {
         yield {
           type: 'assistant_message_started'
         }
         yield {
           type: 'text_delta',
-          delta: pendingPeopleMutationCompletion
+          delta: pendingToolConfirmationCompletion
         }
-        pendingPeopleMutationCompletion = null
+        pendingToolConfirmationCompletion = null
       }
 
       yield {
@@ -444,20 +323,12 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       try {
-        if (PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolCall.name)) {
-          if (!pendingExplain || !isMatchingExplain(pendingExplain, toolCall.name)) {
-            throw new Error(getMissingExplainMessage(toolCall.name))
-          }
-
-          pendingExplain = null
-        }
-
-        if (PEOPLE_CONFIRMATION_REQUIRED_TOOLS.has(toolCall.name)) {
+        if (tool.confirmation) {
           if (!input.toolConfirmationProvider) {
             throw new Error('Tool confirmation provider is not configured')
           }
 
-          const confirmationRequest = createPeopleMutationConfirmationRequest(toolCall.name, toolInput)
+          const confirmationRequest = createConfiguredToolConfirmationRequestData(toolCall.name, toolInput, tool.confirmation)
 
           yield {
             type: 'tool_finished',
@@ -494,13 +365,6 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
 
-        if (toolCall.name === EXPLAIN_TOOL_NAME && isExplainToolData(result.data)) {
-          pendingExplain = {
-            ...result.data,
-            toolCallId: toolCall.id
-          }
-        }
-
         yield {
           type: 'tool_finished',
           id: toolCall.id,
@@ -509,8 +373,9 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           data: result.data
         }
 
-        pendingPeopleMutationCompletion =
-          getPeopleMutationCompletionMessage(toolCall.name, result.data, toolInput) ?? pendingPeopleMutationCompletion
+        pendingToolConfirmationCompletion =
+          renderToolConfirmationCompletionMessage(tool.confirmation, toolInput, result) ??
+          pendingToolConfirmationCompletion
 
         if (isAskRequestData(result.data)) {
           if (!input.askAnswerProvider) {
