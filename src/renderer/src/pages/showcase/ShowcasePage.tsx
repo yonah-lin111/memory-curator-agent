@@ -10,6 +10,7 @@ import {
   Sparkles,
   Star,
   Settings,
+  Info,
 } from "lucide-react";
 import { Tag } from "@renderer/components/ui/Tag";
 import { useToast } from "@renderer/components/ui/Toast";
@@ -17,9 +18,10 @@ import { IconButton } from "@renderer/components/ui/IconButton";
 import { Select, type SelectOption, type SelectGroup } from "@renderer/components/ui/Select";
 import { PageDateNavigator } from "@renderer/components/ui/PageDateNavigator";
 import { MarkdownEditor } from "@renderer/components/ui/MarkdownEditor";
+import { Tooltip } from "@renderer/components/ui/Tooltip";
 
 // 局部导航标签。
-type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "button";
+type ActiveSection = "all" | "toast" | "tag" | "date" | "select" | "editor" | "button" | "tooltip";
 
 /**
  * ShowcasePage - 公共原子组件展示与 Playground 面板。
@@ -85,6 +87,7 @@ export const ShowcasePage = (): React.JSX.Element => {
     { id: "select", label: "Select 下拉框", desc: "自定义单选与分组" },
     { id: "editor", label: "Markdown Editor", desc: "统一Markdown编辑器" },
     { id: "button", label: "IconButton", desc: "极简圆角图标按钮" },
+    { id: "tooltip", label: "Tooltip 提示", desc: "文字气泡提示组件" },
   ] as const;
 
   /**
@@ -400,6 +403,85 @@ export const ShowcasePage = (): React.JSX.Element => {
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="text-[10px] font-mono text-white/30">default</span>
                     <IconButton preset="default" onClick={() => toast.info("触发默认设置")} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Section: Tooltip */}
+        {isVisible("tooltip") && (
+          <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Info className="h-4 w-4 text-white/60" />
+                Tooltip 文字提示
+              </h3>
+              <span className="text-xs font-mono text-white/30">Tooltip.tsx</span>
+            </div>
+            <p className="text-xs text-white/50 font-medium">支持四个方位（top, bottom, left, right）、不同的触发模式（Hover, Click, Both）：</p>
+
+            <div className="flex flex-col gap-5 mt-2">
+              {/* Placement options */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-mono text-white/45">Placements (Hover to Trigger):</span>
+                <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <Tooltip placement="top" content="Prompt text on top" trigger="hover">
+                    <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                      Top Tooltip
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip placement="bottom" content="Prompt text on bottom" trigger="hover">
+                    <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                      Bottom Tooltip
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip placement="left" content="Prompt text on left" trigger="hover">
+                    <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                      Left Tooltip
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip placement="right" content="Prompt text on right" trigger="hover">
+                    <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                      Right Tooltip
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+
+              {/* Trigger options */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-mono text-white/45">Triggers (Modes):</span>
+                <div className="flex flex-wrap items-center gap-6 bg-black/20 rounded-[6px] p-4 border border-white/5">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-mono text-white/30">trigger="hover"</span>
+                    <Tooltip trigger="hover" content="Triggers purely on hover">
+                      <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                        Hover Trigger
+                      </button>
+                    </Tooltip>
+                  </div>
+
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-mono text-white/30">trigger="click"</span>
+                    <Tooltip trigger="click" content="Triggers purely on click (Click outside to close)">
+                      <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                        Click Trigger
+                      </button>
+                    </Tooltip>
+                  </div>
+
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="text-[10px] font-mono text-white/30">trigger="both"</span>
+                    <Tooltip trigger="both" content="Supports both Hover and Click triggers">
+                      <button className="px-3 py-1.5 rounded-[6px] bg-white/5 border border-white/10 text-xs font-semibold text-white/80 hover:text-white transition-all duration-150">
+                        Both Trigger
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
