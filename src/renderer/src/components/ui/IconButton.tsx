@@ -22,7 +22,7 @@ const PRESET_BG_CLASSES: Record<IconButtonPreset, string> = {
   save: "hover:bg-emerald-500/10",
   confirm: "hover:bg-emerald-500/10",
   delete: "hover:bg-rose-500/10",
-  edit: "hover:bg-white/5",
+  edit: "hover:bg-amber-500/10",
   default: "hover:bg-white/5",
 };
 
@@ -33,8 +33,19 @@ const PRESET_TEXT_CLASSES: Record<IconButtonPreset, string> = {
   save: "hover:text-emerald-400",
   confirm: "hover:text-emerald-400",
   delete: "hover:text-rose-400",
-  edit: "hover:text-white",
+  edit: "hover:text-amber-400",
   default: "hover:text-white",
+};
+
+// 预设默认文本与图标颜色样式映射
+const PRESET_DEFAULT_TEXT_CLASSES: Record<IconButtonPreset, string> = {
+  add: "text-white/45",
+  close: "text-white/45",
+  save: "text-emerald-500/70",
+  confirm: "text-emerald-500/70",
+  delete: "text-rose-500/70",
+  edit: "text-amber-500/70",
+  default: "text-white/45",
 };
 
 // 图标按钮组件属性接口
@@ -68,6 +79,7 @@ export const IconButton = ({
   hoverTextClass,
   iconOnly = true,
   preset,
+  disabled,
   ...props
 }: IconButtonProps): React.JSX.Element => {
   // 基础样式
@@ -79,11 +91,14 @@ export const IconButton = ({
   // 悬停样式（若存在预设则以预设样式为默认值，同时也完美支持用户通过属性显式覆盖）
   const finalHoverBg = hoverBgClass ?? (preset ? PRESET_BG_CLASSES[preset] : "hover:bg-white/5");
   const finalHoverText = hoverTextClass ?? (preset ? PRESET_TEXT_CLASSES[preset] : "hover:text-white");
+  const defaultTextClass = preset ? PRESET_DEFAULT_TEXT_CLASSES[preset] : "text-white/45";
 
   // 状态样式
-  const stateStyles = highlighted
-    ? "bg-white text-black hover:bg-white/90"
-    : `text-white/45 ${finalHoverBg} ${finalHoverText}`;
+  const stateStyles = disabled
+    ? (highlighted ? "bg-white text-black" : `${defaultTextClass}`)
+    : (highlighted
+        ? "bg-white text-black hover:bg-white/90"
+        : `${defaultTextClass} ${finalHoverBg} ${finalHoverText}`);
 
   // 确定最终需要渲染的图标或子元素
   let renderContent = children;
@@ -108,6 +123,7 @@ export const IconButton = ({
     <button
       type={type}
       className={`${baseStyles} ${sizeStyles} ${stateStyles} ${className}`}
+      disabled={disabled}
       {...props}
     >
       {renderContent}
