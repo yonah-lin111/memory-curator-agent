@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { NoteMarkdownPanel } from "@/pages/notes/components/NoteMarkdownPanel";
 
 /* ==========================================
@@ -520,11 +521,17 @@ export const NotesPage = (): React.JSX.Element => {
                             onClick={() => handleEditNote(note)}
                             title="编辑笔记"
                           />
-                          <IconButton
-                            preset="delete"
-                            onClick={() => void handleDeleteNote(note.id)}
-                            title="删除笔记"
-                          />
+                          <Tooltip
+                            title="确认要删除该笔记吗？"
+                            description="删除后，笔记将被永久擦除，此操作无法撤销。"
+                            onConfirm={() => void handleDeleteNote(note.id)}
+                            variant="danger"
+                          >
+                            <IconButton
+                              preset="delete"
+                              title="删除笔记"
+                            />
+                          </Tooltip>
                         </div>
                       </div>
 
