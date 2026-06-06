@@ -392,9 +392,7 @@ export const PeopleProfileForm = ({
           <Input
             as="tags"
             tags={formState.tags}
-            onChangeTags={(tags) =>
-              setFormState((prev) => ({ ...prev, tags }))
-            }
+            onChangeTags={(tags) => setFormState((prev) => ({ ...prev, tags }))}
             maxTags={8}
             size="xs"
             aria-label="Input new tag"
@@ -408,7 +406,7 @@ export const PeopleProfileForm = ({
           <div className="p-1 rounded-[6px] border border-white/8 bg-black/15">
             <MarkdownEditor
               id="people-dossier-editor"
-              height={500}
+              height={600}
               placeholder="写下详细的性格喜好、关键习惯、约会备忘录、纪念日以及你们重要的共同记忆..."
               value={formState.details}
               onChange={(value) =>
