@@ -1,10 +1,11 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, FileText, Tag as TagIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Tag as TagIcon } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import { Select, type SelectOption } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useHeaderStore } from "@/lib/headerStore";
 import type { NoteMaterialItem, NoteDraft } from "@/pages/notes/NotesPage";
 
@@ -91,32 +92,9 @@ export const NoteMarkdownPanel = ({
   const [draft, setDraft] = useState<NoteDraft>(
     initialDraft || INITIAL_NOTE_DRAFT,
   );
-  // 属性 Popover 是否打开。
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // Popover 容器的 DOM 引用。
-  const popoverRef = useRef<HTMLDivElement | null>(null);
   // 全局标题与右侧动作 Store。
   const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
     useHeaderStore();
-
-  useEffect(() => {
-    /**
-     * 处理点击外部区域时自动关闭 Popover。
-     */
-    const handleClickOutside = (event: MouseEvent): void => {
-      const target = event.target as Node;
-
-      // 如果点击在 popover 外部，则关闭整个 popover
-      if (popoverRef.current && !popoverRef.current.contains(target)) {
-        setIsPopoverOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   /**
    * 更新草稿局部字段。
@@ -155,41 +133,27 @@ export const NoteMarkdownPanel = ({
     return () => {
       resetHeader();
     };
-  }, [draft.title, initialDraft, setCustomTitle, setHideChatButton, resetHeader]);
+  }, [
+    draft.title,
+    initialDraft,
+    setCustomTitle,
+    setHideChatButton,
+    resetHeader,
+  ]);
 
-  // 2. 同步设置标签、来源渠道的 Popover，以及关闭和保存按钮至全局 Header 右侧
+  // 2. 同步设置标签、来源渠道的 Tooltip 弹出面板，以及关闭和保存按钮至全局 Header 右侧
   useEffect(() => {
     const isSaveDisabled = !draft.title.trim() || !draft.content.trim();
 
     setExtraActions(
       <div className="flex items-center gap-1.5 animate-card-modal-in">
-        {/* 底部设置标签和来源渠道的悬浮 Popover 入口 */}
-        <div ref={popoverRef} className="relative">
-          <IconButton
-            iconOnly={false}
-            hoverBgClass=""
-            hoverTextClass=""
-            className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium outline-none h-7 rounded-[6px] ${
-              isPopoverOpen
-                ? "border-white/20 bg-white/10 text-white"
-                : "border-white/10 bg-black/40 text-white/50 hover:border-white/20 hover:text-white"
-            }`}
-            onClick={() => setIsPopoverOpen((prev) => !prev)}
-          >
-            <TagIcon className="h-3 w-3" />
-            <span className="max-w-[120px] truncate text-xs">
-              {draft.tags.length > 0 ? draft.tags.join(", ") : "无标签"}
-            </span>
-            <span className="text-white/20">|</span>
-            <span className="text-[11px] text-white/45">{draft.source}</span>
-            <ChevronDown
-              className={`h-3 w-3 text-white/35 transition-transform duration-150 ${isPopoverOpen ? "rotate-180" : ""}`}
-            />
-          </IconButton>
-
-          {/* Popover 内容区域（向下弹出） */}
-          {isPopoverOpen && (
-            <div className="absolute right-0 top-[calc(100%+8px)] w-[280px] rounded-[6px] border border-white/10 bg-[#212121] p-3.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] animate-card-modal-in z-50 flex flex-col gap-3.5">
+        {/* 设置标签和来源渠道的 Tooltip */}
+        <Tooltip
+          trigger="click"
+          placement="bottom"
+          contentClassName="!w-[280px] !p-3.5 !whitespace-normal flex flex-col gap-3.5"
+          content={
+            <>
               <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">
                   关联标签
@@ -215,9 +179,23 @@ export const NoteMarkdownPanel = ({
                   onChange={(source) => handleDraftChange({ source })}
                 />
               </div>
-            </div>
-          )}
-        </div>
+            </>
+          }
+        >
+          <IconButton
+            iconOnly={false}
+            hoverBgClass=""
+            hoverTextClass=""
+            className="flex items-center gap-1.5 border border-white/10 bg-[#303030] text-white/50 hover:text-white px-2.5 py-1 text-xs font-medium outline-none h-7 rounded-[6px] transition-colors duration-150"
+          >
+            <TagIcon className="h-3 w-3" />
+            <span className="max-w-[120px] truncate text-xs">
+              {draft.tags.length > 0 ? draft.tags.join(", ") : "无标签"}
+            </span>
+            <span className="text-white/20">|</span>
+            <span className="text-[11px] text-white/45">{draft.source}</span>
+          </IconButton>
+        </Tooltip>
 
         {/* 保存按钮 */}
         <IconButton
@@ -237,7 +215,7 @@ export const NoteMarkdownPanel = ({
         />
       </div>,
     );
-  }, [draft, isPopoverOpen, initialDraft, onClose, setExtraActions]);
+  }, [draft, initialDraft, onClose, setExtraActions]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in rounded-[6px] border border-white/6 bg-[#212121]">

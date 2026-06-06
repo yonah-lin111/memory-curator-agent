@@ -72,6 +72,7 @@ export const Tooltip = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isConfirmMode = typeof onConfirm === "function";
   const activeTrigger = isConfirmMode ? "click" : trigger;
@@ -221,6 +222,7 @@ export const Tooltip = ({
 
   // 定时器辅助控制
   const showTooltip = (): void => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (activeDelay > 0) {
       timeoutRef.current = setTimeout(() => {
@@ -233,7 +235,16 @@ export const Tooltip = ({
 
   const hideTooltip = (): void => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setIsVisible(false);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+
+    // 允许用户在 150ms 内将鼠标移动到 Tooltip 气泡内部，防止直接消失
+    if (activeTrigger === "hover" || activeTrigger === "both") {
+      hideTimeoutRef.current = setTimeout(() => {
+        setIsVisible(false);
+      }, 150);
+    } else {
+      setIsVisible(false);
+    }
   };
 
   const handleMouseEnter = (): void => {
@@ -243,6 +254,18 @@ export const Tooltip = ({
   };
 
   const handleMouseLeave = (): void => {
+    if (activeTrigger === "hover" || activeTrigger === "both") {
+      hideTooltip();
+    }
+  };
+
+  const handleTooltipMouseEnter = (): void => {
+    if (activeTrigger === "hover" || activeTrigger === "both") {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    }
+  };
+
+  const handleTooltipMouseLeave = (): void => {
     if (activeTrigger === "hover" || activeTrigger === "both") {
       hideTooltip();
     }
@@ -302,6 +325,7 @@ export const Tooltip = ({
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, []);
 
@@ -369,13 +393,15 @@ export const Tooltip = ({
         createPortal(
           <div
             ref={tooltipRef}
-            className={`absolute z-[999999] rounded-[6px] select-none transition-opacity duration-150 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${cardClassName} ${contentClassName}`}
+            className={`absolute z-[999999] rounded-[6px] select-text transition-opacity duration-150 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${cardClassName} ${contentClassName}`}
             style={{
               position: "absolute",
               top: `${coords.top}px`,
               left: `${coords.left}px`,
               opacity: coords.top === 0 ? 0 : 1, // 初次定位前保持透明度为0，避免闪烁
             }}
+            onMouseEnter={handleTooltipMouseEnter}
+            onMouseLeave={handleTooltipMouseLeave}
             onClick={(e) => e.stopPropagation()}
             role="tooltip"
             aria-hidden={!isVisible}
