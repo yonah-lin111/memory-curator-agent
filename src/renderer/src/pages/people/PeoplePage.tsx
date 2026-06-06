@@ -15,6 +15,7 @@ import {
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Input } from "@/components/ui/Input";
 import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm";
 import { type RelationshipFilter } from "@/pages/people/components/peopleShared";
 import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles";
@@ -148,16 +149,15 @@ export const PeoplePage = (): React.JSX.Element => {
             </div>
 
             {/* 2. 搜索框 */}
-            <div className="relative flex-shrink-0">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
-              <input
-                type="text"
-                placeholder="搜索姓名、特征、联系方式..."
-                className="w-full rounded-[6px] border border-white/8 bg-black/40 pl-8.5 pr-3 py-1.5 text-xs text-white placeholder:text-white/25 outline-none transition-colors duration-150 focus:border-white/18"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            <Input
+              type="text"
+              size="xs"
+              className="flex-shrink-0"
+              placeholder="搜索姓名、特征、联系方式..."
+              prefix={<Search className="h-3.5 w-3.5 text-white/30" />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
             {/* 3. 关系分类滑块切片 */}
             <div className="flex-shrink-0">
@@ -198,30 +198,23 @@ export const PeoplePage = (): React.JSX.Element => {
                   Feature Tag Map
                 </span>
                 <div className="flex flex-wrap gap-1 max-h-[76px] overflow-y-auto custom-scrollbar">
-                  <button
-                    type="button"
-                    className={`rounded-[4px] border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
-                      selectedTag === null
-                        ? "border-white/18 bg-white/10 text-white"
-                        : "border-white/5 bg-black/25 text-white/50 hover:border-white/12 hover:text-white"
-                    }`}
+                  <Tag
+                    size="small"
+                    highlighted={selectedTag === null}
                     onClick={() => setSelectedTag(null)}
                   >
                     全部
-                  </button>
+                  </Tag>
                   {tagStats.map((tag) => (
-                    <button
+                    <Tag
                       key={tag.name}
-                      type="button"
-                      className={`rounded-[4px] border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
-                        selectedTag === tag.name
-                          ? "border-white/18 bg-white/10 text-white"
-                          : "border-white/5 bg-black/25 text-white/50 hover:border-white/12 hover:text-white"
-                      }`}
+                      size="default"
+                      prefix="#"
+                      highlighted={selectedTag === tag.name}
                       onClick={() => setSelectedTag(tag.name)}
                     >
-                      #{tag.name} · {tag.count}
-                    </button>
+                      {tag.name} · {tag.count}
+                    </Tag>
                   ))}
                 </div>
               </div>
@@ -249,10 +242,10 @@ export const PeoplePage = (): React.JSX.Element => {
                       <button
                         key={person.id}
                         type="button"
-                        className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] border transition-all duration-150 group ${
+                        className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group ${
                           isActive
-                            ? "border-white/15 bg-white/5 text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
-                            : "border-transparent hover:border-white/8 hover:bg-white/[0.02] text-white/70"
+                            ? "bg-white/5 text-white"
+                            : "hover:bg-white/[0.02] text-white/70"
                         }`}
                         onClick={() => {
                           setSelectedId(person.id);
@@ -392,10 +385,7 @@ export const PeoplePage = (): React.JSX.Element => {
                         }
                         variant="danger"
                       >
-                        <IconButton
-                          preset="delete"
-                          title="删除档案"
-                        />
+                        <IconButton preset="delete" title="删除档案" />
                       </Tooltip>
                     </div>
                   </div>

@@ -4,7 +4,7 @@ import { Upload, X } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select, type SelectOption } from "@/components/ui/Select";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
-import { Tag } from "@/components/ui/Tag";
+import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
 import type {
@@ -53,8 +53,6 @@ export const PeopleProfileForm = ({
   onCancel,
   onSave,
 }: PeopleProfileFormProps): React.JSX.Element => {
-  // 特征标签输入暂存。
-  const [tagInput, setTagInput] = useState("");
   // 拖拽上传头像激活状态。
   const [isDragging, setIsDragging] = useState(false);
   // 文件上传 DOM 引用。
@@ -194,34 +192,6 @@ export const PeopleProfileForm = ({
     setFormState((prev) => ({ ...prev, avatar: "" }));
   };
 
-  /**
-   * 处理标签输入确认。
-   */
-  const handleAddTag = (): void => {
-    const trimmed = tagInput.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    if (formState.tags.includes(trimmed)) {
-      toast.warning("该标签已存在");
-      return;
-    }
-
-    setFormState((prev) => ({ ...prev, tags: [...prev.tags, trimmed] }));
-    setTagInput("");
-  };
-
-  /**
-   * 删除表单中的某个特征标签。
-   */
-  const handleRemoveFormTag = (targetTag: string): void => {
-    setFormState((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== targetTag),
-    }));
-  };
-
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in">
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col gap-4">
@@ -288,11 +258,11 @@ export const PeopleProfileForm = ({
               >
                 姓名 *
               </label>
-              <input
+              <Input
                 id="form-name"
                 type="text"
+                size="xs"
                 placeholder="输入姓名..."
-                className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -352,11 +322,11 @@ export const PeopleProfileForm = ({
               >
                 生日 / 纪念日
               </label>
-              <input
+              <Input
                 id="form-birthday"
                 type="text"
+                size="xs"
                 placeholder="例: 12月14日 或 1998-12-14"
-                className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
                 value={formState.birthday}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -377,11 +347,11 @@ export const PeopleProfileForm = ({
             >
               一句话特征/描述状态
             </label>
-            <input
+            <Input
               id="form-status"
               type="text"
+              size="xs"
               placeholder="例: 温柔可爱，善解人意"
-              className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
               value={formState.status}
               onChange={(event) =>
                 setFormState((prev) => ({
@@ -399,11 +369,11 @@ export const PeopleProfileForm = ({
             >
               联络机制 (微信/电话/地址)
             </label>
-            <input
+            <Input
               id="form-contact"
               type="text"
+              size="xs"
               placeholder="例: WeChat: tolin_love"
-              className="w-full rounded-[6px] border border-white/10 bg-black/35 px-2.5 py-1.5 text-xs text-white placeholder:text-white/20 outline-none transition-colors duration-150 focus:border-white/20"
               value={formState.contact}
               onChange={(event) =>
                 setFormState((prev) => ({
@@ -419,37 +389,16 @@ export const PeopleProfileForm = ({
           <span className="text-[11px] font-bold text-white/45">
             行为特征与倾向标签 (输入并回车确定)
           </span>
-          <div className="rounded-[6px] border border-white/10 bg-black/40 p-2">
-            <div className="mb-1.5 flex flex-wrap gap-1">
-              {formState.tags.map((tag) => (
-                <Tag
-                  key={tag}
-                  prefix="#"
-                  onClose={() => handleRemoveFormTag(tag)}
-                >
-                  {tag}
-                </Tag>
-              ))}
-            </div>
-            <input
-              type="text"
-              className="w-full rounded-[4px] border border-white/5 bg-black px-2 py-1 text-xs text-white placeholder:text-white/25 outline-none transition-colors duration-150 focus:border-white/15"
-              placeholder={
-                formState.tags.length >= 8
-                  ? "已达标签数量限制"
-                  : "输入标签后，按回车或点加号进行确认..."
-              }
-              disabled={formState.tags.length >= 8}
-              value={tagInput}
-              onChange={(event) => setTagInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleAddTag();
-                }
-              }}
-            />
-          </div>
+          <Input
+            as="tags"
+            tags={formState.tags}
+            onChangeTags={(tags) =>
+              setFormState((prev) => ({ ...prev, tags }))
+            }
+            maxTags={8}
+            size="xs"
+            aria-label="Input new tag"
+          />
         </div>
 
         <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4">

@@ -7,8 +7,8 @@ import {
   Tag as TagIcon,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/Input";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
-import { Tag } from "@/components/ui/Tag";
 import { Select, type SelectOption } from "@/components/ui/Select";
 import type { NoteMaterialItem, NoteDraft } from "@/pages/notes/NotesPage";
 
@@ -61,8 +61,6 @@ export const NoteMarkdownModal = ({
   );
   // 属性 Popover 是否打开。
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // 标签输入草稿。
-  const [tagInput, setTagInput] = useState<string>("");
   // Popover 容器的 DOM 引用。
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
@@ -199,48 +197,13 @@ export const NoteMarkdownModal = ({
               <div className="absolute left-0 bottom-[calc(100%+8px)] w-[280px] rounded-[6px] border border-white/10 bg-[#212121] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.6)] animate-card-modal-in z-50 flex flex-col gap-3.5">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">关联标签</span>
-                  <div className="rounded-[6px] border border-white/10 bg-black/40 p-2">
-                    <div className="mb-1.5 flex flex-wrap gap-1">
-                      {draft.tags.map((tag) => (
-                        <Tag
-                          key={tag}
-                          prefix="#"
-                          onClose={() => {
-                            handleDraftChange({
-                              tags: draft.tags.filter((t) => t !== tag),
-                            });
-                          }}
-                        >
-                          {tag}
-                        </Tag>
-                      ))}
-                    </div>
-                    <input
-                      aria-label="Input new tag"
-                      disabled={draft.tags.length >= 6}
-                      className="w-full rounded-[6px] border border-white/10 bg-black px-2 py-1 text-xs font-normal text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 focus:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed"
-                      placeholder={draft.tags.length >= 6 ? "最多可添加 6 个标签" : "输入新标签并按回车确认..."}
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const trimmed = tagInput.trim();
-                          if (trimmed) {
-                            if (draft.tags.length >= 6) {
-                              return;
-                            }
-                            if (!draft.tags.includes(trimmed)) {
-                              handleDraftChange({
-                                tags: [...draft.tags, trimmed],
-                              });
-                            }
-                            setTagInput("");
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  <Input
+                    as="tags"
+                    tags={draft.tags}
+                    onChangeTags={(tags) => handleDraftChange({ tags })}
+                    size="xs"
+                    aria-label="Input new tag"
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -249,7 +212,6 @@ export const NoteMarkdownModal = ({
                     value={draft.source}
                     options={NOTE_SOURCE_SELECT_OPTIONS}
                     position="up"
-                    bgClass="bg-black"
                     align="left"
                     onChange={(source) => handleDraftChange({ source })}
                   />
