@@ -58,12 +58,10 @@ export const Tooltip = ({
   className = "",
 }: TooltipProps): React.JSX.Element => {
   const [isVisible, setIsVisible] = useState<boolean>(false);
-  const [activePlacement, setActivePlacement] =
-    useState<TooltipPlacement>(placement);
-  const [coords, setCoords] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
-  });
+  const [shouldRender, setShouldRender] = useState<boolean>(false);
+  const [isAnimatingOut, setIsAnimatingOut] = useState<boolean>(false);
+  const [activePlacement, setActivePlacement] = useState<TooltipPlacement>(placement);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const [arrowOffset, setArrowOffset] = useState<{
     left?: number;
     top?: number;
@@ -73,6 +71,26 @@ export const Tooltip = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    let animTimeout: NodeJS.Timeout;
+    if (isVisible) {
+      setShouldRender(true);
+      setIsAnimatingOut(false);
+    } else {
+      if (shouldRender) {
+        setIsAnimatingOut(true);
+        animTimeout = setTimeout(() => {
+          setShouldRender(false);
+          setIsAnimatingOut(false);
+          setCoords(null); // 卸载时重置坐标，避免下次打开时闪烁旧位置或由于动画尺寸错误导致计算偏差
+        }, 120);
+      }
+    }
+    return () => {
+      if (animTimeout) clearTimeout(animTimeout);
+    };
+  }, [isVisible, shouldRender]);
 
   const isConfirmMode = typeof onConfirm === "function";
   const activeTrigger = isConfirmMode ? "click" : trigger;
@@ -84,8 +102,9 @@ export const Tooltip = ({
       const triggerRect = containerRef.current.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      const tooltipHeight = tooltipRect.height || 40;
-      const tooltipWidth = tooltipRect.width || 120;
+      // 使用 offsetHeight/offsetWidth 作为主布局尺寸，能完美避开 CSS Transform（如缩放动画）对尺寸计算的几何干扰
+      const tooltipHeight = tooltipRef.current.offsetHeight || tooltipRect.height || 40;
+      const tooltipWidth = tooltipRef.current.offsetWidth || tooltipRect.width || 120;
 
       // 视口可见边界（留出 8px 安全间距）
       const limitLeft = 8;
@@ -135,49 +154,48 @@ export const Tooltip = ({
       if (resolvedPlacement === "top") {
         targetTop = window.scrollY + triggerRect.top - tooltipHeight - 16;
         targetLeft =
-          triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
+          window.scrollX + triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
       } else if (resolvedPlacement === "bottom") {
         targetTop = window.scrollY + triggerRect.bottom + 16;
         targetLeft =
-          triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
+          window.scrollX + triggerRect.left + triggerRect.width / 2 - tooltipWidth / 2;
       } else if (resolvedPlacement === "left") {
         targetTop =
           window.scrollY +
           triggerRect.top +
           triggerRect.height / 2 -
           tooltipHeight / 2;
-        targetLeft = triggerRect.left - tooltipWidth - 16;
+        targetLeft = window.scrollX + triggerRect.left - tooltipWidth - 16;
       } else if (resolvedPlacement === "right") {
         targetTop =
           window.scrollY +
           triggerRect.top +
           triggerRect.height / 2 -
           tooltipHeight / 2;
-        targetLeft = triggerRect.right + 16;
+        targetLeft = window.scrollX + triggerRect.right + 16;
       }
 
-      // 3. 执行边界纠偏修正
+      // 3. 执行边界纠偏修正 (进行全向视口安全校围，确保在极小页面或大尺寸气泡下，主体内容100%处于可见视口内)
       let adjustedLeft = targetLeft;
       let adjustedTop = targetTop;
 
-      if (resolvedPlacement === "top" || resolvedPlacement === "bottom") {
-        // 水平纠偏
-        const viewLeft = limitLeft + window.scrollX;
-        const viewRight = limitRight + window.scrollX;
-        if (adjustedLeft < viewLeft) {
-          adjustedLeft = viewLeft;
-        } else if (adjustedLeft + tooltipWidth > viewRight) {
-          adjustedLeft = viewRight - tooltipWidth;
-        }
-      } else {
-        // 垂直纠偏
-        const viewTop = limitTop + window.scrollY;
-        const viewBottom = limitBottom + window.scrollY;
-        if (adjustedTop < viewTop) {
-          adjustedTop = viewTop;
-        } else if (adjustedTop + tooltipHeight > viewBottom) {
-          adjustedTop = viewBottom - tooltipHeight;
-        }
+      const viewLeft = limitLeft + window.scrollX;
+      const viewRight = limitRight + window.scrollX;
+      const viewTop = limitTop + window.scrollY;
+      const viewBottom = limitBottom + window.scrollY;
+
+      // 修正水平越界
+      if (adjustedLeft < viewLeft) {
+        adjustedLeft = viewLeft;
+      } else if (adjustedLeft + tooltipWidth > viewRight) {
+        adjustedLeft = viewRight - tooltipWidth;
+      }
+
+      // 修正垂直越界
+      if (adjustedTop < viewTop) {
+        adjustedTop = viewTop;
+      } else if (adjustedTop + tooltipHeight > viewBottom) {
+        adjustedTop = viewBottom - tooltipHeight;
       }
 
       setCoords({ top: adjustedTop, left: adjustedLeft });
@@ -218,7 +236,7 @@ export const Tooltip = ({
       };
     }
     return undefined;
-  }, [isVisible]);
+  }, [isVisible, shouldRender]);
 
   // 定时器辅助控制
   const showTooltip = (): void => {
@@ -380,6 +398,28 @@ export const Tooltip = ({
     arrowStyle.transform = "translateY(-50%) rotate(270deg)";
   }
 
+  const isPositioned = coords !== null;
+  const animationClass = isPositioned
+    ? isAnimatingOut
+      ? "animate-tooltip-out"
+      : "animate-tooltip-in"
+    : "";
+
+  let transformOrigin = "center";
+  if (activePlacement === "top") {
+    transformOrigin =
+      arrowOffset.left !== undefined ? `${arrowOffset.left}px 100%` : "bottom center";
+  } else if (activePlacement === "bottom") {
+    transformOrigin =
+      arrowOffset.left !== undefined ? `${arrowOffset.left}px 0%` : "top center";
+  } else if (activePlacement === "left") {
+    transformOrigin =
+      arrowOffset.top !== undefined ? `100% ${arrowOffset.top}px` : "right center";
+  } else if (activePlacement === "right") {
+    transformOrigin =
+      arrowOffset.top !== undefined ? `0% ${arrowOffset.top}px` : "left center";
+  }
+
   return (
     <div
       ref={containerRef}
@@ -389,16 +429,17 @@ export const Tooltip = ({
     >
       {triggerElement}
 
-      {isVisible &&
+      {shouldRender &&
         createPortal(
           <div
             ref={tooltipRef}
-            className={`absolute z-[999999] rounded-[6px] select-text transition-opacity duration-150 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${cardClassName} ${contentClassName}`}
+            className={`absolute z-[999999] rounded-[6px] select-text drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${cardClassName} ${animationClass} ${contentClassName}`}
             style={{
               position: "absolute",
-              top: `${coords.top}px`,
-              left: `${coords.left}px`,
-              opacity: coords.top === 0 ? 0 : 1, // 初次定位前保持透明度为0，避免闪烁
+              top: `${coords?.top ?? 0}px`,
+              left: `${coords?.left ?? 0}px`,
+              opacity: isPositioned ? undefined : 0, // 初次定位前保持透明度为0，避免闪烁
+              transformOrigin,
             }}
             onMouseEnter={handleTooltipMouseEnter}
             onMouseLeave={handleTooltipMouseLeave}
