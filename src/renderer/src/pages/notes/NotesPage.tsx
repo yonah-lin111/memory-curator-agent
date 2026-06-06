@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
-import { NoteMarkdownModal } from "@/pages/notes/components/NoteMarkdownModal";
+import { NoteMarkdownPanel } from "@/pages/notes/components/NoteMarkdownPanel";
 
 /* ==========================================
  * TS 类型定义
@@ -366,206 +366,8 @@ export const NotesPage = (): React.JSX.Element => {
       aria-label="Notes library page"
       className="flex h-full min-h-0 flex-col gap-3 text-white"
     >
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
-        {/* 左侧主素材展示区 */}
-        <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white/80">素材列表</span>
-              <div className="flex items-center gap-1 bg-black p-1 rounded-[6px] border border-white/5">
-                {[
-                  {
-                    id: "all" as const,
-                    label: `全部 (${notes.length})`,
-                  },
-                  {
-                    id: "pending" as const,
-                    label: `待整理 (${notes.filter((n) => !n.isCurated).length})`,
-                  },
-                  {
-                    id: "curated" as const,
-                    label: `已整理 (${notes.filter((n) => n.isCurated).length})`,
-                  },
-                ].map((filter) => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    className={`px-2.5 py-1 text-[11px] rounded-[6px] transition-all duration-150 ${
-                      activeFilter === filter.id
-                        ? "bg-white text-black font-semibold"
-                        : "text-white/40 hover:bg-white/5 hover:text-white/70"
-                    }`}
-                    onClick={() => handleFilterChange(filter.id)}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
-              </div>
-              {activeTag && (
-                <div className="flex items-center gap-1 rounded-[6px] border border-white/5 bg-white/5 px-2 py-0.5 text-xs text-white/60">
-                  <TagIcon className="h-2.5 w-2.5" />
-                  <span>{activeTag}</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTag(null)}
-                    className="ml-1 text-white/40 hover:text-white"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <IconButton
-                aria-label="New Markdown note"
-                preset="add"
-                onClick={() => setIsMarkdownModalOpen(true)}
-              />
-            </div>
-          </div>
-
-          {notesError && (
-            <div
-              role="alert"
-              className="flex flex-col gap-2 rounded-[6px] border border-white/10 bg-black/40 p-3 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between flex-shrink-0"
-            >
-              <span>{notesError}</span>
-              <button
-                type="button"
-                className="self-start rounded-[6px] border border-white/10 bg-black px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors duration-150 hover:border-white/25 hover:text-white sm:self-auto"
-                onClick={() => void loadNotes()}
-              >
-                重新读取
-              </button>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col">
-            {isLoadingNotes ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-[258px] rounded-[6px] border border-white/5 bg-[#212121] p-3.5"
-                  >
-                    <div className="h-3 w-24 rounded-[4px] bg-white/10" />
-                    <div className="mt-5 h-4 w-3/4 rounded-[4px] bg-white/10" />
-                    <div className="mt-4 flex flex-col gap-2">
-                      <div className="h-2.5 w-full rounded-[4px] bg-white/5" />
-                      <div className="h-2.5 w-11/12 rounded-[4px] bg-white/5" />
-                      <div className="h-2.5 w-2/3 rounded-[4px] bg-white/5" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : visibleNotes.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <FileText className="h-7 w-7 text-white/30" />
-                <h2 className="mt-3 text-sm font-bold text-white/80">
-                  暂无匹配笔记素材
-                </h2>
-                <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
-                  {activeTag
-                    ? "当前标签下无素材，试着清除标签过滤或新建素材。"
-                    : "点击右上角加号创建第一条 Markdown 素材，内容会写入本地 SQLite。"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-1">
-                {visibleNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className={`group h-[258px] overflow-hidden rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
-                      note.isCurated
-                        ? "border-white/5 bg-white/[0.01] hover:border-white/10"
-                        : "border-white/10 bg-white/[0.03] hover:border-white/20"
-                    }`}
-                  >
-                    {/* 卡片头部：时间与操作按钮（编辑/删除） */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-white/30 leading-none">
-                        <Clock className="h-3 w-3 flex-shrink-0" />
-                        <span className="text-xs">{note.time}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
-                        <IconButton
-                          preset="edit"
-                          onClick={() => handleEditNote(note)}
-                          title="编辑笔记"
-                        />
-                        <IconButton
-                          preset="delete"
-                          onClick={() => void handleDeleteNote(note.id)}
-                          title="删除笔记"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 卡片标题 */}
-                    <h3 className="text-sm font-bold text-white/85 leading-tight">
-                      {note.title}
-                    </h3>
-
-                    {/* 卡片正文 */}
-                    <p className="text-xs text-white/50 leading-relaxed font-sans line-clamp-6">
-                      {note.content}
-                    </p>
-
-                    {/* 来源分类与关联标签 */}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-                      <span className="rounded-[6px] bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60 font-medium">
-                        {note.source}
-                      </span>
-                      {note.tags.map((tag) => (
-                        <Tag
-                          key={tag}
-                          size="small"
-                          prefix={<TagIcon className="h-2.5 w-2.5" />}
-                          bgClass="border-white/5 bg-white/[0.02] text-white/40"
-                        >
-                          {tag}
-                        </Tag>
-                      ))}
-                    </div>
-
-                    {/* 智能线索分析提示 */}
-                    {note.clue && (
-                      <div className="pt-2 border-t border-white/5 flex items-start gap-1.5 mt-1">
-                        <Sparkles
-                          className={`h-3 w-3 mt-0.5 flex-shrink-0 ${
-                            note.isCurated ? "text-white/20" : "text-white/70"
-                          }`}
-                        />
-                        <span
-                          className={`text-xs leading-relaxed ${
-                            note.isCurated
-                              ? "text-white/25 line-through"
-                              : "text-white/65 font-medium"
-                          }`}
-                        >
-                          {note.clue}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 右侧侧栏统计与标签地图 */}
-        <NotesSidebar
-          stats={statsItems}
-          tags={tagItems}
-          activeTag={activeTag}
-          onTagChange={setActiveTag}
-        />
-      </div>
-
       {isMarkdownModalOpen || editingNote ? (
-        <NoteMarkdownModal
+        <NoteMarkdownPanel
           initialDraft={
             editingNote
               ? {
@@ -589,7 +391,205 @@ export const NotesPage = (): React.JSX.Element => {
             }
           }}
         />
-      ) : null}
+      ) : (
+        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+          {/* 左侧主素材展示区 */}
+          <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white/80">素材列表</span>
+                <div className="flex items-center gap-1 bg-black p-1 rounded-[6px] border border-white/5">
+                  {[
+                    {
+                      id: "all" as const,
+                      label: `全部 (${notes.length})`,
+                    },
+                    {
+                      id: "pending" as const,
+                      label: `待整理 (${notes.filter((n) => !n.isCurated).length})`,
+                    },
+                    {
+                      id: "curated" as const,
+                      label: `已整理 (${notes.filter((n) => n.isCurated).length})`,
+                    },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      className={`px-2.5 py-1 text-[11px] rounded-[6px] transition-all duration-150 ${
+                        activeFilter === filter.id
+                          ? "bg-white text-black font-semibold"
+                          : "text-white/40 hover:bg-white/5 hover:text-white/70"
+                      }`}
+                      onClick={() => handleFilterChange(filter.id)}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+                {activeTag && (
+                  <div className="flex items-center gap-1 rounded-[6px] border border-white/5 bg-white/5 px-2 py-0.5 text-xs text-white/60">
+                    <TagIcon className="h-2.5 w-2.5" />
+                    <span>{activeTag}</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTag(null)}
+                      className="ml-1 text-white/40 hover:text-white"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <IconButton
+                  aria-label="New Markdown note"
+                  preset="add"
+                  onClick={() => setIsMarkdownModalOpen(true)}
+                />
+              </div>
+            </div>
+
+            {notesError && (
+              <div
+                role="alert"
+                className="flex flex-col gap-2 rounded-[6px] border border-white/10 bg-black/40 p-3 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between flex-shrink-0"
+              >
+                <span>{notesError}</span>
+                <button
+                  type="button"
+                  className="self-start rounded-[6px] border border-white/10 bg-black px-2.5 py-1 text-xs font-semibold text-white/70 transition-colors duration-150 hover:border-white/25 hover:text-white sm:self-auto"
+                  onClick={() => void loadNotes()}
+                >
+                  重新读取
+                </button>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col">
+              {isLoadingNotes ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-[258px] rounded-[6px] border border-white/5 bg-[#212121] p-3.5"
+                    >
+                      <div className="h-3 w-24 rounded-[4px] bg-white/10" />
+                      <div className="mt-5 h-4 w-3/4 rounded-[4px] bg-white/10" />
+                      <div className="mt-4 flex flex-col gap-2">
+                        <div className="h-2.5 w-full rounded-[4px] bg-white/5" />
+                        <div className="h-2.5 w-11/12 rounded-[4px] bg-white/5" />
+                        <div className="h-2.5 w-2/3 rounded-[4px] bg-white/5" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : visibleNotes.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                  <FileText className="h-7 w-7 text-white/30" />
+                  <h2 className="mt-3 text-sm font-bold text-white/80">
+                    暂无匹配笔记素材
+                  </h2>
+                  <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+                    {activeTag
+                      ? "当前标签下无素材，试着清除标签过滤或新建素材。"
+                      : "点击右上角加号创建第一条 Markdown 素材，内容会写入本地 SQLite。"}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-1">
+                  {visibleNotes.map((note) => (
+                    <div
+                      key={note.id}
+                      className={`group h-[258px] overflow-hidden rounded-[6px] border p-3.5 flex flex-col gap-3 transition-all duration-150 ${
+                        note.isCurated
+                          ? "border-white/5 bg-white/[0.01] hover:border-white/10"
+                          : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                      }`}
+                    >
+                      {/* 卡片头部：时间与操作按钮（编辑/删除） */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 text-[11px] font-mono text-white/30 leading-none">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span className="text-xs">{note.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
+                          <IconButton
+                            preset="edit"
+                            onClick={() => handleEditNote(note)}
+                            title="编辑笔记"
+                          />
+                          <IconButton
+                            preset="delete"
+                            onClick={() => void handleDeleteNote(note.id)}
+                            title="删除笔记"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 卡片标题 */}
+                      <h3 className="text-sm font-bold text-white/85 leading-tight">
+                        {note.title}
+                      </h3>
+
+                      {/* 卡片正文 */}
+                      <p className="text-xs text-white/50 leading-relaxed font-sans line-clamp-6">
+                        {note.content}
+                      </p>
+
+                      {/* 来源分类与关联标签 */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                        <span className="rounded-[6px] bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60 font-medium">
+                          {note.source}
+                        </span>
+                        {note.tags.map((tag) => (
+                          <Tag
+                            key={tag}
+                            size="small"
+                            prefix={<TagIcon className="h-2.5 w-2.5" />}
+                            bgClass="border-white/5 bg-white/[0.02] text-white/40"
+                          >
+                            {tag}
+                          </Tag>
+                        ))}
+                      </div>
+
+                      {/* 智能线索分析提示 */}
+                      {note.clue && (
+                        <div className="pt-2 border-t border-white/5 flex items-start gap-1.5 mt-1">
+                          <Sparkles
+                            className={`h-3 w-3 mt-0.5 flex-shrink-0 ${
+                              note.isCurated ? "text-white/20" : "text-white/70"
+                            }`}
+                          />
+                          <span
+                            className={`text-xs leading-relaxed ${
+                              note.isCurated
+                                ? "text-white/25 line-through"
+                                : "text-white/65 font-medium"
+                            }`}
+                          >
+                            {note.clue}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 右侧侧栏统计与标签地图 */}
+          <NotesSidebar
+            stats={statsItems}
+            tags={tagItems}
+            activeTag={activeTag}
+            onTagChange={setActiveTag}
+          />
+        </div>
+      )}
     </section>
   );
 };

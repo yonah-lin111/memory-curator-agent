@@ -4,13 +4,13 @@ import type React from "react";
 // 全局头部状态接口
 type HeaderState = {
   // 自定义面包屑标题
-  customTitle: string | null;
+  customTitle: React.ReactNode | null;
   // 自定义头部动作
   extraActions: React.ReactNode | null;
   // 是否隐藏 AI 聊天按钮
   hideChatButton: boolean;
   // 设置自定义面包屑标题
-  setCustomTitle: (title: string | null) => void;
+  setCustomTitle: (title: React.ReactNode | null) => void;
   // 设置自定义头部动作
   setExtraActions: (actions: React.ReactNode | null) => void;
   // 设置是否隐藏 AI 聊天按钮
