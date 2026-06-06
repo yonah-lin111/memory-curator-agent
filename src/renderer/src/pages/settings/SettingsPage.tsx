@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   RotateCcw,
   X,
+  Copy,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
@@ -433,7 +434,7 @@ export const SettingsPage = (): React.JSX.Element => {
   };
 
   /**
-   * 新增模型。
+   * 新增模型，并在模型列表的最顶部展示。
    */
   const addModel = (providerKey: string): void => {
     updateProvider(providerKey, (provider) => {
@@ -441,9 +442,50 @@ export const SettingsPage = (): React.JSX.Element => {
       return {
         ...provider,
         models: {
-          ...provider.models,
           [modelId]: createModel(modelId),
+          ...provider.models,
         },
+      };
+    });
+  };
+
+  /**
+   * 复制现有模型，生成新主键，并将复制的模型放置于原模型紧邻的下一行。
+   */
+  const copyModel = (providerKey: string, modelKey: string): void => {
+    updateProvider(providerKey, (provider) => {
+      const originalModel = provider.models[modelKey];
+      if (!originalModel) {
+        return provider;
+      }
+
+      // 生成唯一的 modelId，避免主键冲突
+      let baseId = `${originalModel.id}-copy`;
+      let modelId = baseId;
+      let counter = 1;
+      while (provider.models[modelId]) {
+        modelId = `${baseId}-${counter}`;
+        counter++;
+      }
+
+      const clonedModel: AiSettingsModel = {
+        ...JSON.parse(JSON.stringify(originalModel)),
+        id: modelId,
+        name: originalModel.name ? `${originalModel.name} (Copy)` : modelId,
+      };
+
+      // 保证克隆的模型在遍历顺序中直接处于被复制模型的后面，以在渲染时呈现为“下一行”
+      const nextModels: Record<string, AiSettingsModel> = {};
+      for (const [key, value] of Object.entries(provider.models)) {
+        nextModels[key] = value;
+        if (key === modelKey) {
+          nextModels[modelId] = clonedModel;
+        }
+      }
+
+      return {
+        ...provider,
+        models: nextModels,
       };
     });
   };
@@ -769,12 +811,12 @@ export const SettingsPage = (): React.JSX.Element => {
           </div>
 
           {Object.keys(selectedProvider.models).length > 0 && (
-            <div className="mt-3 hidden grid-cols-[1fr_1fr_120px_36px_36px] gap-3 px-3 text-xs font-bold text-white/35 lg:grid">
+            <div className="mt-3 hidden grid-cols-[1fr_1fr_120px_36px_72px] gap-3 px-3 text-xs font-bold text-white/35 lg:grid">
               <div>Model ID (API 标识)</div>
               <div>显示名称</div>
               <div>Context</div>
               <div className="text-center">高级</div>
-              <div className="text-center">删除</div>
+              <div className="text-center">操作</div>
             </div>
           )}
 
@@ -787,7 +829,7 @@ export const SettingsPage = (): React.JSX.Element => {
                     key={modelKey}
                     className="rounded-[6px] border border-white/8 bg-black/20 p-2.5 transition-all"
                   >
-                    <div className="grid items-center gap-3 lg:grid-cols-[1fr_1fr_120px_36px_36px]">
+                    <div className="grid items-center gap-3 lg:grid-cols-[1fr_1fr_120px_36px_72px]">
                       <div className="flex flex-col gap-1 lg:block">
                         <span className="text-[10px] text-white/35 lg:hidden">
                           Model ID (API 标识)
@@ -867,10 +909,20 @@ export const SettingsPage = (): React.JSX.Element => {
                           <SlidersHorizontal className="h-3.5 w-3.5" />
                         </IconButton>
                       </div>
-                      <div className="flex items-center justify-end gap-2 lg:block lg:text-center">
+                      <div className="flex items-center justify-end gap-1.5 lg:flex lg:justify-center">
                         <span className="text-[10px] text-white/35 lg:hidden">
-                          删除模型：
+                          操作：
                         </span>
+                        <IconButton
+                          preset="default"
+                          size="medium"
+                          className="h-8 w-8"
+                          onClick={() => copyModel(selectedProviderEntryKey, modelKey)}
+                          aria-label={`复制 Model ${modelKey}`}
+                          title="复制模型"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </IconButton>
                         <IconButton
                           preset="delete"
                           size="medium"
