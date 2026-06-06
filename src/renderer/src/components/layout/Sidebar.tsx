@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { AiChatHistoryList } from "@/features/ai-chat/components/AiChatHistoryList";
 import type { AiChatSession } from "@/features/ai-chat/types";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -259,8 +260,11 @@ export const Sidebar = ({
               className="flex min-h-0 flex-1 flex-col gap-3 w-full overflow-y-auto scrollbar-hidden"
               aria-label="Sidebar main navigation"
             >
-              {NAVIGATION_GROUPS.map((group) => (
+              {NAVIGATION_GROUPS.map((group, index) => (
                 <section key={group.id} className="flex flex-col gap-1.5">
+                  {shouldUseCollapsedLayout && index > 0 && (
+                    <div className="border-t border-white/5 my-1 w-full" />
+                  )}
                   {!shouldUseCollapsedLayout && (
                     <h3 className="px-1 text-xs font-bold tracking-[0.18em] text-white/30 whitespace-nowrap">
                       {group.label}
@@ -271,7 +275,7 @@ export const Sidebar = ({
                       const Icon = item.icon;
                       const isActive = item.id === activePage;
 
-                      return (
+                      const buttonContent = (
                         <button
                           key={item.id}
                           type="button"
@@ -309,6 +313,14 @@ export const Sidebar = ({
                           )}
                         </button>
                       );
+
+                      return shouldUseCollapsedLayout ? (
+                        <Tooltip key={item.id} content={item.label} placement="right" className="w-full">
+                          {buttonContent}
+                        </Tooltip>
+                      ) : (
+                        buttonContent
+                      );
                     })}
                   </div>
                 </section>
@@ -323,10 +335,12 @@ export const Sidebar = ({
             }`}
           >
             {shouldUseCollapsedLayout ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45">
-                  <Settings className="h-3.5 w-3.5" />
-                </div>
+              <div className="flex flex-col gap-2 items-center">
+                <Tooltip content="Settings" placement="right">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45 hover:bg-white/5 hover:text-white/85 cursor-pointer transition-colors">
+                    <Settings className="h-3.5 w-3.5" />
+                  </div>
+                </Tooltip>
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35 whitespace-nowrap">
