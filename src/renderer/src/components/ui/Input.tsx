@@ -64,7 +64,32 @@ export interface TagInputProps
   maxTags?: number;
 }
 
-export type InputProps = StandardInputProps | TagInputProps;
+export interface NumberInputProps
+  extends BaseInputProps,
+    Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size" | "prefix"> {
+  /**
+   * 渲染为数字输入框
+   */
+  as: "number";
+  /**
+   * 当前绑定的数值
+   */
+  value: number;
+  /**
+   * 数值变更回调
+   */
+  onChangeValue: (value: number) => void;
+  /**
+   * 前缀插槽
+   */
+  prefix?: React.ReactNode;
+  /**
+   * 后缀插槽
+   */
+  suffix?: React.ReactNode;
+}
+
+export type InputProps = StandardInputProps | TagInputProps | NumberInputProps;
 
 /**
  * Input - 统一的自定义公共输入框/文本域组件
@@ -131,6 +156,55 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
             </div>
           )}
         </div>
+      );
+    }
+
+    if (as === "number") {
+      const { value, onChangeValue, prefix, suffix, disabled, ...numberProps } = rest as NumberInputProps;
+      const baseClass = `w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 outline-none transition-colors duration-150 placeholder:text-white/20 hover:border-white/20 focus:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed`;
+      const sizeClass = size === "xs" ? "text-xs px-3 py-1.5" : "text-sm px-3 py-1.5";
+
+      const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const numVal = val === "" ? 0 : Number(val);
+        if (!isNaN(numVal)) {
+          onChangeValue(numVal);
+        }
+      };
+
+      if (prefix || suffix) {
+        const containerClass = `flex items-center gap-2 w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 transition-colors duration-150 hover:border-white/20 focus-within:border-white/25 px-2 py-1.5 ${className}`.trim();
+        return (
+          <div className={containerClass}>
+            {prefix}
+            <div className="relative min-w-0 flex-1">
+              <input
+                ref={ref as React.ForwardedRef<HTMLInputElement>}
+                type="number"
+                className="w-full bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                value={value}
+                onChange={handleChange}
+                disabled={disabled}
+                {...(numberProps as Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size" | "prefix" | "type">)}
+              />
+            </div>
+            {suffix}
+          </div>
+        );
+      }
+
+      const combinedClassName = `${baseClass} ${sizeClass} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${className}`.trim();
+
+      return (
+        <input
+          ref={ref as React.ForwardedRef<HTMLInputElement>}
+          type="number"
+          className={combinedClassName}
+          value={value}
+          onChange={handleChange}
+          disabled={disabled}
+          {...(numberProps as Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "size" | "prefix" | "type">)}
+        />
       );
     }
 

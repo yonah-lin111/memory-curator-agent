@@ -226,6 +226,73 @@ type AiModelOptionsResponse = {
   agent: AiAgentOption
 }
 
+// Settings 页面模型选择配置。
+type AiSettingsModelSelection = {
+  // 模型所属 provider 标识。
+  provider: string
+  // 模型标识。
+  model: string
+}
+
+// Settings 页面模型配置。
+type AiSettingsModel = {
+  // 模型唯一标识。
+  id: string
+  // 模型显示名。
+  name: string
+  // 模型能力限制。
+  limit: {
+    // 上下文窗口 token 上限。
+    context: number
+    // 输出 token 上限。
+    output: number
+  }
+  // 模型输入输出模态。
+  modalities: {
+    // 支持的输入模态。
+    input: string[]
+    // 支持的输出模态。
+    output: string[]
+  }
+}
+
+// Settings 页面 provider 配置。
+type AiSettingsProvider = {
+  // Provider 唯一标识。
+  id: string
+  // Provider 传输格式。
+  type: 'openai-compatible' | 'openai' | 'anthropic' | 'google'
+  // Provider 显示名。
+  name: string
+  // 对应 npm 包名。
+  npm: string
+  // Provider 连接参数。
+  options: {
+    // API Key。
+    apiKey: string
+    // API 基础地址。
+    baseURL: string
+  }
+  // Provider 可用模型。
+  models: Record<string, AiSettingsModel>
+}
+
+// Settings 页面完整 AI 配置。
+type AiSettingsConfig = {
+  // 配置文件绝对路径。
+  configPath: string
+  // 默认对话模型。
+  defaultModel: AiSettingsModelSelection
+  // 标题总结模型。
+  titleSummary: AiSettingsModelSelection
+  // 已启用 provider 标识列表。
+  enabledProviders: string[]
+  // Provider 配置表。
+  providers: Record<string, AiSettingsProvider>
+  // Agent 非密钥行为配置。
+  agent: AiAgentOption
+}
+
 // AI 工具步骤事件状态。
 type AiChatEvent =
   | {
@@ -430,6 +497,13 @@ type MonthOverview = {
 
 // 渲染进程安全 API。
 const api = {
+  config: {
+    ai: {
+      get: (): Promise<AiSettingsConfig> => ipcRenderer.invoke('config:ai:get'),
+      save: (payload: AiSettingsConfig): Promise<AiSettingsConfig> =>
+        ipcRenderer.invoke('config:ai:save', payload)
+    }
+  },
   files: {
     saveMarkdownImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:markdown-image:save', payload),

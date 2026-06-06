@@ -86,6 +86,70 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /People/ })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('支持从左侧栏底部进入 Settings 页面', async () => {
+    const user = userEvent.setup()
+
+    window.api = {
+      config: {
+        ai: {
+          get: vi.fn(async () => ({
+            configPath: '/Users/yonah/.mc/config.json',
+            defaultModel: {
+              provider: 'gemini',
+              model: 'gemini-3.5-flash'
+            },
+            titleSummary: {
+              provider: 'gemini',
+              model: 'gemini-3.5-flash'
+            },
+            enabledProviders: ['gemini'],
+            providers: {
+              gemini: {
+                id: 'gemini',
+                type: 'google',
+                name: 'Gemini',
+                npm: '@ai-sdk/google',
+                options: {
+                  apiKey: 'secret',
+                  baseURL: 'https://example.com/v1'
+                },
+                models: {
+                  'gemini-3.5-flash': {
+                    id: 'gemini-3.5-flash',
+                    name: 'Gemini 3.5 Flash',
+                    limit: {
+                      context: 1000000,
+                      output: 65536
+                    },
+                    modalities: {
+                      input: ['text'],
+                      output: ['text']
+                    }
+                  }
+                }
+              }
+            },
+            agent: {
+              context: {
+                toolOutputMaxChars: 4096,
+                recentToolResultLimit: 3
+              }
+            }
+          })),
+          save: vi.fn()
+        }
+      }
+    } as never
+
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: /Settings/ }))
+
+    expect(window.location.pathname).toBe('/settings')
+    expect(await screen.findByText('/Users/yonah/.mc/config.json')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Settings/ })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('在切换侧栏 tab 时同步改变 URL pathname 路由，且支持通过改变 pathname 进行路由切换', async () => {
     const user = userEvent.setup()
 

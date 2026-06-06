@@ -9,12 +9,21 @@ type HeaderState = {
   extraActions: React.ReactNode | null;
   // 是否隐藏 AI 聊天按钮
   hideChatButton: boolean;
+  // 增加 Settings 相关的状态
+  settingsState: {
+    isDirty: boolean;
+    isSaving: boolean;
+    onSave: () => void | Promise<void>;
+    onReload: () => void | Promise<void>;
+  } | null;
   // 设置自定义面包屑标题
   setCustomTitle: (title: React.ReactNode | null) => void;
   // 设置自定义头部动作
   setExtraActions: (actions: React.ReactNode | null) => void;
   // 设置是否隐藏 AI 聊天按钮
   setHideChatButton: (hide: boolean) => void;
+  // 设置 Settings 相关的状态
+  setSettingsState: (state: HeaderState["settingsState"]) => void;
   // 重置头部状态
   resetHeader: () => void;
 };
@@ -27,8 +36,10 @@ export const useHeaderStore = create<HeaderState>((set) => ({
   customTitle: null,
   extraActions: null,
   hideChatButton: false,
+  settingsState: null,
   setCustomTitle: (title) => set({ customTitle: title }),
   setExtraActions: (actions) => set({ extraActions: actions }),
   setHideChatButton: (hide) => set({ hideChatButton: hide }),
-  resetHeader: () => set({ customTitle: null, extraActions: null, hideChatButton: false }),
+  setSettingsState: (state) => set({ settingsState: state }),
+  resetHeader: () => set({ customTitle: null, extraActions: null, hideChatButton: false, settingsState: null }),
 }));

@@ -1,5 +1,5 @@
 import type React from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, RotateCcw } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
@@ -32,7 +32,7 @@ export const Header = ({
   chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
-  const { customTitle, extraActions, hideChatButton } = useHeaderStore();
+  const { customTitle, extraActions, hideChatButton, settingsState } = useHeaderStore();
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
@@ -74,6 +74,32 @@ export const Header = ({
             );
           })}
         </div>
+        {!isChatOpen && settingsState && (
+          <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
+            <span
+              className={`text-xs ${
+                settingsState.isDirty ? "text-amber-300" : "text-white/35"
+              }`}
+            >
+              {settingsState.isDirty ? "未保存" : "已同步"}
+            </span>
+            <IconButton
+              disabled={settingsState.isSaving}
+              onClick={settingsState.onReload}
+              title="重置修改"
+              aria-label="重置修改"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton
+              preset="save"
+              disabled={settingsState.isSaving || !settingsState.isDirty}
+              onClick={settingsState.onSave}
+              title={settingsState.isSaving ? "保存中" : "保存设置"}
+              aria-label="保存设置"
+            />
+          </div>
+        )}
         {!isChatOpen && extraActions}
         {chatLeadingAction}
         {!hideChatButton && (

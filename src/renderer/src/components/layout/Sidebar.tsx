@@ -34,7 +34,8 @@ export type SidebarPageId =
   | "todo"
   | "snippets"
   | "people"
-  | "showcase";
+  | "showcase"
+  | "settings";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -337,16 +338,35 @@ export const Sidebar = ({
             {shouldUseCollapsedLayout ? (
               <div className="flex flex-col gap-2 items-center">
                 <Tooltip content="Settings" placement="right">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-white/[0.02] border border-white/5 text-white/45 hover:bg-white/5 hover:text-white/85 cursor-pointer transition-colors">
+                  <button
+                    type="button"
+                    aria-label="Settings"
+                    aria-current={activePage === "settings" ? "page" : undefined}
+                    onClick={() => onPageChange("settings")}
+                    className={`flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/5 ${
+                      activePage === "settings"
+                        ? "bg-white text-black"
+                        : "bg-white/[0.02] text-white/45 hover:bg-white/5 hover:text-white/85"
+                    }`}
+                  >
                     <Settings className="h-3.5 w-3.5" />
-                  </div>
+                  </button>
                 </Tooltip>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm text-white/35 whitespace-nowrap">
+              <button
+                type="button"
+                aria-current={activePage === "settings" ? "page" : undefined}
+                onClick={() => onPageChange("settings")}
+                className={`flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-sm whitespace-nowrap ${
+                  activePage === "settings"
+                    ? "bg-white text-black font-semibold"
+                    : "text-white/35 hover:bg-white/5 hover:text-white/80"
+                }`}
+              >
                 <Settings className="h-3.5 w-3.5" />
                 <span className="whitespace-nowrap">Settings</span>
-              </div>
+              </button>
             )}
           </div>
         </div>

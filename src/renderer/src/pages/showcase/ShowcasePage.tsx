@@ -122,28 +122,33 @@ export const ShowcasePage = (): React.JSX.Element => {
             UI WORKSHOP
           </span>
         </div>
-        <nav className="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar">
-          {sections.map((sec) => (
-            <button
-              key={sec.id}
-              type="button"
-              onClick={() => setActiveSection(sec.id)}
-              className={`flex flex-col items-start px-3 py-2 rounded-[6px] transition-all duration-150 ${
-                activeSection === sec.id
-                  ? "bg-white text-black font-semibold"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <span className="text-xs font-bold">{sec.label}</span>
-              <span
-                className={`text-[10px] leading-none mt-0.5 ${
-                  activeSection === sec.id ? "text-black/60" : "text-white/30"
+        <nav className="flex flex-col gap-1 flex-1 overflow-y-auto custom-scrollbar" aria-label="Showcase sections">
+          {sections.map((sec) => {
+            const isActive = activeSection === sec.id;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                aria-label={sec.label}
+                onClick={() => setActiveSection(sec.id)}
+                className={`rounded-[6px] px-3 py-2 text-left ${
+                  isActive
+                    ? "bg-white text-black"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                {sec.desc}
-              </span>
-            </button>
-          ))}
+                <span className="block text-sm font-bold">{sec.label}</span>
+                <span
+                  className={`mt-1 block text-xs ${
+                    isActive ? "text-black/55" : "text-white/30"
+                  }`}
+                >
+                  {sec.desc}
+                </span>
+              </button>
+            );
+          })}
         </nav>
       </aside>
 
