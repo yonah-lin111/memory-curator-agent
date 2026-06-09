@@ -473,10 +473,6 @@ export const AiChatWorkspace = ({
     }
 
     cancelAcceleratedScroll();
-    const container = messagesContainerRef.current;
-    if (container) {
-      container.scrollTop = 0;
-    }
 
     const animationFrame = requestAnimationFrame(() => {
       scrollLatestUserToTop("smooth");
