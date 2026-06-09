@@ -362,9 +362,7 @@ export const AiChatWorkspace = ({
   // 动态计算并更新底部间距高度。
   useLayoutEffect(() => {
     if (!topPinnedUserId) {
-      if (bottomSpacerHeight !== 0) {
-        setBottomSpacerHeight(0);
-      }
+      setBottomSpacerHeight(0);
       return;
     }
 
@@ -372,17 +370,21 @@ export const AiChatWorkspace = ({
     const userMessage = latestUserMessageRef.current;
 
     if (container && userMessage) {
-      const requiredSpacer = calculateBottomSpacerHeight(
-        container,
-        userMessage,
-        bottomSpacerHeight,
-      );
+      setBottomSpacerHeight((prev) => {
+        const requiredSpacer = calculateBottomSpacerHeight(
+          container,
+          userMessage,
+          prev,
+        );
 
-      if (Math.abs(bottomSpacerHeight - requiredSpacer) > 1) {
-        setBottomSpacerHeight(requiredSpacer);
-      }
+        if (Math.abs(prev - requiredSpacer) > 1) {
+          return requiredSpacer;
+        }
+
+        return prev;
+      });
     }
-  }, [topPinnedUserId, session.messages, bottomSpacerHeight]);
+  }, [topPinnedUserId, session.messages.length]);
 
   // 监听窗口尺寸变化，动态更新底部间距高度。
   useEffect(() => {
