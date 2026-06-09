@@ -126,6 +126,8 @@ export const AiChatWorkspace = ({
   const [topPinnedUserId, setTopPinnedUserId] = useState<
     string | null
   >(null);
+  // 会话切换计数，驱动 useLayoutEffect 统一处理会话切换的滚动逻辑。
+  const [sessionChangeTick, setSessionChangeTick] = useState(0);
   // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
@@ -293,23 +295,15 @@ export const AiChatWorkspace = ({
     scrollMessagesToPosition(targetTop, behavior);
   };
 
-  // 当切换会话（session.id 变化）时，复用发送消息后的最新用户问题定位效果。
+  // 当切换会话（session.id 变化）时，仅更新状态，滚动逻辑交由 sessionChangeTick useLayoutEffect 统一处理。
   useEffect(() => {
     const latestUserMessageId = getLatestUserMessageId();
     if (latestUserMessageId) {
       setTopPinnedUserId(latestUserMessageId);
-      return undefined;
+    } else {
+      setTopPinnedUserId(null);
     }
-
-    setTopPinnedUserId(null);
-    const animationFrame = requestAnimationFrame(() => {
-      scrollMessagesToBottom("smooth");
-    });
-
-    return () => {
-      cancelAnimationFrame(animationFrame);
-      cancelAcceleratedScroll();
-    };
+    setSessionChangeTick(t => t + 1);
   }, [session.id]);
 
   // 当用户在当前会话发送新消息时，优先将最新用户问题置顶显示。
@@ -436,6 +430,31 @@ export const AiChatWorkspace = ({
     };
   }, [topPinnedUserId, session.messages.length]);
 
+  // 会话切换时统一执行滚动逻辑（useLayoutEffect 确保在浏览器绘制前完成）。
+  useLayoutEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    cancelAcceleratedScroll();
+    container.scrollTop = 0;
+
+    const latestUserMessageId = getLatestUserMessageId();
+    if (!latestUserMessageId) {
+      const animationFrame = requestAnimationFrame(() => {
+        scrollMessagesToBottom("smooth");
+      });
+
+      return () => {
+        cancelAnimationFrame(animationFrame);
+        cancelAcceleratedScroll();
+      };
+    }
+
+    return undefined;
+  }, [sessionChangeTick]);
+
   // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
     const isDeletingMessages =
@@ -449,6 +468,12 @@ export const AiChatWorkspace = ({
 
     if (!topPinnedUserId) {
       return;
+    }
+
+    cancelAcceleratedScroll();
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = 0;
     }
 
     const animationFrame = requestAnimationFrame(() => {
