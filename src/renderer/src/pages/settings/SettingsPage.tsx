@@ -417,6 +417,43 @@ export const SettingsPage = (): React.JSX.Element => {
   };
 
   /**
+   * 复制现有 Provider，生成新主键，并将其添加到 Provider 列表的末尾。
+   */
+  const copyProvider = (providerKey: string): void => {
+    updateSettings((current) => {
+      const originalProvider = current.providers[providerKey];
+      if (!originalProvider) {
+        return current;
+      }
+
+      // 生成唯一的 providerId，避免主键冲突
+      let baseId = `${originalProvider.id}-copy`;
+      let nextKey = baseId;
+      let counter = 1;
+      while (current.providers[nextKey]) {
+        nextKey = `${baseId}-${counter}`;
+        counter++;
+      }
+
+      const clonedProvider: AiSettingsProvider = {
+        ...JSON.parse(JSON.stringify(originalProvider)),
+        id: nextKey,
+        name: originalProvider.name ? `${originalProvider.name} (Copy)` : nextKey,
+      };
+
+      setSelectedProviderKey(nextKey);
+      return {
+        ...current,
+        enabledProviders: [...current.enabledProviders, nextKey],
+        providers: {
+          ...current.providers,
+          [nextKey]: clonedProvider,
+        },
+      };
+    });
+  };
+
+  /**
    * 切换 Provider 启用状态。
    */
   const toggleProviderEnabled = (
@@ -643,7 +680,18 @@ export const SettingsPage = (): React.JSX.Element => {
                   ({Object.keys(provider.models).length} ·{" "}
                   {isEnabled ? "已启用" : "已禁用"})
                 </span>
-                <span className="ml-2 inline-flex items-center justify-center">
+                <span className="ml-2 inline-flex items-center justify-center gap-1">
+                  <span
+                    role="button"
+                    aria-label="复制 Provider"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyProvider(providerKey);
+                    }}
+                    className="opacity-60 hover:opacity-100 cursor-pointer text-current hover:text-white transition-all flex items-center justify-center p-0.5"
+                  >
+                    <Copy className="h-2.5 w-2.5" />
+                  </span>
                   <Tooltip
                     title="确定要删除该 Provider 吗？"
                     onConfirm={() => deleteProvider(providerKey)}
