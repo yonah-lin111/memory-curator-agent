@@ -36,6 +36,26 @@ const LATEST_ASSISTANT_TOP_OFFSET = 4;
 const ACCELERATED_SCROLL_DURATION_MS = 250;
 
 /**
+ * calculateBottomSpacerHeight - 计算置顶问题后需要保留的最小底部空间。
+ */
+const calculateBottomSpacerHeight = (
+  container: HTMLDivElement,
+  userMessage: HTMLDivElement,
+  currentSpacerHeight: number,
+): number => {
+  const viewportHeight = container.clientHeight;
+  const targetScrollTop = Math.max(
+    userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
+    0,
+  );
+
+  return Math.max(
+    0,
+    targetScrollTop + viewportHeight - container.scrollHeight + currentSpacerHeight,
+  );
+};
+
+/**
  * copyTextToClipboard - 写入系统剪贴板，兼容缺失 Clipboard API 的运行时。
  */
 const copyTextToClipboard = async (content: string): Promise<void> => {
@@ -311,13 +331,8 @@ export const AiChatWorkspace = ({
     }
 
     if (currentLength < prevLength) {
-      // 撤销 /undo 操作会使消息数量减少，我们需要在此逻辑中重新定位并高亮显示新的最新用户问题（将其滚到视口顶部）
-      const latestUserMsgId = getLatestUserMessageId();
-      if (latestUserMsgId) {
-        setTopPinnedUserId(latestUserMsgId);
-      } else {
-        setTopPinnedUserId(null);
-      }
+      // 删除消息会改变最新 QA 归属，不能把旧问题重新置顶导致滚动跳动。
+      setTopPinnedUserId(null);
       cancelAcceleratedScroll();
       return;
     }
@@ -363,11 +378,10 @@ export const AiChatWorkspace = ({
     const userMessage = latestUserMessageRef.current;
 
     if (container && userMessage) {
-      const H = container.clientHeight;
-      const targetScrollTop = userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET;
-      const requiredSpacer = Math.max(
-        0,
-        targetScrollTop + H - container.scrollHeight + bottomSpacerHeight,
+      const requiredSpacer = calculateBottomSpacerHeight(
+        container,
+        userMessage,
+        bottomSpacerHeight,
       );
 
       if (Math.abs(bottomSpacerHeight - requiredSpacer) > 1) {
@@ -382,14 +396,8 @@ export const AiChatWorkspace = ({
       const container = messagesContainerRef.current;
       const userMessage = latestUserMessageRef.current;
       if (container && userMessage && topPinnedUserId) {
-        const H = container.clientHeight;
-        const targetScrollTop = userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET;
         setBottomSpacerHeight((prev) => {
-          const requiredSpacer = Math.max(
-            0,
-            targetScrollTop + H - container.scrollHeight + prev,
-          );
-          return requiredSpacer;
+          return calculateBottomSpacerHeight(container, userMessage, prev);
         });
       }
     };
@@ -399,6 +407,34 @@ export const AiChatWorkspace = ({
       window.removeEventListener("resize", handleResize);
     };
   }, [topPinnedUserId]);
+
+  // AI 回复流式渲染时，内容高度变化需要同步压缩底部 spacer，避免留下可继续滚动的空白。
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    const userMessage = latestUserMessageRef.current;
+    if (!topPinnedUserId || !container || !userMessage || !window.ResizeObserver) {
+      return undefined;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      setBottomSpacerHeight((prev) => {
+        return calculateBottomSpacerHeight(container, userMessage, prev);
+      });
+    });
+
+    for (const child of Array.from(container.children)) {
+      if (
+        child instanceof HTMLElement &&
+        child.dataset.aiChatBottomSpacer !== "true"
+      ) {
+        resizeObserver.observe(child);
+      }
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [topPinnedUserId, session.messages.length]);
 
   // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
@@ -571,7 +607,11 @@ export const AiChatWorkspace = ({
           })
         )}
         {bottomSpacerHeight > 0 && (
-          <div style={{ height: `${bottomSpacerHeight}px` }} className="flex-shrink-0" />
+          <div
+            data-ai-chat-bottom-spacer="true"
+            style={{ height: `${bottomSpacerHeight}px` }}
+            className="flex-shrink-0"
+          />
         )}
         <div ref={messagesEndRef} />
       </div>

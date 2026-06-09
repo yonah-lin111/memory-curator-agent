@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiChatWorkspace } from '@/features/ai-chat/components/AiChatWorkspace'
 import { useAiChatContextStore } from '@/features/ai-chat/aiChatContextStore'
@@ -382,5 +382,97 @@ describe('AiChatWorkspace', () => {
     )
 
     expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('AI 回复内容未超出视口时动态收缩底部间距，避免继续滚到底部', async () => {
+    const resizeObserverCallbacks: ResizeObserverCallback[] = []
+    const originalResizeObserver = globalThis.ResizeObserver
+
+    globalThis.ResizeObserver = class ResizeObserverMock implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeObserverCallbacks.push(callback)
+      }
+
+      observe = vi.fn()
+      unobserve = vi.fn()
+      disconnect = vi.fn()
+    }
+
+    let contentHeight = 240
+    const offsetTopSpy = vi
+      .spyOn(HTMLElement.prototype, 'offsetTop', 'get')
+      .mockImplementation(function getOffsetTop(this: HTMLElement) {
+        return this.textContent?.includes('切换后滚动') ? 120 : 0
+      })
+    const { rerender } = render(
+      <AiChatWorkspace
+        session={session}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+    const messagesContainer = screen.getByLabelText('AI Chat Workspace').querySelector('.custom-scrollbar')!
+    Object.defineProperty(messagesContainer, 'clientHeight', {
+      configurable: true,
+      value: 600
+    })
+    Object.defineProperty(messagesContainer, 'scrollHeight', {
+      configurable: true,
+      get: () => {
+        const spacer = Array.from(messagesContainer.children).find((child) =>
+          child instanceof HTMLElement && child.style.height.endsWith('px')
+        )
+        const spacerHeight =
+          spacer instanceof HTMLElement ? Number.parseFloat(spacer.style.height) || 0 : 0
+
+        return contentHeight + spacerHeight
+      }
+    })
+
+    rerender(
+      <AiChatWorkspace
+        session={secondSession}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onSendMessage={() => undefined}
+        onSubmitAskAnswer={() => undefined}
+        onRegenerateLatestAnswer={() => undefined}
+        onDeleteChatTurn={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+
+    const getSpacerHeight = () => {
+      const spacer = Array.from(messagesContainer.children).find((child) =>
+        child instanceof HTMLElement && child.style.height.endsWith('px')
+      )
+
+      return spacer instanceof HTMLElement ? Number.parseFloat(spacer.style.height) : 0
+    }
+
+    await waitFor(() => {
+      expect(getSpacerHeight()).toBe(476)
+    })
+
+    contentHeight = 500
+    await act(async () => {
+      for (const callback of resizeObserverCallbacks) {
+        callback([], {} as ResizeObserver)
+      }
+    })
+
+    await waitFor(() => {
+      expect(getSpacerHeight()).toBe(216)
+    })
+
+    globalThis.ResizeObserver = originalResizeObserver
+    offsetTopSpy.mockRestore()
   })
 })
