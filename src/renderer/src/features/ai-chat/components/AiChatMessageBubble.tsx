@@ -251,8 +251,89 @@ const AiMarkdownPreview = ({
   className = "",
   isGenerating = false,
 }: AiMarkdownPreviewProps): React.JSX.Element => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const checkAndClassifyImages = () => {
+      const images = container.querySelectorAll("img");
+      images.forEach((img) => {
+        // 如果已经处理过（已经有 class img-loaded 并且没有 img-loading），则跳过
+        if (img.classList.contains("img-loaded") && !img.classList.contains("img-loading")) {
+          return;
+        }
+
+        // 初始设为加载状态
+        img.classList.add("img-loading");
+
+        const markAsLoaded = () => {
+          img.classList.remove("img-loading");
+          img.classList.add("img-loaded");
+        };
+
+        let imgLoaded = img.complete;
+        let timerDone = false;
+
+        const attemptReveal = () => {
+          if (imgLoaded && timerDone) {
+            markAsLoaded();
+          }
+        };
+
+        // 骨架屏强制显示 0.5s (500ms)
+        setTimeout(() => {
+          timerDone = true;
+          attemptReveal();
+        }, 500);
+
+        if (!imgLoaded) {
+          const handleImgLoad = () => {
+            imgLoaded = true;
+            attemptReveal();
+            img.removeEventListener("load", handleImgLoad);
+          };
+          img.addEventListener("load", handleImgLoad);
+        } else {
+          attemptReveal();
+        }
+      });
+    };
+
+    // 初始检查图片状态
+    checkAndClassifyImages();
+
+    // 在 md-editor-rt 预览区域中动态添加的图片通过事件捕获机制来处理
+    const handleLoad = (e: Event) => {
+      if (e.target instanceof HTMLImageElement) {
+        const img = e.target;
+        if (img.classList.contains("img-loaded") && !img.classList.contains("img-loading")) {
+          return;
+        }
+
+        img.classList.add("img-loading");
+
+        const markAsLoaded = () => {
+          img.classList.remove("img-loading");
+          img.classList.add("img-loaded");
+        };
+
+        setTimeout(() => {
+          markAsLoaded();
+        }, 500);
+      }
+    };
+
+    container.addEventListener("load", handleLoad, true);
+    return () => {
+      container.removeEventListener("load", handleLoad, true);
+    };
+  }, [content]);
+
   return (
     <div
+      ref={containerRef}
       className={`markdown-preview-container ai-chat-markdown-preview select-text max-w-full ${className}`}
     >
       <MdPreview
