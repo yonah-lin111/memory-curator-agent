@@ -100,10 +100,10 @@ export const AiChatWorkspace = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   // 消息底部哨兵节点引用。
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // 最新 AI 消息外层节点引用。
-  const latestAssistantMessageRef = useRef<HTMLDivElement>(null);
-  // 需要置顶显示的最新 AI 消息标识。
-  const [topPinnedAssistantId, setTopPinnedAssistantId] = useState<
+  // 最新用户消息外层节点引用。
+  const latestUserMessageRef = useRef<HTMLDivElement>(null);
+  // 需要置顶显示的最新用户消息标识。
+  const [topPinnedUserId, setTopPinnedUserId] = useState<
     string | null
   >(null);
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
@@ -138,6 +138,16 @@ export const AiChatWorkspace = ({
 
     return null;
   }, [session.messages]);
+  const latestUserMessageId = useMemo(() => {
+    for (let index = session.messages.length - 1; index >= 0; index -= 1) {
+      const message = session.messages[index];
+      if (message.role === "user") {
+        return message.id;
+      }
+    }
+
+    return null;
+  }, [session.messages]);
 
   // 记录上一次的 session.id 与消息长度。
   const prevSessionIdRef = useRef(session.id);
@@ -148,10 +158,10 @@ export const AiChatWorkspace = ({
   const acceleratedScrollFrameRef = useRef<number | null>(null);
 
   /**
-   * 获取当前消息列表中最后一条 AI 消息标识。
+   * 获取当前消息列表中最后一条用户消息标识。
    */
-  const getLatestAssistantMessageId = (): string | null => {
-    return latestAssistantMessageId;
+  const getLatestUserMessageId = (): string | null => {
+    return latestUserMessageId;
   };
 
   /**
@@ -245,31 +255,31 @@ export const AiChatWorkspace = ({
   };
 
   /**
-   * 将最新 AI 回答滚动到消息视口顶部。
+   * 将最新用户问题滚动到消息视口顶部。
    */
-  const scrollLatestAssistantToTop = (behavior: ScrollBehavior): void => {
+  const scrollLatestUserToTop = (behavior: ScrollBehavior): void => {
     const container = messagesContainerRef.current;
-    const assistantMessage = latestAssistantMessageRef.current;
-    if (!container || !assistantMessage) {
+    const userMessage = latestUserMessageRef.current;
+    if (!container || !userMessage) {
       return;
     }
 
     const targetTop = Math.max(
-      assistantMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
+      userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
       0,
     );
     scrollMessagesToPosition(targetTop, behavior);
   };
 
-  // 当切换会话（session.id 变化）时，复用发送消息后的最新 AI 回答定位效果。
+  // 当切换会话（session.id 变化）时，复用发送消息后的最新用户问题定位效果。
   useEffect(() => {
-    const latestAssistantMessageId = getLatestAssistantMessageId();
-    if (latestAssistantMessageId) {
-      setTopPinnedAssistantId(latestAssistantMessageId);
+    const latestUserMessageId = getLatestUserMessageId();
+    if (latestUserMessageId) {
+      setTopPinnedUserId(latestUserMessageId);
       return undefined;
     }
 
-    setTopPinnedAssistantId(null);
+    setTopPinnedUserId(null);
     const animationFrame = requestAnimationFrame(() => {
       scrollMessagesToBottom("smooth");
     });
@@ -280,7 +290,7 @@ export const AiChatWorkspace = ({
     };
   }, [session.id]);
 
-  // 当用户在当前会话发送新消息时，优先将最新 AI 回答置顶显示。
+  // 当用户在当前会话发送新消息时，优先将最新用户问题置顶显示。
   useEffect(() => {
     const prevSessionId = prevSessionIdRef.current;
     const prevLength = prevMessagesLengthRef.current;
@@ -299,18 +309,24 @@ export const AiChatWorkspace = ({
     }
 
     if (currentLength < prevLength) {
-      setTopPinnedAssistantId(null);
+      // 撤销 /undo 操作会使消息数量减少，我们需要在此逻辑中重新定位并高亮显示新的最新用户问题（将其滚到视口顶部）
+      const latestUserMsgId = getLatestUserMessageId();
+      if (latestUserMsgId) {
+        setTopPinnedUserId(latestUserMsgId);
+      } else {
+        setTopPinnedUserId(null);
+      }
       cancelAcceleratedScroll();
       return;
     }
 
     // 发送和重新生成都会产生新的 AI 消息 ID；删除 QA 导致数量减少时不触发滚动。
     if (
-      latestAssistantMessageId &&
+      latestUserMessageId &&
       latestAssistantMessageId !== prevLatestAssistantMessageId &&
       currentLength >= prevLength
     ) {
-      setTopPinnedAssistantId(latestAssistantMessageId);
+      setTopPinnedUserId(latestUserMessageId);
       return;
     }
 
@@ -321,9 +337,9 @@ export const AiChatWorkspace = ({
         (msg) => msg.role === "user",
       );
       if (hasNewUserMessage) {
-        const latestAssistantMessageId = getLatestAssistantMessageId();
-        if (latestAssistantMessageId) {
-          setTopPinnedAssistantId(latestAssistantMessageId);
+        const latestUserMessageId = getLatestUserMessageId();
+        if (latestUserMessageId) {
+          setTopPinnedUserId(latestUserMessageId);
           return;
         }
 
@@ -332,7 +348,7 @@ export const AiChatWorkspace = ({
     }
   }, [session.messages, session.id]);
 
-  // 补足最新 AI 回答底部空间后，再将其滚到视口顶部。
+  // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
     const isDeletingMessages =
       session.id === prevSessionIdRef.current &&
@@ -343,19 +359,19 @@ export const AiChatWorkspace = ({
       return;
     }
 
-    if (!topPinnedAssistantId) {
+    if (!topPinnedUserId) {
       return;
     }
 
     const animationFrame = requestAnimationFrame(() => {
-      scrollLatestAssistantToTop("smooth");
+      scrollLatestUserToTop("smooth");
     });
 
     return () => {
       cancelAnimationFrame(animationFrame);
       cancelAcceleratedScroll();
     };
-  }, [topPinnedAssistantId, session.messages.length]);
+  }, [topPinnedUserId, session.messages.length]);
 
   // 将当前消息列表同步为全局上下文中的 message 来源。
   useEffect(() => {
@@ -481,13 +497,17 @@ export const AiChatWorkspace = ({
               message.id === latestAssistantMessageId &&
               previousMessage?.role === "user" &&
               session.status !== "running";
-            const shouldPinToTop = message.id === topPinnedAssistantId;
+            const isAssistantMessage = message.role === "assistant";
+            const isLatestAssistant = message.id === latestAssistantMessageId;
+            const shouldAddBottomSpacer = isAssistantMessage && isLatestAssistant;
+            const shouldPinToTop = message.id === topPinnedUserId;
+
             return (
               <div
                 key={message.id}
-                ref={shouldPinToTop ? latestAssistantMessageRef : null}
+                ref={shouldPinToTop ? latestUserMessageRef : null}
                 className={
-                  shouldPinToTop
+                  shouldAddBottomSpacer
                     ? "min-h-[calc(100%_-_1rem)] flex flex-col justify-start"
                     : undefined
                 }
