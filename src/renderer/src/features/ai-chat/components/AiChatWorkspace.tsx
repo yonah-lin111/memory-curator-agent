@@ -106,6 +106,8 @@ export const AiChatWorkspace = ({
   const [topPinnedUserId, setTopPinnedUserId] = useState<
     string | null
   >(null);
+  // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
+  const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
     useState<AiChatMessageContextMenuRequest | null>(null);
@@ -348,6 +350,56 @@ export const AiChatWorkspace = ({
     }
   }, [session.messages, session.id]);
 
+  // 动态计算并更新底部间距高度。
+  useLayoutEffect(() => {
+    if (!topPinnedUserId) {
+      if (bottomSpacerHeight !== 0) {
+        setBottomSpacerHeight(0);
+      }
+      return;
+    }
+
+    const container = messagesContainerRef.current;
+    const userMessage = latestUserMessageRef.current;
+
+    if (container && userMessage) {
+      const H = container.clientHeight;
+      const targetScrollTop = userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET;
+      const requiredSpacer = Math.max(
+        0,
+        targetScrollTop + H - container.scrollHeight + bottomSpacerHeight,
+      );
+
+      if (Math.abs(bottomSpacerHeight - requiredSpacer) > 1) {
+        setBottomSpacerHeight(requiredSpacer);
+      }
+    }
+  }, [topPinnedUserId, session.messages, bottomSpacerHeight]);
+
+  // 监听窗口尺寸变化，动态更新底部间距高度。
+  useEffect(() => {
+    const handleResize = () => {
+      const container = messagesContainerRef.current;
+      const userMessage = latestUserMessageRef.current;
+      if (container && userMessage && topPinnedUserId) {
+        const H = container.clientHeight;
+        const targetScrollTop = userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET;
+        setBottomSpacerHeight((prev) => {
+          const requiredSpacer = Math.max(
+            0,
+            targetScrollTop + H - container.scrollHeight + prev,
+          );
+          return requiredSpacer;
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [topPinnedUserId]);
+
   // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
     const isDeletingMessages =
@@ -497,20 +549,12 @@ export const AiChatWorkspace = ({
               message.id === latestAssistantMessageId &&
               previousMessage?.role === "user" &&
               session.status !== "running";
-            const isAssistantMessage = message.role === "assistant";
-            const isLatestAssistant = message.id === latestAssistantMessageId;
-            const shouldAddBottomSpacer = isAssistantMessage && isLatestAssistant;
             const shouldPinToTop = message.id === topPinnedUserId;
 
             return (
               <div
                 key={message.id}
                 ref={shouldPinToTop ? latestUserMessageRef : null}
-                className={
-                  shouldAddBottomSpacer
-                    ? "min-h-[calc(100%_-_1rem)] flex flex-col justify-start"
-                    : undefined
-                }
               >
                 <AiChatMessageBubble
                   message={message}
@@ -525,6 +569,9 @@ export const AiChatWorkspace = ({
               </div>
             );
           })
+        )}
+        {bottomSpacerHeight > 0 && (
+          <div style={{ height: `${bottomSpacerHeight}px` }} className="flex-shrink-0" />
         )}
         <div ref={messagesEndRef} />
       </div>

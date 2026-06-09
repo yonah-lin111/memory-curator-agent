@@ -1,5 +1,6 @@
-import type React from "react";
-import { Bot } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Bot, ChevronDown } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import type {
   AiChatMessage,
   AiChatMessagePart,
@@ -356,6 +357,54 @@ export const AiChatMessageBubble = ({
   onOpenContextMenu,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const textRef = useRef<HTMLDivElement>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isUser && textRef.current) {
+      const checkOverflow = () => {
+        const element = textRef.current;
+        if (!element) return;
+        const overflowing = element.scrollHeight > 93;
+        setHasOverflow(overflowing);
+      };
+
+      checkOverflow();
+      const rafId = requestAnimationFrame(checkOverflow);
+      window.addEventListener("resize", checkOverflow);
+      return () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener("resize", checkOverflow);
+      };
+    }
+    return undefined;
+  }, [message.content, isUser]);
+
+  const getRemainingCharCount = (): number => {
+    if (!textRef.current) return 0;
+    const { scrollHeight } = textRef.current;
+    if (scrollHeight <= 93) return 0;
+    const ratio = (scrollHeight - 93) / scrollHeight;
+    const estimatedRemaining = Math.round(message.content.length * ratio);
+    return Math.max(1, Math.min(estimatedRemaining, message.content.length - 1));
+  };
+
+  const handleToggleCollapse = (): void => {
+    const nextCollapsed = !isCollapsed;
+    setIsCollapsed(nextCollapsed);
+
+    if (nextCollapsed) {
+      setTimeout(() => {
+        bubbleRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 60);
+    }
+  };
+
   const isProcessing =
     !isUser &&
     (message.content.startsWith("Processing:") ||
@@ -402,7 +451,8 @@ export const AiChatMessageBubble = ({
 
   return (
     <div
-      className={`flex gap-3 w-full max-w-[85%] ${
+      ref={bubbleRef}
+      className={`flex gap-3 w-full max-w-[85%] scroll-mt-4 ${
         isUser ? "ml-auto flex-row-reverse" : "mr-auto"
       }`}
       onContextMenu={handleOpenContextMenu}
@@ -426,7 +476,36 @@ export const AiChatMessageBubble = ({
           }`}
         >
           {isUser ? (
-            message.content
+            <div className="relative flex flex-col items-end w-full group/msg-bubble">
+              <div
+                ref={textRef}
+                style={{
+                  maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
+                  transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                }}
+                className="overflow-hidden w-full select-text"
+              >
+                {message.content}
+              </div>
+              {hasOverflow && (
+                <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
+                  <span className="text-xs scale-90 origin-right opacity-60">
+                    {isCollapsed ? `展开 (余 ${getRemainingCharCount()} 字)` : "收起"}
+                  </span>
+                  <IconButton
+                    size="small"
+                    onClick={handleToggleCollapse}
+                    className="hover:bg-white/10 active:scale-95 transition-all"
+                  >
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-300 ease-out ${
+                        isCollapsed ? "" : "rotate-180"
+                      }`}
+                    />
+                  </IconButton>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">
               {(() => {
