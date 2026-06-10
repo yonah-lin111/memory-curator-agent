@@ -186,6 +186,33 @@ export const AiChatWorkspace = ({
   // 标记是否锁住底部动态边距（Spacer）不进行重新计算（如在展开折叠思考内容、编辑用户消息等高度变动期间）。
   const isSpacerLockedRef = useRef(false);
 
+  // 追踪会话切换 loading。
+  const [isSwitching, setIsSwitching] = useState<boolean>(false);
+  const isSwitchingRef = useRef<boolean>(false);
+  const loadingStartTimeRef = useRef<number>(0);
+  const switchSessionCounterRef = useRef<number>(0);
+
+  /**
+   * 结束会话切换 Loading。
+   * 确保 Loading 最少显示 0.8s，并且防止快速连续切换时旧定时器对最新会话加载状态的干扰。
+   */
+  const finishSessionSwitchScroll = (): void => {
+    if (!isSwitchingRef.current) {
+      return;
+    }
+    const currentCounter = switchSessionCounterRef.current;
+    const elapsed = Date.now() - loadingStartTimeRef.current;
+    const minLoadingTime = 800; // 0.8s
+    const remainingTime = Math.max(0, minLoadingTime - elapsed);
+
+    setTimeout(() => {
+      if (switchSessionCounterRef.current === currentCounter) {
+        setIsSwitching(false);
+        isSwitchingRef.current = false;
+      }
+    }, remainingTime);
+  };
+
   // 思考内容展开折叠时屏蔽底部边距重算的回调。
   const handleThinkingBlockToggle = (): void => {
     isSpacerLockedRef.current = true;
@@ -248,9 +275,11 @@ export const AiChatWorkspace = ({
   const scrollMessagesToPosition = (
     targetTop: number,
     behavior: ScrollBehavior,
+    onComplete?: () => void,
   ): void => {
     const container = messagesContainerRef.current;
     if (!container) {
+      onComplete?.();
       return;
     }
 
@@ -258,11 +287,20 @@ export const AiChatWorkspace = ({
 
     if (behavior !== "smooth") {
       setMessagesScrollTop(container, targetTop);
+      onComplete?.();
       return;
     }
 
     const startTop = container.scrollTop;
     const distance = targetTop - startTop;
+
+    // 若目标距离接近当前滚动位置，则直接完成。
+    if (Math.abs(distance) < 1) {
+      setMessagesScrollTop(container, targetTop);
+      onComplete?.();
+      return;
+    }
+
     let startedAt: number | null = null;
 
     /**
@@ -285,6 +323,7 @@ export const AiChatWorkspace = ({
       }
 
       acceleratedScrollFrameRef.current = null;
+      onComplete?.();
     };
 
     acceleratedScrollFrameRef.current = requestAnimationFrame(animate);
@@ -293,23 +332,25 @@ export const AiChatWorkspace = ({
   /**
    * 将消息容器滚动到底部。
    */
-  const scrollMessagesToBottom = (behavior: ScrollBehavior): void => {
+  const scrollMessagesToBottom = (behavior: ScrollBehavior, onComplete?: () => void): void => {
     const container = messagesContainerRef.current;
     if (!container) {
+      onComplete?.();
       return;
     }
 
-    scrollMessagesToPosition(container.scrollHeight, behavior);
+    scrollMessagesToPosition(container.scrollHeight, behavior, onComplete);
   };
 
   /**
    * 将最新用户问题滚动到消息视口顶部。
    */
-  const scrollLatestUserToTop = (behavior: ScrollBehavior): void => {
+  const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void): void => {
     const container = messagesContainerRef.current;
     const userMessage = latestUserMessageRef.current;
     if (!container || !userMessage) {
       console.log("DEBUG scrollLatestUserToTop: NO CONTAINER OR USER_MESSAGE");
+      onComplete?.();
       return;
     }
 
@@ -322,7 +363,7 @@ export const AiChatWorkspace = ({
       userMessageText: userMessage.textContent,
       targetTop
     });
-    scrollMessagesToPosition(targetTop, behavior);
+    scrollMessagesToPosition(targetTop, behavior, onComplete);
   };
 
   // 当切换会话（session.id 变化）时，仅更新状态，滚动逻辑交由 session.id useLayoutEffect 统一处理。
@@ -469,6 +510,12 @@ export const AiChatWorkspace = ({
 
   // 会话切换时统一执行滚动逻辑（useLayoutEffect 确保在浏览器绘制前完成）。
   useLayoutEffect(() => {
+    // 激活 loading 并重置/递增计数器以抵御竞态条件。
+    setIsSwitching(true);
+    isSwitchingRef.current = true;
+    loadingStartTimeRef.current = Date.now();
+    switchSessionCounterRef.current += 1;
+
     const container = messagesContainerRef.current;
     if (!container) {
       return;
@@ -481,7 +528,9 @@ export const AiChatWorkspace = ({
     const latestUserMessageId = getLatestUserMessageId();
     if (!latestUserMessageId) {
       const animationFrame = requestAnimationFrame(() => {
-        scrollMessagesToBottom("smooth");
+        scrollMessagesToBottom("smooth", () => {
+          finishSessionSwitchScroll();
+        });
       });
 
       return () => {
@@ -519,7 +568,9 @@ export const AiChatWorkspace = ({
     cancelAcceleratedScroll();
 
     const animationFrame = requestAnimationFrame(() => {
-      scrollLatestUserToTop("smooth");
+      scrollLatestUserToTop("smooth", () => {
+        finishSessionSwitchScroll();
+      });
     });
 
     prevScrolledPinnedUserIdRef.current = topPinnedUserId;
@@ -626,8 +677,34 @@ export const AiChatWorkspace = ({
   return (
     <section
       aria-label="AI Chat Workspace"
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
+      className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
+      {/* 统一会话切换优雅 Loading */}
+      <div
+        className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#212121] select-none rounded-[6px] transition-all duration-300 ease-in-out ${
+          isSwitching
+            ? "opacity-100 pointer-events-auto scale-100"
+            : "opacity-0 pointer-events-none scale-[0.98]"
+        }`}
+      >
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes ai-workspace-loading {
+            0%, 100% { transform: translateY(0); opacity: 0.35; }
+            50% { transform: translateY(-4px); opacity: 0.95; }
+          }
+        `}} />
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-1.5 h-6">
+            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '0ms' }} />
+            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '200ms' }} />
+            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '400ms' }} />
+          </div>
+          <div className="text-xs text-white/40 font-medium tracking-wide">
+            整理会话数据...
+          </div>
+        </div>
+      </div>
+
       {/* 消息列表 */}
       <div
         ref={messagesContainerRef}
