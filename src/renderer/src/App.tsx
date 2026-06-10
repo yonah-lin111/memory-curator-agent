@@ -17,6 +17,7 @@ import {
 import { Header } from "@/components/layout/Header";
 import { TodayPage } from "@/pages/today/TodayPage";
 import { ToastProvider } from "@/components/ui/Toast";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
 import { AiChatContextBar } from "@/features/ai-chat/components/AiChatContextBar";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
@@ -116,6 +117,9 @@ const AppContent = (): React.JSX.Element => {
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
 
+  // 主内容页面切换时的 Loading 状态。
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
+
   const {
     isChatOpen,
     chatSessions,
@@ -177,8 +181,15 @@ const AppContent = (): React.JSX.Element => {
         completionNoticeSessionIds={completionNoticeSessionIds}
         onCollapsedChange={setIsSidebarCollapsed}
         onPageChange={(pageId) => {
+          if (pageId === activePage) {
+            return;
+          }
           window.history.pushState({}, "", `/${pageId}`);
+          setIsPageLoading(true);
           setActivePage(pageId);
+          setTimeout(() => {
+            setIsPageLoading(false);
+          }, 500);
         }}
         onChatSessionChange={setActiveChatId}
         onCompletionNoticeClear={clearCompletionNoticeSession}
@@ -220,7 +231,10 @@ const AppContent = (): React.JSX.Element => {
             }`}
             aria-hidden={isChatOpen}
           >
-            <div className="w-full h-full">{renderPageById(activePage)}</div>
+            <div className="w-full h-full relative">
+              {renderPageById(activePage)}
+              <LoadingOverlay isLoading={isPageLoading} text="正在载入..." />
+            </div>
           </div>
 
           <div

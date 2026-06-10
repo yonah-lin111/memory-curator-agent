@@ -25,6 +25,7 @@ import {
   type AiChatContextItem,
 } from "@/features/ai-chat/aiChatContextBuilder";
 import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
@@ -680,30 +681,7 @@ export const AiChatWorkspace = ({
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
       {/* 统一会话切换优雅 Loading */}
-      <div
-        className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#212121] select-none rounded-[6px] transition-all duration-300 ease-in-out ${
-          isSwitching
-            ? "opacity-100 pointer-events-auto scale-100"
-            : "opacity-0 pointer-events-none scale-[0.98]"
-        }`}
-      >
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes ai-workspace-loading {
-            0%, 100% { transform: translateY(0); opacity: 0.35; }
-            50% { transform: translateY(-4px); opacity: 0.95; }
-          }
-        `}} />
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center gap-1.5 h-6">
-            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '0ms' }} />
-            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '200ms' }} />
-            <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'ai-workspace-loading 1.2s ease-in-out infinite', animationDelay: '400ms' }} />
-          </div>
-          <div className="text-xs text-white/40 font-medium tracking-wide">
-            整理会话数据...
-          </div>
-        </div>
-      </div>
+      <LoadingOverlay isLoading={isSwitching} text="整理会话数据..." />
 
       {/* 消息列表 */}
       <div
