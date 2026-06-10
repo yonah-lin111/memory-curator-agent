@@ -88,6 +88,14 @@ class MemorySnippetsDatabase implements DatabaseConnection {
       }
     }
 
+    if (sql.startsWith('SELECT id FROM snippets')) {
+      return {
+        all: () => this.snippetRows.map((r) => ({ id: r.id })),
+        get: () => undefined,
+        run: () => undefined
+      }
+    }
+
     throw new Error(`Unhandled SQL: ${sql}`)
   }
 }
@@ -150,5 +158,17 @@ describe('snippetsService', () => {
         tags: []
       })
     ).toThrow('片段标题或内容至少保留一项')
+  })
+
+  it('支持只读 SQL 查询', () => {
+    const service = createSnippetsService(sqlite)
+    service.create({
+      entryDate: '2026-05-27',
+      title: '片段一',
+      content: '正文一',
+      tags: ['A']
+    })
+    const result = service.querySql('SELECT id FROM snippets')
+    expect(result).toEqual([{ id: 1 }])
   })
 })

@@ -31,6 +31,8 @@ export type SnippetsService = {
   update: (id: number, input: SnippetUpdateInput) => SnippetItem
   // 删除片段。
   delete: (id: number) => void
+  // 执行只读片段 SQL 查询并返回原始行。
+  querySql: (sql: string) => unknown[]
 }
 
 /**
@@ -195,5 +197,8 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
   },
   delete: (id) => {
     database.prepare('DELETE FROM snippets WHERE id = ?').run(id)
+  },
+  querySql: (sql) => {
+    return database.prepare(sql).all()
   }
 })
