@@ -65,20 +65,38 @@ export const AiChatThinkingBlock = ({
       >
         <div
           ref={innerRef}
-          className="ai-chat-thinking-block markdown-preview-container select-text max-w-full border-l border-white/10 pl-3 text-white/50"
+          className="flex items-start gap-1 text-white/50 select-text max-w-full ai-chat-thinking-block markdown-preview-container pl-[34px]"
           data-testid="ai-chat-thinking-block"
           style={{ fontSize: "13px" }}
         >
-          <MdPreview
-            theme="dark"
-            modelValue={content}
-            previewTheme="default"
-            codeTheme="atom"
-            style={{ backgroundColor: "transparent" }}
-            // 思考流式输出时不折叠代码块，避免用户看到突然跳变的代码区域。
-            autoFoldThreshold={isGenerating ? Infinity : 0}
-            showCodeRowNumber={false}
-          />
+          {/* 直角 SVG 图标，视觉效果与工具调用一致 */}
+          <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none text-white/45">
+            <svg
+              className="w-3 h-3 stroke-current"
+              viewBox="0 0 12 12"
+              fill="none"
+            >
+              <path
+                d="M3 1v5h7"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+
+          <div className="flex-1 min-w-0">
+            <MdPreview
+              theme="dark"
+              modelValue={content}
+              previewTheme="default"
+              codeTheme="atom"
+              style={{ backgroundColor: "transparent" }}
+              // 思考流式输出时不折叠代码块，避免用户看到突然跳变的代码区域。
+              autoFoldThreshold={isGenerating ? Infinity : 0}
+              showCodeRowNumber={false}
+            />
+          </div>
         </div>
       </div>
     </div>
