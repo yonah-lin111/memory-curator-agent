@@ -96,6 +96,49 @@ class MemoryTodosDatabase implements DatabaseConnection {
     }
 
     if (
+      sql.startsWith('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, updated_at = ? WHERE id = ?')
+    ) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          const id = values[5] as number
+          const row = this.todoRows.find((row) => row.id === id)
+          if (row) {
+            row.text = values[0] as string
+            row.priority = values[1] as TodoRow['priority']
+            row.completed = values[2] as number
+            row.entry_date = values[3] as string
+            row.updated_at = values[4] as string
+          }
+          return { changes: 1 }
+        }
+      }
+    }
+
+    if (
+      sql.startsWith('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, sort_order = ?, updated_at = ? WHERE id = ?')
+    ) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          const id = values[6] as number
+          const row = this.todoRows.find((row) => row.id === id)
+          if (row) {
+            row.text = values[0] as string
+            row.priority = values[1] as TodoRow['priority']
+            row.completed = values[2] as number
+            row.entry_date = values[3] as string
+            row.sort_order = values[4] as number
+            row.updated_at = values[5] as string
+          }
+          return { changes: 1 }
+        }
+      }
+    }
+
+    if (
       sql.startsWith('UPDATE todos SET sort_order = ?, updated_at = ? WHERE id = ? AND entry_date = ?')
     ) {
       return {

@@ -190,15 +190,22 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
     }
 
     const updatedAt = createTimestamp()
+    const entryDate = input.entryDate?.trim() || existing.entry_date
+    const sortOrder = typeof input.sortOrder === 'number' ? input.sortOrder : existing.sort_order
+    if (input.entryDate) {
+      validateEntryDate(input.entryDate)
+    }
     database
-      .prepare('UPDATE todos SET text = ?, priority = ?, completed = ?, updated_at = ? WHERE id = ?')
-      .run(input.text.trim(), input.priority, input.completed ? 1 : 0, updatedAt, id)
+      .prepare('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, sort_order = ?, updated_at = ? WHERE id = ?')
+      .run(input.text.trim(), input.priority, input.completed ? 1 : 0, entryDate, sortOrder, updatedAt, id)
 
     return mapTodoRow({
       ...existing,
       text: input.text.trim(),
       priority: input.priority,
       completed: input.completed ? 1 : 0,
+      entry_date: entryDate,
+      sort_order: sortOrder,
       updated_at: updatedAt
     })
   },

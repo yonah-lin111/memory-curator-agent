@@ -134,6 +134,49 @@ class MemoryDailyDatabase implements DatabaseConnection {
       }
     }
 
+    if (sql.startsWith('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, updated_at = ? WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows = this.todoRows.map((row) =>
+            row.id === values[5]
+              ? {
+                  ...row,
+                  text: values[0] as string,
+                  priority: values[1] as TodoRow['priority'],
+                  completed: values[2] as number,
+                  entry_date: values[3] as string,
+                  updated_at: values[4] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
+    if (sql.startsWith('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, sort_order = ?, updated_at = ? WHERE id = ?')) {
+      return {
+        all: () => [],
+        get: () => undefined,
+        run: (...values) => {
+          this.todoRows = this.todoRows.map((row) =>
+            row.id === values[6]
+              ? {
+                  ...row,
+                  text: values[0] as string,
+                  priority: values[1] as TodoRow['priority'],
+                  completed: values[2] as number,
+                  entry_date: values[3] as string,
+                  sort_order: values[4] as number,
+                  updated_at: values[5] as string
+                }
+              : row
+          )
+        }
+      }
+    }
+
     if (sql.startsWith('DELETE FROM todos WHERE id = ?')) {
       return {
         all: () => [],

@@ -44,6 +44,10 @@ export type TodoUpdateInput = {
   priority: TodoPriority
   // 是否完成。
   completed: boolean
+  // 待办所属日期。可选，不传则保持原日期。
+  entryDate?: string
+  // 排序序号。可选，不传则保持原序号。
+  sortOrder?: number
 }
 
 // 待办排序输入类型。

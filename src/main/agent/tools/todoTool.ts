@@ -303,6 +303,8 @@ const parseUpdateInput = (
   const text = parseString(input.text)?.trim()
   const priority = parseString(input.priority)
   const completed = typeof input.completed === 'boolean' ? input.completed : false
+  const entryDate = parseString(input.entryDate)?.trim()
+  const sortOrder = typeof input.sortOrder === 'number' ? input.sortOrder : undefined
 
   if (!text) {
     throw new Error('Todo update requires text')
@@ -312,7 +314,16 @@ const parseUpdateInput = (
     throw new Error('Todo update requires priority')
   }
 
-  return { id: input.id, profile: { text, priority: priority as TodoPriority, completed } }
+  return {
+    id: input.id,
+    profile: {
+      text,
+      priority: priority as TodoPriority,
+      completed,
+      ...(entryDate ? { entryDate } : {}),
+      ...(sortOrder !== undefined ? { sortOrder } : {})
+    }
+  }
 }
 
 /**
@@ -708,6 +719,14 @@ export const createTodoUpdateTool = (
       completed: {
         type: 'boolean',
         description: 'Whether the todo is completed'
+      },
+      entryDate: {
+        type: 'string',
+        description: 'Target date in YYYY-MM-DD format. Only set when the user explicitly asks to change the date.'
+      },
+      sortOrder: {
+        type: 'number',
+        description: 'Sort order number. Only set when the user explicitly asks to reorder.'
       }
     }
   },
@@ -787,6 +806,378 @@ export const createTodoDeleteTool = (
   }
 })
 
+// Todo 批量创建确认配置。
+const TODO_BATCH_ADD_CONFIRMATION: ToolConfirmationConfig = {
+  header: '批量确认创建',
+  question: '确认批量创建待办',
+  confirm: '确认创建',
+  cancel: '取消创建',
+  renderTarget: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const items = Array.isArray(input.items) ? input.items : []
+    return `${items.length} 项待办`
+  },
+  renderSummary: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const aiSummary = getTodoInputString(input, 'confirmationSummary')
+    if (aiSummary) return aiSummary
+    const items = Array.isArray(input.items) ? input.items : []
+    if (items.length === 0) return null
+    const previews = (items as unknown[]).slice(0, 3).map((item) => {
+      if (!isRecord(item)) return null
+      const text = getTodoInputString(item, 'text')
+      const priority = getTodoInputString(item, 'priority')
+      return text ? `${text}（P${priority ?? '?'}）` : null
+    }).filter((p): p is string => Boolean(p))
+    const suffix = items.length > 3 ? ` 等 ${items.length} 项` : ''
+    return `将批量创建待办：${previews.join('、')}${suffix}。`
+  },
+  completion: {
+    renderMessage: (_input: unknown, result: { data: unknown }): string | null => {
+      if (!isRecord(result.data)) return null
+      const count = (result.data as { count?: unknown }).count
+      return typeof count === 'number' ? `已批量创建 ${count} 项待办。` : '已批量创建待办。'
+    }
+  }
+}
+
+// Todo 批量更新确认配置。
+const TODO_BATCH_UPDATE_CONFIRMATION: ToolConfirmationConfig = {
+  header: '批量确认更新',
+  question: '确认批量更新待办',
+  confirm: '确认更新',
+  cancel: '取消更新',
+  renderTarget: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const items = Array.isArray(input.items) ? input.items : []
+    return `${items.length} 项待办`
+  },
+  renderSummary: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const aiSummary = getTodoInputString(input, 'confirmationSummary')
+    if (aiSummary) return aiSummary
+    const items = Array.isArray(input.items) ? input.items : []
+    if (items.length === 0) return null
+    const previews = (items as unknown[]).slice(0, 3).map((item) => {
+      if (!isRecord(item)) return null
+      const text = getTodoInputString(item, 'text')
+      const completed = typeof item.completed === 'boolean' ? item.completed : undefined
+      const completionTag = completed === true ? '✓' : completed === false ? '○' : ''
+      return text ? `${text}${completionTag ? ` ${completionTag}` : ''}` : null
+    }).filter((p): p is string => Boolean(p))
+    const suffix = items.length > 3 ? ` 等 ${items.length} 项` : ''
+    return `将批量更新待办：${previews.join('、')}${suffix}。`
+  },
+  completion: {
+    renderMessage: (_input: unknown, result: { data: unknown }): string | null => {
+      if (!isRecord(result.data)) return null
+      const count = (result.data as { count?: unknown }).count
+      return typeof count === 'number' ? `已批量更新 ${count} 项待办。` : '已批量更新待办。'
+    }
+  }
+}
+
+// Todo 批量删除确认配置。
+const TODO_BATCH_DELETE_CONFIRMATION: ToolConfirmationConfig = {
+  header: '批量确认删除',
+  question: '确认批量永久删除待办',
+  confirm: '确认删除',
+  cancel: '取消删除',
+  renderTarget: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const ids = Array.isArray(input.ids) ? input.ids : []
+    return `${ids.length} 项待办`
+  },
+  renderSummary: (input: unknown): string | null => {
+    if (!isRecord(input)) return null
+    const aiSummary = getTodoInputString(input, 'confirmationSummary')
+    if (aiSummary) return aiSummary
+    const ids = Array.isArray(input.ids) ? input.ids : []
+    return ids.length > 0 ? `将批量删除 ${ids.length} 项待办。` : null
+  },
+  completion: {
+    renderMessage: (_input: unknown, result: { data: unknown }): string | null => {
+      if (!isRecord(result.data)) return null
+      const count = (result.data as { count?: unknown }).count
+      return typeof count === 'number' ? `已批量删除 ${count} 项待办。` : '已批量删除待办。'
+    }
+  }
+}
+
+/**
+ * 创建 Todo 批量新建工具。
+ */
+const createTodoBatchAddTool = (
+  todosService: Pick<TodosService, 'create'>
+): TodoWriteTool => ({
+  name: 'todos_tool_batch_add',
+  description: 'Create multiple todo items at once in the local Todos table.',
+  confirmation: TODO_BATCH_ADD_CONFIRMATION,
+  prompt: {
+    summary: 'Batch create multiple todo items in the local Todos table.',
+    intentKeywords: [
+      '批量添加',
+      '批量创建',
+      '批量新增',
+      '批量记录待办',
+      'batch add todos',
+      'batch create tasks'
+    ],
+    whenToUse: [
+      'Use when the user explicitly asks to create multiple todo items at once.',
+      'Use when the user lists several tasks separated by newlines, commas, or bullet points.',
+      'Use when batch creation is more efficient than calling the single-add tool multiple times.',
+      'Use common_tool_ask to ask for missing required facts when any batch item is underspecified.'
+    ],
+    whenNotToUse: [
+      'Do not use for creating a single todo item — use todos_tool_add instead.',
+      'Do not use for read-only questions about existing todos.',
+      'Do not use when the user has not asked to create todos.'
+    ],
+    safety: [
+      'Do not call common_tool_ask only to confirm creation; the system will request internal confirmation before execution.',
+      'Write confirmationSummary yourself in concise Markdown Chinese before confirmation.',
+      'For batch creation, confirmationSummary must summarize the items being created (count and key texts).',
+      'entryDate defaults to today when not explicitly specified for each item.',
+      'Never invent todo text the user did not provide or confirm.',
+      'Each item must have entryDate, text, and priority filled.'
+    ],
+    output:
+      'Include confirmationSummary in the tool arguments; return the count and created todo facts needed by the user.',
+    examples: [
+      '{"confirmationSummary":"将批量创建 3 项待办。\n- 买水果（P2）\n- 开会（P1）\n- 写代码（P0）","items":[{"entryDate":"2026-06-10","text":"买水果","priority":"P2"},{"entryDate":"2026-06-10","text":"开会","priority":"P1"},{"entryDate":"2026-06-10","text":"写代码","priority":"P0"}]}'
+    ]
+  },
+  parameters: {
+    type: 'object',
+    required: ['items', 'confirmationSummary'],
+    properties: {
+      confirmationSummary: {
+        type: 'string',
+        description:
+          'Concise Markdown Chinese explanation shown above the internal confirmation. List all items or summarize with count and key texts.'
+      },
+      items: {
+        type: 'array',
+        description: 'Array of todo items to create',
+        items: {
+          type: 'object',
+          required: ['entryDate', 'text', 'priority'],
+          properties: {
+            entryDate: {
+              type: 'string',
+              description: 'Target date in YYYY-MM-DD format. Default to today when not explicitly specified.'
+            },
+            text: {
+              type: 'string',
+              description: 'Todo item text'
+            },
+            priority: TODO_PRIORITY_SCHEMA
+          }
+        }
+      }
+    }
+  },
+  execute: async (input) => {
+    if (!isRecord(input) || !Array.isArray(input.items)) {
+      throw new Error('Todo batch create requires items array')
+    }
+
+    const results = (input.items as unknown[]).map((item) => {
+      const created = todosService.create(parseCreateInput(item))
+      return toToolItem(created)
+    })
+
+    return {
+      observation: `Batch created ${results.length} todos.`,
+      data: { items: results, count: results.length }
+    }
+  }
+})
+
+/**
+ * 创建 Todo 批量更新工具。
+ */
+const createTodoBatchUpdateTool = (
+  todosService: Pick<TodosService, 'update'>
+): TodoWriteTool => ({
+  name: 'todos_tool_batch_update',
+  description: 'Update multiple todo items at once in the local Todos table by id.',
+  confirmation: TODO_BATCH_UPDATE_CONFIRMATION,
+  prompt: {
+    summary: 'Batch update multiple todo items in the local Todos table by id.',
+    intentKeywords: [
+      '批量修改',
+      '批量更新',
+      '批量完成',
+      '全部标记完成',
+      '全部完成',
+      'batch update todos',
+      'batch edit tasks',
+      'mark all done'
+    ],
+    whenToUse: [
+      'Use when the user explicitly asks to update multiple todo items at once.',
+      'Use when the user asks to "mark all as done" or "complete all tasks".',
+      'Use when the user asks to change multiple todos together (e.g., "move these to tomorrow").',
+      'Use after todos_tool_query when the user identifies multiple todos to update.'
+    ],
+    whenNotToUse: [
+      'Do not use for updating a single todo item — use todos_tool_update instead.',
+      'Do not use for creating new todos.',
+      'Do not use when target todo ids are unknown or ambiguous.'
+    ],
+    safety: [
+      'Do not call common_tool_ask only to confirm updates; the system will request internal confirmation before execution.',
+      'Write confirmationSummary yourself in concise Markdown Chinese before confirmation.',
+      'For batch updates, confirmationSummary must summarize the changes (count, key fields being modified).',
+      'Each item must include its numeric id and complete replacement fields (text, priority, completed).',
+      'Query first when the user provides descriptions instead of ids.',
+      'Never overwrite fields with guesses.',
+      'Only include entryDate when the user explicitly asks to change the date.'
+    ],
+    output:
+      'Include confirmationSummary in the tool arguments; return the count and updated todo facts needed by the user.',
+    examples: [
+      '{"confirmationSummary":"将批量更新 2 项待办标记为已完成。","items":[{"id":1,"text":"买水果","priority":"P2","completed":true},{"id":2,"text":"开会","priority":"P1","completed":true}]}'
+    ]
+  },
+  parameters: {
+    type: 'object',
+    required: ['items', 'confirmationSummary'],
+    properties: {
+      confirmationSummary: {
+        type: 'string',
+        description:
+          'Concise Markdown Chinese explanation shown above the internal confirmation. Summarize all items and key changed fields.'
+      },
+      items: {
+        type: 'array',
+        description: 'Array of todo items to update, each with id and replacement fields',
+        items: {
+          type: 'object',
+          required: ['id', 'text', 'priority', 'completed'],
+          properties: {
+            id: {
+              type: 'number',
+              description: 'Todo item id'
+            },
+            text: {
+              type: 'string',
+              description: 'Todo item text'
+            },
+            priority: TODO_PRIORITY_SCHEMA,
+            completed: {
+              type: 'boolean',
+              description: 'Whether the todo is completed'
+            },
+            entryDate: {
+              type: 'string',
+              description: 'Target date in YYYY-MM-DD format. Only set when the user explicitly asks to change the date.'
+            }
+          }
+        }
+      }
+    }
+  },
+  execute: async (input) => {
+    if (!isRecord(input) || !Array.isArray(input.items)) {
+      throw new Error('Todo batch update requires items array')
+    }
+
+    const results = (input.items as unknown[]).map((item) => {
+      const parsed = parseUpdateInput(item)
+      const updated = todosService.update(parsed.id, parsed.profile)
+      return toToolItem(updated)
+    })
+
+    return {
+      observation: `Batch updated ${results.length} todos.`,
+      data: { items: results, count: results.length }
+    }
+  }
+})
+
+/**
+ * 创建 Todo 批量删除工具。
+ */
+const createTodoBatchDeleteTool = (
+  todosService: Pick<TodosService, 'delete'>
+): TodoWriteTool => ({
+  name: 'todos_tool_batch_delete',
+  description: 'Delete multiple todo items at once from the local Todos table by id.',
+  confirmation: TODO_BATCH_DELETE_CONFIRMATION,
+  prompt: {
+    summary: 'Batch delete multiple todo items from the local Todos table by id.',
+    intentKeywords: [
+      '批量删除',
+      '批量移除',
+      '清空待办',
+      '全部删除',
+      'batch delete todos',
+      'remove all tasks',
+      'clear todos'
+    ],
+    whenToUse: [
+      'Use when the user explicitly asks to delete multiple todo items at once.',
+      'Use when the user asks to "clear all todos" or "delete all tasks".',
+      'Use after todos_tool_query when the user identifies multiple todos to delete.'
+    ],
+    whenNotToUse: [
+      'Do not use for deleting a single todo item — use todos_tool_delete instead.',
+      'Do not use for temporary filtering or hiding.',
+      'Do not use when target todo ids are unknown or ambiguous.'
+    ],
+    safety: [
+      'Do not call common_tool_ask only to confirm deletion; the system will request internal confirmation before execution.',
+      'Write confirmationSummary yourself in concise Markdown Chinese before confirmation.',
+      'For batch deletion, confirmationSummary must identify the count and distinguishing facts of todos being deleted.',
+      'Require exact numeric ids.',
+      'Ask the user for clarification before deleting when the set of todos is ambiguous.',
+      'Batch deletion is permanent and cannot be undone — be conservative.'
+    ],
+    output:
+      'Include confirmationSummary in the tool arguments; return count and concise deletion confirmation.',
+    examples: [
+      '{"confirmationSummary":"将批量删除 3 项已完成待办。\n- #1 买水果\n- #2 开会\n- #3 写代码","ids":[1,2,3]}'
+    ]
+  },
+  parameters: {
+    type: 'object',
+    required: ['ids', 'confirmationSummary'],
+    properties: {
+      confirmationSummary: {
+        type: 'string',
+        description:
+          'Concise Markdown Chinese explanation shown above the internal confirmation. Include the count and key distinguishing facts.'
+      },
+      ids: {
+        type: 'array',
+        description: 'Array of todo ids to delete',
+        items: {
+          type: 'number',
+          description: 'Todo item id'
+        }
+      }
+    }
+  },
+  execute: async (input) => {
+    if (!isRecord(input) || !Array.isArray(input.ids) || input.ids.some((id: unknown) => typeof id !== 'number')) {
+      throw new Error('Todo batch delete requires ids array of numbers')
+    }
+
+    const ids = input.ids as number[]
+    ids.forEach((id) => {
+      todosService.delete(id)
+    })
+
+    return {
+      observation: `Batch deleted ${ids.length} todos.`,
+      data: { ids, count: ids.length }
+    }
+  }
+})
+
 /**
  * 创建完整 Todo 工具组。
  */
@@ -799,5 +1190,8 @@ export const createTodoTools = (
   createTodoQueryTool(todosService),
   createTodoAddTool(todosService),
   createTodoUpdateTool(todosService),
-  createTodoDeleteTool(todosService)
+  createTodoDeleteTool(todosService),
+  createTodoBatchAddTool(todosService),
+  createTodoBatchUpdateTool(todosService),
+  createTodoBatchDeleteTool(todosService)
 ]

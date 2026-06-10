@@ -459,6 +459,9 @@ describe("peopleTool", () => {
       "people_tool_add",
       "people_tool_update",
       "people_tool_delete",
+      "people_tool_batch_add",
+      "people_tool_batch_update",
+      "people_tool_batch_delete",
     ]);
   });
 });

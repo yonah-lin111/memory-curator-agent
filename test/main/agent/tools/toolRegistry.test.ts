@@ -76,10 +76,16 @@ describe('toolRegistry', () => {
       'people_tool_add',
       'people_tool_update',
       'people_tool_delete',
+      'people_tool_batch_add',
+      'people_tool_batch_update',
+      'people_tool_batch_delete',
       'todos_tool_query',
       'todos_tool_add',
       'todos_tool_update',
       'todos_tool_delete',
+      'todos_tool_batch_add',
+      'todos_tool_batch_update',
+      'todos_tool_batch_delete',
       'common_tool_time_now',
       'common_tool_date_offset'
     ])
@@ -91,7 +97,7 @@ describe('toolRegistry', () => {
     expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(11)
+    expect(registry.all()).toHaveLength(17)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
