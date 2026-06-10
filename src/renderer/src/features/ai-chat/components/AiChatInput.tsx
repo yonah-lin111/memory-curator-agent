@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Paperclip, SendHorizontal, SlidersHorizontal } from "lucide-react";
+import { Paperclip, RotateCcw, SendHorizontal, SlidersHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
@@ -333,6 +333,11 @@ export const AiChatInput = ({
       return;
     }
 
+    // 不保存以 "/" 开头的斜杠命令到提示词历史。
+    if (normalizedPrompt.startsWith("/")) {
+      return;
+    }
+
     const addPromptHistory = window.api?.ai?.addPromptHistory;
 
     if (!addPromptHistory) {
@@ -421,7 +426,7 @@ export const AiChatInput = ({
         return 0;
       }
 
-      return (currentIndex + direction + matchedAgentMentions.length) % matchedAgentMentions.length;
+      return Math.max(0, Math.min(currentIndex + direction, matchedAgentMentions.length - 1));
     });
   };
 
@@ -456,12 +461,24 @@ export const AiChatInput = ({
       return;
     }
     onSendMessage(nextPayload);
-    savePromptHistory(nextPayload.text);
+    savePromptHistory(inputText);
     setInputText("");
     draftInputRef.current = "";
     historyCursorRef.current = null;
     setIsCommandPanelOpen(false);
     closeAgentMentionPanel();
+  };
+
+  /**
+   * 清空输入框内容。
+   */
+  const handleClearInput = (): void => {
+    setInputText("");
+    draftInputRef.current = "";
+    historyCursorRef.current = null;
+    closeAgentMentionPanel();
+    setIsCommandPanelOpen(false);
+    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   /**
@@ -497,7 +514,7 @@ export const AiChatInput = ({
         return 0;
       }
 
-      return (currentIndex + direction + matchedCommands.length) % matchedCommands.length;
+      return Math.max(0, Math.min(currentIndex + direction, matchedCommands.length - 1));
     });
   };
 
@@ -538,7 +555,7 @@ export const AiChatInput = ({
 
     if (nextCursor > newestIndex) {
       setInputText(draftInputRef.current);
-      historyCursorRef.current = null;
+      historyCursorRef.current = newestIndex + 1;
       syncTextareaAfterHistoryMove("end");
       return;
     }
@@ -569,7 +586,7 @@ export const AiChatInput = ({
       return direction === -1;
     }
 
-    if (direction === 1 && textareaValue.includes("\n")) {
+    if (direction === 1 && textareaValue.includes("\n") && !isTextareaCursorAt(textarea, textareaValue.length)) {
       return false;
     }
 
@@ -617,13 +634,13 @@ export const AiChatInput = ({
    * 处理输入框键盘按键事件，支持 Enter 键发送消息，Shift + Enter 换行。
    */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (isCommandPanelOpen && e.key === "ArrowDown") {
+    if (isCommandPanelOpen && e.key === "ArrowDown" ) {
       e.preventDefault();
       moveActiveCommand(1);
       return;
     }
 
-    if (isCommandPanelOpen && e.key === "ArrowUp") {
+    if (isCommandPanelOpen && e.key === "ArrowUp" ) {
       e.preventDefault();
       moveActiveCommand(-1);
       return;
@@ -635,13 +652,13 @@ export const AiChatInput = ({
       return;
     }
 
-    if (isAgentPanelOpen && e.key === "ArrowDown") {
+    if (isAgentPanelOpen && e.key === "ArrowDown" ) {
       e.preventDefault();
       moveActiveAgent(1);
       return;
     }
 
-    if (isAgentPanelOpen && e.key === "ArrowUp") {
+    if (isAgentPanelOpen && e.key === "ArrowUp" ) {
       e.preventDefault();
       moveActiveAgent(-1);
       return;
@@ -678,13 +695,13 @@ export const AiChatInput = ({
       }
     }
 
-    if (!isCommandPanelOpen && e.key === "ArrowDown" && canMovePromptHistory(1)) {
+    if (!isCommandPanelOpen && e.key === "ArrowDown"  && canMovePromptHistory(1)) {
       e.preventDefault();
       movePromptHistory(1);
       return;
     }
 
-    if (!isCommandPanelOpen && e.key === "ArrowUp" && canMovePromptHistory(-1)) {
+    if (!isCommandPanelOpen && e.key === "ArrowUp"  && canMovePromptHistory(-1)) {
       e.preventDefault();
       movePromptHistory(-1);
       return;
@@ -709,13 +726,13 @@ export const AiChatInput = ({
    * 处理命令面板键盘事件，支持方向键切换、回车执行和 Esc 关闭。
    */
   const handleCommandPanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" ) {
       e.preventDefault();
       moveActiveCommand(1);
       return;
     }
 
-    if (e.key === "ArrowUp") {
+    if (e.key === "ArrowUp" ) {
       e.preventDefault();
       moveActiveCommand(-1);
       return;
@@ -893,20 +910,35 @@ export const AiChatInput = ({
             </IconButton>
           </div>
 
-          {/* 右侧发送按钮 */}
-          <IconButton
-            aria-label="Send message"
-            onClick={handleSend}
-            disabled={!canSend}
-            highlighted={canSend}
-            className={`rounded-full flex items-center justify-center transition-all ${
-              canSend
-                ? "bg-white text-black hover:bg-white/90"
-                : "bg-white/10 text-white/30 cursor-not-allowed"
-            }`}
-          >
-            <SendHorizontal className="h-3.5 w-3.5" />
-          </IconButton>
+          {/* 右侧发送与清空按钮 */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Clear input"
+              onClick={handleClearInput}
+              disabled={!inputText}
+              className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
+                inputText
+                  ? "text-white/45 hover:text-white"
+                  : "text-white/10 cursor-not-allowed"
+              }`}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+            <IconButton
+              aria-label="Send message"
+              onClick={handleSend}
+              disabled={!canSend}
+              highlighted={canSend}
+              className={`rounded-full flex items-center justify-center transition-all ${
+                canSend
+                  ? "bg-white text-black hover:bg-white/90"
+                  : "bg-white/10 text-white/30 cursor-not-allowed"
+              }`}
+            >
+              <SendHorizontal className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
         </div>
       </div>
     </div>

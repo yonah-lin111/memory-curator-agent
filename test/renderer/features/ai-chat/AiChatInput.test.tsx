@@ -162,7 +162,7 @@ describe('AiChatInput', () => {
     expect(onCommandExecute).toHaveBeenCalledWith('clear')
   })
 
-  it('支持命令模糊匹配和上下循环切换', async () => {
+  it('支持命令模糊匹配', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
     const textarea = screen.getByLabelText('AI Chat Input Area')
@@ -179,20 +179,45 @@ describe('AiChatInput', () => {
       key: 'Enter'
     })
     expect(onCommandExecute).toHaveBeenCalledWith('clear')
+  })
+
+  it('命令面板上下键在首/末项边界截断，不循环', async () => {
+    const onCommandExecute = vi.fn()
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+    textarea.focus()
 
     fireEvent.change(textarea, {
       target: {
         value: '/'
       }
     })
-    fireEvent.keyDown(textarea, {
-      key: 'ArrowUp'
-    })
-    fireEvent.keyDown(textarea, {
-      key: 'Enter'
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/clear/ })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: /\/undo/ })).toBeInTheDocument()
     })
 
-    expect(onCommandExecute).toHaveBeenLastCalledWith('undo')
+    // 初始选中 /clear
+    expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
+
+    // 上键在首项截断，仍选中 /clear
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 下键移到 /undo
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/undo/ })).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 下键在末项截断，仍选中 /undo
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/undo/ })).toHaveAttribute('aria-selected', 'true')
+    })
   })
 
   it('undo 命令返回文本时回填到输入框', async () => {
@@ -290,7 +315,7 @@ describe('AiChatInput', () => {
     await waitFor(() => expect(textarea.selectionStart).toBe('当前草稿'.length))
   })
 
-  it('历史提示词包含换行时下键不切换到下一条历史', async () => {
+  it('历史提示词包含换行且光标在末尾时下键可切换到下一条', async () => {
     const listPromptHistory = vi.fn().mockResolvedValue(['1\n\n', '第二个问题'])
     Object.defineProperty(window, 'api', {
       configurable: true,
@@ -319,7 +344,7 @@ describe('AiChatInput', () => {
       key: 'ArrowDown'
     })
 
-    expect(textarea).toHaveValue('1\n\n')
+    expect(textarea).toHaveValue('第二个问题')
   })
 
   it('输入 @ 后打开 agent 面板并支持过滤选择', async () => {
@@ -354,7 +379,7 @@ describe('AiChatInput', () => {
     expect(textarea).toHaveClass('text-white')
   })
 
-  it('发送时剥离 agent token 并保存干净 prompt history', async () => {
+  it('发送时剥离 agent token 并保存包含 @ 命令的原始 prompt history', async () => {
     const onSendMessage = vi.fn()
     const addPromptHistory = vi.fn().mockResolvedValue(['查阿明'])
     Object.defineProperty(window, 'api', {
@@ -394,7 +419,7 @@ describe('AiChatInput', () => {
         }
       ]
     })
-    expect(addPromptHistory).toHaveBeenCalledWith('查阿明')
+    expect(addPromptHistory).toHaveBeenCalledWith('@people_agent  @todo_agent 查阿明')
     await waitFor(() => expect(textarea).toHaveValue(''))
   })
 
@@ -465,5 +490,89 @@ describe('AiChatInput', () => {
 
     expect(mockToastWarning).toHaveBeenCalledWith('请等待 AI 输出完成')
     expect(onSendMessage).not.toHaveBeenCalled()
+  })
+
+  it('点击清空按钮时清空输入框并聚焦', () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '待清空的内容'
+      }
+    })
+
+    const clearButton = screen.getByRole('button', { name: 'Clear input' })
+    expect(clearButton).not.toBeDisabled()
+
+    fireEvent.click(clearButton)
+
+    expect(textarea).toHaveValue('')
+    expect(textarea).toHaveFocus()
+  })
+
+  it('模糊匹配斜杠命令执行时不以 / 开头命令记录提示词历史', async () => {
+    const onCommandExecute = vi.fn()
+    const addPromptHistory = vi.fn().mockResolvedValue([])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          addPromptHistory
+        }
+      }
+    })
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/ce'
+      }
+    })
+
+    await waitFor(() => expect(screen.getByRole('option', { name: /\/clear/ })).toBeInTheDocument())
+
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+
+    expect(onCommandExecute).toHaveBeenCalledWith('clear')
+    expect(addPromptHistory).not.toHaveBeenCalled()
+  })
+
+  it('以 / 开头的草稿在历史导航回绕后下键不再循环', async () => {
+    const listPromptHistory = vi.fn().mockResolvedValue(['第一个问题', '第二个问题'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          listPromptHistory
+        }
+      }
+    })
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+
+    await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
+
+    // 输入以 / 开头的草稿
+    fireEvent.change(textarea, { target: { value: '/xyz' } })
+    textarea.setSelectionRange(0, 0)
+
+    // ArrowUp 正常进入历史
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea).toHaveValue('第二个问题')
+
+    // 回绕到草稿
+    textarea.setSelectionRange('第二个问题'.length, '第二个问题'.length)
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea).toHaveValue('/xyz')
+
+    // 再次下键停在草稿，不回绕到历史首项
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea).toHaveValue('/xyz')
   })
 })

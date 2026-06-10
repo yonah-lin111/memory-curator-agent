@@ -55,6 +55,9 @@ const AI_CHAT_HISTORY_PAGE_SIZE = 20;
 // AI 对话发送输入。
 type AiChatSendInput = string | AiChatSendPayload;
 
+// 用于本地缓存所选 AI 模型的 Key。
+const LOCAL_STORAGE_AI_MODEL_KEY = "ai-chat-selected-model";
+
 /**
  * 创建列表使用的年月日时分时间戳。
  */
@@ -536,13 +539,37 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         if (!isMounted) return;
         setAiModelOptions(options.providers);
         setAiAgentOption(options.agent);
-        setSelectedAiModel(
-          resolveDefaultAiModel(
-            options.providers,
-            options.defaultProvider,
-            options.defaultModel,
-          ),
-        );
+
+        // 尝试从 localStorage 读取上次选择的模型。
+        let savedModel: AiModelSelection | null = null;
+        try {
+          const saved = localStorage.getItem(LOCAL_STORAGE_AI_MODEL_KEY);
+          if (saved) {
+            savedModel = JSON.parse(saved);
+          }
+        } catch {
+          // 忽略解析错误
+        }
+
+        // 验证缓存中的模型是否有效且目前依然可用。
+        const isValidModel =
+          savedModel &&
+          options.providers.some((provider) =>
+            provider.id === savedModel!.provider &&
+            provider.models.some((model) => model.id === savedModel!.model),
+          );
+
+        if (isValidModel) {
+          setSelectedAiModel(savedModel);
+        } else {
+          setSelectedAiModel(
+            resolveDefaultAiModel(
+              options.providers,
+              options.defaultProvider,
+              options.defaultModel,
+            ),
+          );
+        }
       })
       .catch(() => {
         if (!isMounted) return;
@@ -555,6 +582,17 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       isMounted = false;
     };
   }, []);
+
+  // 当 selectedAiModel 发生变化时，保存到 localStorage 缓存中。
+  useEffect(() => {
+    if (selectedAiModel) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_AI_MODEL_KEY, JSON.stringify(selectedAiModel));
+      } catch {
+        // 忽略可能存在的 Storage 写入异常
+      }
+    }
+  }, [selectedAiModel]);
 
   // 启动时读取真实持久化会话；没有历史时创建空白会话。
   useEffect(() => {
