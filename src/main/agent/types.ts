@@ -1,4 +1,4 @@
-import type { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority } from '@/db/schema'
+import type { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -423,3 +423,46 @@ export type TodoQueryToolResult = AgentToolResult & {
   // SQL 查询返回的原始行。
   rows?: unknown[]
 }
+
+// Snippet 条件查询入参。
+export type SnippetQueryConditions = {
+  // 标题包含条件。
+  title?: string
+  // 正文包含条件。
+  content?: string
+  // 标签包含条件。
+  tag?: string
+  // 更新时间起始边界。
+  updatedAfter?: string
+  // 更新时间结束边界。
+  updatedBefore?: string
+}
+
+// Snippet 查询工具入参。
+export type SnippetQueryToolInput = {
+  // 片段所属日期。默认 "all" 跨日期查询。
+  entryDate?: string
+  // 搜索关键字（LIKE 匹配 title 或 content 字段）。
+  query?: string
+  // 结构化条件过滤。
+  conditions?: SnippetQueryConditions
+  // 只读 SQL 查询。
+  sql?: string
+  // 返回数量上限。
+  limit?: number
+}
+
+// Snippet 查询工具返回项。
+export type SnippetQueryToolItem = Pick<
+  SnippetItem,
+  'id' | 'entryDate' | 'title' | 'content' | 'tags' | 'createdAt' | 'updatedAt'
+>
+
+// Snippet 查询工具返回结果。
+export type SnippetQueryToolResult = AgentToolResult & {
+  // 命中的片段条目。
+  items: SnippetQueryToolItem[]
+  // SQL 查询返回的原始行。
+  rows?: unknown[]
+}
+
