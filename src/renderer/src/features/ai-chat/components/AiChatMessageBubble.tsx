@@ -452,6 +452,7 @@ export const AiChatMessageBubble = ({
   const textRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const remainingCharCountRef = useRef(0);
 
   useEffect(() => {
     setEditText(message.content);
@@ -472,7 +473,7 @@ export const AiChatMessageBubble = ({
   }, [editText, isEditing]);
 
   useEffect(() => {
-    if (isUser && textRef.current) {
+    if (isUser && textRef.current && !isEditing) {
       const checkOverflow = () => {
         const element = textRef.current;
         if (!element) return;
@@ -489,15 +490,17 @@ export const AiChatMessageBubble = ({
       };
     }
     return undefined;
-  }, [message.content, isUser]);
+  }, [message.content, isUser, isEditing]);
 
   const getRemainingCharCount = (): number => {
-    if (!textRef.current) return 0;
+    if (!textRef.current) return remainingCharCountRef.current;
     const { scrollHeight } = textRef.current;
     if (scrollHeight <= 93) return 0;
     const ratio = (scrollHeight - 93) / scrollHeight;
     const estimatedRemaining = Math.round(message.content.length * ratio);
-    return Math.max(1, Math.min(estimatedRemaining, message.content.length - 1));
+    const result = Math.max(1, Math.min(estimatedRemaining, message.content.length - 1));
+    remainingCharCountRef.current = result;
+    return result;
   };
 
   const handleToggleCollapse = (): void => {
