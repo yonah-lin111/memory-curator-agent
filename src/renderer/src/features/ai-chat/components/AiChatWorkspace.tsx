@@ -195,7 +195,7 @@ export const AiChatWorkspace = ({
 
   /**
    * 结束会话切换 Loading。
-   * 确保 Loading 最少显示 0.8s，并且防止快速连续切换时旧定时器对最新会话加载状态的干扰。
+   * 确保 Loading 最少显示 0.5s，并且防止快速连续切换时旧定时器对最新会话加载状态的干扰。
    */
   const finishSessionSwitchScroll = (): void => {
     if (!isSwitchingRef.current) {
@@ -203,7 +203,7 @@ export const AiChatWorkspace = ({
     }
     const currentCounter = switchSessionCounterRef.current;
     const elapsed = Date.now() - loadingStartTimeRef.current;
-    const minLoadingTime = 800; // 0.8s
+    const minLoadingTime = 500; // 0.5s
     const remainingTime = Math.max(0, minLoadingTime - elapsed);
 
     setTimeout(() => {
