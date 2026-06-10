@@ -129,8 +129,6 @@ export const AiChatWorkspace = ({
   const [topPinnedUserId, setTopPinnedUserId] = useState<
     string | null
   >(null);
-  // 会话切换计数，驱动 useLayoutEffect 统一处理会话切换的滚动逻辑。
-  const [sessionChangeTick, setSessionChangeTick] = useState(0);
   // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
@@ -183,6 +181,29 @@ export const AiChatWorkspace = ({
   const prevLatestAssistantMessageIdRef = useRef(latestAssistantMessageId);
   // 当前加速滚动动画帧。
   const acceleratedScrollFrameRef = useRef<number | null>(null);
+  // 记录已经成功滚动定位过的最新用户消息 ID。
+  const prevScrolledPinnedUserIdRef = useRef<string | null>(null);
+  // 标记是否锁住底部动态边距（Spacer）不进行重新计算（如在展开折叠思考内容、编辑用户消息等高度变动期间）。
+  const isSpacerLockedRef = useRef(false);
+
+  // 思考内容展开折叠时屏蔽底部边距重算的回调。
+  const handleThinkingBlockToggle = (): void => {
+    isSpacerLockedRef.current = true;
+    setTimeout(() => {
+      isSpacerLockedRef.current = false;
+    }, 350);
+  };
+
+  // 用户编辑框状态改变时，动态屏蔽底部边距重算的回调。
+  const handleUserEditStateChange = (isEditing: boolean): void => {
+    if (isEditing) {
+      isSpacerLockedRef.current = true;
+    } else {
+      setTimeout(() => {
+        isSpacerLockedRef.current = false;
+      }, 350);
+    }
+  };
 
   /**
    * 获取当前消息列表中最后一条用户消息标识。
@@ -288,6 +309,7 @@ export const AiChatWorkspace = ({
     const container = messagesContainerRef.current;
     const userMessage = latestUserMessageRef.current;
     if (!container || !userMessage) {
+      console.log("DEBUG scrollLatestUserToTop: NO CONTAINER OR USER_MESSAGE");
       return;
     }
 
@@ -295,10 +317,15 @@ export const AiChatWorkspace = ({
       userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
       0,
     );
+    console.log("DEBUG scrollLatestUserToTop:", {
+      userMessageOffsetTop: userMessage.offsetTop,
+      userMessageText: userMessage.textContent,
+      targetTop
+    });
     scrollMessagesToPosition(targetTop, behavior);
   };
 
-  // 当切换会话（session.id 变化）时，仅更新状态，滚动逻辑交由 sessionChangeTick useLayoutEffect 统一处理。
+  // 当切换会话（session.id 变化）时，仅更新状态，滚动逻辑交由 session.id useLayoutEffect 统一处理。
   useEffect(() => {
     const latestUserMessageId = getLatestUserMessageId();
     if (latestUserMessageId) {
@@ -306,7 +333,6 @@ export const AiChatWorkspace = ({
     } else {
       setTopPinnedUserId(null);
     }
-    setSessionChangeTick(t => t + 1);
   }, [session.id]);
 
   // 当用户在当前会话发送新消息时，优先将最新用户问题置顶显示。
@@ -392,6 +418,9 @@ export const AiChatWorkspace = ({
   // 监听窗口尺寸变化，动态更新底部间距高度。
   useEffect(() => {
     const handleResize = () => {
+      if (isSpacerLockedRef.current) {
+        return;
+      }
       const container = messagesContainerRef.current;
       const userMessage = latestUserMessageRef.current;
       if (container && userMessage && topPinnedUserId) {
@@ -416,6 +445,9 @@ export const AiChatWorkspace = ({
     }
 
     const resizeObserver = new ResizeObserver(() => {
+      if (isSpacerLockedRef.current) {
+        return;
+      }
       setBottomSpacerHeight((prev) => {
         return calculateBottomSpacerHeight(container, userMessage, prev);
       });
@@ -444,6 +476,7 @@ export const AiChatWorkspace = ({
 
     cancelAcceleratedScroll();
     container.scrollTop = 0;
+    prevScrolledPinnedUserIdRef.current = null; // 重置已经成功滚动定位过的用户消息 ID
 
     const latestUserMessageId = getLatestUserMessageId();
     if (!latestUserMessageId) {
@@ -458,7 +491,7 @@ export const AiChatWorkspace = ({
     }
 
     return undefined;
-  }, [sessionChangeTick]);
+  }, [session.id]);
 
   // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
@@ -468,10 +501,18 @@ export const AiChatWorkspace = ({
 
     if (isDeletingMessages) {
       cancelAcceleratedScroll();
+      prevScrolledPinnedUserIdRef.current = null;
       return;
     }
 
-    if (!topPinnedUserId) {
+    // 确保置顶消息存在，且属于当前会话，避免切换会话时由于状态滞后对旧消息执行多余定位
+    if (!topPinnedUserId || !session.messages.some((m) => m.id === topPinnedUserId)) {
+      prevScrolledPinnedUserIdRef.current = null;
+      return;
+    }
+
+    // 如果当前需要定位的置顶消息已经滚动定位过了，就不再重复滚动。
+    if (prevScrolledPinnedUserIdRef.current === topPinnedUserId) {
       return;
     }
 
@@ -480,6 +521,8 @@ export const AiChatWorkspace = ({
     const animationFrame = requestAnimationFrame(() => {
       scrollLatestUserToTop("smooth");
     });
+
+    prevScrolledPinnedUserIdRef.current = topPinnedUserId;
 
     return () => {
       cancelAnimationFrame(animationFrame);
@@ -631,6 +674,8 @@ export const AiChatWorkspace = ({
                   }
                   onOpenContextMenu={handleOpenMessageContextMenu}
                   onEditAndResendUserMessage={onEditAndResendUserMessage}
+                  onThinkingBlockToggle={handleThinkingBlockToggle}
+                  onUserEditStateChange={handleUserEditStateChange}
                 />
               </div>
             );

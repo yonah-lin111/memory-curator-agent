@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Bot, ChevronDown } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -51,6 +51,10 @@ type AiChatMessageBubbleProps = {
   onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
   // 编辑并重新发送用户消息。
   onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
+  // 思考内容展开折叠时的回调。
+  onThinkingBlockToggle?: () => void;
+  // 用户编辑状态改变时的回调.
+  onUserEditStateChange?: (isEditing: boolean) => void;
 };
 
 // AI 消息右键菜单打开请求类型。
@@ -443,6 +447,8 @@ export const AiChatMessageBubble = ({
   onSubmitToolConfirmationAnswer,
   onOpenContextMenu,
   onEditAndResendUserMessage,
+  onThinkingBlockToggle,
+  onUserEditStateChange,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -453,6 +459,73 @@ export const AiChatMessageBubble = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const remainingCharCountRef = useRef(0);
+
+  // 气泡主体容器，用于捕获高度变化执行 FLIP 过渡。
+  const userBubbleRef = useRef<HTMLDivElement>(null);
+  // 记录上一次容器的渲染高度。
+  const lastHeightRef = useRef<number>(0);
+  // 高度过渡清理函数引用。
+  const transitionCleanupRef = useRef<(() => void) | null>(null);
+
+  // 监听状态改变动态平滑调整气泡高度（FLIP 动效）。
+  useLayoutEffect(() => {
+    const el = userBubbleRef.current;
+    if (!el) return;
+
+    if (transitionCleanupRef.current) {
+      transitionCleanupRef.current();
+    }
+
+    const newHeight = el.getBoundingClientRect().height;
+
+    if (lastHeightRef.current && lastHeightRef.current !== newHeight) {
+      const oldHeight = lastHeightRef.current;
+
+      el.style.overflow = "hidden";
+      el.style.transition = "none";
+      el.style.height = `${oldHeight}px`;
+
+      el.offsetHeight; // 强制重排
+
+      el.style.transition = "height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)";
+      el.style.height = `${newHeight}px`;
+
+      const handleTransitionEnd = (e: TransitionEvent) => {
+        if (e.propertyName === "height") {
+          el.style.transition = "";
+          el.style.height = "";
+          el.style.overflow = "";
+        }
+      };
+
+      el.addEventListener("transitionend", handleTransitionEnd);
+
+      const cleanup = () => {
+        el.removeEventListener("transitionend", handleTransitionEnd);
+      };
+      transitionCleanupRef.current = cleanup;
+    }
+
+    lastHeightRef.current = newHeight;
+
+    return () => {
+      if (transitionCleanupRef.current) {
+        transitionCleanupRef.current();
+        transitionCleanupRef.current = null;
+      }
+    };
+  }, [isEditing, editText, isCollapsed]);
+
+  // 根据文本内容长度，动态平滑调整输入框自身高度。
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      const el = textareaRef.current;
+      el.style.height = "auto";
+      const maxHeight = 140; // 限制最大高度约 7 行
+      const targetHeight = Math.min(el.scrollHeight, maxHeight);
+      el.style.height = `${targetHeight}px`;
+    }
+  }, [editText, isEditing]);
 
   useEffect(() => {
     setEditText(message.content);
@@ -465,6 +538,10 @@ export const AiChatMessageBubble = ({
       el.setSelectionRange(el.value.length, el.value.length);
     }
   }, [isEditing]);
+
+  useEffect(() => {
+    onUserEditStateChange?.(isEditing);
+  }, [isEditing, onUserEditStateChange]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -588,91 +665,92 @@ export const AiChatMessageBubble = ({
           }`}
         >
           {isUser ? (
-            isEditing ? (
-              <div className="flex flex-col gap-2 w-[400px] max-w-full bg-[#212121] border border-white/10 rounded-[6px] p-2.5">
-                <textarea
-                  ref={textareaRef}
-                  value={editText}
-                  rows={Math.max(1, Math.min(editText.split("\n").length, 7))}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="w-full resize-none bg-transparent text-sm text-white focus:outline-none custom-scrollbar"
-                />
-                <div className="flex justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
-                  <IconButton
-                    size="small"
-                    preset="close"
-                    title="取消"
-                    onClick={() => {
-                      setIsEditing(false);
-                      setEditText(message.content);
-                    }}
+            <div ref={userBubbleRef} className="w-fit max-w-full">
+              {isEditing ? (
+                <div className="flex flex-col gap-2 w-[400px] max-w-full bg-[#212121] border border-white/10 rounded-[6px] p-2.5">
+                  <textarea
+                    ref={textareaRef}
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="w-full resize-none bg-transparent text-sm text-white focus:outline-none custom-scrollbar"
                   />
-                  {isLastUser ? (
+                  <div className="flex justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
                     <IconButton
                       size="small"
-                      preset="confirm"
-                      title="发送并重新生成"
-                      disabled={!editText.trim() || isGenerating}
+                      preset="close"
+                      title="取消"
                       onClick={() => {
-                        if (editText.trim() && !isGenerating) {
-                          setIsEditing(false);
-                          void onEditAndResendUserMessage?.(message.id, editText.trim());
-                        }
+                        setIsEditing(false);
+                        setEditText(message.content);
                       }}
                     />
-                  ) : (
-                    <Tooltip
-                      title="编辑历史消息将删除其后所有的对话记录，确定要发送吗？"
-                      placement="top"
-                      onConfirm={() => {
-                        if (editText.trim() && !isGenerating) {
-                          setIsEditing(false);
-                          void onEditAndResendUserMessage?.(message.id, editText.trim());
-                        }
-                      }}
-                    >
+                    {isLastUser ? (
                       <IconButton
                         size="small"
                         preset="confirm"
                         title="发送并重新生成"
                         disabled={!editText.trim() || isGenerating}
+                        onClick={() => {
+                          if (editText.trim() && !isGenerating) {
+                            setIsEditing(false);
+                            void onEditAndResendUserMessage?.(message.id, editText.trim());
+                          }
+                        }}
                       />
-                    </Tooltip>
+                    ) : (
+                      <Tooltip
+                        title="编辑历史消息将删除其后所有的对话记录，确定要发送吗？"
+                        placement="top"
+                        onConfirm={() => {
+                          if (editText.trim() && !isGenerating) {
+                            setIsEditing(false);
+                            void onEditAndResendUserMessage?.(message.id, editText.trim());
+                          }
+                        }}
+                      >
+                        <IconButton
+                          size="small"
+                          preset="confirm"
+                          title="发送并重新生成"
+                          disabled={!editText.trim() || isGenerating}
+                        />
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative flex flex-col items-end w-full group/msg-bubble">
+                  <div
+                    ref={textRef}
+                    style={{
+                      maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
+                      transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                    }}
+                    className="overflow-hidden w-full select-text pr-1"
+                  >
+                    {message.content}
+                  </div>
+                  {hasOverflow && (
+                    <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
+                      <span className="text-xs scale-90 origin-right opacity-60">
+                        {isCollapsed ? `展开 (余 ${getRemainingCharCount()} 字)` : "收起"}
+                      </span>
+                      <IconButton
+                        size="small"
+                        onClick={handleToggleCollapse}
+                        className="hover:bg-white/10 active:scale-95 transition-all"
+                      >
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 transition-transform duration-300 ease-out ${
+                            isCollapsed ? "" : "rotate-180"
+                          }`}
+                        />
+                      </IconButton>
+                    </div>
                   )}
                 </div>
-              </div>
-            ) : (
-              <div className="relative flex flex-col items-end w-full group/msg-bubble">
-                <div
-                  ref={textRef}
-                  style={{
-                    maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
-                    transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
-                  }}
-                  className="overflow-hidden w-full select-text pr-1"
-                >
-                  {message.content}
-                </div>
-                {hasOverflow && (
-                  <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
-                    <span className="text-xs scale-90 origin-right opacity-60">
-                      {isCollapsed ? `展开 (余 ${getRemainingCharCount()} 字)` : "收起"}
-                    </span>
-                    <IconButton
-                      size="small"
-                      onClick={handleToggleCollapse}
-                      className="hover:bg-white/10 active:scale-95 transition-all"
-                    >
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 transition-transform duration-300 ease-out ${
-                          isCollapsed ? "" : "rotate-180"
-                        }`}
-                      />
-                    </IconButton>
-                  </div>
-                )}
-              </div>
-            )
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">
               {(() => {
@@ -733,6 +811,7 @@ export const AiChatMessageBubble = ({
                           partIndex,
                           isGenerating,
                         )}
+                        onToggle={onThinkingBlockToggle}
                       />,
                     );
                   } else {

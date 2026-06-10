@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { ChevronDown, Brain } from "lucide-react";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
@@ -9,18 +9,23 @@ type AiChatThinkingBlockProps = {
   content: string;
   // 是否正在生成中。
   isGenerating?: boolean;
+  // 点击折叠展开时的回调。
+  onToggle?: () => void;
 };
 
 /**
  * AiChatThinkingBlock - 使用 Markdown 预览渲染模型思考内容。
- * 支持点击折叠/展开，并提供流式生成动画指示。
+ * 支持点击折叠/展开，并提供流式生成动画指示，且高度折叠/展开具有平滑过渡。
  */
 export const AiChatThinkingBlock = ({
   content,
   isGenerating = false,
+  onToggle,
 }: AiChatThinkingBlockProps): React.JSX.Element => {
   // 是否展开思考内容。
   const [isExpanded, setIsExpanded] = useState(false);
+  // 思考内容内部容器引用，用于测量真实自适应高度。
+  const innerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-1 w-full my-1.5">
@@ -28,7 +33,10 @@ export const AiChatThinkingBlock = ({
       <button
         type="button"
         className="flex items-center gap-1.5 cursor-pointer text-xs select-none py-1.5 px-2.5 rounded-[6px] bg-[#212121] text-white/50 hover:bg-[#212121]/80 hover:text-white/70 transition-all duration-200 w-fit outline-none focus:outline-none border-none"
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={() => {
+          setIsExpanded((prev) => !prev);
+          onToggle?.();
+        }}
         aria-expanded={isExpanded}
       >
         <ChevronDown
@@ -46,10 +54,18 @@ export const AiChatThinkingBlock = ({
         )}
       </button>
 
-      {/* 展开的思考内容区域 */}
-      {isExpanded && (
+      {/* 展开的思考内容区域，带平滑高度与透明度过渡 */}
+      <div
+        style={{
+          maxHeight: isExpanded ? `${innerRef.current?.scrollHeight || 1000}px` : "0px",
+          opacity: isExpanded ? 1 : 0,
+          transition: "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
+        }}
+        className="overflow-hidden"
+      >
         <div
-          className="ai-chat-thinking-block markdown-preview-container select-text max-w-full border-l border-white/10 pl-3 text-white/50 animate-fade-in"
+          ref={innerRef}
+          className="ai-chat-thinking-block markdown-preview-container select-text max-w-full border-l border-white/10 pl-3 text-white/50"
           data-testid="ai-chat-thinking-block"
           style={{ fontSize: "13px" }}
         >
@@ -64,7 +80,7 @@ export const AiChatThinkingBlock = ({
             showCodeRowNumber={false}
           />
         </div>
-      )}
+      </div>
     </div>
   );
 };

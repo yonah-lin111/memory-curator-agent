@@ -189,6 +189,12 @@ describe('AiChatWorkspace', () => {
   })
 
   it('切换 active chat 后滚动速度逐帧递增', async () => {
+    const offsetTopSpy = vi
+      .spyOn(HTMLElement.prototype, 'offsetTop', 'get')
+      .mockImplementation(function getOffsetTop(this: HTMLElement) {
+        return this.textContent?.includes('切换后滚动') ? 120 : 0
+      })
+
     const { rerender } = render(
       <AiChatWorkspace
         session={session}
@@ -229,7 +235,7 @@ describe('AiChatWorkspace', () => {
     )
 
     await waitFor(() => {
-      expect(scrollPositions.at(-1)).toBe(0)
+      expect(scrollPositions.at(-1)).toBe(116)
     })
     const travelDistances = scrollPositions
       .slice(1)
@@ -238,6 +244,7 @@ describe('AiChatWorkspace', () => {
 
     expect(travelDistances.length).toBeGreaterThanOrEqual(2)
     expect(travelDistances[1]).toBeGreaterThan(travelDistances[0])
+    offsetTopSpy.mockRestore()
   })
 
   it('重新生成导致最新 AI 消息变化但消息数量不变时仍置顶显示', async () => {
@@ -389,13 +396,21 @@ describe('AiChatWorkspace', () => {
     const originalResizeObserver = globalThis.ResizeObserver
 
     globalThis.ResizeObserver = class ResizeObserverMock implements ResizeObserver {
+      private callback: ResizeObserverCallback
+
       constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
         resizeObserverCallbacks.push(callback)
       }
 
       observe = vi.fn()
       unobserve = vi.fn()
-      disconnect = vi.fn()
+      disconnect = vi.fn().mockImplementation(() => {
+        const index = resizeObserverCallbacks.indexOf(this.callback)
+        if (index >= 0) {
+          resizeObserverCallbacks.splice(index, 1)
+        }
+      })
     }
 
     let contentHeight = 240
