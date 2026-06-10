@@ -616,4 +616,70 @@ describe('AiChatInput', () => {
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     expect(textarea).toHaveValue('') // 应该是空，而不应该是 '/cl'
   })
+
+  it('正确统计并显示历史提示词序号，在修改输入或清空时统计信息消失', async () => {
+    const listPromptHistory = vi.fn().mockResolvedValue(['第一个问题', '第二个问题'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          listPromptHistory
+        }
+      }
+    })
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+
+    await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
+
+    // 初始状态下不应显示历史统计
+    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+
+    // 按上键，进入最新历史 (1-based 应为 2/2)
+    textarea.setSelectionRange(0, 0)
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea).toHaveValue('第二个问题')
+    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+
+    // 等待光标被移到起始位置 (0)
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+
+    // 再次按上键，进入第一条历史 (1-based 应为 1/2)
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea).toHaveValue('第一个问题')
+    expect(screen.getByText('history_prompts: 1/2')).toBeInTheDocument()
+
+    // 等待光标重置到 0 处
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+
+    // 要按下键往回切换，光标必须在文本末尾
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+
+    // 按下键回到第二条历史 (2/2)
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea).toHaveValue('第二个问题')
+    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+
+    // 等待光标重置到末尾位置
+    await waitFor(() => expect(textarea.selectionStart).toBe('第二个问题'.length))
+
+    // 按下键回到草稿状态，统计数字应消失
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea).toHaveValue('')
+    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+
+    // 等待光标被同步
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+
+    // 再次进入历史 (2/2)
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+
+    // 等待光标定位
+    await waitFor(() => expect(textarea.selectionStart).toBe(0))
+
+    // 手动修改输入内容，统计数字应消失
+    fireEvent.change(textarea, { target: { value: '修改内容' } })
+    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+  })
 })
