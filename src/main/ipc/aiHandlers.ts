@@ -3,6 +3,7 @@ import { getDatabase } from '@/db'
 import { createCompactUuid } from '@/id'
 import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '@/services/peopleService'
 import { createTodosService, type DatabaseConnection as TodosDatabaseConnection } from '@/services/todosService'
+import { createSnippetsService, type DatabaseConnection as SnippetsDatabaseConnection } from '@/services/snippetsService'
 import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection
@@ -540,10 +541,12 @@ export const registerAiHandlers = (): void => {
   const database = getDatabase()
   const peopleService = createPeopleService(database as unknown as PeopleDatabaseConnection)
   const todosService = createTodosService(database as unknown as TodosDatabaseConnection)
+  const snippetsService = createSnippetsService(database as unknown as SnippetsDatabaseConnection)
   const aiChatService = createAiChatPersistenceService(database as unknown as AiChatDatabaseConnection)
   const toolRegistry = createAgentToolRegistry({
     peopleService,
-    todosService
+    todosService,
+    snippetsService
   })
 
   /**
