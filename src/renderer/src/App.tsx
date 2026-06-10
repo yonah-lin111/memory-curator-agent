@@ -118,7 +118,7 @@ const AppContent = (): React.JSX.Element => {
     useState<SidebarPageId>(getPageFromPathname);
 
   // 主内容页面切换时的 Loading 状态。
-  const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
 
   const {
     isChatOpen,
@@ -167,6 +167,14 @@ const AppContent = (): React.JSX.Element => {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
+  }, []);
+
+  // 首次进入页面时触发 500ms Loading 效果。
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -246,6 +254,7 @@ const AppContent = (): React.JSX.Element => {
             aria-hidden={!isChatOpen}
           >
             <AiChatWorkspace
+              isChatOpen={isChatOpen}
               session={activeChatSession}
               modelOptions={aiModelOptions}
               selectedModel={selectedAiModel}

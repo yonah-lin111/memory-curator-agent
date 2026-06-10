@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import type {
   AiToolStep,
@@ -9,6 +9,8 @@ import {
   isAiAskAnswer,
   isAiAskRequest,
   isAiToolConfirmationRequest,
+  type AiAskRequest,
+  type AiToolConfirmationRequest,
   type AiAskAnswerSubmitPayload,
   type AiToolConfirmationAnswerSubmitPayload,
 } from "@/features/ai-chat/components/AiAskRequestPanel";
@@ -171,6 +173,90 @@ const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
   );
 };
 
+// 工具确认/问答面板包装组件属性类型。
+type AiToolRequestPanelContainerProps = {
+  // 请求数据。
+  request: AiAskRequest | AiToolConfirmationRequest | null;
+  // 提交回答回调。
+  onSubmit: ((payload: AiAskAnswerSubmitPayload) => void | Promise<void>) | undefined;
+};
+
+/**
+ * AiToolRequestPanelContainer - 为工具确认面板/问答面板提供平滑展开与收拢过渡的容器组件。
+ */
+const AiToolRequestPanelContainer = ({
+  request,
+  onSubmit,
+}: AiToolRequestPanelContainerProps): React.JSX.Element | null => {
+  const [activeRequest, setActiveRequest] = useState<
+    AiAskRequest | AiToolConfirmationRequest | null
+  >(request);
+  const [isExpanded, setIsExpanded] = useState<boolean>(!!request);
+  const [activeOnSubmit, setActiveOnSubmit] = useState<
+    ((payload: AiAskAnswerSubmitPayload) => void | Promise<void>) | undefined
+  >(() => onSubmit);
+  const innerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (request && onSubmit) {
+      setActiveOnSubmit(() => onSubmit);
+      if (!activeRequest) {
+        setActiveRequest(request);
+        const raf = requestAnimationFrame(() => {
+          setIsExpanded(true);
+        });
+        return () => cancelAnimationFrame(raf);
+      } else {
+        setActiveRequest(request);
+        setIsExpanded(true);
+      }
+    } else {
+      setIsExpanded(false);
+    }
+    return undefined;
+  }, [request, onSubmit]);
+
+  const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (!isExpanded && e.propertyName === "max-height") {
+      setActiveRequest(null);
+      setActiveOnSubmit(undefined);
+    }
+  };
+
+  if (!activeRequest || !activeOnSubmit) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        maxHeight: isExpanded ? `${innerRef.current?.scrollHeight || 1000}px` : "0px",
+        opacity: isExpanded ? 1 : 0,
+        transition:
+          "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
+      }}
+      className="overflow-hidden"
+      onTransitionEnd={handleTransitionEnd}
+    >
+      <div ref={innerRef} className="mt-1 flex items-start gap-1 text-white/45">
+        <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
+          <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M3 1v5h7"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <AiAskRequestPanel request={activeRequest} onSubmit={activeOnSubmit} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /**
  * AiToolCallBlock - 渲染 ReAct 风格的工具执行摘要
  */
@@ -280,30 +366,10 @@ export const AiToolCallBlock = ({
                   </div>
                 ) : null}
                 {askAnswerSummary}
-                {requestPanel && handleSubmitRequest ? (
-                  <div className="mt-1 flex items-start gap-1 text-white/45">
-                    <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
-                      <svg
-                        className="h-3 w-3 stroke-current"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 1v5h7"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <AiAskRequestPanel
-                        request={requestPanel}
-                        onSubmit={handleSubmitRequest}
-                      />
-                    </div>
-                  </div>
-                ) : null}
+                <AiToolRequestPanelContainer
+                  request={requestPanel}
+                  onSubmit={handleSubmitRequest}
+                />
               </div>
             </div>
           );

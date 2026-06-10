@@ -26,6 +26,7 @@ import {
 } from "@/features/ai-chat/aiChatContextBuilder";
 import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
+import { isEmptyAiChatDraftSession } from "@/features/ai-chat/core/aiChatSessionReducer";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
@@ -78,6 +79,8 @@ const copyTextToClipboard = async (content: string): Promise<void> => {
 
 // AI 对话工作区组件属性类型。
 type AiChatWorkspaceProps = {
+  // AI 对话模式是否打开。
+  isChatOpen?: boolean;
   // 当前激活的 AI 会话。
   session: AiChatSession;
   // 可切换的 AI provider 与模型列表。
@@ -108,6 +111,7 @@ type AiChatWorkspaceProps = {
  * AiChatWorkspace - 负责渲染 Header 下方的 AI 对话主体工作区。
  */
 export const AiChatWorkspace = ({
+  isChatOpen = false,
   session,
   modelOptions,
   selectedModel,
@@ -511,6 +515,20 @@ export const AiChatWorkspace = ({
 
   // 会话切换时统一执行滚动逻辑（useLayoutEffect 确保在浏览器绘制前完成）。
   useLayoutEffect(() => {
+    const isEmptyDraft = isEmptyAiChatDraftSession(session);
+
+    if (isEmptyDraft) {
+      setIsSwitching(false);
+      isSwitchingRef.current = false;
+      const container = messagesContainerRef.current;
+      if (container) {
+        cancelAcceleratedScroll();
+        container.scrollTop = 0;
+      }
+      prevScrolledPinnedUserIdRef.current = null;
+      return;
+    }
+
     // 激活 loading 并重置/递增计数器以抵御竞态条件。
     setIsSwitching(true);
     isSwitchingRef.current = true;
@@ -542,6 +560,30 @@ export const AiChatWorkspace = ({
 
     return undefined;
   }, [session.id]);
+
+  // 监听 chat 打开状态，点击 Header 的聊天 icon 展开时触发 Loading。
+  useEffect(() => {
+    if (isChatOpen) {
+      setIsSwitching(true);
+      isSwitchingRef.current = true;
+      loadingStartTimeRef.current = Date.now();
+      switchSessionCounterRef.current += 1;
+
+      const latestUserMessageId = getLatestUserMessageId();
+      if (!latestUserMessageId) {
+        scrollMessagesToBottom("smooth", () => {
+          finishSessionSwitchScroll();
+        });
+      } else {
+        scrollLatestUserToTop("smooth", () => {
+          finishSessionSwitchScroll();
+        });
+      }
+    } else {
+      setIsSwitching(false);
+      isSwitchingRef.current = false;
+    }
+  }, [isChatOpen]);
 
   // 补足最新用户问题底部空间后，再将其滚到视口顶部。
   useLayoutEffect(() => {
