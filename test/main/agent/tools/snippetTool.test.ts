@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createSnippetQueryTool } from '@/agent/tools/snippetTool'
+import {
+  createSnippetQueryTool,
+  createSnippetAddTool,
+  createSnippetUpdateTool,
+  createSnippetDeleteTool
+} from '@/agent/tools/snippetTool'
 import type { SnippetsService } from '@/services/snippetsService'
 
 describe('snippetTool_query', () => {
@@ -77,5 +82,100 @@ describe('snippetTool_query', () => {
     expect(mockQuerySql).toHaveBeenCalledWith(
       "SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE entry_date = '2026-06-10' AND tags LIKE '%web%' AND (title LIKE '%React%' OR content LIKE '%React%') ORDER BY updated_at DESC, created_at DESC LIMIT 20"
     )
+  })
+})
+
+describe('snippetTool mutations', () => {
+  it('snippets_tool_add should call create on service', async () => {
+    const mockCreate = vi.fn().mockReturnValue({
+      id: 2,
+      entryDate: '2026-06-10',
+      title: 'New Snippet',
+      content: 'hello',
+      tags: ['test'],
+      createdAt: '2026-06-10 12:00',
+      updatedAt: '2026-06-10 12:00'
+    })
+    const service = { create: mockCreate } as unknown as SnippetsService
+    const tool = createSnippetAddTool(service)
+
+    const result = await tool.execute({
+      entryDate: '2026-06-10',
+      title: 'New Snippet',
+      content: 'hello',
+      tags: ['test'],
+      confirmationSummary: 'Creating snippet'
+    })
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      entryDate: '2026-06-10',
+      title: 'New Snippet',
+      content: 'hello',
+      tags: ['test']
+    })
+    expect(result.data).toEqual({
+      item: {
+        id: 2,
+        entryDate: '2026-06-10',
+        title: 'New Snippet',
+        content: 'hello',
+        tags: ['test'],
+        createdAt: '2026-06-10 12:00',
+        updatedAt: '2026-06-10 12:00'
+      }
+    })
+  })
+
+  it('snippets_tool_update should call update on service', async () => {
+    const mockUpdate = vi.fn().mockReturnValue({
+      id: 2,
+      entryDate: '2026-06-10',
+      title: 'Updated Title',
+      content: 'hello 2',
+      tags: ['test2'],
+      createdAt: '2026-06-10 12:00',
+      updatedAt: '2026-06-10 12:05'
+    })
+    const service = { update: mockUpdate } as unknown as SnippetsService
+    const tool = createSnippetUpdateTool(service)
+
+    const result = await tool.execute({
+      id: 2,
+      title: 'Updated Title',
+      content: 'hello 2',
+      tags: ['test2'],
+      confirmationSummary: 'Updating snippet'
+    })
+
+    expect(mockUpdate).toHaveBeenCalledWith(2, {
+      title: 'Updated Title',
+      content: 'hello 2',
+      tags: ['test2']
+    })
+    expect(result.data).toEqual({
+      item: {
+        id: 2,
+        entryDate: '2026-06-10',
+        title: 'Updated Title',
+        content: 'hello 2',
+        tags: ['test2'],
+        createdAt: '2026-06-10 12:00',
+        updatedAt: '2026-06-10 12:05'
+      }
+    })
+  })
+
+  it('snippets_tool_delete should call delete on service', async () => {
+    const mockDelete = vi.fn()
+    const service = { delete: mockDelete } as unknown as SnippetsService
+    const tool = createSnippetDeleteTool(service)
+
+    const result = await tool.execute({
+      id: 2,
+      confirmationSummary: 'Deleting snippet'
+    })
+
+    expect(mockDelete).toHaveBeenCalledWith(2)
+    expect(result.data).toEqual({ id: 2 })
   })
 })
