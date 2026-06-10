@@ -723,7 +723,7 @@ export const AiChatWorkspace = ({
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[6px] border border-white/5 bg-[#212121]"
     >
       {/* 统一会话切换优雅 Loading */}
-      <LoadingOverlay isLoading={isSwitching} text="整理会话数据..." />
+      <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
 
       {/* 消息列表 */}
       <div

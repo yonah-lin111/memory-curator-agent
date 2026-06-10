@@ -241,7 +241,7 @@ const AppContent = (): React.JSX.Element => {
           >
             <div className="w-full h-full relative">
               {renderPageById(activePage)}
-              <LoadingOverlay isLoading={isPageLoading} text="正在载入..." />
+              <LoadingOverlay isLoading={isPageLoading} text="Loading..." />
             </div>
           </div>
 

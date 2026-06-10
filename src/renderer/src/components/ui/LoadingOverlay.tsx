@@ -4,7 +4,7 @@ import type React from "react";
 interface LoadingOverlayProps {
   // 当前是否处于 loading 状态。
   isLoading: boolean;
-  // loading 时显示的提示文本，默认为 "整理数据中..."。
+  // loading 时显示的提示文本，默认为 "Processing..."。
   text?: string;
   // 容器的圆角大小，默认为 "rounded-[6px]"。
   rounded?: string;
@@ -16,7 +16,7 @@ interface LoadingOverlayProps {
  */
 export const LoadingOverlay = ({
   isLoading,
-  text = "整理数据中...",
+  text = "Processing...",
   rounded = "rounded-[6px]",
 }: LoadingOverlayProps): React.JSX.Element => {
   return (
