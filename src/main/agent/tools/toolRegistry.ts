@@ -1,13 +1,17 @@
 import { createPeopleTools } from '@/agent/tools/peopleTool'
+import { createTodoTools } from '@/agent/tools/todoTool'
 import { createDateOffsetTool, createTimeNowTool } from '@/agent/tools/commonTimeTool'
 import { createAskTool } from '@/agent/tools/askTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
 import type { PeopleService } from '@/services/peopleService'
+import type { TodosService } from '@/services/todosService'
 
 // Agent 工具注册上下文。
 export type AgentToolRegistryContext = {
   // People 服务。
   peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'>
+  // Todos 服务。
+  todosService: Pick<TodosService, 'querySql' | 'create' | 'update' | 'delete'>
 }
 
 // Agent 工具工厂。
@@ -37,6 +41,7 @@ export type AgentToolRegistry = {
 const builtinToolFactories: AgentToolFactory[] = [
   () => createAskTool(),
   ({ peopleService }) => createPeopleTools(peopleService),
+  ({ todosService }) => createTodoTools(todosService),
   () => createTimeNowTool(),
   () => createDateOffsetTool()
 ]

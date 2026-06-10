@@ -2,6 +2,7 @@ import { ipcMain, type WebContents } from 'electron'
 import { getDatabase } from '@/db'
 import { createCompactUuid } from '@/id'
 import { createPeopleService, type DatabaseConnection as PeopleDatabaseConnection } from '@/services/peopleService'
+import { createTodosService, type DatabaseConnection as TodosDatabaseConnection } from '@/services/todosService'
 import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection
@@ -538,9 +539,11 @@ const appendToolPart = (parts: AiChatMessagePart[], messageId: string, stepId: s
 export const registerAiHandlers = (): void => {
   const database = getDatabase()
   const peopleService = createPeopleService(database as unknown as PeopleDatabaseConnection)
+  const todosService = createTodosService(database as unknown as TodosDatabaseConnection)
   const aiChatService = createAiChatPersistenceService(database as unknown as AiChatDatabaseConnection)
   const toolRegistry = createAgentToolRegistry({
-    peopleService
+    peopleService,
+    todosService
   })
 
   /**

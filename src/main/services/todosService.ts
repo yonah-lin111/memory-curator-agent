@@ -35,6 +35,8 @@ export type TodosService = {
   delete: (id: number) => void
   // 重新排序待办。
   reorder: (input: TodoReorderInput) => TodoItem[]
+  // 执行只读待办 SQL 查询并返回原始行。
+  querySql: (sql: string) => unknown[]
 }
 
 // 合法待办优先级集合。
@@ -223,5 +225,8 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
       .all(input.entryDate) as TodoRow[]
 
     return rows.map(mapTodoRow)
+  },
+  querySql: (sql) => {
+    return database.prepare(sql).all()
   }
 })

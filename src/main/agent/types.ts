@@ -1,4 +1,4 @@
-import type { AssociatedPersonItem, PersonRelationship } from '@/db/schema'
+import type { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -390,6 +390,36 @@ export type PeopleQueryToolItem = Pick<
 export type PeopleQueryToolResult = AgentToolResult & {
   // 命中的人物条目。
   items: PeopleQueryToolItem[]
+  // SQL 查询返回的原始行。
+  rows?: unknown[]
+}
+
+// Todo 查询工具入参。
+export type TodoQueryToolInput = {
+  // 待办所属日期。默认今天；传 "all" 跨日期查询。
+  entryDate?: string
+  // 搜索关键字（LIKE 匹配 text 字段）。
+  query?: string
+  // 优先级精确过滤。
+  priority?: TodoPriority
+  // 完成状态过滤。
+  completed?: boolean
+  // 只读 SQL 查询。
+  sql?: string
+  // 返回数量上限。
+  limit?: number
+}
+
+// Todo 查询工具返回项。
+export type TodoQueryToolItem = Pick<
+  TodoItem,
+  'id' | 'entryDate' | 'text' | 'priority' | 'completed' | 'sortOrder' | 'createdAt' | 'updatedAt'
+>
+
+// Todo 查询工具返回结果。
+export type TodoQueryToolResult = AgentToolResult & {
+  // 命中的待办条目。
+  items: TodoQueryToolItem[]
   // SQL 查询返回的原始行。
   rows?: unknown[]
 }
