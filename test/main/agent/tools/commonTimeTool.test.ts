@@ -5,7 +5,7 @@ import { createDateOffsetTool, createTimeNowTool } from '@/agent/tools/commonTim
 const fixedNow = (): Date => new Date('2026-05-30T04:03:04.000Z')
 
 describe('commonTimeTool', () => {
-  it('common_tool.time_now 返回当前时间结构化数据', async () => {
+  it('common_tool_time_now 返回当前时间结构化数据', async () => {
     const tool = createTimeNowTool(fixedNow)
 
     const result = await tool.execute({
@@ -24,7 +24,7 @@ describe('commonTimeTool', () => {
     expect(result.observation).toContain('Asia/Shanghai')
   })
 
-  it('common_tool.time_now 拒绝无效时区', async () => {
+  it('common_tool_time_now 拒绝无效时区', async () => {
     const tool = createTimeNowTool(fixedNow)
 
     await expect(
@@ -34,7 +34,7 @@ describe('commonTimeTool', () => {
     ).rejects.toThrow('Invalid locale or time zone')
   })
 
-  it('common_tool.date_offset 按天计算日期偏移', async () => {
+  it('common_tool_date_offset 按天计算日期偏移', async () => {
     const tool = createDateOffsetTool(fixedNow)
 
     const result = await tool.execute({
@@ -54,7 +54,7 @@ describe('commonTimeTool', () => {
     expect(result.observation).toContain('offsetting -1 days')
   })
 
-  it('common_tool.date_offset 拒绝无效基准日期', async () => {
+  it('common_tool_date_offset 拒绝无效基准日期', async () => {
     const tool = createDateOffsetTool(fixedNow)
 
     await expect(

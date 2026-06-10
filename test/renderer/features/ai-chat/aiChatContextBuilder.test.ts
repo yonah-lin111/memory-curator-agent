@@ -181,7 +181,7 @@ describe('aiChatContextBuilder', () => {
             id: 'call-1',
           title: 'Query local People',
             status: 'done',
-            tool: 'people_tool.query',
+            tool: 'people_tool_query',
             observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
             data: [
               {
@@ -194,7 +194,7 @@ describe('aiChatContextBuilder', () => {
             id: 'call-2',
             title: '等待执行',
             status: 'running',
-            tool: 'people_tool.query',
+            tool: 'people_tool_query',
             observation: 'Reading the local People table.'
           }
         ]
@@ -208,10 +208,10 @@ describe('aiChatContextBuilder', () => {
           sessionId: 's1',
           kind: 'tool',
           sourceId: 'call-1',
-          title: 'Tool result: people_tool.query',
+          title: 'Tool result: people_tool_query',
           content: expect.stringContaining('"details": "# 阿明\\n完整详情"'),
           meta: expect.objectContaining({
-            tool: 'people_tool.query',
+            tool: 'people_tool_query',
             messageId: 'a1'
           })
         })

@@ -231,7 +231,7 @@ const hasAnsweredAllQuestions = (
   );
 
 /**
- * AiAskRequestPanel - 渲染 common_tool.ask 结构化澄清交互。
+ * AiAskRequestPanel - 渲染 common_tool_ask 结构化澄清交互。
  */
 export const AiAskRequestPanel = ({
   request,

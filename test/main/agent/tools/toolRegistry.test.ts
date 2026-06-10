@@ -43,22 +43,22 @@ describe('toolRegistry', () => {
     })
 
     expect(registry.ids()).toEqual([
-      'common_tool.ask',
-      'people_tool.query',
-      'people_tool.add',
-      'people_tool.update',
-      'people_tool.delete',
-      'common_tool.time_now',
-      'common_tool.date_offset'
+      'common_tool_ask',
+      'people_tool_query',
+      'people_tool_add',
+      'people_tool_update',
+      'people_tool_delete',
+      'common_tool_time_now',
+      'common_tool_date_offset'
     ])
-    expect(registry.get('common_tool.ask')?.description).toContain('structured clarification')
+    expect(registry.get('common_tool_ask')?.description).toContain('structured clarification')
     expect(registry.get('common_tool.explain')).toBeUndefined()
-    expect(registry.get('people_tool.query')?.description).toContain('People table')
-    expect(registry.get('people_tool.add')?.description).toContain('Create a people profile')
-    expect(registry.get('people_tool.update')?.description).toContain('Update an existing people profile')
-    expect(registry.get('people_tool.delete')?.description).toContain('Delete an existing people profile')
-    expect(registry.get('common_tool.time_now')?.description).toContain('current date')
-    expect(registry.get('common_tool.date_offset')?.description).toContain('date offsets')
+    expect(registry.get('people_tool_query')?.description).toContain('People table')
+    expect(registry.get('people_tool_add')?.description).toContain('Create a people profile')
+    expect(registry.get('people_tool_update')?.description).toContain('Update an existing people profile')
+    expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
+    expect(registry.get('common_tool_time_now')?.description).toContain('current date')
+    expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
     expect(registry.all()).toHaveLength(7)
   })
 
@@ -107,12 +107,12 @@ describe('toolRegistry', () => {
     expect(prepared.description).toContain('Output requirements: Return a concise observation.')
   })
 
-  it('people_tool.query 使用结构化 prompt 元数据', () => {
+  it('people_tool_query 使用结构化 prompt 元数据', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const peopleTool = registry.get('people_tool.query')
-    const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_tool.query')
+    const peopleTool = registry.get('people_tool_query')
+    const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_tool_query')
 
     expect(peopleTool?.prompt?.summary).toContain('People table')
     expect(prepared?.description).toContain('When to use:')
@@ -120,11 +120,11 @@ describe('toolRegistry', () => {
     expect(prepared?.description).toContain('Markdown image syntax ![](...)')
   })
 
-  it('common_tool.ask 使用结构化 prompt 并每轮常驻', () => {
+  it('common_tool_ask 使用结构化 prompt 并每轮常驻', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const askTool = registry.get('common_tool.ask')
+    const askTool = registry.get('common_tool_ask')
     const [prepared] = prepareToolsForModel([askTool!])
 
     expect(askTool?.prompt?.alwaysAvailable).toBe(true)
@@ -136,9 +136,9 @@ describe('toolRegistry', () => {
     const registry = createAgentToolRegistry({
       peopleService
     })
-    const addTool = registry.get('people_tool.add')
-    const updateTool = registry.get('people_tool.update')
-    const deleteTool = registry.get('people_tool.delete')
+    const addTool = registry.get('people_tool_add')
+    const updateTool = registry.get('people_tool_update')
+    const deleteTool = registry.get('people_tool_delete')
 
     expect(addTool?.confirmation?.header).toBe('确认创建')
     expect(updateTool?.confirmation?.header).toBe('确认更新')
@@ -229,7 +229,7 @@ describe('toolRegistry', () => {
         {
           role: 'tool',
           toolCallId: 'call-1',
-          name: 'people_tool.query',
+          name: 'people_tool_query',
           content: '找到 1 位关联人物：阿明｜朋友｜技术狂热者'
         }
       ]).map((tool) => tool.name)

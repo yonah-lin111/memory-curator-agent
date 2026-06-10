@@ -142,6 +142,7 @@ const AppContent = (): React.JSX.Element => {
     handleSubmitAskAnswer,
     handleSubmitToolConfirmationAnswer,
     handleRegenerateLatestAnswer,
+    handleEditAndResendUserMessage,
     handleDeleteChatTurn,
     handleAiChatCommand,
   } = useAiChatController();
@@ -238,6 +239,7 @@ const AppContent = (): React.JSX.Element => {
               onSubmitAskAnswer={handleSubmitAskAnswer}
               onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
               onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
+              onEditAndResendUserMessage={handleEditAndResendUserMessage}
               onDeleteChatTurn={handleDeleteChatTurn}
               onCommandExecute={handleAiChatCommand}
               onModelChange={setSelectedAiModel}

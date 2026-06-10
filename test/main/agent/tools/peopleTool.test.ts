@@ -155,10 +155,10 @@ const peopleWriteService: Pick<
 };
 
 describe("peopleTool", () => {
-  it("使用 people_tool.query 作为查询工具名", () => {
+  it("使用 people_tool_query 作为查询工具名", () => {
     const tool = createPeopleQueryTool(peopleService);
 
-    expect(tool.name).toBe("people_tool.query");
+    expect(tool.name).toBe("people_tool_query");
   });
 
   it("按 query 查询 people 表并返回观察文本", async () => {
@@ -293,7 +293,7 @@ describe("peopleTool", () => {
       details: "# 小陈",
     });
 
-    expect(tool.name).toBe("people_tool.add");
+    expect(tool.name).toBe("people_tool_add");
     expect(peopleWriteService.create).toHaveBeenCalledWith({
       avatar: "",
       name: "小陈",
@@ -314,10 +314,10 @@ describe("peopleTool", () => {
     });
   });
 
-  it("添加人物提示词仅用 common_tool.ask 补充缺失信息并要求 details 使用 Markdown", () => {
+  it("添加人物提示词仅用 common_tool_ask 补充缺失信息并要求 details 使用 Markdown", () => {
     const tool = createPeopleAddTool(peopleWriteService);
 
-    expect(tool.prompt?.whenToUse.join("\n")).toContain("common_tool.ask");
+    expect(tool.prompt?.whenToUse.join("\n")).toContain("common_tool_ask");
     expect(tool.prompt?.whenToUse.join("\n")).toContain("missing required facts");
     expect(tool.prompt?.safety?.join("\n")).toContain("internal confirmation");
     expect(tool.prompt?.safety?.join("\n")).toContain("confirmationSummary");
@@ -408,7 +408,7 @@ describe("peopleTool", () => {
       details: "# 阿明\n更新后的详情。",
     });
 
-    expect(tool.name).toBe("people_tool.update");
+    expect(tool.name).toBe("people_tool_update");
     expect(peopleWriteService.update).toHaveBeenCalledWith("person-1", {
       avatar: "",
       name: "阿明",
@@ -445,7 +445,7 @@ describe("peopleTool", () => {
       id: "person-1",
     });
 
-    expect(tool.name).toBe("people_tool.delete");
+    expect(tool.name).toBe("people_tool_delete");
     expect(peopleWriteService.delete).toHaveBeenCalledWith("person-1");
     expect(result.observation).toBe("Deleted people profile: person-1.");
     expect(result.data).toEqual({
@@ -455,10 +455,10 @@ describe("peopleTool", () => {
 
   it("集中创建四个 People 工具", () => {
     expect(createPeopleTools(peopleWriteService).map((tool) => tool.name)).toEqual([
-      "people_tool.query",
-      "people_tool.add",
-      "people_tool.update",
-      "people_tool.delete",
+      "people_tool_query",
+      "people_tool_add",
+      "people_tool_update",
+      "people_tool_delete",
     ]);
   });
 });

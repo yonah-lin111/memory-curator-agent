@@ -34,7 +34,7 @@ describe('aiSdkProvider', () => {
           yield {
             type: 'tool-call',
             toolCallId: 'call-1',
-            toolName: 'people_tool.query',
+            toolName: 'people_tool_query',
             input: {
               query: '阿明'
             }
@@ -57,7 +57,7 @@ describe('aiSdkProvider', () => {
         ],
         tools: [
           {
-            name: 'people_tool.query',
+            name: 'people_tool_query',
             description: 'Query the People table',
             parameters: {
               type: 'object',
@@ -85,7 +85,7 @@ describe('aiSdkProvider', () => {
       {
         type: 'tool_call_done',
         id: 'call-1',
-        name: 'people_tool.query',
+        name: 'people_tool_query',
         argumentsText: '{"query":"阿明"}'
       },
       {
@@ -256,7 +256,7 @@ describe('aiSdkProvider', () => {
         ],
         tools: [
           {
-            name: 'people_tool.query',
+            name: 'people_tool_query',
             description: '查询 People 表',
             parameters: {
               type: 'object',
@@ -272,7 +272,7 @@ describe('aiSdkProvider', () => {
     )
 
     const tools = capturedInput?.tools as Record<string, { description?: string }>
-    expect(Object.keys(tools)).toContain('people_tool.query')
-    expect(tools['people_tool.query'].description).toContain('provide arguments strictly according to the parameter schema')
+    expect(Object.keys(tools)).toContain('people_tool_query')
+    expect(tools['people_tool_query'].description).toContain('provide arguments strictly according to the parameter schema')
   })
 })

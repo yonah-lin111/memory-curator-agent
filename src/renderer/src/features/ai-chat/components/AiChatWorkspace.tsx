@@ -93,6 +93,8 @@ type AiChatWorkspaceProps = {
   ) => void | Promise<void>;
   // 重新生成最新 AI 回答回调。
   onRegenerateLatestAnswer: () => void;
+  // 编辑并重新发送用户消息回调。
+  onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
   // 删除指定消息所属 QA 回调。
   onDeleteChatTurn: (messageId: string) => void;
   // 执行输入框命令回调。
@@ -112,6 +114,7 @@ export const AiChatWorkspace = ({
   onSubmitAskAnswer,
   onSubmitToolConfirmationAnswer,
   onRegenerateLatestAnswer,
+  onEditAndResendUserMessage,
   onDeleteChatTurn,
   onCommandExecute,
   onModelChange,
@@ -610,6 +613,8 @@ export const AiChatWorkspace = ({
               session.status !== "running";
             const shouldPinToTop = message.id === topPinnedUserId;
 
+            const isLastUser = message.role === "user" && index === session.messages.length - 2;
+
             return (
               <div
                 key={message.id}
@@ -617,6 +622,7 @@ export const AiChatWorkspace = ({
               >
                 <AiChatMessageBubble
                   message={message}
+                  isLastUser={isLastUser}
                   isGenerating={isGenerating}
                   canRegenerate={canRegenerate}
                   onSubmitAskAnswer={onSubmitAskAnswer}
@@ -624,6 +630,7 @@ export const AiChatWorkspace = ({
                     onSubmitToolConfirmationAnswer
                   }
                   onOpenContextMenu={handleOpenMessageContextMenu}
+                  onEditAndResendUserMessage={onEditAndResendUserMessage}
                 />
               </div>
             );

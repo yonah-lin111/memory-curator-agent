@@ -31,6 +31,7 @@ import {
   getActiveAiChatSession,
   INITIAL_AI_CHAT_SESSION_STATE,
   isEmptyAiChatDraftSession,
+  findChatTurnBoundsByMessageId,
   type AiChatMessageUpdater,
 } from "@/features/ai-chat/core/aiChatSessionReducer";
 import {
@@ -137,6 +138,8 @@ type UseAiChatControllerResult = {
   ) => Promise<void>;
   // 重新生成最新 AI 回答。
   handleRegenerateLatestAnswer: () => Promise<void>;
+  // 编辑并重新发送用户消息。
+  handleEditAndResendUserMessage: (messageId: string, text: string) => Promise<void>;
   // 删除指定消息所属 QA。
   handleDeleteChatTurn: (messageId: string) => Promise<void>;
   // 执行 AI 输入框命令。
@@ -858,6 +861,82 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   };
 
   /**
+   * 编辑指定用户消息，并删除该消息之后的所有对话记录，然后基于新文本重新触发 AI 对话。
+   */
+  const handleEditAndResendUserMessage = async (messageId: string, text: string): Promise<void> => {
+    if (activeChatSession.status === "running") {
+      toast.warning("AI 正在生成，不能编辑消息");
+      return;
+    }
+
+    const messages = activeChatSession.messages;
+    const messageIndex = messages.findIndex((m) => m.id === messageId);
+    if (messageIndex < 0 || messages[messageIndex].role !== "user") {
+      toast.error("未找到有效的用户消息");
+      return;
+    }
+
+    // 1. 删除此用户消息之后的所有消息（包含它自己，但在重新发送前我们会把它删除，或者我们直接通过持久层接口处理）。
+    // 在这里，我们可以通过 deleteTurn/deleteTurnByMessageId 来清除。
+    // deleteTurnByMessageId 会删除 messageId 所在的 QA 以及之后的所有 QA (因为它是多轮对话，如果删了中间的，后面的也会由于上下文改变而被删除。其实在持久层，deleteTurnByMessageId 已经自动删除了该 QA 到末尾的所有消息，见 deleteTurnByRange(..., messages, turnStartIndex, messages.length))。
+    // 来看 deleteTurnByMessageId 的具体实现：它传入的是 messageId，然后获取所在 turn 的起止位置，并删除从 turnStartIndex 到 messages.length (末尾) 的所有消息！
+    // 恰好完全符合“删除此消息及其后所有对话记录”的需求！
+    try {
+      const deleteTurnFn = window.api?.ai?.deleteTurn;
+      if (deleteTurnFn) {
+        const persistedSession = await deleteTurnFn(activeChatSession.id, messageId);
+        // 先在前端状态中同步清除后面的消息
+        const turnBounds = findChatTurnBoundsByMessageId(messages, messageId);
+        if (turnBounds) {
+          const removedMessages = messages.slice(turnBounds.startIndex);
+          const removedMessageIds = new Set(removedMessages.map((m) => m.id));
+          removeRunMappingsByMessageIds(removedMessageIds);
+
+          const fallbackSession = {
+            ...activeChatSession,
+            title: turnBounds.startIndex === 0 ? "新建对话" : activeChatSession.title,
+            status: turnBounds.startIndex === 0 ? ("idle" as const) : ("completed" as const),
+            messages: messages.slice(0, turnBounds.startIndex),
+          };
+
+          const cleanSessions = chatSessions.map((item) =>
+            item.id === activeChatId ? (persistedSession ?? fallbackSession) : item,
+          );
+          dispatchChatState({ type: "reset", sessions: cleanSessions, activeId: activeChatId });
+
+          // 2. 基于新的文本发送消息
+          startAiChatMessage(text, activeChatId, cleanSessions);
+        }
+      } else {
+        // 无持久层 fallback
+        const turnBounds = findChatTurnBoundsByMessageId(messages, messageId);
+        if (turnBounds) {
+          const removedMessages = messages.slice(turnBounds.startIndex);
+          const removedMessageIds = new Set(removedMessages.map((m) => m.id));
+          removeRunMappingsByMessageIds(removedMessageIds);
+
+          const fallbackSession = {
+            ...activeChatSession,
+            title: turnBounds.startIndex === 0 ? "新建对话" : activeChatSession.title,
+            status: turnBounds.startIndex === 0 ? ("idle" as const) : ("completed" as const),
+            messages: messages.slice(0, turnBounds.startIndex),
+          };
+
+          const cleanSessions = chatSessions.map((item) =>
+            item.id === activeChatId ? fallbackSession : item,
+          );
+          dispatchChatState({ type: "reset", sessions: cleanSessions, activeId: activeChatId });
+
+          // 基于新文本发送消息
+          startAiChatMessage(text, activeChatId, cleanSessions);
+        }
+      }
+    } catch {
+      toast.error("编辑消息失败");
+    }
+  };
+
+  /**
    * 切换当前激活的 AI 对话会话。
    */
   const handleActiveChatChange = (sessionId: string): void => {
@@ -910,6 +989,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     handleSubmitAskAnswer,
     handleSubmitToolConfirmationAnswer,
     handleRegenerateLatestAnswer,
+    handleEditAndResendUserMessage,
     handleDeleteChatTurn,
     handleAiChatCommand,
   };

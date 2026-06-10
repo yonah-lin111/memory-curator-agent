@@ -23,11 +23,11 @@ const DEFAULT_MAX_TURNS = 5
 const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 
 // Ask 工具名。
-const ASK_TOOL_NAME = 'common_tool.ask'
+const ASK_TOOL_NAME = 'common_tool_ask'
 
 // People 写入确认误用 Ask 时回灌模型的固定错误。
 const PEOPLE_MUTATION_ASK_REJECTION_MESSAGE =
-  'Do not use common_tool.ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
+  'Do not use common_tool_ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
 
 /**
  * 如果当前 run 已取消，直接中断 Agent 循环。

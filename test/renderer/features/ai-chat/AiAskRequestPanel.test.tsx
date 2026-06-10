@@ -53,7 +53,7 @@ const request: AiAskRequest = {
 const toolConfirmationRequest: AiToolConfirmationRequest = {
   kind: "tool_confirmation_request",
   id: "confirm_test_1",
-  tool: "people_tool.update",
+  tool: "people_tool_update",
   input: {
     name: "阿明",
   },

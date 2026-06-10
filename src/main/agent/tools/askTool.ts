@@ -212,7 +212,7 @@ export const createAskAnswerData = (request: AskRequestData, answers: string[][]
  * 创建用户澄清工具。
  */
 export const createAskTool = (): AgentTool => ({
-  name: 'common_tool.ask',
+  name: 'common_tool_ask',
   description: 'Ask the user structured clarification questions when critical information is missing.',
   prompt: {
     summary: 'Ask the user structured clarification questions when critical information is missing.',

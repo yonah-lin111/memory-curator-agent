@@ -677,7 +677,7 @@ const queryStructuredBySql = (
 export const createPeopleQueryTool = (
   peopleService: Pick<PeopleService, "querySql">,
 ): PeopleQueryTool => ({
-  name: "people_tool.query",
+  name: "people_tool_query",
   description:
     "Query associated people profiles in the local People table. Read-only; never modifies data.",
   prompt: {
@@ -833,7 +833,7 @@ export const createPeopleQueryTool = (
 export const createPeopleAddTool = (
   peopleService: Pick<PeopleService, "create">,
 ): PeopleWriteTool => ({
-  name: "people_tool.add",
+  name: "people_tool_add",
   description: "Create a people profile in the local People table.",
   confirmation: PEOPLE_ADD_CONFIRMATION,
   prompt: {
@@ -854,14 +854,14 @@ export const createPeopleAddTool = (
     ],
     whenToUse: [
       "Use when the user explicitly asks to create or save a new people profile.",
-      "Use common_tool.ask to ask for missing required facts when the create request is ambiguous or underspecified.",
+      "Use common_tool_ask to ask for missing required facts when the create request is ambiguous or underspecified.",
     ],
     whenNotToUse: [
       "Do not use for read-only questions about existing people profiles.",
       "Do not use when the user has not asked to save data.",
     ],
     safety: [
-      "Do not call common_tool.ask only to confirm creation; the system will request internal confirmation before execution.",
+      "Do not call common_tool_ask only to confirm creation; the system will request internal confirmation before execution.",
       "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
       "For creation, confirmationSummary must include the target name, relationship, and key known profile facts or fields being added; do not write only a generic create sentence.",
       "Use human-readable names and relationships in confirmationSummary; do not use profile ids unless there is no readable target.",
@@ -898,7 +898,7 @@ export const createPeopleAddTool = (
 export const createPeopleUpdateTool = (
   peopleService: Pick<PeopleService, "update">,
 ): PeopleWriteTool => ({
-  name: "people_tool.update",
+  name: "people_tool_update",
   description:
     "Update an existing people profile in the local People table by id.",
   confirmation: PEOPLE_UPDATE_CONFIRMATION,
@@ -915,7 +915,7 @@ export const createPeopleUpdateTool = (
     ],
     whenToUse: [
       "Use when the user explicitly asks to update an existing people profile.",
-      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then update the resolved profile id.",
+      "Use after people_tool_query when the user identifies a person by name or relationship instead of id, then update the resolved profile id.",
     ],
     whenNotToUse: [
       "Do not use for creating new people profiles.",
@@ -923,7 +923,7 @@ export const createPeopleUpdateTool = (
       "Do not use when the target profile id is unknown.",
     ],
     safety: [
-      "Do not call common_tool.ask only to confirm updates; the system will request internal confirmation before execution.",
+      "Do not call common_tool_ask only to confirm updates; the system will request internal confirmation before execution.",
       "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
       "For updates, confirmationSummary must name the target and list the key fields or facts that will change; do not write only a generic update sentence.",
       "Use human-readable names, relationships, and changed fields in confirmationSummary; do not use profile ids unless there is no readable target.",
@@ -966,7 +966,7 @@ export const createPeopleUpdateTool = (
 export const createPeopleDeleteTool = (
   peopleService: Pick<PeopleService, "delete">,
 ): PeopleWriteTool => ({
-  name: "people_tool.delete",
+  name: "people_tool_delete",
   description:
     "Delete an existing people profile from the local People table by id.",
   confirmation: PEOPLE_DELETE_CONFIRMATION,
@@ -981,14 +981,14 @@ export const createPeopleDeleteTool = (
     ],
     whenToUse: [
       "Use when the user explicitly asks to delete a people profile.",
-      "Use after people_tool.query when the user identifies a person by name or relationship instead of id, then delete the resolved profile id.",
+      "Use after people_tool_query when the user identifies a person by name or relationship instead of id, then delete the resolved profile id.",
     ],
     whenNotToUse: [
       "Do not use for temporary filtering or hiding.",
       "Do not use when the target profile id is unknown or ambiguous.",
     ],
     safety: [
-      "Do not call common_tool.ask only to confirm deletion; the system will request internal confirmation before execution.",
+      "Do not call common_tool_ask only to confirm deletion; the system will request internal confirmation before execution.",
       "Write confirmationSummary yourself in concise Markdown Chinese before confirmation.",
       "For deletion, confirmationSummary must identify the readable target and any key relationship or distinguishing facts known from query results; do not write only a generic delete sentence.",
       "Use human-readable names and relationships in confirmationSummary; do not use profile ids unless there is no readable target.",

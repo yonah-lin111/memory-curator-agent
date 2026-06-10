@@ -92,7 +92,7 @@ describe('aiHandlers', () => {
   it('system prompt 不硬编码具体工具名，避免工具被筛掉时诱导伪调用', () => {
     const systemPrompt = createSystemPrompt().content
 
-    expect(systemPrompt).not.toContain('people_tool.query')
+    expect(systemPrompt).not.toContain('people_tool_query')
     expect(systemPrompt).toContain('已授权工具')
     expect(systemPrompt).toContain('工具边界：')
     expect(systemPrompt).toContain('事实边界：')
@@ -195,11 +195,11 @@ describe('aiHandlers', () => {
     vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
     vi.mocked(runReactAgent).mockImplementation(async function* () {
       yield { type: 'text_delta', delta: '你好' } as never
-      yield { type: 'tool_started', id: 'call-1', name: 'people_tool.query', input: { query: '阿明' } } as never
+      yield { type: 'tool_started', id: 'call-1', name: 'people_tool_query', input: { query: '阿明' } } as never
       yield {
         type: 'tool_finished',
         id: 'call-1',
-        name: 'people_tool.query',
+        name: 'people_tool_query',
         observation: '找到 1 位关联人物',
         data: [{ name: '阿明' }]
       } as never
@@ -316,7 +316,7 @@ describe('aiHandlers', () => {
     expect(systemMessage.role).toBe('system')
     expect(systemMessage.content).toContain('Agent selection directive')
     expect(systemMessage.content).toContain('1. people_agent')
-    expect(systemMessage.content).toContain('people_tool.query')
+    expect(systemMessage.content).toContain('people_tool_query')
     expect(systemMessage.content).toContain('2. todo_agent')
     expect(systemMessage.content).not.toContain('unknown')
     expect(service.createRunWithMessages).toHaveBeenCalledWith(
@@ -378,7 +378,7 @@ describe('aiHandlers', () => {
     expect(service.updateSessionTitle).not.toHaveBeenCalled()
   })
 
-  it('persists common_tool.ask tool state like other tools', async () => {
+  it('persists common_tool_ask tool state like other tools', async () => {
     const service = {
       listSessions: vi.fn(),
       getSession: vi.fn(() => ({
@@ -403,11 +403,11 @@ describe('aiHandlers', () => {
     vi.mocked(createAiChatPersistenceService).mockReturnValue(service as never)
     vi.mocked(runReactAgent).mockImplementation(async function* () {
       yield { type: 'text_delta', delta: '需要确认范围。' } as never
-      yield { type: 'tool_started', id: 'call-ask', name: 'common_tool.ask', input: {} } as never
+      yield { type: 'tool_started', id: 'call-ask', name: 'common_tool_ask', input: {} } as never
       yield {
         type: 'tool_finished',
         id: 'call-ask',
-        name: 'common_tool.ask',
+        name: 'common_tool_ask',
         observation: 'Ask request created: waiting for the user.',
         data: {
           kind: 'ask_request',
@@ -424,7 +424,7 @@ describe('aiHandlers', () => {
       yield {
         type: 'tool_failed',
         id: 'call-ask',
-        name: 'common_tool.ask',
+        name: 'common_tool_ask',
         input: {},
         error: 'Ask request was cancelled.'
       } as never
@@ -458,7 +458,7 @@ describe('aiHandlers', () => {
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
         toolCallId: askToolCallIds[0],
-        name: 'common_tool.ask',
+        name: 'common_tool_ask',
         status: 'running',
         observation: 'Ask request created: waiting for the user.'
       })
@@ -466,7 +466,7 @@ describe('aiHandlers', () => {
     expect(service.upsertToolCall).toHaveBeenCalledWith(
       expect.objectContaining({
         toolCallId: askToolCallIds[0],
-        name: 'common_tool.ask',
+        name: 'common_tool_ask',
         status: 'failed',
         observation: 'Ask was cancelled.',
         error: 'Ask request was cancelled.'
@@ -483,7 +483,7 @@ describe('aiHandlers', () => {
         toolSteps: [
           expect.objectContaining({
             id: 'call-ask',
-            tool: 'common_tool.ask',
+            tool: 'common_tool_ask',
             status: 'cancelled',
             observation: 'Ask was cancelled.'
           })
@@ -519,7 +519,7 @@ describe('aiHandlers', () => {
       const request = {
         kind: 'tool_confirmation_request',
         id: 'confirm-1',
-        tool: 'people_tool.delete',
+        tool: 'people_tool_delete',
         input: { id: 'p1' },
         questions: [
           {
@@ -533,12 +533,12 @@ describe('aiHandlers', () => {
         ]
       }
 
-      yield { type: 'tool_started', id: 'call-delete', name: 'people_tool.delete', input: { id: 'p1' } } as never
+      yield { type: 'tool_started', id: 'call-delete', name: 'people_tool_delete', input: { id: 'p1' } } as never
       yield {
         type: 'tool_finished',
         id: 'call-delete',
-        name: 'people_tool.delete',
-        observation: 'Tool confirmation required before executing people_tool.delete.',
+        name: 'people_tool_delete',
+        observation: 'Tool confirmation required before executing people_tool_delete.',
         data: request
       } as never
 
@@ -548,7 +548,7 @@ describe('aiHandlers', () => {
         yield {
           type: 'tool_failed',
           id: 'call-delete',
-          name: 'people_tool.delete',
+          name: 'people_tool_delete',
           input: { id: 'p1' },
           error: error instanceof Error ? error.message : String(error)
         } as never
@@ -581,9 +581,9 @@ describe('aiHandlers', () => {
     await vi.waitFor(() =>
       expect(service.upsertToolCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'people_tool.delete',
+          name: 'people_tool_delete',
           status: 'running',
-          observation: 'Tool confirmation required before executing people_tool.delete.'
+          observation: 'Tool confirmation required before executing people_tool_delete.'
         })
       )
     )
@@ -591,7 +591,7 @@ describe('aiHandlers', () => {
     await vi.waitFor(() =>
       expect(service.upsertToolCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'people_tool.delete',
+          name: 'people_tool_delete',
           status: 'failed',
           observation: 'Tool confirmation was cancelled.',
           error: 'Tool confirmation request was cancelled.'
@@ -604,7 +604,7 @@ describe('aiHandlers', () => {
         toolSteps: [
           expect.objectContaining({
             id: 'call-delete',
-            tool: 'people_tool.delete',
+            tool: 'people_tool_delete',
             status: 'cancelled',
             observation: 'Tool confirmation was cancelled.'
           })

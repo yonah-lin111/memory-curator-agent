@@ -361,7 +361,7 @@ describe('App', () => {
           runId: capturedPayload!.runId!,
           sessionId: capturedPayload!.sessionId,
           id: 'call-1',
-          name: 'people_tool.query',
+          name: 'people_tool_query',
           input: {
             query: '阿明'
           }
@@ -377,7 +377,7 @@ describe('App', () => {
           runId: capturedPayload!.runId!,
           sessionId: capturedPayload!.sessionId,
           id: 'call-1',
-          name: 'people_tool.query',
+          name: 'people_tool_query',
           observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
           data: []
         })
@@ -584,7 +584,7 @@ describe('App', () => {
           runId: capturedPayload!.runId!,
           sessionId: capturedPayload!.sessionId,
           id: 'ask-1',
-          name: 'common_tool.ask',
+          name: 'common_tool_ask',
           observation: 'Ask request created: waiting for the user.',
           data: {
             kind: 'ask_request',
@@ -960,7 +960,7 @@ describe('App', () => {
           runId: firstPayload.runId!,
           sessionId: firstPayload.sessionId,
           id: 'call-1',
-          name: 'people_tool.query',
+          name: 'people_tool_query',
           observation: '找到 1 位关联人物：阿明｜朋友｜技术狂热者',
           data: []
         })
@@ -987,10 +987,10 @@ describe('App', () => {
         expect.objectContaining({
           key: expect.stringMatching(/^tool:.*:call-1$/),
           kind: 'tool',
-          title: 'Tool result: people_tool.query',
+          title: 'Tool result: people_tool_query',
           content: expect.stringContaining('找到 1 位关联人物：阿明｜朋友｜技术狂热者'),
           meta: expect.objectContaining({
-            tool: 'people_tool.query',
+            tool: 'people_tool_query',
             messageId: expect.any(String)
           })
         })

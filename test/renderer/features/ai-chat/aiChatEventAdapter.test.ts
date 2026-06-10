@@ -160,7 +160,7 @@ describe('createAiChatEventHandler', () => {
       runId: 'run-1',
       sessionId: 's1',
       id: 'call-delete',
-      name: 'people_tool.delete',
+      name: 'people_tool_delete',
       input: { id: 'p1' },
       error: 'Tool confirmation request was cancelled.'
     })
@@ -178,7 +178,7 @@ describe('createAiChatEventHandler', () => {
     expect(nextMessage.toolSteps).toEqual([
       expect.objectContaining({
         id: 'call-delete',
-        title: 'Tool cancelled: people_tool.delete',
+        title: 'Tool cancelled: people_tool_delete',
         status: 'cancelled',
         observation: 'Tool confirmation was cancelled.'
       })

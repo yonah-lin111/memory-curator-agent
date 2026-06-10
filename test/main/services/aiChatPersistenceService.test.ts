@@ -242,9 +242,9 @@ describe('aiChatPersistenceService', () => {
       toolSteps: [
         {
           id: 'call-1',
-          title: 'Tool result: people_tool.query',
+          title: 'Tool result: people_tool_query',
           status: 'done',
-          tool: 'people_tool.query',
+          tool: 'people_tool_query',
           input: { query: '阿明' },
           observation: '找到 1 位关联人物',
           data: [{ name: '阿明' }]
@@ -256,7 +256,7 @@ describe('aiChatPersistenceService', () => {
     expect(service.getSession('s1')?.messages[0]).toMatchObject({
       answer: '完成',
       parts: [{ id: 'p1', kind: 'text', content: '完成' }],
-      toolSteps: [{ id: 'call-1', status: 'done', tool: 'people_tool.query' }]
+      toolSteps: [{ id: 'call-1', status: 'done', tool: 'people_tool_query' }]
     })
   })
 
@@ -329,7 +329,7 @@ describe('aiChatPersistenceService', () => {
       runId: 'run-delete',
       messageId: 'm-ai',
       toolCallId: 'call-delete',
-      name: 'people_tool.query',
+      name: 'people_tool_query',
       status: 'done',
       input: {},
       observation: '完成',
@@ -434,7 +434,7 @@ describe('aiChatPersistenceService', () => {
       runId: 'run-2',
       messageId: 'm2-ai',
       toolCallId: 'call-undo',
-      name: 'people_tool.query',
+      name: 'people_tool_query',
       status: 'done',
       input: {},
       observation: '完成',
@@ -516,7 +516,7 @@ describe('aiChatPersistenceService', () => {
       runId: 'run-2',
       messageId: 'm2-ai',
       toolCallId: 'call-delete',
-      name: 'people_tool.query',
+      name: 'people_tool_query',
       status: 'done',
       input: {},
       observation: '完成',
@@ -572,7 +572,7 @@ describe('aiChatPersistenceService', () => {
       runId: 'run-1',
       messageId: 'm-ai',
       toolCallId: 'call-1',
-      name: 'people_tool.query',
+      name: 'people_tool_query',
       status: 'running',
       input: { query: '阿明' },
       observation: '',
@@ -584,7 +584,7 @@ describe('aiChatPersistenceService', () => {
       runId: 'run-1',
       messageId: 'm-ai',
       toolCallId: 'call-1',
-      name: 'people_tool.query',
+      name: 'people_tool_query',
       status: 'done',
       input: { query: '阿明' },
       observation: '找到 1 位关联人物',

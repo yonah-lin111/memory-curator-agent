@@ -284,7 +284,7 @@ export const createAiChatEventHandler = ({
     event: Extract<AiChatEvent, { type: "tool_failed" }>,
   ): AiChatMessage => {
     const isAskCancelled =
-      event.name === "common_tool.ask" && event.error === ASK_CANCELLED_MESSAGE;
+      event.name === "common_tool_ask" && event.error === ASK_CANCELLED_MESSAGE;
     const isToolConfirmationCancelled =
       event.error === TOOL_CONFIRMATION_CANCELLED_MESSAGE;
     const isCancelled = isAskCancelled || isToolConfirmationCancelled;

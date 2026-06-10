@@ -29,8 +29,8 @@ describe('agentHints', () => {
 
     expect(directive).toContain('Agent selection directive')
     expect(directive).toContain('1. people_agent')
-    expect(directive).toContain('people_tool.query')
-    expect(directive).toContain('people_tool.add')
+    expect(directive).toContain('people_tool_query')
+    expect(directive).toContain('people_tool_add')
     expect(directive).toContain('2. todo_agent')
     expect(directive.indexOf('1. people_agent')).toBeLessThan(directive.indexOf('2. todo_agent'))
     expect(directive).toContain('Do not force unrelated tools')

@@ -202,7 +202,7 @@ const parseBaseDate = (baseDate: string | undefined, now: Date): Date => {
  * 创建当前时间查询工具。
  */
 export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_tool.time_now',
+  name: 'common_tool_time_now',
   description: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
   prompt: {
     summary: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
@@ -250,7 +250,7 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
  * 创建日期偏移计算工具。
  */
 export const createDateOffsetTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_tool.date_offset',
+  name: 'common_tool_date_offset',
   description: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
   prompt: {
     summary: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
@@ -270,7 +270,7 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
       'Use when the user asks for yesterday, tomorrow, the day after tomorrow, N days earlier, or N days later.',
       'Use when the user needs a date offset from a given base date.'
     ],
-    whenNotToUse: ['Prefer common_tool.time_now when the user only asks for the current date or current time.'],
+    whenNotToUse: ['Prefer common_tool_time_now when the user only asks for the current date or current time.'],
     safety: ['Only perform local date calculations. Do not access the network or user files.'],
     output: 'Return the calculated date, weekday, and time zone.',
     examples: ['{"offsetDays":1}', '{"baseDate":"2026-05-30T10:00:00+08:00","offsetDays":-7,"timeZone":"Asia/Shanghai"}']

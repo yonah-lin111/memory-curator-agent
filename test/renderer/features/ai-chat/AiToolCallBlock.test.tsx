@@ -21,7 +21,7 @@ describe("AiToolCallBlock", () => {
       id: "ask-answer-1",
       title: "Ask user",
       status: "done",
-      tool: "common_tool.ask",
+      tool: "common_tool_ask",
       observation:
         'User has answered your clarification questions: "请问您要添加的人物与您是什么关系？"="家人", "请提供该人物的姓名"="王小美".',
       data: {
@@ -65,9 +65,9 @@ describe("AiToolCallBlock", () => {
   it("ask 被取消时展示取消状态", () => {
     const step: AiToolStep = {
       id: "ask-cancel-1",
-      title: "Tool cancelled: common_tool.ask",
+      title: "Tool cancelled: common_tool_ask",
       status: "cancelled",
-      tool: "common_tool.ask",
+      tool: "common_tool_ask",
       observation: "Ask was cancelled.",
       data: {
         error: "Ask request was cancelled.",
@@ -84,14 +84,14 @@ describe("AiToolCallBlock", () => {
     const onSubmitToolConfirmationAnswer = vi.fn(async () => undefined);
     const step: AiToolStep = {
       id: "call-add",
-      title: "Tool result: people_tool.add",
+      title: "Tool result: people_tool_add",
       status: "running",
-      tool: "people_tool.add",
-      observation: "Tool confirmation required before executing people_tool.add.",
+      tool: "people_tool_add",
+      observation: "Tool confirmation required before executing people_tool_add.",
       data: {
         kind: "tool_confirmation_request",
         id: "confirm-1",
-        tool: "people_tool.add",
+        tool: "people_tool_add",
         input: {
           name: "测试助手",
         },
@@ -134,14 +134,14 @@ describe("AiToolCallBlock", () => {
   it("工具确认请求展示写入前说明", () => {
     const step: AiToolStep = {
       id: "confirm-1",
-      title: "Tool result: people_tool.delete",
+      title: "Tool result: people_tool_delete",
       status: "running",
-      tool: "people_tool.delete",
-      observation: "Tool confirmation required before executing people_tool.delete.",
+      tool: "people_tool_delete",
+      observation: "Tool confirmation required before executing people_tool_delete.",
       data: {
         kind: "tool_confirmation_request",
         id: "confirm-delete",
-        tool: "people_tool.delete",
+        tool: "people_tool_delete",
         input: {
           id: "person-1",
         },
@@ -182,7 +182,7 @@ describe("AiToolCallBlock", () => {
     expect(preview).toHaveStyle({ fontSize: "13px" });
     expect(
       screen.getByText(
-        "Tool confirmation required before executing people_tool.delete.",
+        "Tool confirmation required before executing people_tool_delete.",
       ),
     ).toBeInTheDocument();
     expect(summary.querySelector("svg path")).toHaveAttribute("d", "M3 1v5h7");

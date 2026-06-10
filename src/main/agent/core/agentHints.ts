@@ -29,7 +29,7 @@ const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
     id: 'people',
     token: 'people_agent',
     description: 'Prefer People-related profile facts, relationship memory, and People tools first.',
-    tools: ['people_tool.query', 'people_tool.add', 'people_tool.update', 'people_tool.delete']
+    tools: ['people_tool_query', 'people_tool_add', 'people_tool_update', 'people_tool_delete']
   },
   {
     id: 'todo',
