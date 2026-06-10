@@ -3,7 +3,8 @@ import {
   createSnippetQueryTool,
   createSnippetAddTool,
   createSnippetUpdateTool,
-  createSnippetDeleteTool
+  createSnippetDeleteTool,
+  createSnippetTools
 } from '@/agent/tools/snippetTool'
 import type { SnippetsService } from '@/services/snippetsService'
 
@@ -177,5 +178,46 @@ describe('snippetTool mutations', () => {
 
     expect(mockDelete).toHaveBeenCalledWith(2)
     expect(result.data).toEqual({ id: 2 })
+  })
+
+  it('snippets_tool_batch_add should call create on service per item', async () => {
+    const mockCreate = vi.fn().mockReturnValue({
+      id: 3,
+      entryDate: '2026-06-10',
+      title: 'Snippet 3',
+      content: 'content 3',
+      tags: ['a'],
+      createdAt: '2026-06-10 12:00',
+      updatedAt: '2026-06-10 12:00'
+    })
+    const service = { create: mockCreate } as unknown as SnippetsService
+    const tools = createSnippetTools(service)
+    const batchTool = tools.find((t) => t.name === 'snippets_tool_batch_add')!
+
+    await batchTool.execute({
+      items: [
+        { entryDate: '2026-06-10', title: 'S1', content: 'c1', tags: ['a'] },
+        { entryDate: '2026-06-10', title: 'S2', content: 'c2', tags: ['b'] }
+      ],
+      confirmationSummary: 'Creating batch'
+    })
+
+    expect(mockCreate).toHaveBeenCalledTimes(2)
+  })
+
+  it('snippets_tool_batch_delete should call delete on service per id', async () => {
+    const mockDelete = vi.fn()
+    const service = { delete: mockDelete } as unknown as SnippetsService
+    const tools = createSnippetTools(service)
+    const batchTool = tools.find((t) => t.name === 'snippets_tool_batch_delete')!
+
+    await batchTool.execute({
+      ids: [1, 2],
+      confirmationSummary: 'Deleting batch'
+    })
+
+    expect(mockDelete).toHaveBeenCalledTimes(2)
+    expect(mockDelete).toHaveBeenCalledWith(1)
+    expect(mockDelete).toHaveBeenCalledWith(2)
   })
 })
