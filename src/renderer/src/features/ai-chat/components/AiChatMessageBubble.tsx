@@ -53,6 +53,8 @@ type AiChatMessageBubbleProps = {
   onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
   // 思考内容展开折叠时的回调。
   onThinkingBlockToggle?: () => void;
+  // 工具确认表单状态/高度改变时的回调。
+  onToolConfirmationToggle?: () => void;
   // 用户编辑状态改变时的回调.
   onUserEditStateChange?: (isEditing: boolean) => void;
 };
@@ -448,6 +450,7 @@ export const AiChatMessageBubble = ({
   onOpenContextMenu,
   onEditAndResendUserMessage,
   onThinkingBlockToggle,
+  onToolConfirmationToggle,
   onUserEditStateChange,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
@@ -769,6 +772,7 @@ export const AiChatMessageBubble = ({
                         onSubmitToolConfirmationAnswer={
                           onSubmitToolConfirmationAnswer
                         }
+                        onToolConfirmationToggle={onToolConfirmationToggle}
                       />,
                     );
                     currentToolSteps = [];

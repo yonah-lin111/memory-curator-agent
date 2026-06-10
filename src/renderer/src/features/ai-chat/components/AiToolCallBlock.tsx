@@ -42,6 +42,8 @@ type AiToolCallBlockProps = {
   onSubmitToolConfirmationAnswer?: (
     payload: AiToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
+  // 工具确认表单展开收拢时的回调。
+  onToolConfirmationToggle?: () => void;
 };
 
 // 根据工具步骤状态返回状态展示配置。
@@ -179,6 +181,8 @@ type AiToolRequestPanelContainerProps = {
   request: AiAskRequest | AiToolConfirmationRequest | null;
   // 提交回答回调。
   onSubmit: ((payload: AiAskAnswerSubmitPayload) => void | Promise<void>) | undefined;
+  // 切换展开折叠时的回调。
+  onToggle?: () => void;
 };
 
 /**
@@ -187,6 +191,7 @@ type AiToolRequestPanelContainerProps = {
 const AiToolRequestPanelContainer = ({
   request,
   onSubmit,
+  onToggle,
 }: AiToolRequestPanelContainerProps): React.JSX.Element | null => {
   const [activeRequest, setActiveRequest] = useState<
     AiAskRequest | AiToolConfirmationRequest | null
@@ -204,14 +209,17 @@ const AiToolRequestPanelContainer = ({
         setActiveRequest(request);
         const raf = requestAnimationFrame(() => {
           setIsExpanded(true);
+          onToggle?.();
         });
         return () => cancelAnimationFrame(raf);
       } else {
         setActiveRequest(request);
         setIsExpanded(true);
+        onToggle?.();
       }
     } else {
       setIsExpanded(false);
+      onToggle?.();
     }
     return undefined;
   }, [request, onSubmit]);
@@ -264,6 +272,7 @@ export const AiToolCallBlock = ({
   steps,
   onSubmitAskAnswer,
   onSubmitToolConfirmationAnswer,
+  onToolConfirmationToggle,
 }: AiToolCallBlockProps): React.JSX.Element => {
   return (
     <div className="my-0.5 flex flex-col gap-2">
@@ -369,6 +378,7 @@ export const AiToolCallBlock = ({
                 <AiToolRequestPanelContainer
                   request={requestPanel}
                   onSubmit={handleSubmitRequest}
+                  onToggle={onToolConfirmationToggle}
                 />
               </div>
             </div>

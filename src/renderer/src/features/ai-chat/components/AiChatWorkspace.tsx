@@ -772,6 +772,7 @@ export const AiChatWorkspace = ({
                   onOpenContextMenu={handleOpenMessageContextMenu}
                   onEditAndResendUserMessage={onEditAndResendUserMessage}
                   onThinkingBlockToggle={handleThinkingBlockToggle}
+                  onToolConfirmationToggle={handleThinkingBlockToggle}
                   onUserEditStateChange={handleUserEditStateChange}
                 />
               </div>
