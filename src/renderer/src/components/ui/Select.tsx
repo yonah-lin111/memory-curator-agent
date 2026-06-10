@@ -45,7 +45,7 @@ export interface SelectProps<T> {
  * 判断是否为分组选项
  */
 const isGroup = <T,>(
-  item: SelectOption<T> | SelectGroup<T>
+  item: SelectOption<T> | SelectGroup<T>,
 ): item is SelectGroup<T> => {
   return "options" in item;
 };
@@ -88,7 +88,7 @@ export const Select = <T extends string>({
 
   // 查找当前选中的选项。
   const findSelectedOption = (
-    items: (SelectOption<T> | SelectGroup<T>)[]
+    items: (SelectOption<T> | SelectGroup<T>)[],
   ): SelectOption<T> | undefined => {
     for (const item of items) {
       if (isGroup(item)) {
@@ -129,9 +129,11 @@ export const Select = <T extends string>({
         className={`flex w-full items-center justify-between rounded-[4px] px-2.5 py-1.5 text-xs font-normal outline-none ${
           isSelected ? "bg-white/5 text-white" : "text-white/70"
         } ${isGrouped ? "pl-5" : ""}`}
-        onClick={() => {
-          onChange(option.value);
+        onMouseDown={(e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
           setIsOpen(false);
+          onChange(option.value);
         }}
       >
         <span className={`flex-1 whitespace-nowrap ${textAlignStyles}`}>
