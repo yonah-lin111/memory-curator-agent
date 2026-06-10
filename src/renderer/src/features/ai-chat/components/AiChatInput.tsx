@@ -494,12 +494,17 @@ export const AiChatInput = ({
     void Promise.resolve(onCommandExecute(command.id))
       .then((nextInputText) => {
         if (!command.addToContext) {
-          setInputText(nextInputText ?? "");
+          const text = nextInputText ?? "";
+          setInputText(text);
+          draftInputRef.current = text;
+          historyCursorRef.current = null;
         }
       })
       .catch(() => {
         if (!command.addToContext) {
           setInputText("");
+          draftInputRef.current = "";
+          historyCursorRef.current = null;
         }
       });
     requestAnimationFrame(() => textareaRef.current?.focus());
@@ -756,6 +761,8 @@ export const AiChatInput = ({
       const nextValue = inputText.slice(0, -1);
       const nextMatchedCommands = getMatchedCommands(nextValue);
       setInputText(nextValue);
+      draftInputRef.current = nextValue;
+      historyCursorRef.current = null;
       setActiveCommandIndex(0);
       setIsCommandPanelOpen(isCommandInput(nextValue) && nextMatchedCommands.length > 0);
       requestAnimationFrame(adjustTextareaHeight);
@@ -767,6 +774,8 @@ export const AiChatInput = ({
       const nextValue = `${inputText}${e.key}`;
       const nextMatchedCommands = getMatchedCommands(nextValue);
       setInputText(nextValue);
+      draftInputRef.current = nextValue;
+      historyCursorRef.current = null;
       setActiveCommandIndex(0);
       setIsCommandPanelOpen(isCommandInput(nextValue) && nextMatchedCommands.length > 0);
       requestAnimationFrame(adjustTextareaHeight);

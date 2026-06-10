@@ -575,4 +575,45 @@ describe('AiChatInput', () => {
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     expect(textarea).toHaveValue('/xyz')
   })
+
+  it('执行 /clear 后，使用上键、下键切换历史不会显示已经执行的命令', async () => {
+    const listPromptHistory = vi.fn().mockResolvedValue(['第一个问题', '第二个问题'])
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        ai: {
+          listPromptHistory
+        }
+      }
+    })
+    const onCommandExecute = vi.fn().mockResolvedValue('')
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+    textarea.focus()
+
+    await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
+
+    // 输入以 /cl
+    fireEvent.change(textarea, { target: { value: '/cl' } })
+    
+    // 等待命令面板显示并回车执行
+    const commandPanel = screen.getByRole('listbox', {
+      name: 'AI Command Input Panel'
+    })
+    await waitFor(() => expect(commandPanel).toBeInTheDocument())
+    
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    expect(onCommandExecute).toHaveBeenCalledWith('clear')
+    await waitFor(() => expect(textarea).toHaveValue(''))
+
+    // 此时按上键（进入历史）
+    textarea.setSelectionRange(0, 0)
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea).toHaveValue('第二个问题')
+
+    // 此时按下键（回到草稿）
+    textarea.setSelectionRange('第二个问题'.length, '第二个问题'.length)
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea).toHaveValue('') // 应该是空，而不应该是 '/cl'
+  })
 })
