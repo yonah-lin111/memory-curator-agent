@@ -31,8 +31,6 @@ export type AiSettingsProvider = {
   type: ProviderTransportType
   // Provider 显示名。
   name: string
-  // 对应 npm 包名。
-  npm: string
   // Provider 连接参数。
   options: {
     // API Key。
@@ -114,7 +112,6 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: '',
         baseURL: ''
@@ -224,7 +221,6 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): AiSettingsP
   id,
   type: inferProviderType(provider),
   name: provider.name ?? id,
-  npm: provider.npm ?? '',
   options: {
     apiKey: provider.options?.apiKey ?? '',
     baseURL: provider.options?.baseURL ?? ''
@@ -460,7 +456,6 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
       {
         type: provider.type,
         name: provider.name,
-        npm: provider.npm,
         options: {
           apiKey: provider.options.apiKey,
           baseURL: provider.options.baseURL.replace(/\/$/, '')

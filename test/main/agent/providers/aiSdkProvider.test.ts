@@ -3,13 +3,12 @@ import { createAiSdkModelProvider } from '@/agent/providers/aiSdkProvider'
 import type { NormalizedProviderConfig } from '@/agent/types'
 
 describe('aiSdkProvider', () => {
-  it('通过配置 npm 字段加载 provider 工厂并转发 AI SDK 流式事件', async () => {
+  it('加载 type 映射的 provider 包并转发 AI SDK 流式事件', async () => {
     const loadedPackages: string[] = []
     const config: NormalizedProviderConfig = {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: 'test-key',
         baseURL: 'https://example.com/v1'
@@ -99,7 +98,6 @@ describe('aiSdkProvider', () => {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: 'test-key',
         baseURL: 'https://example.com/v1'
@@ -154,7 +152,6 @@ describe('aiSdkProvider', () => {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: 'test-key',
         baseURL: 'https://example.com/v1'
@@ -220,7 +217,6 @@ describe('aiSdkProvider', () => {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: 'test-key',
         baseURL: 'https://example.com/v1'

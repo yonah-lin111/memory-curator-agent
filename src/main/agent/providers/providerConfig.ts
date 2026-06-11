@@ -122,7 +122,6 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): NormalizedP
     id,
     type: inferProviderType(provider),
     name: provider.name ?? id,
-    npm: provider.npm,
     options: {
       apiKey: provider.options.apiKey,
       baseURL: provider.options.baseURL.replace(/\/$/, '')

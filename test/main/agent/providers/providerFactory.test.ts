@@ -8,7 +8,6 @@ describe('providerFactory', () => {
       id: 'bailian',
       type: 'openai-compatible',
       name: 'Bailian',
-      npm: '@ai-sdk/openai-compatible',
       options: {
         apiKey: 'test-key',
         baseURL: 'https://example.com/v1'
@@ -40,12 +39,6 @@ describe('providerFactory', () => {
       createModelProvider({
         id: type,
         type,
-        npm:
-          type === 'google'
-            ? '@ai-sdk/google'
-            : type === 'anthropic'
-              ? '@ai-sdk/anthropic'
-              : '@ai-sdk/openai',
         name: type,
         options: {
           apiKey: 'test-key',

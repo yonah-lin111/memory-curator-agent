@@ -31,7 +31,6 @@ const createSettings = (): AiSettingsConfig => ({
       id: 'gemini',
       type: 'google',
       name: 'Gemini',
-      npm: '@ai-sdk/google',
       options: {
         apiKey: 'secret',
         baseURL: 'https://example.com/v1'

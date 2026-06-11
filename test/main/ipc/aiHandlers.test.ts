@@ -51,7 +51,6 @@ vi.mock('../../../src/main/agent/providers/providerConfig', () => ({
         id: 'bailian',
         type: 'openai-compatible',
         name: 'Bailian',
-        npm: '@ai-sdk/openai-compatible',
         options: {
           apiKey: 'secret-key',
           baseURL: 'https://example.invalid/v1'

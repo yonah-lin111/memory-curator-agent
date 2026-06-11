@@ -264,8 +264,6 @@ type AiSettingsProvider = {
   type: 'openai-compatible' | 'openai' | 'anthropic' | 'google'
   // Provider 显示名。
   name: string
-  // 对应 npm 包名。
-  npm: string
   // Provider 连接参数。
   options: {
     // API Key。

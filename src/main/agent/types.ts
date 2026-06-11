@@ -73,8 +73,6 @@ export type NormalizedProviderConfig = {
   type: ProviderTransportType
   // Provider 显示名。
   name: string
-  // 对应 npm 包名，仅用于配置说明。
-  npm?: string
   // Provider 连接参数。
   options: ProviderOptions
   // Provider 可用模型。

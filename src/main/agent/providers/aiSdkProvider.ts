@@ -5,7 +5,8 @@ import type {
   ModelProvider,
   ModelStreamEvent,
   ModelTurnInput,
-  NormalizedProviderConfig
+  NormalizedProviderConfig,
+  ProviderTransportType
 } from '@/agent/types'
 import { prepareToolsForModel } from '@/agent/tools/toolRegistry'
 
@@ -25,10 +26,28 @@ type AiSdkStreamText = (input: Record<string, unknown>) => {
 
 // AI SDK provider 运行时依赖。
 export type AiSdkProviderRuntime = {
-  // 加载配置中 npm 指定的 provider 包。
+  // 加载指定的 provider 包。
   loadPackage?: (packageName: string) => Promise<AiSdkProviderModule>
   // AI SDK streamText 函数。
   streamText?: AiSdkStreamText
+}
+
+/**
+ * 根据 provider 传输格式匹配指定的 npm 包名。
+ */
+export const getProviderNpmPackage = (type: ProviderTransportType): string => {
+  switch (type) {
+    case 'openai-compatible':
+      return '@ai-sdk/openai-compatible'
+    case 'openai':
+      return '@ai-sdk/openai'
+    case 'anthropic':
+      return '@ai-sdk/anthropic'
+    case 'google':
+      return '@ai-sdk/google'
+    default:
+      return '@ai-sdk/openai-compatible'
+  }
 }
 
 // 常见 AI SDK provider 工厂导出名。
@@ -143,18 +162,15 @@ const toAiSdkTools = (tools: AgentTool[]): Record<string, unknown> =>
   )
 
 /**
- * 创建由 npm 字段驱动的 AI SDK 模型 provider。
+ * 创建由 type 映射驱动的 AI SDK 模型 provider。
  */
 export const createAiSdkModelProvider = async (
   config: NormalizedProviderConfig,
   runtime: AiSdkProviderRuntime = {}
 ): Promise<ModelProvider> => {
-  if (!config.npm) {
-    throw new Error(`Provider ${config.id} is missing the npm field, so the AI SDK provider cannot be loaded`)
-  }
-
-  const providerModule = await (runtime.loadPackage ?? loadProviderPackage)(config.npm)
-  const createProvider = resolveProviderFactory(providerModule, config.npm)
+  const packageName = getProviderNpmPackage(config.type)
+  const providerModule = await (runtime.loadPackage ?? loadProviderPackage)(packageName)
+  const createProvider = resolveProviderFactory(providerModule, packageName)
   const provider = createProvider({
     name: config.name,
     apiKey: config.options.apiKey,

@@ -104,7 +104,6 @@ const createProvider = (id: string): AiSettingsProvider => ({
   id,
   type: "openai-compatible",
   name: id,
-  npm: "@ai-sdk/openai-compatible",
   options: {
     apiKey: "",
     baseURL: "",
@@ -776,19 +775,6 @@ export const SettingsPage = (): React.JSX.Element => {
                   value: type,
                   label: type,
                 }))}
-              />
-            </label>
-            <label className="grid gap-1.5 text-xs text-white/45">
-              NPM
-              <Input
-                aria-label="NPM package"
-                value={selectedProvider.npm}
-                onChange={(event) =>
-                  updateProvider(selectedProviderEntryKey, (provider) => ({
-                    ...provider,
-                    npm: event.target.value,
-                  }))
-                }
               />
             </label>
             <label className="grid gap-1.5 text-xs text-white/45 lg:col-span-2">
