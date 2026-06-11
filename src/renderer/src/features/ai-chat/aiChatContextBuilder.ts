@@ -65,6 +65,12 @@ export type AiChatContextBudget = {
   usagePercent: number | null;
 };
 
+// 单张图片估算 token 数（参考 opencode 粗略估算）。
+const ESTIMATED_IMAGE_TOKENS = 500;
+
+// 单个文本文件估算 token 数（内容由 getMessageContextContent 计入 text，此处仅文件元信息开销）。
+const ESTIMATED_TEXT_FILE_OVERHEAD_TOKENS = 20;
+
 /**
  * 估算 AI 对话上下文 token 数。
  */
@@ -194,20 +200,34 @@ export const buildMessageContextItems = (
     const items: AiChatContextItem[] = [];
 
     if (message.role === "user" && content && !shouldSkipMessageContext) {
+      let partsTokens = 0;
+      const meta: AiChatContextMeta = {
+        role: message.role,
+        time: message.time,
+      };
+
+      if (message.parts?.length) {
+        meta.parts = JSON.stringify(message.parts);
+        for (const p of message.parts) {
+          if (p.kind === "image") {
+            partsTokens += ESTIMATED_IMAGE_TOKENS;
+          } else if (p.kind === "text-file") {
+            partsTokens += ESTIMATED_TEXT_FILE_OVERHEAD_TOKENS;
+          }
+        }
+      }
+
       items.push({
         key: `message:${message.id}`,
         sessionId,
         kind: "message",
         sourceId: message.id,
-        title: message.role === "user" ? "用户消息" : "助手回答",
+        title: "用户消息",
         summary: summarizeContextContent(content),
         content,
-        tokens: estimateAiChatContextTokens(content),
+        tokens: estimateAiChatContextTokens(content) + partsTokens,
         createdAt,
-        meta: {
-          role: message.role,
-          time: message.time,
-        },
+        meta,
       });
     }
 
