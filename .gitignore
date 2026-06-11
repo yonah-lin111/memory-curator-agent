@@ -49,3 +49,5 @@ pnpm-debug.log*
 
 .superpowers/
 .playwright-mcp/
+
+.claude/

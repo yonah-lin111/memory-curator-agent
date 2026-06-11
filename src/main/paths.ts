@@ -45,3 +45,13 @@ export const getMarkdownImageTrashDir = (): string => join(getAppDataRoot(), 'tr
  * 获取 AI 聊天图片回收目录。
  */
 export const getAiChatImageTrashDir = (): string => join(getAppDataRoot(), 'trash', 'img', 'chat')
+
+/**
+ * 获取 AI 聊天文本文件存储目录。
+ */
+export const getAiChatTextDir = (): string => join(getAppDataRoot(), 'text', 'chat')
+
+/**
+ * 获取 AI 聊天文本文件回收目录。
+ */
+export const getAiChatTextTrashDir = (): string => join(getAppDataRoot(), 'trash', 'text', 'chat')
