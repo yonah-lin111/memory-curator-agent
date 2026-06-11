@@ -1214,13 +1214,13 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open chat' }))
 
-    const contextButton = await screen.findByRole('button', { name: 'View AI context records' })
+    const contextButton = await screen.findByRole('button', { name: 'Toggle AI context timeline' })
     const chatButton = screen.getByRole('button', { name: 'Close chat' })
     expect(contextButton.compareDocumentPosition(chatButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await user.click(contextButton)
 
-    expect(screen.getByRole('dialog', { name: 'AI context record details' })).toBeInTheDocument()
+    expect(screen.getByLabelText('AI Chat Context Timeline')).toBeInTheDocument()
     expect(screen.queryByText('单条工具输出上限')).not.toBeInTheDocument()
     expect(screen.queryByText('4,096 chars')).not.toBeInTheDocument()
     expect(screen.queryByText('最近完整工具结果')).not.toBeInTheDocument()

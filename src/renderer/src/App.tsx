@@ -19,8 +19,9 @@ import { TodayPage } from "@/pages/today/TodayPage";
 import { ToastProvider } from "@/components/ui/Toast";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
-import { AiChatContextBar } from "@/features/ai-chat/components/AiChatContextBar";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
+import { IconButton } from "@/components/ui/IconButton";
+import { Layers3 } from "lucide-react";
 
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [
@@ -113,6 +114,9 @@ const AppContent = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
+  // 上下文时间线展开状态。
+  const [isContextTimelineOpen, setIsContextTimelineOpen] = useState<boolean>(false);
+
   // 当前中间主内容页面。
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
@@ -126,10 +130,7 @@ const AppContent = (): React.JSX.Element => {
     activeChatId,
     completionNoticeSessionIds,
     activeChatSession,
-    activeChatContextItems,
-    activeChatContextBudget,
     aiModelOptions,
-    aiAgentOption,
     selectedAiModel,
     hasMoreChatSessions,
     isLoadingMoreChatSessions,
@@ -221,11 +222,15 @@ const AppContent = (): React.JSX.Element => {
           chatTitle={activeChatSession.title}
           chatLeadingAction={
             isChatOpen ? (
-              <AiChatContextBar
-                items={activeChatContextItems}
-                budget={activeChatContextBudget}
-                agent={aiAgentOption}
-              />
+              <IconButton
+                aria-label="Toggle AI context timeline"
+                title="查看 AI 上下文记录"
+                highlighted={isContextTimelineOpen}
+                onClick={() => setIsContextTimelineOpen((prev) => !prev)}
+                className={isContextTimelineOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
+              >
+                <Layers3 className="h-3.5 w-3.5" />
+              </IconButton>
             ) : null
           }
         />
@@ -258,6 +263,7 @@ const AppContent = (): React.JSX.Element => {
               session={activeChatSession}
               modelOptions={aiModelOptions}
               selectedModel={selectedAiModel}
+              isContextTimelineOpen={isContextTimelineOpen}
               onSendMessage={handleSendMessage}
               onSubmitAskAnswer={handleSubmitAskAnswer}
               onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}

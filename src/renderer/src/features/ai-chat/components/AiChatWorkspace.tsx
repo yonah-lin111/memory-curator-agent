@@ -27,6 +27,7 @@ import {
 import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { isEmptyAiChatDraftSession } from "@/features/ai-chat/core/aiChatSessionReducer";
+import { AiChatContextTimeline } from "@/features/ai-chat/components/AiChatContextTimeline";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
@@ -105,6 +106,8 @@ type AiChatWorkspaceProps = {
   onCommandExecute: (command: AiChatInputCommandId) => void;
   // AI 模型切换回调。
   onModelChange: (selection: AiModelSelection) => void;
+  // 上下文时间线是否展开
+  isContextTimelineOpen?: boolean;
 };
 
 /**
@@ -123,6 +126,7 @@ export const AiChatWorkspace = ({
   onDeleteChatTurn,
   onCommandExecute,
   onModelChange,
+  isContextTimelineOpen = false,
 }: AiChatWorkspaceProps): React.JSX.Element => {
   // 消息滚动容器引用。
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -725,68 +729,80 @@ export const AiChatWorkspace = ({
       {/* 统一会话切换优雅 Loading */}
       <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
 
-      {/* 消息列表 */}
-      <div
-        ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4"
-      >
-        {session.messages.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
-            <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
-            <p className="max-w-md text-xs text-white/40 leading-relaxed">
-              在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
-            </p>
-          </div>
-        ) : (
-          session.messages.map((message, index) => {
-            const isLast = index === session.messages.length - 1;
-            const isGenerating =
-              isLast &&
-              session.status === "running" &&
-              message.role === "assistant";
-            const previousMessage = session.messages[index - 1];
-            const canRegenerate =
-              message.role === "assistant" &&
-              isLast &&
-              message.id === latestAssistantMessageId &&
-              previousMessage?.role === "user" &&
-              session.status !== "running";
-            const shouldPinToTop = message.id === topPinnedUserId;
+      {/* 消息区域容器：支持左右并排（两个列表）展示 */}
+      <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-white/5">
+        {/* 左侧：消息列表 */}
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4 min-w-0"
+        >
+          {session.messages.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
+              <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
+              <p className="max-w-md text-xs text-white/40 leading-relaxed">
+                在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
+              </p>
+            </div>
+          ) : (
+            session.messages.map((message, index) => {
+              const isLast = index === session.messages.length - 1;
+              const isGenerating =
+                isLast &&
+                session.status === "running" &&
+                message.role === "assistant";
+              const previousMessage = session.messages[index - 1];
+              const canRegenerate =
+                message.role === "assistant" &&
+                isLast &&
+                message.id === latestAssistantMessageId &&
+                previousMessage?.role === "user" &&
+                session.status !== "running";
+              const shouldPinToTop = message.id === topPinnedUserId;
 
-            const isLastUser = message.role === "user" && index === session.messages.length - 2;
+              const isLastUser = message.role === "user" && index === session.messages.length - 2;
 
-            return (
-              <div
-                key={message.id}
-                ref={shouldPinToTop ? latestUserMessageRef : null}
-              >
-                <AiChatMessageBubble
-                  message={message}
-                  isLastUser={isLastUser}
-                  isGenerating={isGenerating}
-                  canRegenerate={canRegenerate}
-                  onSubmitAskAnswer={onSubmitAskAnswer}
-                  onSubmitToolConfirmationAnswer={
-                    onSubmitToolConfirmationAnswer
-                  }
-                  onOpenContextMenu={handleOpenMessageContextMenu}
-                  onEditAndResendUserMessage={onEditAndResendUserMessage}
-                  onThinkingBlockToggle={handleThinkingBlockToggle}
-                  onToolConfirmationToggle={handleThinkingBlockToggle}
-                  onUserEditStateChange={handleUserEditStateChange}
-                />
-              </div>
-            );
-          })
-        )}
-        {bottomSpacerHeight > 0 && (
-          <div
-            data-ai-chat-bottom-spacer="true"
-            style={{ height: `${bottomSpacerHeight}px` }}
-            className="flex-shrink-0"
+              return (
+                <div
+                  key={message.id}
+                  ref={shouldPinToTop ? latestUserMessageRef : null}
+                >
+                  <AiChatMessageBubble
+                    message={message}
+                    isLastUser={isLastUser}
+                    isGenerating={isGenerating}
+                    canRegenerate={canRegenerate}
+                    onSubmitAskAnswer={onSubmitAskAnswer}
+                    onSubmitToolConfirmationAnswer={
+                      onSubmitToolConfirmationAnswer
+                    }
+                    onOpenContextMenu={handleOpenMessageContextMenu}
+                    onEditAndResendUserMessage={onEditAndResendUserMessage}
+                    onThinkingBlockToggle={handleThinkingBlockToggle}
+                    onToolConfirmationToggle={handleThinkingBlockToggle}
+                    onUserEditStateChange={handleUserEditStateChange}
+                  />
+                </div>
+              );
+            })
+          )}
+          {bottomSpacerHeight > 0 && (
+            <div
+              data-ai-chat-bottom-spacer="true"
+              style={{ height: `${bottomSpacerHeight}px` }}
+              className="flex-shrink-0"
+            />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* 右侧：上下文时间线 */}
+        {isContextTimelineOpen && (
+          <AiChatContextTimeline
+            items={contextItems}
+            budget={contextBudget}
+            messages={session.messages}
           />
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {messageContextMenu ? (
