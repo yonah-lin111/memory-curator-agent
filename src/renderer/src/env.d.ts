@@ -482,6 +482,18 @@ type AiChatMessagePart =
       // 图片的本地协议地址。
       url: string
     }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'text-file'
+      // 文本文件的本地协议地址。
+      url: string
+      // 原始文件名。
+      fileName: string
+      // 文件大小（字节）。
+      sizeBytes: number
+    }
 
 // AI 对话消息类型。
 type AiChatMessage = {
