@@ -8,7 +8,6 @@ import type {
   AiToolStep,
 } from "@/features/ai-chat/types";
 import { AiChatThinkingBlock } from "@/features/ai-chat/components/AiChatThinkingBlock";
-import { PreviewableImage } from "@/components/ui/PreviewableImage";
 import { AiToolCallBlock } from "@/features/ai-chat/components/AiToolCallBlock";
 import type {
   AiAskAnswerSubmitPayload,
@@ -455,9 +454,6 @@ export const AiChatMessageBubble = ({
   onUserEditStateChange,
 }: AiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
-  const userParts = message.parts?.length
-    ? message.parts
-    : [{ id: `${message.id}-content`, kind: "text" as const, content: message.content }];
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -735,27 +731,8 @@ export const AiChatMessageBubble = ({
                     }}
                     className="overflow-hidden w-full select-text pr-1"
                   >
-                    {userParts.map((part) => {
-                      if (part.kind === "text") {
-                        return <div key={part.id} className="whitespace-pre-wrap">{part.content}</div>;
-                      }
-                      return null;
-                    })}
+                    {message.content}
                   </div>
-                  {userParts.map((part) => {
-                    if (part.kind === "image") {
-                      return (
-                        <PreviewableImage
-                          key={part.id}
-                          src={part.image.url}
-                          alt={part.image.name}
-                          variant="message"
-                          className="mt-2 text-left"
-                        />
-                      );
-                    }
-                    return null;
-                  })}
                   {hasOverflow && (
                     <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
                       <span className="text-xs scale-90 origin-right opacity-60">

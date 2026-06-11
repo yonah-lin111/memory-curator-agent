@@ -452,38 +452,4 @@ describe("AiChatMessageBubble", () => {
     const pingSpan = container.querySelector(".animate-ping");
     expect(pingSpan).toBeInTheDocument();
   });
-
-  it("renders user image parts with preview", () => {
-    const message: AiChatMessage = {
-      id: "u1",
-      role: "user",
-      content: "看图",
-      time: "10:00",
-      parts: [
-        { id: "u1-text", kind: "text", content: "看图" },
-        {
-          id: "u1-img",
-          kind: "image",
-          image: {
-            id: "img-1",
-            name: "a.png",
-            mimeType: "image/png",
-            url: "mc-img://chat/a.png",
-            filePath: "/Users/yonah/.mc/img/chat/a.png",
-            sizeBytes: 4,
-          },
-        },
-      ],
-    };
-
-    render(
-      <AiChatMessageBubble
-        message={message}
-        onOpenContextMenu={noopContextMenu}
-      />,
-    );
-
-    expect(screen.getByText("看图")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "预览图片 a.png" })).toBeInTheDocument();
-  });
 });
