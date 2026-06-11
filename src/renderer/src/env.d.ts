@@ -545,6 +545,20 @@ type MarkdownImageSaveResult = {
   url: string
 }
 
+// AI 聊天文本文件保存结果类型。
+type AiChatTextFileSaveResult = {
+  // 落盘文件名。
+  fileName: string
+  // 本机绝对路径。
+  filePath: string
+  // 可访问文本文件的应用 URL。
+  url: string
+  // 原始文件名。
+  originalName: string
+  // 文件大小（字节）。
+  sizeBytes: number
+}
+
 // 页面使用的片段类型。
 type SnippetItem = {
   // 片段唯一标识。
@@ -629,6 +643,10 @@ type AppAPI = {
     savePeopleAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存 AI 聊天图片。
     saveAiChatImage?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    // 保存 AI 聊天文本文件。
+    saveAiChatTextFile?: (payload: MarkdownImageSavePayload) => Promise<AiChatTextFileSaveResult>
+    // 删除 AI 聊天文本文件。
+    deleteAiChatTextFile?: (fileName: string) => Promise<void>
   }
   // Notes 页面 API。
   notes: {
