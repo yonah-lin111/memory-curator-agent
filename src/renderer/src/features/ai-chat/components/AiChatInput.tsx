@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Image } from "@/components/ui/Image";
+import { TextFile } from "@/components/ui/TextFile";
 import type { AiChatMessagePart } from "@/features/ai-chat/types";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
@@ -225,6 +226,56 @@ const resolveAgentMentionPanelState = (
   };
 };
 
+// 文本文件支持的最大数量。
+const MAX_TEXT_FILES = 6;
+
+// 文本文件 MIME 类型集合。
+const SUPPORTED_TEXT_MIME_TYPES = new Set([
+  "text/plain",
+  "text/markdown",
+  "text/csv",
+  "text/xml",
+  "text/html",
+  "text/css",
+  "text/javascript",
+  "text/x-python",
+  "text/x-java",
+  "text/x-c",
+  "text/x-c++",
+  "text/x-sh",
+  "text/x-bash",
+  "text/x-zsh",
+  "text/x-ruby",
+  "text/x-go",
+  "text/x-rust",
+  "text/x-swift",
+  "text/x-kotlin",
+  "text/x-scala",
+  "text/x-lua",
+  "text/x-perl",
+  "text/x-php",
+  "text/x-sql",
+  "text/yaml",
+  "application/json",
+  "application/x-yaml",
+  "application/toml",
+  "application/typescript",
+  "application/xml",
+  "application/x-sh",
+]);
+
+// 已选文本文件条目。
+type SelectedTextFile = {
+  // 落盘文件名。
+  fileName: string;
+  // 协议 URL。
+  url: string;
+  // 原始文件名。
+  originalName: string;
+  // 文件大小（字节）。
+  sizeBytes: number;
+};
+
 /**
  * AiChatInput - AI 对话底部输入区域组件，包含模型切换、文本输入与辅助功能。
  */
@@ -247,6 +298,7 @@ export const AiChatInput = ({
   const [inputText, setInputText] = useState("");
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedTextFiles, setSelectedTextFiles] = useState<SelectedTextFile[]>([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -281,7 +333,7 @@ export const AiChatInput = ({
   const activeAgent =
     matchedAgentMentions[activeAgentIndex] ?? matchedAgentMentions[0];
   const inputSendPayload = createAiChatSendPayload(inputText);
-  const canSend = Boolean(inputSendPayload.text.trim() || selectedImages.length > 0);
+  const canSend = Boolean(inputSendPayload.text.trim() || selectedImages.length > 0 || selectedTextFiles.length > 0);
   const hasModelOptions = modelOptions.some(
     (provider) => provider.models.length > 0,
   );
@@ -576,11 +628,96 @@ export const AiChatInput = ({
   };
 
   /**
+   * 判断文件是否为支持的文本类型。
+   */
+  const isTextFile = (file: File): boolean => {
+    if (SUPPORTED_TEXT_MIME_TYPES.has(file.type)) {
+      return true;
+    }
+
+    // MIME 回退时通过扩展名判断。
+    const supportedExtensions = [
+      ".txt", ".md", ".json", ".csv", ".log", ".xml",
+      ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+      ".env", ".sh", ".bash", ".zsh", ".py", ".js", ".ts",
+      ".jsx", ".tsx", ".html", ".css", ".scss", ".less",
+      ".sql", ".java", ".c", ".cpp", ".h", ".hpp", ".rs",
+      ".go", ".rb", ".php", ".swift", ".kt", ".scala",
+      ".r", ".lua", ".pl", ".pm", ".bat", ".ps1",
+    ];
+
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+
+    return supportedExtensions.includes(ext);
+  };
+
+  /**
+   * 异步上传并存储文本文件。
+   */
+  const handleUploadTextFiles = async (files: FileList | File[]): Promise<void> => {
+    if (!window.api?.files?.saveAiChatTextFile) {
+      toast.error("当前环境不支持保存文本文件，无法上传。");
+      return;
+    }
+
+    const currentCount = selectedTextFiles.length;
+
+    if (currentCount >= MAX_TEXT_FILES) {
+      toast.warning(`最多只能上传 ${MAX_TEXT_FILES} 个文本文件`);
+      return;
+    }
+
+    const remainingSlots = MAX_TEXT_FILES - currentCount;
+    const fileArray = Array.from(files);
+    const textFiles = fileArray.filter((file) => isTextFile(file));
+
+    if (textFiles.length === 0 && fileArray.length > 0) {
+      toast.warning("仅支持上传常见文本/代码文件");
+      return;
+    }
+
+    if (textFiles.length > remainingSlots) {
+      toast.warning(`最多只能上传 ${MAX_TEXT_FILES} 个文本文件，已自动截取前 ${remainingSlots} 个`);
+    }
+
+    const allowedFiles = textFiles.slice(0, remainingSlots);
+    const uploaded: SelectedTextFile[] = [];
+
+    for (const file of allowedFiles) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.warning(`文件 ${file.name} 超过 5MB 限制`);
+        continue;
+      }
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const result = await window.api.files.saveAiChatTextFile({
+          name: file.name,
+          mimeType: file.type,
+          bytes: buffer,
+        });
+
+        uploaded.push({
+          fileName: result.fileName,
+          url: result.url,
+          originalName: result.originalName,
+          sizeBytes: result.sizeBytes,
+        });
+      } catch (err) {
+        toast.error(`文件 ${file.name} 上传失败`);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setSelectedTextFiles((prev) => [...prev, ...uploaded]);
+    }
+  };
+
+  /**
    * 拖拽进入区域事件。
    */
   const handleDragOver = (e: React.DragEvent): void => {
     e.preventDefault();
-    if (!isImageSupported) return;
     setIsDragging(true);
   };
 
@@ -598,16 +735,26 @@ export const AiChatInput = ({
   const handleDrop = async (e: React.DragEvent): Promise<void> => {
     e.preventDefault();
     setIsDragging(false);
-    if (!isImageSupported) return;
 
     const files = e.dataTransfer.files;
+
     if (files && files.length > 0) {
-      await handleUploadFiles(files);
+      const fileArray = Array.from(files);
+      const imageFiles = fileArray.filter((f) => f.type.startsWith("image/"));
+      const textFiles = fileArray.filter((f) => !f.type.startsWith("image/") && isTextFile(f));
+
+      if (isImageSupported && imageFiles.length > 0) {
+        await handleUploadFiles(imageFiles);
+      }
+
+      if (textFiles.length > 0) {
+        await handleUploadTextFiles(textFiles);
+      }
     }
   };
 
   /**
-   * 粘贴图片事件。
+   * 粘贴图片与文本文件事件。
    */
   const handlePaste = async (
     e: React.ClipboardEvent<HTMLTextAreaElement>,
@@ -615,19 +762,27 @@ export const AiChatInput = ({
     const items = e.clipboardData?.items;
     if (!items) return;
 
-    const files: File[] = [];
+    const imageFiles: File[] = [];
+    const textFileList: File[] = [];
+
     for (const item of Array.from(items)) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        if (file) {
-          files.push(file);
-        }
+        if (file) imageFiles.push(file);
+      } else {
+        const file = item.getAsFile();
+        if (file && isTextFile(file)) textFileList.push(file);
       }
     }
 
-    if (files.length > 0) {
+    if (imageFiles.length > 0 || textFileList.length > 0) {
       e.preventDefault();
-      await handleUploadFiles(files);
+      if (isImageSupported && imageFiles.length > 0) {
+        await handleUploadFiles(imageFiles);
+      }
+      if (textFileList.length > 0) {
+        await handleUploadTextFiles(textFileList);
+      }
     }
   };
 
@@ -636,10 +791,6 @@ export const AiChatInput = ({
    */
   const handleAttachmentClick = (e: React.MouseEvent): void => {
     e.stopPropagation();
-    if (!isImageSupported) {
-      toast.error("当前选择的模型不支持图片输入。");
-      return;
-    }
     fileInputRef.current?.click();
   };
 
@@ -656,6 +807,16 @@ export const AiChatInput = ({
         content: textToSend,
       });
     }
+
+    selectedTextFiles.forEach((file, i) => {
+      parts.push({
+        id: `msg-txtfile-${i}-${Date.now()}`,
+        kind: "text-file",
+        url: file.url,
+        fileName: file.originalName,
+        sizeBytes: file.sizeBytes,
+      });
+    });
 
     selectedImages.forEach((url, i) => {
       parts.push({
@@ -675,7 +836,7 @@ export const AiChatInput = ({
     onSendMessage({
       text: textToSend,
       agents: inputSendPayload.agents,
-      ...(selectedImages.length > 0 ? { parts } : {}),
+      ...(selectedImages.length > 0 || selectedTextFiles.length > 0 ? { parts } : {}),
     });
 
     savePromptHistory(inputText);
@@ -683,6 +844,7 @@ export const AiChatInput = ({
     draftInputRef.current = "";
     historyCursorRef.current = null;
     setSelectedImages([]);
+    setSelectedTextFiles([]);
     setIsCommandPanelOpen(false);
     closeAgentMentionPanel();
   };
@@ -695,6 +857,7 @@ export const AiChatInput = ({
     draftInputRef.current = "";
     historyCursorRef.current = null;
     setSelectedImages([]);
+    setSelectedTextFiles([]);
     closeAgentMentionPanel();
     setIsCommandPanelOpen(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
@@ -1057,11 +1220,20 @@ export const AiChatInput = ({
           type="file"
           ref={fileInputRef}
           multiple
-          accept="image/*"
+          accept={isImageSupported ? "image/*,.txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1" : ".txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1"}
           className="hidden"
           onChange={(e) => {
             if (e.target.files) {
-              void handleUploadFiles(e.target.files);
+              const fileArray = Array.from(e.target.files);
+              const imageFiles = fileArray.filter((f) => f.type.startsWith("image/"));
+              const textFiles = fileArray.filter((f) => !f.type.startsWith("image/") && isTextFile(f));
+
+              if (isImageSupported && imageFiles.length > 0) {
+                void handleUploadFiles(imageFiles);
+              }
+              if (textFiles.length > 0) {
+                void handleUploadTextFiles(textFiles);
+              }
             }
             e.target.value = "";
           }}
@@ -1070,7 +1242,7 @@ export const AiChatInput = ({
         {isDragging && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-white/20 bg-black/90 backdrop-blur-xs text-white/90 pointer-events-none">
             <Paperclip className="h-6 w-6 mb-2 animate-bounce" />
-            <span className="text-xs font-medium">松手即可上传图片</span>
+            <span className="text-xs font-medium">松手即可上传图片或文本文件</span>
           </div>
         )}
 
@@ -1116,6 +1288,30 @@ export const AiChatInput = ({
             </span>
           )}
         />
+
+        {/* 上传文本文件微缩预览横轴 */}
+        {selectedTextFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1.5 py-1.5 max-h-[140px] overflow-y-auto custom-scrollbar">
+            {selectedTextFiles.map((file, idx) => (
+              <div key={idx} className="relative group/preview-txt">
+                <TextFile
+                  url={file.url}
+                  fileName={file.originalName}
+                  sizeBytes={file.sizeBytes}
+                  preview={true}
+                />
+                <button
+                  type="button"
+                  aria-label="Remove text file"
+                  onClick={() => setSelectedTextFiles((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute -top-1.5 -right-1.5 z-10 hidden group-hover/preview-txt:flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-500 transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 上传图片微缩预览横轴 */}
         {selectedImages.length > 0 && (
