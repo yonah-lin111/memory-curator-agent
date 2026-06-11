@@ -1,8 +1,8 @@
 import { access, mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import { createCompactUuid } from '@/id'
-import { getAiChatImageDir, getAiChatImageTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getAppDataRoot } from '@/paths'
-import { createAiChatImageUrl, createMarkdownImageUrl, createPeopleAvatarUrl } from '@/protocols/localImages'
+import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getAppDataRoot } from '@/paths'
+import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl } from '@/protocols/localImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -38,6 +38,20 @@ export type MarkdownImageSaveResult = {
   filePath: string
   // 可写入 Markdown 的应用图片 URL。
   url: string
+}
+
+// AI 聊天文本文件保存结果。
+export type AiChatTextFileSaveResult = {
+  // 落盘文件名。
+  fileName: string
+  // 本机绝对路径。
+  filePath: string
+  // 可访问文本文件的应用 URL。
+  url: string
+  // 原始文件名。
+  originalName: string
+  // 文件大小（字节）。
+  sizeBytes: number
 }
 
 // Markdown 图片条目。
@@ -112,6 +126,10 @@ export type FilesService = {
   restoreReferencedAiChatImages: () => Promise<MarkdownImageRestoreResult>
   // 删除未被 AI 聊天引用的图片。
   deleteUnusedAiChatImages: (options?: MarkdownImageCleanupOptions) => Promise<MarkdownImageCleanupResult>
+  // 保存 AI 聊天文本文件。
+  saveAiChatTextFile: (input: MarkdownImageSaveInput) => Promise<AiChatTextFileSaveResult>
+  // 删除 AI 聊天文本文件（移到回收站）。
+  deleteAiChatTextFile: (fileName: string) => Promise<void>
   // 物理清理回收站中超过指定保留时间的过期文件。
   cleanExpiredTrash: (retentionMs?: number) => Promise<void>
 }
@@ -345,6 +363,8 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
   const peopleAvatarDir = getPeopleAvatarDir()
   const aiChatImageDir = deps.aiChatImageDir ?? getAiChatImageDir()
   const aiChatImageTrashDir = deps.aiChatImageTrashDir ?? getAiChatImageTrashDir()
+  const aiChatTextDir = getAiChatTextDir()
+  const aiChatTextTrashDir = getAiChatTextTrashDir()
   const trashRootDir = deps.trashRootDir ?? join(getAppDataRoot(), 'trash')
 
   return {
@@ -541,6 +561,35 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         deletedCount: unusedImages.length,
         deletedImages: unusedImages
       }
+    },
+    saveAiChatTextFile: async (input) => {
+      const extension = extname(input.name).toLowerCase() || '.txt'
+      const fileName = `${createSafeFileStem(input.name)}-${createCompactUuid()}${extension}`
+      const filePath = join(aiChatTextDir, fileName)
+
+      await mkdir(aiChatTextDir, { recursive: true })
+      await writeFile(filePath, Buffer.from(new Uint8Array(input.bytes)))
+
+      const fileStat = await stat(filePath)
+
+      return {
+        fileName,
+        filePath,
+        url: createAiChatTextFileUrl(fileName),
+        originalName: input.name,
+        sizeBytes: fileStat.size
+      }
+    },
+    deleteAiChatTextFile: async (fileName) => {
+      const filePath = join(aiChatTextDir, fileName)
+
+      if (!(await pathExists(filePath))) {
+        return
+      }
+
+      await mkdir(aiChatTextTrashDir, { recursive: true })
+      const targetPath = await createTrashTargetPath(aiChatTextTrashDir, fileName)
+      await rename(filePath, targetPath)
     },
     cleanExpiredTrash: async (retentionMs = 7 * 24 * 60 * 60 * 1000) => {
       const now = Date.now()

@@ -18,6 +18,8 @@ const filesService: FilesService = {
   listUnusedAiChatImages: vi.fn(),
   restoreReferencedAiChatImages: vi.fn(),
   deleteUnusedAiChatImages: vi.fn(),
+  saveAiChatTextFile: vi.fn(),
+  deleteAiChatTextFile: vi.fn(),
   cleanExpiredTrash: vi.fn()
 }
 
