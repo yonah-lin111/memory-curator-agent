@@ -11,6 +11,7 @@ import type { FilesService } from '@/services/filesService'
 const filesService: FilesService = {
   saveMarkdownImage: vi.fn(),
   savePeopleAvatar: vi.fn(),
+  saveAiChatImage: vi.fn(),
   listUnusedMarkdownImages: vi.fn(),
   restoreReferencedMarkdownImages: vi.fn(),
   deleteUnusedMarkdownImages: vi.fn()

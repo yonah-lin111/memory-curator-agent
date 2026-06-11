@@ -1,3 +1,5 @@
+import type { AiChatMessagePart } from "@/features/ai-chat/types";
+
 // AI 输入框可选择的 agent 标识。
 export type AiChatAgentId = "people" | "todo" | "snippets" | "journal" | "notes" | "today";
 
@@ -31,6 +33,8 @@ export type AiChatSendPayload = {
   text: string;
   // 本轮选择的 agent mention。
   agents: AiChatInputAgentMention[];
+  // 本轮附带的多模态消息片段。
+  parts?: AiChatMessagePart[];
 };
 
 // 发送给主进程的 agent hint。

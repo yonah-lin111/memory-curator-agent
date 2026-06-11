@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createAiSdkModelProvider } from '@/agent/providers/aiSdkProvider'
 import type { NormalizedProviderConfig } from '@/agent/types'
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...actual,
+    readFileSync: (path: string, options?: any) => {
+      if (typeof path === 'string' && path.includes('upload-123.png')) {
+        return Buffer.from([1, 2, 3])
+      }
+      return actual.readFileSync(path, options)
+    }
+  }
+})
 
 describe('aiSdkProvider', () => {
   it('加载 type 映射的 provider 包并转发 AI SDK 流式事件', async () => {
@@ -270,5 +283,59 @@ describe('aiSdkProvider', () => {
     const tools = capturedInput?.tools as Record<string, { description?: string }>
     expect(Object.keys(tools)).toContain('people_tool_query')
     expect(tools['people_tool_query'].description).toContain('provide arguments strictly according to the parameter schema')
+  })
+
+  it('支持将包含图片片段的多模态消息转换为 Vercel AI SDK 多模态格式', async () => {
+    let capturedInput: any = null
+    const config: NormalizedProviderConfig = {
+      id: 'bailian',
+      type: 'openai-compatible',
+      name: 'Bailian',
+      options: {
+        apiKey: 'test-key',
+        baseURL: 'https://example.com/v1'
+      },
+      models: {}
+    }
+    const provider = await createAiSdkModelProvider(config, {
+      loadPackage: async () => ({
+        createOpenAICompatible: () => (model: string) => ({
+          model
+        })
+      }),
+      streamText: (input) => {
+        capturedInput = input
+        return {
+          stream: (async function* () {
+            yield { type: 'finish' }
+          })()
+        }
+      }
+    })
+
+    await Array.fromAsync(
+      provider.streamTurn({
+        model: 'MiniMax-M2.5',
+        messages: [
+          {
+            role: 'user',
+            content: '看看这个图片',
+            parts: [
+              { id: 'p1', kind: 'text', content: '看看这个图片' },
+              { id: 'p2', kind: 'image', url: 'mc-img://chat/upload-123.png' }
+            ]
+          }
+        ],
+        tools: []
+      })
+    )
+
+    expect(capturedInput).not.toBeNull()
+    const convertedMsg = capturedInput.messages[0]
+    expect(convertedMsg.role).toBe('user')
+    expect(convertedMsg.content).toEqual([
+      { type: 'text', text: '看看这个图片' },
+      { type: 'image', image: Buffer.from([1, 2, 3]).toString('base64'), mimeType: 'image/png' }
+    ])
   })
 })

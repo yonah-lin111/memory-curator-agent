@@ -238,6 +238,14 @@ export type AiChatMessagePart =
       // 对应工具步骤 ID。
       stepId: string
     }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'image'
+      // 图片的本地协议地址。
+      url: string
+    }
 
 // AI 工具步骤类型。
 export type AiToolStep = {

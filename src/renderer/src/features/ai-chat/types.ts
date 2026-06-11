@@ -62,6 +62,8 @@ export type AiChatStartPayload = {
   sessionId: string;
   // 用户消息。
   message: string;
+  // 用户消息片段。
+  parts?: AiChatMessagePart[];
   // 用户选择的 provider 标识。
   provider?: string;
   // 用户选择的模型标识。
@@ -269,6 +271,14 @@ export type AiChatMessagePart =
       kind: "tool";
       // 对应工具步骤 ID。
       stepId: string;
+    }
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "image";
+      // 图片的本地协议地址。
+      url: string;
     };
 
 // AI 对话消息类型，描述聊天气泡所需数据。

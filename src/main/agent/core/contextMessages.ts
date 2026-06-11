@@ -1,4 +1,5 @@
 import type { AgentMessage, AgentMessageRole } from '@/agent/types'
+import type { AiChatMessagePart } from '@/db/schema'
 
 // Agent 上下文载荷来源类型。
 export type AgentContextKind = 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
@@ -32,6 +33,8 @@ type BuildContextAgentMessagesInput = {
   systemMessage: AgentMessage
   // 当前用户消息。
   userMessage: string
+  // 当前用户消息片段。
+  userParts?: AiChatMessagePart[]
   // 渲染层传入的上下文条目。
   contextItems?: AgentContextPayloadItem[]
   // 当前模型上下文窗口上限。
@@ -230,10 +233,19 @@ const resolveToolArgumentsText = (item: AgentContextPayloadItem): string => {
  */
 const toContextAgentMessages = (item: SelectedContextItem): AgentMessage[] => {
   if (item.kind !== 'tool') {
+    let parts: AiChatMessagePart[] | undefined = undefined
+    if (typeof item.meta?.parts === 'string') {
+      try {
+        parts = JSON.parse(item.meta.parts) as AiChatMessagePart[]
+      } catch {
+        parts = undefined
+      }
+    }
     return [
       {
         role: resolveContextRole(item),
-        content: item.content
+        content: item.content,
+        parts
       }
     ]
   }
@@ -425,6 +437,7 @@ const selectContextItems = (
 export const buildContextAgentMessages = ({
   systemMessage,
   userMessage,
+  userParts,
   contextItems = [],
   contextLimit,
   outputLimit,
@@ -449,7 +462,8 @@ export const buildContextAgentMessages = ({
     ...contextMessages,
     {
       role: 'user',
-      content: userMessage
+      content: userMessage,
+      parts: userParts
     }
   ]
 }

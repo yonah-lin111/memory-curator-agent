@@ -780,6 +780,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       id: userMessageId,
       role: "user" as const,
       content: text,
+      parts: sendPayload.parts,
       time: userTime,
     };
     const aiMessage = {
@@ -834,6 +835,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         assistantMessageId,
         sessionId,
         message: text,
+        parts: sendPayload.parts,
         provider: selectedAiModel?.provider,
         model: selectedAiModel?.model,
         context: contextItems,

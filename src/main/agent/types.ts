@@ -1,4 +1,4 @@
-import type { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem } from '@/db/schema'
+import { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -104,6 +104,8 @@ export type AgentMessage = {
   role: AgentMessageRole
   // 消息正文。
   content: string
+  // 消息所含的片段（包括文本或图片等）。
+  parts?: AiChatMessagePart[]
   // Assistant 发起的工具调用列表。
   toolCalls?: ModelToolCallDoneEvent[]
   // 工具调用 ID，仅 tool 消息使用。

@@ -11,7 +11,10 @@ import {
   RotateCcw,
   SendHorizontal,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
+import { Image } from "@/components/ui/Image";
+import type { AiChatMessagePart } from "@/features/ai-chat/types";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
@@ -238,11 +241,14 @@ export const AiChatInput = ({
 }: AiChatInputProps): React.JSX.Element => {
   const toast = useToast();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const draftInputRef = useRef("");
   const historyCursorRef = useRef<number | null>(null);
   const [inputText, setInputText] = useState("");
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const [agentMentionPanelState, setAgentMentionPanelState] =
     useState<AgentMentionPanelState | null>(null);
@@ -250,6 +256,19 @@ export const AiChatInput = ({
   const selectedModelValue = selectedModel
     ? `${selectedModel.provider}::${selectedModel.model}`
     : "";
+
+  const selectedModelOption = modelOptions
+    .find((p) => p.id === selectedModel?.provider)
+    ?.models.find((m) => m.id === selectedModel?.model);
+  const isImageSupported = selectedModelOption?.modalities?.input?.includes("image") ?? false;
+
+  useEffect(() => {
+    if (!isImageSupported && selectedImages.length > 0) {
+      setSelectedImages([]);
+      toast.info("当前选择模型不支持图像输入，已自动清空已选图片。");
+    }
+  }, [selectedModelValue, isImageSupported]);
+
   const matchedCommands = getMatchedCommands(inputText);
   const activeCommand =
     matchedCommands[activeCommandIndex] ?? matchedCommands[0];
@@ -262,7 +281,7 @@ export const AiChatInput = ({
   const activeAgent =
     matchedAgentMentions[activeAgentIndex] ?? matchedAgentMentions[0];
   const inputSendPayload = createAiChatSendPayload(inputText);
-  const canSend = Boolean(inputSendPayload.text.trim());
+  const canSend = Boolean(inputSendPayload.text.trim() || selectedImages.length > 0);
   const hasModelOptions = modelOptions.some(
     (provider) => provider.models.length > 0,
   );
@@ -497,21 +516,157 @@ export const AiChatInput = ({
   };
 
   /**
+   * 异步处理文件并上传、存储图片文件。
+   */
+  const handleUploadFiles = async (files: FileList | File[]): Promise<void> => {
+    if (!isImageSupported) {
+      toast.error("当前选择的模型不支持图片输入。");
+      return;
+    }
+
+    if (!window.api?.files?.saveAiChatImage) {
+      toast.error("当前环境不支持保存图片，无法上传。");
+      return;
+    }
+
+    const uploaded: string[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) {
+        toast.warning("仅支持上传图片文件");
+        continue;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        toast.warning("图片大小超过 10MB 限制");
+        continue;
+      }
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const result = await window.api.files.saveAiChatImage({
+          name: file.name,
+          mimeType: file.type,
+          bytes: buffer,
+        });
+        uploaded.push(result.url);
+      } catch (err) {
+        toast.error(`图片 ${file.name} 上传失败`);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setSelectedImages((prev) => [...prev, ...uploaded]);
+    }
+  };
+
+  /**
+   * 拖拽进入区域事件。
+   */
+  const handleDragOver = (e: React.DragEvent): void => {
+    e.preventDefault();
+    if (!isImageSupported) return;
+    setIsDragging(true);
+  };
+
+  /**
+   * 拖拽离开区域事件。
+   */
+  const handleDragLeave = (e: React.DragEvent): void => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  /**
+   * 拖拽松手上传事件。
+   */
+  const handleDrop = async (e: React.DragEvent): Promise<void> => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!isImageSupported) return;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await handleUploadFiles(files);
+    }
+  };
+
+  /**
+   * 粘贴图片事件。
+   */
+  const handlePaste = async (
+    e: React.ClipboardEvent<HTMLTextAreaElement>,
+  ): Promise<void> => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
+        }
+      }
+    }
+
+    if (files.length > 0) {
+      e.preventDefault();
+      await handleUploadFiles(files);
+    }
+  };
+
+  /**
+   * 点击附件按钮拉起文件选择。
+   */
+  const handleAttachmentClick = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    if (!isImageSupported) {
+      toast.error("当前选择的模型不支持图片输入。");
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  /**
    * 发送消息处理函数。
    */
   const handleSend = (): void => {
-    const nextPayload = createAiChatSendPayload(inputText);
+    const parts: AiChatMessagePart[] = [];
+    const textToSend = inputSendPayload.text.trim();
+    if (textToSend) {
+      parts.push({
+        id: `msg-text-${Date.now()}`,
+        kind: "text",
+        content: textToSend,
+      });
+    }
 
-    if (!nextPayload.text.trim()) return;
+    selectedImages.forEach((url, i) => {
+      parts.push({
+        id: `msg-img-${i}-${Date.now()}`,
+        kind: "image",
+        url,
+      });
+    });
+
+    if (parts.length === 0) return;
+
     if (isGenerating) {
       toast.warning("请等待 AI 输出完成");
       return;
     }
-    onSendMessage(nextPayload);
+
+    onSendMessage({
+      text: textToSend,
+      agents: inputSendPayload.agents,
+      ...(selectedImages.length > 0 ? { parts } : {}),
+    });
+
     savePromptHistory(inputText);
     setInputText("");
     draftInputRef.current = "";
     historyCursorRef.current = null;
+    setSelectedImages([]);
     setIsCommandPanelOpen(false);
     closeAgentMentionPanel();
   };
@@ -523,6 +678,7 @@ export const AiChatInput = ({
     setInputText("");
     draftInputRef.current = "";
     historyCursorRef.current = null;
+    setSelectedImages([]);
     closeAgentMentionPanel();
     setIsCommandPanelOpen(false);
     requestAnimationFrame(() => textareaRef.current?.focus());
@@ -876,8 +1032,32 @@ export const AiChatInput = ({
       <div
         data-testid="ai-chat-input-container"
         onClick={handleContainerClick}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2"
       >
+        <input
+          type="file"
+          ref={fileInputRef}
+          multiple
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) {
+              void handleUploadFiles(e.target.files);
+            }
+            e.target.value = "";
+          }}
+        />
+
+        {isDragging && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-white/20 bg-black/90 backdrop-blur-xs text-white/90 pointer-events-none">
+            <Paperclip className="h-6 w-6 mb-2 animate-bounce" />
+            <span className="text-xs font-medium">松手即可上传图片</span>
+          </div>
+        )}
+
         <CommandPanel
           isOpen={isCommandPanelOpen && matchedCommands.length > 0}
           ariaLabel="AI Command Input Panel"
@@ -930,10 +1110,37 @@ export const AiChatInput = ({
           onKeyDown={handleKeyDown}
           onClick={handleTextareaCursorMove}
           onKeyUp={handleTextareaCursorMove}
+          onPaste={handlePaste}
           placeholder="输入您的问题..."
           aria-label="AI Chat Input Area"
           className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
         />
+
+        {/* 上传图片微缩预览横轴 */}
+        {selectedImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-1 py-1 max-h-[140px] overflow-y-auto custom-scrollbar">
+            {selectedImages.map((url, idx) => (
+              <div
+                key={idx}
+                className="relative group/preview-img w-14 h-14 shrink-0 rounded-[6px] border border-white/10 bg-white/[0.02]"
+              >
+                <Image
+                  src={url}
+                  preview={false}
+                  className="w-full h-full rounded-[6px] object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove image"
+                  onClick={() => setSelectedImages((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute -top-1.5 -right-1.5 z-10 hidden group-hover/preview-img:flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-500 transition-colors"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 工具栏与发送按钮 */}
         <div className="flex items-center justify-between">
@@ -985,8 +1192,8 @@ export const AiChatInput = ({
             </div>
             <IconButton
               aria-label="Add attachment"
-              disabled
-              className="text-white/30 cursor-not-allowed"
+              onClick={handleAttachmentClick}
+              className={isImageSupported ? "text-white/80 hover:text-white" : "text-white/30 hover:text-white/50"}
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
@@ -1003,7 +1210,7 @@ export const AiChatInput = ({
           <div className="flex items-center gap-1.5">
             {isBrowsingHistory && (
               <span className="text-xs text-white/45 select-none mr-0.5">
-                History: {historyCursorRef.current! + 1}/{promptHistory.length}
+                {`History: ${historyCursorRef.current! + 1}/${promptHistory.length}`}
               </span>
             )}
             <button

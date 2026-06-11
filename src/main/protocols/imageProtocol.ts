@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url'
 import { getMarkdownImageDir, getMarkdownImageTrashDir } from '@/paths'
 import {
   MARKDOWN_IMAGE_PROTOCOL,
+  resolveAiChatImagePath,
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
@@ -74,6 +75,9 @@ export const registerImageProtocolHandler = (): void => {
     let filePath = resolveMarkdownImagePath(request.url)
     if (!filePath) {
       filePath = resolvePeopleAvatarPath(request.url)
+    }
+    if (!filePath) {
+      filePath = resolveAiChatImagePath(request.url)
     }
 
     if (!filePath) {

@@ -1,5 +1,5 @@
 import { basename, join } from 'node:path'
-import { getMarkdownImageDir, getPeopleAvatarDir } from '@/paths'
+import { getAiChatImageDir, getMarkdownImageDir, getPeopleAvatarDir } from '@/paths'
 
 // Markdown 图片协议。
 export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
@@ -9,6 +9,9 @@ export const MARKDOWN_IMAGE_HOST = 'md'
 
 // 人物头像协议主机名。
 export const PEOPLE_AVATAR_HOST = 'people'
+
+// AI 聊天图片协议主机名。
+export const AI_CHAT_IMAGE_HOST = 'chat'
 
 /**
  * 创建 Markdown 图片访问 URL。
@@ -76,4 +79,38 @@ export const resolvePeopleAvatarPath = (requestUrl: string): string | null => {
   const fileName = resolvePeopleAvatarFileName(requestUrl)
 
   return fileName ? join(getPeopleAvatarDir(), fileName) : null
+}
+
+/**
+ * 创建 AI 聊天图片访问 URL。
+ */
+export const createAiChatImageUrl = (fileName: string): string =>
+  `${MARKDOWN_IMAGE_PROTOCOL}://${AI_CHAT_IMAGE_HOST}/${encodeURIComponent(fileName)}`
+
+/**
+ * 从 AI 聊天图片 URL 解析文件名。
+ */
+export const resolveAiChatImageFileName = (requestUrl: string): string | null => {
+  const url = new URL(requestUrl)
+
+  if (url.protocol !== `${MARKDOWN_IMAGE_PROTOCOL}:` || url.hostname !== AI_CHAT_IMAGE_HOST) {
+    return null
+  }
+
+  const fileName = basename(decodeURIComponent(url.pathname.slice(1)))
+
+  if (!fileName) {
+    return null
+  }
+
+  return fileName
+}
+
+/**
+ * 从 AI 聊天图片 URL 解析本机文件路径。
+ */
+export const resolveAiChatImagePath = (requestUrl: string): string | null => {
+  const fileName = resolveAiChatImageFileName(requestUrl)
+
+  return fileName ? join(getAiChatImageDir(), fileName) : null
 }

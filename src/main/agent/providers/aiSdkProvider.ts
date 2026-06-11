@@ -1,4 +1,11 @@
 import { jsonSchema, streamText, tool, type ModelMessage } from 'ai'
+import { readFileSync } from 'node:fs'
+import { extname } from 'node:path'
+import {
+  resolveAiChatImagePath,
+  resolveMarkdownImagePath,
+  resolvePeopleAvatarPath
+} from '@/protocols/markdownImages'
 import type {
   AgentMessage,
   AgentTool,
@@ -9,6 +16,45 @@ import type {
   ProviderTransportType
 } from '@/agent/types'
 import { prepareToolsForModel } from '@/agent/tools/toolRegistry'
+
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp'
+}
+
+/**
+ * 从本地磁盘读取图片并转为 Base64 及对应 MIME。
+ */
+const readImageAsBase64 = (url: string): { base64: string; mimeType: string } | null => {
+  try {
+    let filePath: string | null = null
+    if (url.startsWith('mc-img://chat/')) {
+      filePath = resolveAiChatImagePath(url)
+    } else if (url.startsWith('mc-img://md/')) {
+      filePath = resolveMarkdownImagePath(url)
+    } else if (url.startsWith('mc-img://people/')) {
+      filePath = resolvePeopleAvatarPath(url)
+    }
+
+    if (!filePath) {
+      return null
+    }
+
+    const ext = extname(filePath).toLowerCase()
+    const mimeType = IMAGE_MIME_TYPES[ext] || 'image/png'
+    const buffer = readFileSync(filePath)
+    return {
+      base64: buffer.toString('base64'),
+      mimeType
+    }
+  } catch {
+    return null
+  }
+}
 
 // AI SDK provider 模块。
 type AiSdkProviderModule = Record<string, unknown>
@@ -139,6 +185,28 @@ const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
         }
       ]
     }
+  }
+
+  if (message.parts && message.parts.some((part) => part.kind === 'image')) {
+    const parts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType: string }> = []
+    for (const part of message.parts) {
+      if (part.kind === 'text') {
+        parts.push({ type: 'text', text: part.content })
+      } else if (part.kind === 'image') {
+        const base64Data = readImageAsBase64(part.url)
+        if (base64Data) {
+          parts.push({
+            type: 'image',
+            image: base64Data.base64,
+            mimeType: base64Data.mimeType
+          })
+        }
+      }
+    }
+    return {
+      role: message.role,
+      content: parts
+    } as ModelMessage
   }
 
   return {

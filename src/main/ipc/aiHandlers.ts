@@ -41,6 +41,8 @@ type AiChatStartPayload = {
   sessionId: string
   // 用户消息。
   message: string
+  // 用户消息片段。
+  parts?: AiChatMessagePart[]
   // 用户选择的 provider 标识。
   provider?: string
   // 用户选择的模型标识。
@@ -722,6 +724,7 @@ export const registerAiHandlers = (): void => {
         sessionId: payload.sessionId,
         role: 'user',
         content: payload.message,
+        parts: payload.parts,
         time: userTime,
         timestamp
       },
@@ -823,6 +826,7 @@ export const registerAiHandlers = (): void => {
           messages: buildContextAgentMessages({
             systemMessage: appendAiChatAgentDirectiveToSystemMessage(createSystemPrompt(), agentHints),
             userMessage: payload.message,
+            userParts: payload.parts,
             contextItems: payload.context,
             contextLimit: modelConfig.limit?.context,
             outputLimit: modelConfig.limit?.output,

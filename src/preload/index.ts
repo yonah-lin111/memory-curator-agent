@@ -506,7 +506,9 @@ const api = {
     saveMarkdownImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:markdown-image:save', payload),
     savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:people-avatar:save', payload)
+      ipcRenderer.invoke('files:people-avatar:save', payload),
+    saveAiChatImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
+      ipcRenderer.invoke('files:ai-chat-image:save', payload)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),

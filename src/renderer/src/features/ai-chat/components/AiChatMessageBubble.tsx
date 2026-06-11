@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Bot, ChevronDown } from "lucide-react";
+import { Image } from "@/components/ui/Image";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import type {
@@ -733,6 +734,19 @@ export const AiChatMessageBubble = ({
                   >
                     {message.content}
                   </div>
+                  {message.parts && message.parts.some((p) => p.kind === "image") && (
+                    <div className="flex flex-wrap gap-2 mt-2 justify-end w-full">
+                      {message.parts
+                        .filter((p) => p.kind === "image")
+                        .map((part, i) => (
+                          <Image
+                            key={i}
+                            src={part.url}
+                            className="w-[160px] h-[120px] rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
+                          />
+                        ))}
+                    </div>
+                  )}
                   {hasOverflow && (
                     <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
                       <span className="text-xs scale-90 origin-right opacity-60">
