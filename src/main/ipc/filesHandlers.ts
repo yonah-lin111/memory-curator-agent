@@ -23,4 +23,12 @@ export const registerFilesHandlers = (): void => {
   ipcMain.handle('files:ai-chat-image:save', (_, input: MarkdownImageSaveInput) =>
     filesService.saveAiChatImage(input)
   )
+
+  ipcMain.handle('files:ai-chat-text:save', (_, input: MarkdownImageSaveInput) =>
+    filesService.saveAiChatTextFile(input)
+  )
+
+  ipcMain.handle('files:ai-chat-text:delete', (_, fileName: string) =>
+    filesService.deleteAiChatTextFile(fileName)
+  )
 }
