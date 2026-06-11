@@ -15,6 +15,7 @@ import {
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
+import { PreviewableImage } from "@/components/ui/PreviewableImage";
 import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
 import {
   createAiChatSendPayload,
@@ -243,6 +244,18 @@ export const AiChatInput = ({
   const [inputText, setInputText] = useState("");
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
+  // 待发送图片附件状态 (静态 UI 检查点使用，提供一个开发调试用示例图片)
+  const [pendingImages, setPendingImages] = useState<{ id: string; name: string; url: string }[]>([
+    {
+      id: "demo-1",
+      name: "diagram.png",
+      url: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=128&q=80",
+    },
+  ]);
+
+  const removePendingImage = (id: string): void => {
+    setPendingImages((current) => current.filter((image) => image.id !== id));
+  };
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const [agentMentionPanelState, setAgentMentionPanelState] =
     useState<AgentMentionPanelState | null>(null);
@@ -920,6 +933,21 @@ export const AiChatInput = ({
             </span>
           )}
         />
+
+        {/* 图片附件展示区域 */}
+        {pendingImages.length > 0 && (
+          <div className="mb-1 flex flex-wrap items-center gap-2 px-1">
+            {pendingImages.map((image) => (
+              <PreviewableImage
+                key={image.id}
+                src={image.url}
+                alt={image.name}
+                variant="thumbnail"
+                onRemove={() => removePendingImage(image.id)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* 输入框 */}
         <textarea

@@ -633,13 +633,13 @@ describe('AiChatInput', () => {
     await waitFor(() => expect(listPromptHistory).toHaveBeenCalledTimes(1))
 
     // 初始状态下不应显示历史统计
-    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/History/)).not.toBeInTheDocument()
 
     // 按上键，进入最新历史 (1-based 应为 2/2)
     textarea.setSelectionRange(0, 0)
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     expect(textarea).toHaveValue('第二个问题')
-    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+    expect(screen.getByText('History: 2/2')).toBeInTheDocument()
 
     // 等待光标被移到起始位置 (0)
     await waitFor(() => expect(textarea.selectionStart).toBe(0))
@@ -647,7 +647,7 @@ describe('AiChatInput', () => {
     // 再次按上键，进入第一条历史 (1-based 应为 1/2)
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     expect(textarea).toHaveValue('第一个问题')
-    expect(screen.getByText('history_prompts: 1/2')).toBeInTheDocument()
+    expect(screen.getByText('History: 1/2')).toBeInTheDocument()
 
     // 等待光标重置到 0 处
     await waitFor(() => expect(textarea.selectionStart).toBe(0))
@@ -658,7 +658,7 @@ describe('AiChatInput', () => {
     // 按下键回到第二条历史 (2/2)
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     expect(textarea).toHaveValue('第二个问题')
-    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+    expect(screen.getByText('History: 2/2')).toBeInTheDocument()
 
     // 等待光标重置到末尾位置
     await waitFor(() => expect(textarea.selectionStart).toBe('第二个问题'.length))
@@ -666,20 +666,36 @@ describe('AiChatInput', () => {
     // 按下键回到草稿状态，统计数字应消失
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     expect(textarea).toHaveValue('')
-    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/History/)).not.toBeInTheDocument()
 
     // 等待光标被同步
     await waitFor(() => expect(textarea.selectionStart).toBe(0))
 
     // 再次进入历史 (2/2)
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
-    expect(screen.getByText('history_prompts: 2/2')).toBeInTheDocument()
+    expect(screen.getByText('History: 2/2')).toBeInTheDocument()
 
     // 等待光标定位
     await waitFor(() => expect(textarea.selectionStart).toBe(0))
 
     // 手动修改输入内容，统计数字应消失
     fireEvent.change(textarea, { target: { value: '修改内容' } })
-    expect(screen.queryByText(/history_prompts/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/History/)).not.toBeInTheDocument()
+  })
+
+  it('渲染待发送图片附件条并允许移除图片', async () => {
+    renderAiChatInput()
+    
+    // 断言静态示例图片 diagram.png 被渲染
+    const img = screen.getByRole('img', { name: 'diagram.png' })
+    expect(img).toBeInTheDocument()
+    expect(img).toHaveAttribute('src', 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=128&q=80')
+
+    // 点击移除图片
+    const removeBtn = screen.getByRole('button', { name: '移除图片 diagram.png' })
+    fireEvent.click(removeBtn)
+
+    // 断言图片已被移除
+    expect(img).not.toBeInTheDocument()
   })
 })

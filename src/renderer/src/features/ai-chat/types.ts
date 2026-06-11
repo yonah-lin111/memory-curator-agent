@@ -237,6 +237,22 @@ export type AiChatEvent =
       message: string;
     };
 
+// AI Chat 图片附件。
+export type AiChatImageAttachment = {
+  // 图片附件唯一标识。
+  id: string;
+  // 原始文件名。
+  name: string;
+  // 图片 MIME 类型。
+  mimeType: string;
+  // 应用图片协议地址。
+  url: string;
+  // 本机绝对路径。
+  filePath: string;
+  // 文件大小。
+  sizeBytes: number;
+};
+
 // 消息发送者类型，描述消息归属。
 export type AiChatMessageRole = "user" | "assistant";
 
@@ -269,6 +285,14 @@ export type AiChatMessagePart =
       kind: "tool";
       // 对应工具步骤 ID。
       stepId: string;
+    }
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "image";
+      // 图片附件。
+      image: AiChatImageAttachment;
     };
 
 // AI 对话消息类型，描述聊天气泡所需数据。
