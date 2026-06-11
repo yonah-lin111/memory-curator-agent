@@ -34,7 +34,7 @@ describe("TextFile Component", () => {
   });
 
   it("formats bytes correctly", () => {
-    const { rerender } = render(
+    render(
       <TextFile
         url="mc-img://chat-text/a.txt"
         fileName="a.txt"
