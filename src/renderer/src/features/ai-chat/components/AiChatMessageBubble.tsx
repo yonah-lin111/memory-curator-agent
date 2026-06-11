@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Bot, ChevronDown } from "lucide-react";
 import { Image } from "@/components/ui/Image";
+import { TextFile } from "@/components/ui/TextFile";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import type {
@@ -724,6 +725,21 @@ export const AiChatMessageBubble = ({
                 </div>
               ) : (
                 <div className="relative flex flex-col items-end w-full group/msg-bubble">
+                  {message.parts && message.parts.some((p) => p.kind === "text-file") && (
+                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                      {message.parts
+                        .filter((p) => p.kind === "text-file")
+                        .map((part, i) => (
+                          <TextFile
+                            key={i}
+                            url={part.url}
+                            fileName={part.fileName}
+                            sizeBytes={part.sizeBytes}
+                            preview={true}
+                          />
+                        ))}
+                    </div>
+                  )}
                   {message.parts && message.parts.some((p) => p.kind === "image") && (
                     <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
                       {message.parts
