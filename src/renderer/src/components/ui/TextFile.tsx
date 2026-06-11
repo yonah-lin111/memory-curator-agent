@@ -1,6 +1,8 @@
 import type React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { FileText, X } from "lucide-react";
+import { MdPreview } from "md-editor-rt";
+import "md-editor-rt/lib/preview.css";
 
 export interface TextFileProps {
   // 文本文件协议 URL。
@@ -28,6 +30,106 @@ const formatFileSize = (bytes: number): string => {
   }
 
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/**
+ * 根据文件名和文件内容，生成用于预览的 Markdown 字符串。
+ * 如果是 Markdown 文件，则直接返回内容；
+ * 如果是其他代码或文本文件，则自动包裹在 Markdown 代码块中。
+ *
+ * @param content 原始文本内容
+ * @param fileName 文件名称
+ * @returns 包装后的 Markdown 文本
+ */
+const getMarkdownContent = (content: string, fileName: string): string => {
+  const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
+
+  if (ext === ".md" || ext === ".markdown") {
+    return content;
+  }
+
+  // 映射常见文件后缀到 markdown 语言标识。
+  let lang = "";
+  switch (ext) {
+    case ".json":
+      lang = "json";
+      break;
+    case ".csv":
+      lang = "csv";
+      break;
+    case ".xml":
+      lang = "xml";
+      break;
+    case ".yaml":
+    case ".yml":
+      lang = "yaml";
+      break;
+    case ".toml":
+      lang = "toml";
+      break;
+    case ".py":
+      lang = "python";
+      break;
+    case ".js":
+      lang = "javascript";
+      break;
+    case ".ts":
+      lang = "typescript";
+      break;
+    case ".jsx":
+      lang = "jsx";
+      break;
+    case ".tsx":
+      lang = "tsx";
+      break;
+    case ".html":
+      lang = "html";
+      break;
+    case ".css":
+      lang = "css";
+      break;
+    case ".sh":
+    case ".bash":
+    case ".zsh":
+      lang = "bash";
+      break;
+    case ".sql":
+      lang = "sql";
+      break;
+    case ".java":
+      lang = "java";
+      break;
+    case ".c":
+      lang = "c";
+      break;
+    case ".cpp":
+      lang = "cpp";
+      break;
+    case ".rs":
+      lang = "rust";
+      break;
+    case ".go":
+      lang = "go";
+      break;
+    case ".rb":
+      lang = "ruby";
+      break;
+    case ".env":
+    case ".ini":
+      lang = "ini";
+      break;
+    case ".log":
+      lang = "text";
+      break;
+    case ".txt":
+    default:
+      lang = "text";
+      break;
+  }
+
+  // 为防止内容中包含 ``` 导致 markdown 渲染错误，动态选择 ``` 或 ````
+  const fence = content.includes("```") ? "````" : "```";
+  return `${fence}${lang}\n${content}\n${fence}`;
 };
 
 // 文本文件图标色映射。
@@ -191,9 +293,18 @@ export const TextFile = ({
               </div>
             )}
             {previewContent !== null && !previewLoading && !previewError && (
-              <pre className="p-4 text-xs text-white/80 font-mono whitespace-pre-wrap break-all overflow-auto max-h-[85vh] custom-scrollbar leading-relaxed select-text">
-                {previewContent}
-              </pre>
+              <div className="p-4 overflow-auto max-h-[75vh] custom-scrollbar markdown-preview-container select-text text-white/80">
+                <MdPreview
+                  theme="dark"
+                  modelValue={getMarkdownContent(previewContent, fileName)}
+                  previewTheme="default"
+                  codeTheme="atom"
+                  codeFoldable={false}
+                  autoFoldThreshold={Infinity}
+                  style={{ backgroundColor: "transparent" }}
+                  showCodeRowNumber={false}
+                />
+              </div>
             )}
           </div>
         </div>

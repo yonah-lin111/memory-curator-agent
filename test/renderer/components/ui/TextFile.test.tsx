@@ -6,6 +6,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { TextFile } from "@/components/ui/TextFile";
 
+vi.mock("md-editor-rt", () => ({
+  MdPreview: ({ modelValue }: { modelValue: string }) => (
+    <div data-testid="md-preview">{modelValue}</div>
+  ),
+}));
+
 describe("TextFile Component", () => {
   beforeAll(() => {
     // 模拟 fetch 返回文本内容。
@@ -73,9 +79,9 @@ describe("TextFile Component", () => {
     expect(screen.getByTestId("text-file-preview")).toBeInTheDocument();
 
     await waitFor(() => {
-      const preElement = screen.getByTestId("text-file-preview").querySelector("pre");
-      expect(preElement).toBeInTheDocument();
-      expect(preElement?.textContent).toBe("line 1\nline 2\nline 3");
+      const previewElement = screen.getByTestId("md-preview");
+      expect(previewElement).toBeInTheDocument();
+      expect(previewElement.textContent).toBe("```text\nline 1\nline 2\nline 3\n```");
     });
   });
 
@@ -132,6 +138,75 @@ describe("TextFile Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText("文件加载失败")).toBeInTheDocument();
+    });
+  });
+
+  it("previews markdown file directly without wrapping in code blocks", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve("# Title\n- Item 1\n- Item 2"),
+    } as Response);
+
+    render(
+      <TextFile
+        url="mc-img://chat-text/test.md"
+        fileName="test.md"
+        sizeBytes={100}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("text-file-card"));
+
+    await waitFor(() => {
+      const previewElement = screen.getByTestId("md-preview");
+      expect(previewElement).toBeInTheDocument();
+      expect(previewElement.textContent).toBe("# Title\n- Item 1\n- Item 2");
+    });
+  });
+
+  it("previews typescript file with typescript code blocks", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve("const x: number = 42;"),
+    } as Response);
+
+    render(
+      <TextFile
+        url="mc-img://chat-text/test.ts"
+        fileName="test.ts"
+        sizeBytes={100}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("text-file-card"));
+
+    await waitFor(() => {
+      const previewElement = screen.getByTestId("md-preview");
+      expect(previewElement).toBeInTheDocument();
+      expect(previewElement.textContent).toBe("```typescript\nconst x: number = 42;\n```");
+    });
+  });
+
+  it("handles backticks correctly in file content", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve("Some code with ``` in it"),
+    } as Response);
+
+    render(
+      <TextFile
+        url="mc-img://chat-text/test.js"
+        fileName="test.js"
+        sizeBytes={100}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("text-file-card"));
+
+    await waitFor(() => {
+      const previewElement = screen.getByTestId("md-preview");
+      expect(previewElement).toBeInTheDocument();
+      expect(previewElement.textContent).toBe("````javascript\nSome code with ``` in it\n````");
     });
   });
 });
