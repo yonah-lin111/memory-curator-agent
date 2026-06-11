@@ -724,29 +724,29 @@ export const AiChatMessageBubble = ({
                 </div>
               ) : (
                 <div className="relative flex flex-col items-end w-full group/msg-bubble">
-                  <div
-                    ref={textRef}
-                    style={{
-                      maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
-                      transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
-                    }}
-                    className="overflow-hidden w-full select-text pr-1"
-                  >
-                    {message.content}
-                  </div>
                   {message.parts && message.parts.some((p) => p.kind === "image") && (
-                    <div className="flex flex-wrap gap-2 mt-2 justify-end w-full">
+                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
                       {message.parts
                         .filter((p) => p.kind === "image")
                         .map((part, i) => (
                           <Image
                             key={i}
                             src={part.url}
-                            className="w-[160px] h-[120px] rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
+                            className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
                           />
                         ))}
                     </div>
                   )}
+                  <div
+                    ref={textRef}
+                    style={{
+                      maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
+                      transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                    }}
+                    className="overflow-hidden w-full select-text pr-1 text-right"
+                  >
+                    {message.content}
+                  </div>
                   {hasOverflow && (
                     <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
                       <span className="text-xs scale-90 origin-right opacity-60">

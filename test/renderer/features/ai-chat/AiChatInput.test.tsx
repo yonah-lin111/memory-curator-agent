@@ -512,6 +512,85 @@ describe('AiChatInput', () => {
     expect(textarea).toHaveFocus()
   })
 
+  it('当选择的模型支持图片输入时，最多一次性上传 6 张图片，超出则警告并截断', async () => {
+    const mockSaveAiChatImage = vi.fn().mockImplementation(({ name }) => {
+      return Promise.resolve({ url: `mc-img://chat/${name}` })
+    })
+
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: {
+        files: {
+          saveAiChatImage: mockSaveAiChatImage
+        }
+      }
+    })
+
+    const modelOptionsWithImage: AiModelProviderOption[] = [
+      {
+        id: 'bailian',
+        name: 'Bailian',
+        models: [
+          {
+            id: 'multimodal-model',
+            name: 'Multimodal Model',
+            limit: {
+              context: 204800,
+              output: 131072
+            },
+            modalities: {
+              input: ['text', 'image'],
+              output: ['text']
+            }
+          }
+        ]
+      }
+    ]
+
+    const selectedModelWithImage: AiModelSelection = {
+      provider: 'bailian',
+      model: 'multimodal-model'
+    }
+
+    render(
+      <AiChatInput
+        modelOptions={modelOptionsWithImage}
+        selectedModel={selectedModelWithImage}
+        contextUsagePercent={0}
+        contextTokens={0}
+        contextLimit={204800}
+        isGenerating={false}
+        onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+      />
+    )
+
+    // 查找并获取 file input
+    const fileInput = screen.getByTestId('ai-chat-input-container').querySelector('input[type="file"]') as HTMLInputElement
+    expect(fileInput).toBeInTheDocument()
+
+    // 模拟上传 7 张图片
+    const files = Array.from({ length: 7 }, (_, i) => {
+      const f = new File([''], `pic-${i}.png`, { type: 'image/png' })
+      Object.defineProperty(f, 'size', { value: 1024 })
+      return f
+    })
+
+    // 触发 file input change 事件
+    fireEvent.change(fileInput, {
+      target: { files }
+    })
+
+    // 校验 mockSaveAiChatImage 调用次数限制为 6（只保存了前 6 张）
+    await waitFor(() => {
+      expect(mockSaveAiChatImage).toHaveBeenCalledTimes(6)
+    })
+
+    // 校验是否弹出了正确的 toast 提示
+    expect(mockToastWarning).toHaveBeenCalledWith('最多只能上传 6 张图片，已自动截取前 6 张')
+  })
+
   it('模糊匹配斜杠命令执行时不以 / 开头命令记录提示词历史', async () => {
     const onCommandExecute = vi.fn()
     const addPromptHistory = vi.fn().mockResolvedValue([])

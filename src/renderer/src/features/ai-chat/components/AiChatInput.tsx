@@ -529,15 +529,31 @@ export const AiChatInput = ({
       return;
     }
 
-    const uploaded: string[] = [];
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) {
-        toast.warning("仅支持上传图片文件");
-        continue;
-      }
+    const currentCount = selectedImages.length;
+    if (currentCount >= 6) {
+      toast.warning("最多只能上传 6 张图片");
+      return;
+    }
 
+    const remainingSlots = 6 - currentCount;
+    const fileArray = Array.from(files);
+
+    const imageFiles = fileArray.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length === 0 && fileArray.length > 0) {
+      toast.warning("仅支持上传图片文件");
+      return;
+    }
+
+    if (imageFiles.length > remainingSlots) {
+      toast.warning(`最多只能上传 6 张图片，已自动截取前 ${remainingSlots} 张`);
+    }
+
+    const allowedFiles = imageFiles.slice(0, remainingSlots);
+
+    const uploaded: string[] = [];
+    for (const file of allowedFiles) {
       if (file.size > 10 * 1024 * 1024) {
-        toast.warning("图片大小超过 10MB 限制");
+        toast.warning(`图片 ${file.name} 超过 10MB 限制`);
         continue;
       }
 
@@ -1101,24 +1117,9 @@ export const AiChatInput = ({
           )}
         />
 
-        {/* 输入框 */}
-        <textarea
-          ref={textareaRef}
-          rows={TEXTAREA_MIN_ROWS}
-          value={inputText}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onClick={handleTextareaCursorMove}
-          onKeyUp={handleTextareaCursorMove}
-          onPaste={handlePaste}
-          placeholder="输入您的问题..."
-          aria-label="AI Chat Input Area"
-          className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
-        />
-
         {/* 上传图片微缩预览横轴 */}
         {selectedImages.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-1 py-1 max-h-[140px] overflow-y-auto custom-scrollbar">
+          <div className="flex flex-wrap gap-2 px-1.5 py-1.5 max-h-[140px] overflow-y-auto custom-scrollbar">
             {selectedImages.map((url, idx) => (
               <div
                 key={idx}
@@ -1141,6 +1142,21 @@ export const AiChatInput = ({
             ))}
           </div>
         )}
+
+        {/* 输入框 */}
+        <textarea
+          ref={textareaRef}
+          rows={TEXTAREA_MIN_ROWS}
+          value={inputText}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onClick={handleTextareaCursorMove}
+          onKeyUp={handleTextareaCursorMove}
+          onPaste={handlePaste}
+          placeholder="输入您的问题..."
+          aria-label="AI Chat Input Area"
+          className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
+        />
 
         {/* 工具栏与发送按钮 */}
         <div className="flex items-center justify-between">

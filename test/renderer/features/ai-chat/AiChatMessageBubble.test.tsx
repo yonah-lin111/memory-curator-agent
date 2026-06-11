@@ -452,4 +452,48 @@ describe("AiChatMessageBubble", () => {
     const pingSpan = container.querySelector(".animate-ping");
     expect(pingSpan).toBeInTheDocument();
   });
+
+  it("用户消息包含图片时，图片应渲染在用户提示词的上方，且具有固定的正方形类名", () => {
+    const message: AiChatMessage = {
+      id: "u1-images",
+      role: "user",
+      content: "帮我看看这张图",
+      time: "10:15",
+      parts: [
+        {
+          id: "p1",
+          kind: "image",
+          url: "mc-img://chat/test.png",
+        },
+      ],
+    };
+
+    const { container } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    // 应该渲染图片组件
+    const img = container.querySelector("img");
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute("src", "mc-img://chat/test.png");
+
+    // 图片包裹层应该拥有 w-16 h-16 样式类
+    const imgWrapper = img?.closest(".w-16.h-16");
+    expect(imgWrapper).toBeInTheDocument();
+
+    // 图片容器应该在文本（帮我看看这张图）的前面（也就是上方）
+    const msgBubble = container.querySelector(".group\\/msg-bubble");
+    expect(msgBubble).toBeInTheDocument();
+
+    const children = Array.from(msgBubble?.children || []);
+    const imgContainerIdx = children.findIndex((child) => child.querySelector("img"));
+    const textIdx = children.findIndex((child) => child.textContent?.includes("帮我看看这张图"));
+
+    expect(imgContainerIdx).toBeGreaterThan(-1);
+    expect(textIdx).toBeGreaterThan(-1);
+    expect(imgContainerIdx).toBeLessThan(textIdx); // 图片在文本的前面，也即上方
+  });
 });
