@@ -10,6 +10,9 @@ vi.mock('node:fs', async (importOriginal) => {
       if (typeof path === 'string' && path.includes('upload-123.png')) {
         return Buffer.from([1, 2, 3])
       }
+      if (typeof path === 'string' && path.includes('test-file-123.txt')) {
+        return 'Hello, this is mock text content!'
+      }
       return actual.readFileSync(path, options)
     }
   }
@@ -336,6 +339,60 @@ describe('aiSdkProvider', () => {
     expect(convertedMsg.content).toEqual([
       { type: 'text', text: '看看这个图片' },
       { type: 'image', image: Buffer.from([1, 2, 3]).toString('base64'), mimeType: 'image/png' }
+    ])
+  })
+
+  it('支持将 text-file 片段转换并读入为模型消息内容', async () => {
+    let capturedInput: any = null
+    const config: NormalizedProviderConfig = {
+      id: 'bailian',
+      type: 'openai-compatible',
+      name: 'Bailian',
+      options: {
+        apiKey: 'test-key',
+        baseURL: 'https://example.com/v1'
+      },
+      models: {}
+    }
+    const provider = await createAiSdkModelProvider(config, {
+      loadPackage: async () => ({
+        createOpenAICompatible: () => (model: string) => ({
+          model
+        })
+      }),
+      streamText: (input) => {
+        capturedInput = input
+        return {
+          stream: (async function* () {
+            yield { type: 'finish' }
+          })()
+        }
+      }
+    })
+
+    await Array.fromAsync(
+      provider.streamTurn({
+        model: 'MiniMax-M2.5',
+        messages: [
+          {
+            role: 'user',
+            content: '读一下这个文件',
+            parts: [
+              { id: 'p1', kind: 'text', content: '读一下这个文件' },
+              { id: 'p2', kind: 'text-file', url: 'mc-img://chat-text/test-file-123.txt', fileName: 'test-file-123.txt', sizeBytes: 100 }
+            ]
+          }
+        ],
+        tools: []
+      })
+    )
+
+    expect(capturedInput).not.toBeNull()
+    const convertedMsg = capturedInput.messages[0]
+    expect(convertedMsg.role).toBe('user')
+    expect(convertedMsg.content).toEqual([
+      { type: 'text', text: '读一下这个文件' },
+      { type: 'text', text: '\n[Uploaded File: test-file-123.txt]\n```\nHello, this is mock text content!\n```\n' }
     ])
   })
 })

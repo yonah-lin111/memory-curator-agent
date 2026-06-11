@@ -31,4 +31,8 @@ export const registerFilesHandlers = (): void => {
   ipcMain.handle('files:ai-chat-text:delete', (_, fileName: string) =>
     filesService.deleteAiChatTextFile(fileName)
   )
+
+  ipcMain.handle('files:ai-chat-text:read', (_, url: string) =>
+    filesService.readAiChatTextFile(url)
+  )
 }

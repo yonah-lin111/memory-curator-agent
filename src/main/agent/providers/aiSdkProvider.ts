@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import {
   resolveAiChatImagePath,
+  resolveAiChatTextFileName,
+  resolveAiChatTextFilePath,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
 } from '@/protocols/localImages'
@@ -50,6 +52,28 @@ const readImageAsBase64 = (url: string): { base64: string; mimeType: string } | 
     return {
       base64: buffer.toString('base64'),
       mimeType
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 从本地磁盘读取 AI 聊天文本文件内容。
+ */
+const readTextFileContent = (url: string): { content: string; fileName: string } | null => {
+  try {
+    const filePath = resolveAiChatTextFilePath(url)
+    const fileName = resolveAiChatTextFileName(url) || 'file.txt'
+
+    if (!filePath) {
+      return null
+    }
+
+    const content = readFileSync(filePath, 'utf-8')
+    return {
+      content,
+      fileName
     }
   } catch {
     return null
@@ -187,7 +211,7 @@ const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
     }
   }
 
-  if (message.parts && message.parts.some((part) => part.kind === 'image')) {
+  if (message.parts && message.parts.length) {
     const parts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType: string }> = []
     for (const part of message.parts) {
       if (part.kind === 'text') {
@@ -199,6 +223,14 @@ const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
             type: 'image',
             image: base64Data.base64,
             mimeType: base64Data.mimeType
+          })
+        }
+      } else if (part.kind === 'text-file') {
+        const fileData = readTextFileContent(part.url)
+        if (fileData) {
+          parts.push({
+            type: 'text',
+            text: `\n[Uploaded File: ${fileData.fileName}]\n\`\`\`\n${fileData.content}\n\`\`\`\n`
           })
         }
       }

@@ -115,14 +115,17 @@ export const TextFile = ({
     setPreviewLoading(true);
     setPreviewError(false);
 
-    fetch(url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch");
-        }
+    const loadContent = window.api?.files?.readAiChatTextFile
+      ? window.api.files.readAiChatTextFile(url)
+      : fetch(url).then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to fetch");
+          }
 
-        return response.text();
-      })
+          return response.text();
+        });
+
+    loadContent
       .then((text) => {
         setPreviewContent(text);
         setPreviewLoading(false);

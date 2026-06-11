@@ -20,6 +20,7 @@ const filesService: FilesService = {
   deleteUnusedAiChatImages: vi.fn(),
   saveAiChatTextFile: vi.fn(),
   deleteAiChatTextFile: vi.fn(),
+  readAiChatTextFile: vi.fn(),
   cleanExpiredTrash: vi.fn()
 }
 

@@ -659,6 +659,8 @@ type AppAPI = {
     saveAiChatTextFile?: (payload: MarkdownImageSavePayload) => Promise<AiChatTextFileSaveResult>
     // 删除 AI 聊天文本文件。
     deleteAiChatTextFile?: (fileName: string) => Promise<void>
+    // 读取 AI 聊天文本文件内容。
+    readAiChatTextFile?: (url: string) => Promise<string>
   }
   // Notes 页面 API。
   notes: {

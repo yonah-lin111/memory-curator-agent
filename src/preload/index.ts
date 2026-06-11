@@ -526,7 +526,9 @@ const api = {
     saveAiChatTextFile: (payload: MarkdownImageSavePayload): Promise<AiChatTextFileSaveResult> =>
       ipcRenderer.invoke('files:ai-chat-text:save', payload),
     deleteAiChatTextFile: (fileName: string): Promise<void> =>
-      ipcRenderer.invoke('files:ai-chat-text:delete', fileName)
+      ipcRenderer.invoke('files:ai-chat-text:delete', fileName),
+    readAiChatTextFile: (url: string): Promise<string> =>
+      ipcRenderer.invoke('files:ai-chat-text:read', url)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),

@@ -1,8 +1,8 @@
-import { access, mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import { createCompactUuid } from '@/id'
 import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getAppDataRoot } from '@/paths'
-import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl } from '@/protocols/localImages'
+import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, resolveAiChatTextFileName } from '@/protocols/localImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -130,6 +130,8 @@ export type FilesService = {
   saveAiChatTextFile: (input: MarkdownImageSaveInput) => Promise<AiChatTextFileSaveResult>
   // 删除 AI 聊天文本文件（移到回收站）。
   deleteAiChatTextFile: (fileName: string) => Promise<void>
+  // 读取 AI 聊天文本文件内容。
+  readAiChatTextFile: (url: string) => Promise<string>
   // 物理清理回收站中超过指定保留时间的过期文件。
   cleanExpiredTrash: (retentionMs?: number) => Promise<void>
 }
@@ -590,6 +592,19 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       await mkdir(aiChatTextTrashDir, { recursive: true })
       const targetPath = await createTrashTargetPath(aiChatTextTrashDir, fileName)
       await rename(filePath, targetPath)
+    },
+    readAiChatTextFile: async (url) => {
+      const fileName = resolveAiChatTextFileName(url)
+      if (!fileName) {
+        throw new Error('Invalid text file URL')
+      }
+
+      const filePath = join(aiChatTextDir, fileName)
+      if (!(await pathExists(filePath))) {
+        throw new Error('File does not exist')
+      }
+
+      return readFile(filePath, 'utf-8')
     },
     cleanExpiredTrash: async (retentionMs = 7 * 24 * 60 * 60 * 1000) => {
       const now = Date.now()
