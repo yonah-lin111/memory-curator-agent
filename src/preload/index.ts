@@ -473,6 +473,20 @@ type MarkdownImageSaveResult = {
   url: string
 }
 
+// AI 聊天文本文件保存结果类型。
+type AiChatTextFileSaveResult = {
+  // 落盘文件名。
+  fileName: string
+  // 本机绝对路径。
+  filePath: string
+  // 可访问文本文件的应用 URL。
+  url: string
+  // 原始文件名。
+  originalName: string
+  // 文件大小（字节）。
+  sizeBytes: number
+}
+
 // 单日聚合概览类型。
 type MonthEntryOverview = {
   // 所属日期。
@@ -508,7 +522,11 @@ const api = {
     savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:people-avatar:save', payload),
     saveAiChatImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:ai-chat-image:save', payload)
+      ipcRenderer.invoke('files:ai-chat-image:save', payload),
+    saveAiChatTextFile: (payload: MarkdownImageSavePayload): Promise<AiChatTextFileSaveResult> =>
+      ipcRenderer.invoke('files:ai-chat-text:save', payload),
+    deleteAiChatTextFile: (fileName: string): Promise<void> =>
+      ipcRenderer.invoke('files:ai-chat-text:delete', fileName)
   },
   notes: {
     list: () => ipcRenderer.invoke('notes:list'),
