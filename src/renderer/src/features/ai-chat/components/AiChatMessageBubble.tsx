@@ -732,6 +732,7 @@ export const AiChatMessageBubble = ({
                           <Image
                             key={i}
                             src={part.url}
+                            aspectRatio="square"
                             className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
                           />
                         ))}

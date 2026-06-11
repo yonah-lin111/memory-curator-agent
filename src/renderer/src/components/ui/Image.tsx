@@ -9,6 +9,8 @@ export interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt?: string;
   // 是否支持点击全屏预览。
   preview?: boolean;
+  // 预设纵横比，支持 "square" (1:1) | "video" (16:9) | "auto" | 自定义数字比例。
+  aspectRatio?: "square" | "video" | "auto" | number;
 }
 
 /**
@@ -19,6 +21,7 @@ export const Image = ({
   alt = "",
   preview = true,
   className = "",
+  aspectRatio = "auto",
   onClick,
   ...props
 }: ImageProps): React.JSX.Element => {
@@ -27,6 +30,28 @@ export const Image = ({
   const [showLightbox, setShowLightbox] = useState(false);
   const [scale, setScale] = useState(1);
   const [rotate, setRotate] = useState(0);
+  // 拖拽时的位移坐标。
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  // 是否正在拖拽。
+  const [isDragging, setIsDragging] = useState(false);
+  // 拖拽起始点指针坐标。
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  /**
+   * 根据传入的 aspectRatio 属性计算外层包裹容器的 CSS 纵横比样式。
+   */
+  const getAspectRatioStyle = (): React.CSSProperties => {
+    if (!aspectRatio || aspectRatio === "auto") {
+      return {};
+    }
+    if (aspectRatio === "square") {
+      return { aspectRatio: 1 };
+    }
+    if (aspectRatio === "video") {
+      return { aspectRatio: 16 / 9 };
+    }
+    return { aspectRatio };
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -40,11 +65,13 @@ export const Image = ({
     };
   }, [showLightbox]);
 
-  // 重置放大和旋转参数。
+  // 重置放大、旋转和偏移参数。
   useEffect(() => {
     if (!showLightbox) {
       setScale(1);
       setRotate(0);
+      setPosition({ x: 0, y: 0 });
+      setIsDragging(false);
     }
   }, [showLightbox]);
 
@@ -72,10 +99,60 @@ export const Image = ({
     }
   };
 
+  /**
+   * 处理图片拖拽开始事件（Pointer Down）。
+   * 记录起始指针坐标，并捕获指针以确保事件连续性。
+   */
+  const handlePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+    e.preventDefault(); // 阻止浏览器默认拖拽行为，避免产生幽灵图
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  /**
+   * 处理图片拖拽移动事件（Pointer Move）。
+   * 根据当前指针位置计算图片偏移量。
+   */
+  const handlePointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    if (!isDragging) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    setPosition({ x: newX, y: newY });
+  };
+
+  /**
+   * 处理图片拖拽结束事件（Pointer Up）。
+   * 结束拖拽状态，释放指针捕获。
+   */
+  const handlePointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  /**
+   * 处理鼠标滚轮缩放事件（Wheel）。
+   * 向上滚动放大图片，向下滚动缩小图片，限制范围在 0.5 到 3 之间。
+   */
+  const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
+    const zoomFactor = 0.1;
+    setScale((s) => {
+      const nextScale = e.deltaY < 0 ? s + zoomFactor : s - zoomFactor;
+      return Math.max(0.5, Math.min(nextScale, 3));
+    });
+  };
+
   return (
     <>
       <div
         className={`relative overflow-hidden rounded-[6px] bg-white/[0.02] border border-white/5 group/img-box ${className}`}
+        style={getAspectRatioStyle()}
       >
         {loading && (
           <div
@@ -154,17 +231,27 @@ export const Image = ({
             </button>
           </div>
 
-          <div
-            className="max-h-[85vh] max-w-[85vw] overflow-hidden flex items-center justify-center"
+           <div
+            className="max-h-[85vh] max-w-[85vw] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
+            onWheel={handleWheel}
           >
             <img
               data-testid="lightbox-img"
               src={src}
               alt={alt}
+              draggable="false"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               style={{
-                transform: `scale(${scale}) rotate(${rotate}deg)`,
-                transition: "transform 0.2s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                transform:
+                  position.x === 0 && position.y === 0
+                    ? `scale(${scale}) rotate(${rotate}deg)`
+                    : `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotate}deg)`,
+                transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                cursor: isDragging ? "grabbing" : scale > 1 ? "grab" : "default",
               }}
               className="max-h-full max-w-full object-contain"
             />

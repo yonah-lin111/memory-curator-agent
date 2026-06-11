@@ -3,7 +3,7 @@
  */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Image } from "@/components/ui/Image";
 
 describe("Image Component", () => {
@@ -106,5 +106,83 @@ describe("Image Component", () => {
     const rotateBtn = screen.getByLabelText("Rotate");
     fireEvent.click(rotateBtn);
     expect(lightboxImg.style.transform).toBe("scale(1) rotate(90deg)");
+  });
+
+  it("can drag and translate the lightbox image", () => {
+    const setPointerCaptureMock = vi.fn();
+    const releasePointerCaptureMock = vi.fn();
+
+    render(<Image src="test-pic.png" alt="Test Pic" />);
+    const img = screen.getByAltText("Test Pic");
+    fireEvent.load(img);
+
+    fireEvent.click(img);
+
+    const lightboxImg = screen.getByTestId("lightbox-img");
+    lightboxImg.setPointerCapture = setPointerCaptureMock;
+    lightboxImg.releasePointerCapture = releasePointerCaptureMock;
+
+    expect(lightboxImg.style.transform).toBe("scale(1) rotate(0deg)");
+
+    // 开始拖拽
+    fireEvent.pointerDown(lightboxImg, { clientX: 100, clientY: 100, pointerId: 1 });
+    expect(setPointerCaptureMock).toHaveBeenCalledWith(1);
+
+    // 移动指针
+    fireEvent.pointerMove(lightboxImg, { clientX: 150, clientY: 180 });
+    expect(lightboxImg.style.transform).toBe("translate(50px, 80px) scale(1) rotate(0deg)");
+
+    // 结束拖拽
+    fireEvent.pointerUp(lightboxImg, { pointerId: 1 });
+    expect(releasePointerCaptureMock).toHaveBeenCalledWith(1);
+  });
+
+  it("can zoom the image via mouse wheel", () => {
+    render(<Image src="test-pic.png" alt="Test Pic" />);
+    const img = screen.getByAltText("Test Pic");
+    fireEvent.load(img);
+
+    fireEvent.click(img);
+
+    const lightboxImg = screen.getByTestId("lightbox-img");
+    expect(lightboxImg.style.transform).toBe("scale(1) rotate(0deg)");
+
+    // 向上滚动鼠标滚轮（放大）
+    fireEvent.wheel(lightboxImg.parentElement!, { deltaY: -100 });
+    expect(lightboxImg.style.transform).toBe("scale(1.1) rotate(0deg)");
+
+    // 向下滚动鼠标滚轮（缩小）
+    fireEvent.wheel(lightboxImg.parentElement!, { deltaY: 100 });
+    expect(lightboxImg.style.transform).toBe("scale(1) rotate(0deg)");
+  });
+
+  it("does not apply aspectRatio style when auto or not specified", () => {
+    const { container } = render(<Image src="test-pic.png" alt="Test Pic" />);
+    const wrapper = container.querySelector("div");
+    expect(wrapper?.style.aspectRatio).toBe("");
+  });
+
+  it("applies correct aspect ratio style for predefined values", () => {
+    const { container: containerSquare } = render(
+      <Image src="test-pic.png" alt="Test Pic" aspectRatio="square" />
+    );
+    const wrapperSquare = containerSquare.querySelector("div");
+    expect(wrapperSquare?.style.aspectRatio).toMatch(/^1(\s*\/\s*1)?$/);
+
+    cleanup();
+
+    const { container: containerVideo } = render(
+      <Image src="test-pic.png" alt="Test Pic" aspectRatio="video" />
+    );
+    const wrapperVideo = containerVideo.querySelector("div");
+    expect(wrapperVideo?.style.aspectRatio).toMatch(/^(1\.7777\d+|16\s*\/\s*9)(\s*\/\s*1)?$/);
+  });
+
+  it("applies custom numeric aspect ratio styles", () => {
+    const { container } = render(
+      <Image src="test-pic.png" alt="Test Pic" aspectRatio={4 / 3} />
+    );
+    const wrapper = container.querySelector("div");
+    expect(wrapper?.style.aspectRatio).toMatch(/^1\.3333\d+(\s*\/\s*1)?$/);
   });
 });

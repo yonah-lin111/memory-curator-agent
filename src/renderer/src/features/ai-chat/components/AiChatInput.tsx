@@ -1128,6 +1128,7 @@ export const AiChatInput = ({
                 <Image
                   src={url}
                   preview={false}
+                  aspectRatio="square"
                   className="w-full h-full rounded-[6px] object-cover"
                 />
                 <button
