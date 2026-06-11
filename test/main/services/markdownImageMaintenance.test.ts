@@ -14,7 +14,11 @@ const filesService: FilesService = {
   saveAiChatImage: vi.fn(),
   listUnusedMarkdownImages: vi.fn(),
   restoreReferencedMarkdownImages: vi.fn(),
-  deleteUnusedMarkdownImages: vi.fn()
+  deleteUnusedMarkdownImages: vi.fn(),
+  listUnusedAiChatImages: vi.fn(),
+  restoreReferencedAiChatImages: vi.fn(),
+  deleteUnusedAiChatImages: vi.fn(),
+  cleanExpiredTrash: vi.fn()
 }
 
 describe('markdownImageMaintenance', () => {
@@ -29,6 +33,7 @@ describe('markdownImageMaintenance', () => {
       deletedCount: 0,
       deletedImages: []
     })
+    vi.mocked(filesService.cleanExpiredTrash).mockResolvedValue(undefined)
   })
 
   afterEach(() => {

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, utimesSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -9,6 +9,9 @@ let tempImageDir: string | null = null
 
 // 临时回收目录。
 let tempTrashDir: string | null = null
+
+// 临时垃圾桶根目录。
+let tempTrashRoot: string | null = null
 
 // 内存 Markdown 内容数据库。
 class MemoryMarkdownDatabase implements DatabaseConnection {
@@ -21,7 +24,7 @@ class MemoryMarkdownDatabase implements DatabaseConnection {
    * 准备内存 SQL 语句。
    */
   prepare = (sql: string): DatabaseStatement => {
-    if (sql.includes('SELECT content FROM notes')) {
+    if (sql.includes('SELECT content FROM notes') || sql.includes('SELECT content FROM ai_chat_messages')) {
       return {
         all: () => this.contents.map((content) => ({ content })),
         get: () => undefined,
@@ -43,6 +46,11 @@ describe('filesService', () => {
     if (tempTrashDir) {
       rmSync(tempTrashDir, { recursive: true, force: true })
       tempTrashDir = null
+    }
+
+    if (tempTrashRoot) {
+      rmSync(tempTrashRoot, { recursive: true, force: true })
+      tempTrashRoot = null
     }
   })
 
@@ -198,5 +206,91 @@ describe('filesService', () => {
 
     expect(readFileSync(join(tempTrashDir, 'unused.png'))).toEqual(Buffer.from([9]))
     expect(readdirSync(tempTrashDir).filter((fileName) => fileName.startsWith('unused'))).toHaveLength(2)
+  })
+
+  describe('AI Chat Images Maintenance', () => {
+    it('should list and delete unused AI chat images, and restore them when referenced again', async () => {
+      tempImageDir = mkdtempSync(join(tmpdir(), 'mc-chat-img-'))
+      tempTrashDir = mkdtempSync(join(tmpdir(), 'mc-chat-trash-'))
+
+      // 准备图片
+      writeFileSync(join(tempImageDir, 'used.png'), Buffer.from([1]))
+      writeFileSync(join(tempImageDir, 'unused.png'), Buffer.from([2]))
+      writeFileSync(join(tempTrashDir, 'restored.png'), Buffer.from([3]))
+
+      const service = createFilesService({
+        database: new MemoryMarkdownDatabase([
+          '![used](mc-img://chat/used.png)',
+          '![restored](mc-img://chat/restored.png)'
+        ]),
+        aiChatImageDir: tempImageDir,
+        aiChatImageTrashDir: tempTrashDir
+      })
+
+      // 1. 测试列出未引用
+      const unused = await service.listUnusedAiChatImages()
+      expect(unused).toHaveLength(1)
+      expect(unused[0].fileName).toBe('unused.png')
+
+      // 2. 测试删除未引用
+      const deleteResult = await service.deleteUnusedAiChatImages()
+      expect(deleteResult.deletedCount).toBe(1)
+      expect(existsSync(join(tempImageDir, 'unused.png'))).toBe(false)
+      expect(existsSync(join(tempTrashDir, 'unused.png'))).toBe(true)
+
+      // 3. 测试自动恢复
+      const restoreResult = await service.restoreReferencedAiChatImages()
+      expect(restoreResult.restoredCount).toBe(1)
+      expect(existsSync(join(tempImageDir, 'restored.png'))).toBe(true)
+      expect(existsSync(join(tempTrashDir, 'restored.png'))).toBe(false)
+    })
+  })
+
+  describe('Trash Cleanup', () => {
+    it('should recursively delete expired files and empty subdirectories in the trash root', async () => {
+      tempTrashRoot = mkdtempSync(join(tmpdir(), 'mc-trash-root-'))
+
+      const sub1 = join(tempTrashRoot, 'sub1')
+      const sub2 = join(tempTrashRoot, 'sub2')
+      const subEmpty = join(tempTrashRoot, 'sub-empty')
+
+      mkdirSync(sub1)
+      mkdirSync(sub2)
+      mkdirSync(subEmpty)
+
+      const expiredFile1 = join(sub1, 'expired1.png')
+      const activeFile = join(sub2, 'active.png')
+      const expiredFile2 = join(tempTrashRoot, 'expired2.png')
+
+      writeFileSync(expiredFile1, Buffer.from([10]))
+      writeFileSync(activeFile, Buffer.from([11]))
+      writeFileSync(expiredFile2, Buffer.from([12]))
+
+      // 将过期文件最后修改时间设置为 10 天前
+      const tenDaysAgo = new Date(Date.now() - 10 * 24 * 3600 * 1000)
+      utimesSync(expiredFile1, tenDaysAgo, tenDaysAgo)
+      utimesSync(expiredFile2, tenDaysAgo, tenDaysAgo)
+
+      const service = createFilesService({
+        trashRootDir: tempTrashRoot
+      })
+
+      // 运行清理，设保留时长为 7 天
+      await service.cleanExpiredTrash(7 * 24 * 3600 * 1000)
+
+      // 验证过期文件被删除
+      expect(existsSync(expiredFile1)).toBe(false)
+      expect(existsSync(expiredFile2)).toBe(false)
+
+      // 验证未过期文件被完好保留
+      expect(existsSync(activeFile)).toBe(true)
+
+      // 验证空子目录 sub-empty 应该被删除，被清空的 sub1 应该被删除
+      expect(existsSync(subEmpty)).toBe(false)
+      expect(existsSync(sub1)).toBe(false)
+
+      // 验证仍含有文件的 sub2 应该保留
+      expect(existsSync(sub2)).toBe(true)
+    })
   })
 })

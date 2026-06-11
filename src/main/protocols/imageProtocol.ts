@@ -9,7 +9,7 @@ import {
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
-} from '@/protocols/markdownImages'
+} from '@/protocols/localImages'
 
 /**
  * 判断文件是否存在。

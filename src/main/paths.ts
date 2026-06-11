@@ -40,3 +40,8 @@ export const getAiChatImageDir = (): string => join(getAppDataRoot(), 'img', 'ch
  * 获取 Markdown 图片回收目录。
  */
 export const getMarkdownImageTrashDir = (): string => join(getAppDataRoot(), 'trash', 'img', 'md')
+
+/**
+ * 获取 AI 聊天图片回收目录。
+ */
+export const getAiChatImageTrashDir = (): string => join(getAppDataRoot(), 'trash', 'img', 'chat')

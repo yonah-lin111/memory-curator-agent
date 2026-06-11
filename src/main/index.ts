@@ -12,6 +12,7 @@ import { registerConfigHandlers } from '@/ipc/configHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from '@/protocols/imageProtocol'
 import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
 import { scheduleStartupMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
+import { scheduleStartupAiChatImageMaintenance } from '@/services/aiChatImageMaintenance'
 
 registerImageProtocolSchemes()
 
@@ -60,6 +61,9 @@ app.whenReady().then(() => {
   registerConfigHandlers()
   registerImageProtocolHandler()
   scheduleStartupMarkdownImageMaintenance(
+    createFilesService({ database: database as unknown as FilesDatabaseConnection })
+  )
+  scheduleStartupAiChatImageMaintenance(
     createFilesService({ database: database as unknown as FilesDatabaseConnection })
   )
 

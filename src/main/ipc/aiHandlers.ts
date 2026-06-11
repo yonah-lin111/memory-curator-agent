@@ -8,6 +8,8 @@ import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection
 } from '@/services/aiChatPersistenceService'
+import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
+import { scheduleAiChatImageMaintenance } from '@/services/aiChatImageMaintenance'
 import { loadProviderConfig } from '@/agent/providers/providerConfig'
 import { createModelProvider } from '@/agent/providers/providerFactory'
 import { runReactAgent } from '@/agent/core/reactAgent'
@@ -623,13 +625,21 @@ export const registerAiHandlers = (): void => {
   })
   ipcMain.handle('ai:session:delete', async (_, sessionId: string) => {
     aiChatService.deleteSession(sessionId)
+    const filesService = createFilesService({ database: database as unknown as FilesDatabaseConnection })
+    scheduleAiChatImageMaintenance(filesService)
   })
-  ipcMain.handle('ai:session:turn:undo', async (_, sessionId: string) =>
-    aiChatService.undoLastTurn(sessionId, createTimestamp())
-  )
-  ipcMain.handle('ai:session:turn:delete', async (_, sessionId: string, messageId: string) =>
-    aiChatService.deleteTurnByMessageId(sessionId, messageId, createTimestamp())
-  )
+  ipcMain.handle('ai:session:turn:undo', async (_, sessionId: string) => {
+    const result = await aiChatService.undoLastTurn(sessionId, createTimestamp())
+    const filesService = createFilesService({ database: database as unknown as FilesDatabaseConnection })
+    scheduleAiChatImageMaintenance(filesService)
+    return result
+  })
+  ipcMain.handle('ai:session:turn:delete', async (_, sessionId: string, messageId: string) => {
+    const result = await aiChatService.deleteTurnByMessageId(sessionId, messageId, createTimestamp())
+    const filesService = createFilesService({ database: database as unknown as FilesDatabaseConnection })
+    scheduleAiChatImageMaintenance(filesService)
+    return result
+  })
   ipcMain.handle('ai:chat:ask-answer', async (_, payload: AiAskAnswerPayload) => {
     if (!payload || typeof payload.requestId !== 'string' || !isStringMatrix(payload.answers)) {
       throw new Error('Invalid Ask answer payload')

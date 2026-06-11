@@ -1,7 +1,7 @@
 import { basename, join } from 'node:path'
 import { getAiChatImageDir, getMarkdownImageDir, getPeopleAvatarDir } from '@/paths'
 
-// Markdown 图片协议。
+// 本地图片协议。
 export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
 
 // Markdown 图片协议主机名。

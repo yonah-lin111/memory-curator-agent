@@ -5,7 +5,7 @@ import {
   resolveAiChatImagePath,
   resolveMarkdownImagePath,
   resolvePeopleAvatarPath
-} from '@/protocols/markdownImages'
+} from '@/protocols/localImages'
 import type {
   AgentMessage,
   AgentTool,
