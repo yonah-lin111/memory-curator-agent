@@ -140,6 +140,16 @@ export const AiChatWorkspace = ({
   >(null);
   // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
+  // 时间线全屏展示状态（替代左侧聊天列表）。
+  const [isTimelineFullscreen, setIsTimelineFullscreen] = useState<boolean>(false);
+
+  // 当时间线关闭时，重置全屏状态。
+  useEffect(() => {
+    if (!isContextTimelineOpen) {
+      setIsTimelineFullscreen(false);
+    }
+  }, [isContextTimelineOpen]);
+
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
     useState<AiChatMessageContextMenuRequest | null>(null);
@@ -732,68 +742,70 @@ export const AiChatWorkspace = ({
       {/* 消息区域容器：支持左右并排（两个列表）展示 */}
       <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-white/5">
         {/* 左侧：消息列表 */}
-        <div
-          ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4 min-w-0"
-        >
-          {session.messages.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
-              <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
-              <p className="max-w-md text-xs text-white/40 leading-relaxed">
-                在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
-              </p>
-            </div>
-          ) : (
-            session.messages.map((message, index) => {
-              const isLast = index === session.messages.length - 1;
-              const isGenerating =
-                isLast &&
-                session.status === "running" &&
-                message.role === "assistant";
-              const previousMessage = session.messages[index - 1];
-              const canRegenerate =
-                message.role === "assistant" &&
-                isLast &&
-                message.id === latestAssistantMessageId &&
-                previousMessage?.role === "user" &&
-                session.status !== "running";
-              const shouldPinToTop = message.id === topPinnedUserId;
+        {!isTimelineFullscreen && (
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4 min-w-0"
+          >
+            {session.messages.length === 0 ? (
+              <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
+                <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
+                <p className="max-w-md text-xs text-white/40 leading-relaxed">
+                  在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
+                </p>
+              </div>
+            ) : (
+              session.messages.map((message, index) => {
+                const isLast = index === session.messages.length - 1;
+                const isGenerating =
+                  isLast &&
+                  session.status === "running" &&
+                  message.role === "assistant";
+                const previousMessage = session.messages[index - 1];
+                const canRegenerate =
+                  message.role === "assistant" &&
+                  isLast &&
+                  message.id === latestAssistantMessageId &&
+                  previousMessage?.role === "user" &&
+                  session.status !== "running";
+                const shouldPinToTop = message.id === topPinnedUserId;
 
-              const isLastUser = message.role === "user" && index === session.messages.length - 2;
+                const isLastUser = message.role === "user" && index === session.messages.length - 2;
 
-              return (
-                <div
-                  key={message.id}
-                  ref={shouldPinToTop ? latestUserMessageRef : null}
-                >
-                  <AiChatMessageBubble
-                    message={message}
-                    isLastUser={isLastUser}
-                    isGenerating={isGenerating}
-                    canRegenerate={canRegenerate}
-                    onSubmitAskAnswer={onSubmitAskAnswer}
-                    onSubmitToolConfirmationAnswer={
-                      onSubmitToolConfirmationAnswer
-                    }
-                    onOpenContextMenu={handleOpenMessageContextMenu}
-                    onEditAndResendUserMessage={onEditAndResendUserMessage}
-                    onThinkingBlockToggle={handleThinkingBlockToggle}
-                    onToolConfirmationToggle={handleThinkingBlockToggle}
-                    onUserEditStateChange={handleUserEditStateChange}
-                  />
-                </div>
-              );
-            })
-          )}
-          {bottomSpacerHeight > 0 && (
-            <div
-              data-ai-chat-bottom-spacer="true"
-              style={{ height: `${bottomSpacerHeight}px` }}
-              className="flex-shrink-0"
-            />
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+                return (
+                  <div
+                    key={message.id}
+                    ref={shouldPinToTop ? latestUserMessageRef : null}
+                  >
+                    <AiChatMessageBubble
+                      message={message}
+                      isLastUser={isLastUser}
+                      isGenerating={isGenerating}
+                      canRegenerate={canRegenerate}
+                      onSubmitAskAnswer={onSubmitAskAnswer}
+                      onSubmitToolConfirmationAnswer={
+                        onSubmitToolConfirmationAnswer
+                      }
+                      onOpenContextMenu={handleOpenMessageContextMenu}
+                      onEditAndResendUserMessage={onEditAndResendUserMessage}
+                      onThinkingBlockToggle={handleThinkingBlockToggle}
+                      onToolConfirmationToggle={handleThinkingBlockToggle}
+                      onUserEditStateChange={handleUserEditStateChange}
+                    />
+                  </div>
+                );
+              })
+            )}
+            {bottomSpacerHeight > 0 && (
+              <div
+                data-ai-chat-bottom-spacer="true"
+                style={{ height: `${bottomSpacerHeight}px` }}
+                className="flex-shrink-0"
+              />
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
 
         {/* 右侧：上下文时间线 */}
         {isContextTimelineOpen && (
@@ -801,6 +813,8 @@ export const AiChatWorkspace = ({
             items={contextItems}
             budget={contextBudget}
             messages={session.messages}
+            isFullscreen={isTimelineFullscreen}
+            onToggleFullscreen={() => setIsTimelineFullscreen((prev) => !prev)}
           />
         )}
       </div>

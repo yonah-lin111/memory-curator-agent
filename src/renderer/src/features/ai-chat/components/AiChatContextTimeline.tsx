@@ -8,6 +8,10 @@ import {
   Wrench,
   FileText,
   Brain,
+  Maximize2,
+  Minimize2,
+  ChevronsUpDown,
+  ChevronsDownUp,
 } from "lucide-react";
 import type { AiChatMessage } from "@/features/ai-chat/types";
 import type {
@@ -23,6 +27,10 @@ type AiChatContextTimelineProps = {
   budget: AiChatContextBudget;
   // 当前会话的原始消息列表。
   messages?: AiChatMessage[];
+  // 是否全屏展示（替代原本聊天列表）
+  isFullscreen?: boolean;
+  // 切换全屏显示的回调。
+  onToggleFullscreen?: () => void;
 };
 
 // QA 回合条目结构。
@@ -135,10 +143,13 @@ export const AiChatContextTimeline = ({
   items,
   budget,
   messages = [],
+  isFullscreen = false,
+  onToggleFullscreen,
 }: AiChatContextTimelineProps): React.JSX.Element => {
   const [expandedTurns, setExpandedTurns] = useState<Record<string, boolean>>({});
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [expandedParams, setExpandedParams] = useState<Record<string, boolean>>({});
+  const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
 
   const toolCount = items.filter((item) => item.kind === "tool").length;
   void budget;
@@ -172,46 +183,63 @@ export const AiChatContextTimeline = ({
   };
 
   // 一键展开/折叠所有回合
-  const handleToggleAllTurns = (expand: boolean) => {
+  const handleToggleAll = () => {
+    const nextState = !isAllExpanded;
+    setIsAllExpanded(nextState);
     const nextStates: Record<string, boolean> = {};
     for (const t of turns) {
-      nextStates[t.id] = expand;
+      nextStates[t.id] = nextState;
     }
     setExpandedTurns(nextStates);
   };
 
   return (
-    <div className="w-[360px] lg:w-[420px] flex-shrink-0 flex flex-col min-h-0 bg-[#161616]/40 border-l border-white/5 p-4 text-xs text-white/55 overflow-y-auto custom-scrollbar select-none" aria-label="AI Chat Context Timeline">
+    <div
+      className={`flex-shrink-0 flex flex-col min-h-0 bg-[#161616]/40 p-4 text-xs text-white/55 overflow-y-auto custom-scrollbar select-none ${
+        isFullscreen ? "flex-1" : "w-[360px] lg:w-[420px] border-l border-white/5"
+      }`}
+      aria-label="AI Chat Context Timeline"
+    >
       {/* 上下文概览统计 */}
-      <div className="mb-2.5 flex items-center gap-1.5 border-b border-white/5 pb-2 shrink-0">
-        <div className="font-medium text-white/80">上下文时间线</div>
-        <div className="text-white/35">·</div>
-        <div>{turns.length} 轮 QA</div>
-        <div className="text-white/35">·</div>
-        <div>{toolCount} 个工具</div>
-      </div>
-
-      {/* 快速控制栏 */}
-      {turns.length > 0 && (
-        <div className="mb-3 flex items-center justify-between text-[11px] text-white/45 shrink-0">
-          <span>点击条目可展开详情。</span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => handleToggleAllTurns(true)}
-              className="hover:text-white transition-colors cursor-pointer"
-            >
-              展开全部
-            </button>
-            <span className="text-white/15">|</span>
-            <button
-              onClick={() => handleToggleAllTurns(false)}
-              className="hover:text-white transition-colors cursor-pointer"
-            >
-              折叠全部
-            </button>
-          </div>
+      <div className="mb-2.5 flex items-center justify-between border-b border-white/5 pb-2 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <div className="font-medium text-white/80">上下文时间线</div>
+          <div className="text-white/35">·</div>
+          <div>{turns.length} 轮 QA</div>
+          <div className="text-white/35">·</div>
+          <div>{toolCount} 个工具</div>
         </div>
-      )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {turns.length > 0 && (
+            <button
+              onClick={handleToggleAll}
+              title={isAllExpanded ? "折叠全部" : "展开全部"}
+              aria-label={isAllExpanded ? "Collapse all turns" : "Expand all turns"}
+              className="text-white/35 hover:text-white transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
+            >
+              {isAllExpanded ? (
+                <ChevronsDownUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronsUpDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              title={isFullscreen ? "恢复窗口" : "全屏查看"}
+              aria-label={isFullscreen ? "Restore layout" : "Fullscreen timeline"}
+              className="text-white/35 hover:text-white transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-3.5 w-3.5" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 时间线列表 */}
       {turns.length === 0 ? (
