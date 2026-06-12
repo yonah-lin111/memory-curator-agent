@@ -23,6 +23,13 @@ export const AI_CHAT_INPUT_COMMANDS: AiChatInputCommand[] = [
     description: "快速切换 AI 语言模型",
     addToContext: false,
   },
+  {
+    id: "showContextTimeline",
+    name: "/showContextTimeline",
+    aliases: [],
+    description: "显示或隐藏上下文时间线",
+    addToContext: false,
+  },
 ];
 
 // 输入框最小显示行数。

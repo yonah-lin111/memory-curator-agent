@@ -22,6 +22,7 @@ import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
 import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
+import type { AiChatInputCommandId } from "@/features/ai-chat/components/AiChatInput/types";
 
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [
@@ -152,6 +153,17 @@ const AppContent = (): React.JSX.Element => {
     handleAiChatCommand,
   } = useAiChatController();
 
+  // 执行 AI 对话斜杠命令。
+  const handleCommandExecute = (
+    command: AiChatInputCommandId,
+  ): string | void | Promise<string | void> => {
+    if (command === "showContextTimeline") {
+      setIsContextTimelineOpen((prev) => !prev);
+      return;
+    }
+    return handleAiChatCommand(command);
+  };
+
   // 监听 URL 路由 pathname 变化，确保与页面状态双向同步。
   useEffect(() => {
     const handlePopState = (): void => {
@@ -270,7 +282,7 @@ const AppContent = (): React.JSX.Element => {
               onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
               onEditAndResendUserMessage={handleEditAndResendUserMessage}
               onDeleteChatTurn={handleDeleteChatTurn}
-              onCommandExecute={handleAiChatCommand}
+              onCommandExecute={handleCommandExecute}
               onModelChange={setSelectedAiModel}
             />
           </div>
