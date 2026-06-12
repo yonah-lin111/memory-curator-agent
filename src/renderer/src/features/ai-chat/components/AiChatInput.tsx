@@ -197,31 +197,29 @@ type AgentMentionPanelState = {
 const resolveAgentMentionPanelState = (
   value: string,
   cursor: number,
-  currentState: AgentMentionPanelState | null,
 ): AgentMentionPanelState | null => {
   if (isCommandInput(value)) {
     return null;
   }
 
-  const start =
-    currentState?.start ??
-    (value.slice(0, cursor).endsWith("@") ? cursor - 1 : -1);
-  if (start < 0 || value[start] !== "@" || cursor <= start) {
+  const textBeforeCursor = value.slice(0, cursor);
+  const lastAt = textBeforeCursor.lastIndexOf("@");
+  if (lastAt < 0 || cursor <= lastAt) {
     return null;
   }
 
-  const previousCharacter = start > 0 ? value[start - 1] : "";
+  const previousCharacter = lastAt > 0 ? textBeforeCursor[lastAt - 1] : "";
   if (previousCharacter && !/\s/.test(previousCharacter)) {
     return null;
   }
 
-  const query = value.slice(start + 1, cursor);
+  const query = value.slice(lastAt + 1, cursor);
   if (/[\s\n]/.test(query)) {
     return null;
   }
 
   return {
-    start,
+    start: lastAt,
     query,
   };
 };
@@ -500,7 +498,6 @@ export const AiChatInput = ({
     const nextState = resolveAgentMentionPanelState(
       value,
       cursor,
-      agentMentionPanelState,
     );
     const nextMatches = nextState
       ? getMatchedAiChatAgentMentions(nextState.query)
@@ -567,7 +564,6 @@ export const AiChatInput = ({
     const nextState = resolveAgentMentionPanelState(
       textarea.value,
       textarea.selectionStart,
-      agentMentionPanelState,
     );
     if (!nextState) {
       closeAgentMentionPanel();
@@ -1125,6 +1121,9 @@ export const AiChatInput = ({
     }
 
     if (isAgentPanelOpen && e.key === "Enter" && activeAgent) {
+      if (e.nativeEvent.isComposing) {
+        return;
+      }
       e.preventDefault();
       selectAgentMention(activeAgent);
       return;

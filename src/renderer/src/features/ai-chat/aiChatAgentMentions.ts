@@ -144,10 +144,6 @@ const isFuzzyAgentMatch = (query: string, keyword: string): boolean => {
     return true;
   }
 
-  if (keyword[0] !== query[0]) {
-    return false;
-  }
-
   let queryIndex = 0;
   for (const character of keyword) {
     if (character === query[queryIndex]) {
@@ -169,7 +165,7 @@ export const getMatchedAiChatAgentMentions = (query: string): AiChatAgentMention
   const normalizedQuery = query.trim().toLowerCase().replace(/^@/, "");
 
   return AI_CHAT_AGENT_MENTION_OPTIONS.filter((option) =>
-    [option.id, option.label].some((keyword) =>
+    [option.id, option.label, option.token.replace(/^@/, "")].some((keyword) =>
       isFuzzyAgentMatch(normalizedQuery, keyword.toLowerCase()),
     ),
   );

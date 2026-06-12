@@ -379,6 +379,33 @@ describe('AiChatInput', () => {
     expect(textarea).toHaveClass('text-white')
   })
 
+  it('输入 @ 处于 composition 状态时按下 Enter 回车，不应执行 agent 选中', async () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area') as HTMLTextAreaElement
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@'
+      }
+    })
+
+    expect(screen.getByRole('listbox', { name: 'AI Agent Mention Panel' })).toBeInTheDocument()
+
+    // 触发 keydown，带 isComposing 为 true
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true
+    })
+    Object.defineProperty(event, 'isComposing', { value: true })
+    fireEvent(textarea, event)
+
+    // 输入框不应该被填入选中的 agent (仍然是原来输入的内容 '@')
+    expect(textarea).toHaveValue('@')
+    expect(screen.getByRole('listbox', { name: 'AI Agent Mention Panel' })).toBeInTheDocument()
+  })
+
   it('发送时剥离 agent token 并保存包含 @ 命令的原始 prompt history', async () => {
     const onSendMessage = vi.fn()
     const addPromptHistory = vi.fn().mockResolvedValue(['查阿明'])
