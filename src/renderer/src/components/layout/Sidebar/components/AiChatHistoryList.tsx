@@ -1,8 +1,9 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckSquare, Search, Target, Trash2 } from "lucide-react";
+import { Bot, CheckSquare, ChevronLeft, ChevronRight, Search, Target, Trash2 } from "lucide-react";
 import type { AiChatSession } from "@/features/ai-chat/types";
 import { IconButton } from "@/components/ui/IconButton";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { AiChatHistoryContextMenu } from "@/features/ai-chat/components/AiChatHistoryContextMenu";
 import { isEmptyAiChatDraftSession } from "@/features/ai-chat/core/aiChatSessionReducer";
 
@@ -28,12 +29,16 @@ type AiChatHistoryListProps = {
   hasMore: boolean;
   // 是否正在加载更多。
   isLoadingMore: boolean;
-  // 已完成但尚未查看的 AI 会话 ID。
+  // 已完成但尚未查看 of AI 会话 ID。
   completionNoticeSessionIds?: Set<string>;
   // 清理指定会话完成提醒回调。
   onCompletionNoticeClear?: (sessionId: string) => void;
   // 是否隐藏
   "aria-hidden"?: boolean;
+  // 是否处于折叠状态。
+  isCollapsed?: boolean;
+  // 折叠状态改变回调。
+  onCollapsedChange?: (collapsed: boolean) => void;
 };
 
 // 行内标题编辑草稿。
@@ -103,6 +108,8 @@ export const AiChatHistoryList = ({
   completionNoticeSessionIds,
   onCompletionNoticeClear,
   "aria-hidden": ariaHidden,
+  isCollapsed = false,
+  onCollapsedChange,
 }: AiChatHistoryListProps): React.JSX.Element => {
   // 当前行内标题编辑草稿。
   const [editingTitle, setEditingTitle] = useState<EditingAiChatTitleDraft | null>(null);
@@ -477,6 +484,32 @@ export const AiChatHistoryList = ({
     ? filteredSessions.find((session) => session.id === contextMenu.sessionId)
     : undefined;
 
+  if (isCollapsed) {
+    return (
+      <div
+        className="flex h-full w-full flex-col items-center gap-4 py-1"
+        aria-label="Chat history list"
+        aria-hidden={ariaHidden}
+      >
+        <Tooltip content="展开" placement="right">
+          <IconButton
+            aria-label="Expand sidebar"
+            onClick={() => onCollapsedChange?.(false)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="新建对话" placement="right">
+          <IconButton
+            aria-label="New chat"
+            preset="add"
+            onClick={onNewChat}
+          />
+        </Tooltip>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -491,29 +524,40 @@ export const AiChatHistoryList = ({
       `}} />
       {/* 顶部标题与新建按钮 */}
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-xs font-bold tracking-wider text-white/40 uppercase">
-          AI DIALOGS
-        </h2>
+        <Tooltip content="收起" placement="right">
+          <IconButton
+            aria-label="Collapse sidebar"
+            onClick={() => onCollapsedChange?.(true)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
         <div className="flex items-center gap-1">
-          <IconButton
-            aria-label={isBatchMode ? "Exit batch delete" : "Batch delete chats"}
-            highlighted={isBatchMode}
-            preset={isBatchMode ? "close" : undefined}
-            onClick={handleBatchModeToggle}
-          >
-            {isBatchMode ? null : <CheckSquare className="h-3.5 w-3.5" />}
-          </IconButton>
-          <IconButton
-            aria-label="Locate active chat"
-            onClick={handleLocateActiveSession}
-          >
-            <Target className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton
-            aria-label="New chat"
-            preset="add"
-            onClick={onNewChat}
-          />
+          <Tooltip content={isBatchMode ? "退出管理" : "批量管理"} placement="bottom">
+            <IconButton
+              aria-label={isBatchMode ? "Exit batch delete" : "Batch delete chats"}
+              highlighted={isBatchMode}
+              preset={isBatchMode ? "close" : undefined}
+              onClick={handleBatchModeToggle}
+            >
+              {isBatchMode ? null : <CheckSquare className="h-3.5 w-3.5" />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip content="定位当前对话" placement="bottom">
+            <IconButton
+              aria-label="Locate active chat"
+              onClick={handleLocateActiveSession}
+            >
+              <Target className="h-3.5 w-3.5" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip content="新建对话" placement="bottom">
+            <IconButton
+              aria-label="New chat"
+              preset="add"
+              onClick={onNewChat}
+            />
+          </Tooltip>
         </div>
       </div>
 
@@ -640,7 +684,7 @@ export const AiChatHistoryList = ({
                           return;
                         }
                         if (event.key === "Enter") {
-                          event.preventDefault();
+                           event.preventDefault();
                           void handleCommitEditTitle(session);
                         }
                         if (event.key === "Escape") {

@@ -5,7 +5,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AiChatHistoryList } from '@/features/ai-chat/components/AiChatHistoryList'
+import { AiChatHistoryList } from '@/components/layout/Sidebar/components/AiChatHistoryList'
 import type { AiChatSession } from '@/features/ai-chat/types'
 
 // 测试用 AI 会话列表。
@@ -235,5 +235,69 @@ describe('AiChatHistoryList', () => {
     await waitFor(() => {
       expect(onBatchDeleteChats).toHaveBeenCalledWith(['s1', 's2'])
     })
+  })
+
+  it('在展开状态下渲染折叠按钮，点击时调用 onCollapsedChange(true)', async () => {
+    const user = userEvent.setup()
+    const onCollapsedChange = vi.fn()
+    render(
+      <AiChatHistoryList
+        sessions={sessions}
+        activeSessionId="s1"
+        onSessionChange={() => undefined}
+        onNewChat={() => undefined}
+        onRenameChat={vi.fn(async () => true)}
+        onDeleteChat={vi.fn(async () => true)}
+        onBatchDeleteChats={vi.fn(async () => true)}
+        onLoadMore={vi.fn(async () => undefined)}
+        hasMore={false}
+        isLoadingMore={false}
+        isCollapsed={false}
+        onCollapsedChange={onCollapsedChange}
+      />
+    )
+
+    const button = screen.getByRole('button', { name: 'Collapse sidebar' })
+    expect(button).toBeInTheDocument()
+    await user.click(button)
+    expect(onCollapsedChange).toHaveBeenCalledWith(true)
+  })
+
+  it('在折叠状态下仅渲染展开和新建对话按钮', async () => {
+    const user = userEvent.setup()
+    const onCollapsedChange = vi.fn()
+    const onNewChat = vi.fn()
+    render(
+      <AiChatHistoryList
+        sessions={sessions}
+        activeSessionId="s1"
+        onSessionChange={() => undefined}
+        onNewChat={onNewChat}
+        onRenameChat={vi.fn(async () => true)}
+        onDeleteChat={vi.fn(async () => true)}
+        onBatchDeleteChats={vi.fn(async () => true)}
+        onLoadMore={vi.fn(async () => undefined)}
+        hasMore={false}
+        isLoadingMore={false}
+        isCollapsed={true}
+        onCollapsedChange={onCollapsedChange}
+      />
+    )
+
+    // 不应渲染搜索框和对话列表等
+    expect(screen.queryByPlaceholderText('搜索对话历史')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('AI chat history sessions')).not.toBeInTheDocument()
+
+    // 应该渲染展开按钮
+    const expandButton = screen.getByRole('button', { name: 'Expand sidebar' })
+    expect(expandButton).toBeInTheDocument()
+    await user.click(expandButton)
+    expect(onCollapsedChange).toHaveBeenCalledWith(false)
+
+    // 应该渲染新建对话按钮
+    const newChatButton = screen.getByRole('button', { name: 'New chat' })
+    expect(newChatButton).toBeInTheDocument()
+    await user.click(newChatButton)
+    expect(onNewChat).toHaveBeenCalled()
   })
 })

@@ -1164,7 +1164,7 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Close chat' })).toBeInTheDocument()
     expect(screen.getByLabelText('Chat history list')).toBeInTheDocument()
     expect(screen.getByLabelText('AI Chat Workspace')).toBeInTheDocument()
-    expect(screen.getByText('AI DIALOGS')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument()
     expect(screen.getAllByText('整理今天的记忆线索')[0]).toBeInTheDocument()
     expect(window.location.pathname).toBe('/today')
 
