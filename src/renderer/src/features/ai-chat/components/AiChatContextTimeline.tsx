@@ -208,7 +208,7 @@ export const AiChatContextTimeline = ({
   return (
     <div
       style={{
-        width: !isOpen ? "0px" : "35vw",
+        width: !isOpen ? "0px" : "30vw",
         opacity: isOpen ? 1 : 0,
         paddingLeft: isOpen ? "1rem" : "0px",
         paddingRight: isOpen ? "1rem" : "0px",
