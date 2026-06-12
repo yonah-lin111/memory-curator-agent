@@ -37,6 +37,13 @@ export const AI_CHAT_INPUT_COMMANDS: AiChatInputCommand[] = [
     description: "快速搜索历史对话并进行切换",
     addToContext: false,
   },
+  {
+    id: "showFullScreen",
+    name: "/showFullScreen",
+    aliases: [],
+    description: "折叠侧边栏和上下文时间线",
+    addToContext: false,
+  },
 ];
 
 // 输入框最小显示行数。

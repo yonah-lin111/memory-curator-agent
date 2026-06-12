@@ -205,6 +205,25 @@ describe('AiChatInput', () => {
     expect(onCommandExecute).toHaveBeenCalledWith('showContextTimeline')
   })
 
+  it('支持 /showFullScreen 命令匹配与触发', async () => {
+    const onCommandExecute = vi.fn()
+    renderAiChatInput(onCommandExecute)
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '/showFullScreen'
+      }
+    })
+
+    await waitFor(() => expect(screen.getByRole('option', { name: /\/showFullScreen/ })).toBeInTheDocument())
+    fireEvent.keyDown(textarea, {
+      key: 'Enter'
+    })
+    expect(onCommandExecute).toHaveBeenCalledWith('showFullScreen')
+  })
+
   it('命令面板上下键循环选择', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
@@ -225,10 +244,10 @@ describe('AiChatInput', () => {
     // 初始选中 /clear
     expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
 
-    // 上键循环，选中末项 /session
+    // 上键循环，选中末项 /showFullScreen
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/session/ })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('option', { name: /\/showFullScreen/ })).toHaveAttribute('aria-selected', 'true')
     })
 
     // 下键循环，返回首项 /clear

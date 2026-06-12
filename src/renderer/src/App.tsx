@@ -161,6 +161,11 @@ const AppContent = (): React.JSX.Element => {
       setIsContextTimelineOpen((prev) => !prev);
       return;
     }
+    if (command === "showFullScreen") {
+      setIsSidebarCollapsed(true);
+      setIsContextTimelineOpen(false);
+      return;
+    }
     return handleAiChatCommand(command);
   };
 
