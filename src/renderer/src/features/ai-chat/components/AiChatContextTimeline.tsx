@@ -232,7 +232,7 @@ export const AiChatContextTimeline = ({
       {isOpen && (
         <>
           {/* 上下文概览统计 */}
-          <div className="mb-2.5 flex items-center justify-between border-b border-white/5 pb-2 shrink-0">
+          <div className="mb-1 mt-1 flex items-center justify-between border-b border-white/5 pb-1 shrink-0">
             <div className="flex items-center gap-2">
               <div className="font-medium text-white/80">上下文时间线</div>
               <div className="text-white/35">·</div>
