@@ -298,7 +298,9 @@ export const AiChatInput = ({
   const [inputText, setInputText] = useState("");
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [selectedTextFiles, setSelectedTextFiles] = useState<SelectedTextFile[]>([]);
+  const [selectedTextFiles, setSelectedTextFiles] = useState<
+    SelectedTextFile[]
+  >([]);
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -312,7 +314,8 @@ export const AiChatInput = ({
   const selectedModelOption = modelOptions
     .find((p) => p.id === selectedModel?.provider)
     ?.models.find((m) => m.id === selectedModel?.model);
-  const isImageSupported = selectedModelOption?.modalities?.input?.includes("image") ?? false;
+  const isImageSupported =
+    selectedModelOption?.modalities?.input?.includes("image") ?? false;
 
   useEffect(() => {
     if (!isImageSupported && selectedImages.length > 0) {
@@ -333,7 +336,11 @@ export const AiChatInput = ({
   const activeAgent =
     matchedAgentMentions[activeAgentIndex] ?? matchedAgentMentions[0];
   const inputSendPayload = createAiChatSendPayload(inputText);
-  const canSend = Boolean(inputSendPayload.text.trim() || selectedImages.length > 0 || selectedTextFiles.length > 0);
+  const canSend = Boolean(
+    inputSendPayload.text.trim() ||
+    selectedImages.length > 0 ||
+    selectedTextFiles.length > 0,
+  );
   const hasModelOptions = modelOptions.some(
     (provider) => provider.models.length > 0,
   );
@@ -590,7 +597,9 @@ export const AiChatInput = ({
     const remainingSlots = 6 - currentCount;
     const fileArray = Array.from(files);
 
-    const imageFiles = fileArray.filter((file) => file.type.startsWith("image/"));
+    const imageFiles = fileArray.filter((file) =>
+      file.type.startsWith("image/"),
+    );
     if (imageFiles.length === 0 && fileArray.length > 0) {
       toast.warning("仅支持上传图片文件");
       return;
@@ -637,13 +646,50 @@ export const AiChatInput = ({
 
     // MIME 回退时通过扩展名判断。
     const supportedExtensions = [
-      ".txt", ".md", ".json", ".csv", ".log", ".xml",
-      ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
-      ".env", ".sh", ".bash", ".zsh", ".py", ".js", ".ts",
-      ".jsx", ".tsx", ".html", ".css", ".scss", ".less",
-      ".sql", ".java", ".c", ".cpp", ".h", ".hpp", ".rs",
-      ".go", ".rb", ".php", ".swift", ".kt", ".scala",
-      ".r", ".lua", ".pl", ".pm", ".bat", ".ps1",
+      ".txt",
+      ".md",
+      ".json",
+      ".csv",
+      ".log",
+      ".xml",
+      ".yaml",
+      ".yml",
+      ".toml",
+      ".ini",
+      ".cfg",
+      ".conf",
+      ".env",
+      ".sh",
+      ".bash",
+      ".zsh",
+      ".py",
+      ".js",
+      ".ts",
+      ".jsx",
+      ".tsx",
+      ".html",
+      ".css",
+      ".scss",
+      ".less",
+      ".sql",
+      ".java",
+      ".c",
+      ".cpp",
+      ".h",
+      ".hpp",
+      ".rs",
+      ".go",
+      ".rb",
+      ".php",
+      ".swift",
+      ".kt",
+      ".scala",
+      ".r",
+      ".lua",
+      ".pl",
+      ".pm",
+      ".bat",
+      ".ps1",
     ];
 
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
@@ -654,7 +700,9 @@ export const AiChatInput = ({
   /**
    * 异步上传并存储文本文件。
    */
-  const handleUploadTextFiles = async (files: FileList | File[]): Promise<void> => {
+  const handleUploadTextFiles = async (
+    files: FileList | File[],
+  ): Promise<void> => {
     if (!window.api?.files?.saveAiChatTextFile) {
       toast.error("当前环境不支持保存文本文件，无法上传。");
       return;
@@ -677,7 +725,9 @@ export const AiChatInput = ({
     }
 
     if (textFiles.length > remainingSlots) {
-      toast.warning(`最多只能上传 ${MAX_TEXT_FILES} 个文本文件，已自动截取前 ${remainingSlots} 个`);
+      toast.warning(
+        `最多只能上传 ${MAX_TEXT_FILES} 个文本文件，已自动截取前 ${remainingSlots} 个`,
+      );
     }
 
     const allowedFiles = textFiles.slice(0, remainingSlots);
@@ -741,7 +791,9 @@ export const AiChatInput = ({
     if (files && files.length > 0) {
       const fileArray = Array.from(files);
       const imageFiles = fileArray.filter((f) => f.type.startsWith("image/"));
-      const textFiles = fileArray.filter((f) => !f.type.startsWith("image/") && isTextFile(f));
+      const textFiles = fileArray.filter(
+        (f) => !f.type.startsWith("image/") && isTextFile(f),
+      );
 
       if (isImageSupported && imageFiles.length > 0) {
         await handleUploadFiles(imageFiles);
@@ -836,7 +888,9 @@ export const AiChatInput = ({
     onSendMessage({
       text: textToSend,
       agents: inputSendPayload.agents,
-      ...(selectedImages.length > 0 || selectedTextFiles.length > 0 ? { parts } : {}),
+      ...(selectedImages.length > 0 || selectedTextFiles.length > 0
+        ? { parts }
+        : {}),
     });
 
     savePromptHistory(inputText);
@@ -1207,7 +1261,7 @@ export const AiChatInput = ({
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-white/5 p-3 bg-black/5">
+    <div className="flex-shrink-0 p-3 bg-black/5">
       <div
         data-testid="ai-chat-input-container"
         onClick={handleContainerClick}
@@ -1220,13 +1274,21 @@ export const AiChatInput = ({
           type="file"
           ref={fileInputRef}
           multiple
-          accept={isImageSupported ? "image/*,.txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1" : ".txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1"}
+          accept={
+            isImageSupported
+              ? "image/*,.txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1"
+              : ".txt,.md,.json,.csv,.log,.xml,.yaml,.yml,.toml,.ini,.cfg,.conf,.env,.sh,.bash,.zsh,.py,.js,.ts,.jsx,.tsx,.html,.css,.scss,.less,.sql,.java,.c,.cpp,.h,.hpp,.rs,.go,.rb,.php,.swift,.kt,.scala,.r,.lua,.pl,.pm,.bat,.ps1"
+          }
           className="hidden"
           onChange={(e) => {
             if (e.target.files) {
               const fileArray = Array.from(e.target.files);
-              const imageFiles = fileArray.filter((f) => f.type.startsWith("image/"));
-              const textFiles = fileArray.filter((f) => !f.type.startsWith("image/") && isTextFile(f));
+              const imageFiles = fileArray.filter((f) =>
+                f.type.startsWith("image/"),
+              );
+              const textFiles = fileArray.filter(
+                (f) => !f.type.startsWith("image/") && isTextFile(f),
+              );
 
               if (isImageSupported && imageFiles.length > 0) {
                 void handleUploadFiles(imageFiles);
@@ -1242,7 +1304,9 @@ export const AiChatInput = ({
         {isDragging && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-white/20 bg-black/90 backdrop-blur-xs text-white/90 pointer-events-none">
             <Paperclip className="h-6 w-6 mb-2 animate-bounce" />
-            <span className="text-xs font-medium">松手即可上传图片或文本文件</span>
+            <span className="text-xs font-medium">
+              松手即可上传图片或文本文件
+            </span>
           </div>
         )}
 
@@ -1303,7 +1367,11 @@ export const AiChatInput = ({
                 <button
                   type="button"
                   aria-label="Remove text file"
-                  onClick={() => setSelectedTextFiles((prev) => prev.filter((_, i) => i !== idx))}
+                  onClick={() =>
+                    setSelectedTextFiles((prev) =>
+                      prev.filter((_, i) => i !== idx),
+                    )
+                  }
                   className="absolute -top-1.5 -right-1.5 z-10 hidden group-hover/preview-txt:flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-500 transition-colors"
                 >
                   <X className="h-2.5 w-2.5" />
@@ -1330,7 +1398,11 @@ export const AiChatInput = ({
                 <button
                   type="button"
                   aria-label="Remove image"
-                  onClick={() => setSelectedImages((prev) => prev.filter((_, i) => i !== idx))}
+                  onClick={() =>
+                    setSelectedImages((prev) =>
+                      prev.filter((_, i) => i !== idx),
+                    )
+                  }
                   className="absolute -top-1.5 -right-1.5 z-10 hidden group-hover/preview-img:flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-500 transition-colors"
                 >
                   <X className="h-2.5 w-2.5" />
@@ -1406,7 +1478,11 @@ export const AiChatInput = ({
             <IconButton
               aria-label="Add attachment"
               onClick={handleAttachmentClick}
-              className={isImageSupported ? "text-white/80 hover:text-white" : "text-white/30 hover:text-white/50"}
+              className={
+                isImageSupported
+                  ? "text-white/80 hover:text-white"
+                  : "text-white/30 hover:text-white/50"
+              }
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>

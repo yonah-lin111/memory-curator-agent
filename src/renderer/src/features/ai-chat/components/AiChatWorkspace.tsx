@@ -140,43 +140,6 @@ export const AiChatWorkspace = ({
   >(null);
   // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
-  // 时间线全屏展示状态（替代左侧聊天列表）。
-  const [isTimelineFullscreen, setIsTimelineFullscreen] = useState<boolean>(false);
-  // 全屏切换时是否启用平滑过渡
-  const [isTransitionEnabled, setIsTransitionEnabled] = useState<boolean>(true);
-  const prevFullscreenRef = useRef<boolean>(false);
-
-  // 当时间线关闭时，重置全屏状态。
-  useEffect(() => {
-    if (!isContextTimelineOpen) {
-      setIsTransitionEnabled(false);
-      setIsTimelineFullscreen(false);
-      setTimeout(() => {
-        setIsTransitionEnabled(true);
-      }, 50);
-    }
-  }, [isContextTimelineOpen]);
-
-  // 监听全屏关闭时的滚动调整
-  useEffect(() => {
-    if (prevFullscreenRef.current && !isTimelineFullscreen) {
-      // 当关闭全屏时，原本的消息列表重新展现，直接跳转到底部
-      requestAnimationFrame(() => {
-        scrollMessagesToBottom("auto");
-      });
-    }
-    prevFullscreenRef.current = isTimelineFullscreen;
-  }, [isTimelineFullscreen]);
-
-  // 切换全屏状态（不启用过渡以实现瞬时切换）
-  const handleToggleFullscreen = () => {
-    setIsTransitionEnabled(false);
-    setIsTimelineFullscreen((prev) => !prev);
-    setTimeout(() => {
-      setIsTransitionEnabled(true);
-    }, 50);
-  };
-
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
     useState<AiChatMessageContextMenuRequest | null>(null);
@@ -772,17 +735,10 @@ export const AiChatWorkspace = ({
         <div
           ref={messagesContainerRef}
           style={{
-            width: isTimelineFullscreen ? "0px" : "",
-            flex: isTimelineFullscreen ? "0 0 0px" : "1 1 0px",
-            opacity: isTimelineFullscreen ? 0 : 1,
-            paddingLeft: isTimelineFullscreen ? "0px" : "1rem",
-            paddingRight: isTimelineFullscreen ? "0px" : "1rem",
+            paddingLeft: "1rem",
+            paddingRight: "1rem",
           }}
-          className={`overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col gap-4 min-w-0 ${
-            isTransitionEnabled ? "transition-all duration-300 ease-in-out" : ""
-          } ${
-            isTimelineFullscreen ? "overflow-hidden pointer-events-none" : ""
-          }`}
+          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col gap-4 min-w-0 transition-all duration-300 ease-in-out"
         >
             {session.messages.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
@@ -849,9 +805,6 @@ export const AiChatWorkspace = ({
           budget={contextBudget}
           messages={session.messages}
           isOpen={isContextTimelineOpen}
-          isTransitionEnabled={isTransitionEnabled}
-          isFullscreen={isTimelineFullscreen}
-          onToggleFullscreen={handleToggleFullscreen}
         />
       </div>
 

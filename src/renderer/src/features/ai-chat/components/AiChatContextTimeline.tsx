@@ -7,8 +7,6 @@ import {
   Wrench,
   FileText,
   Brain,
-  Maximize2,
-  Minimize2,
   ChevronsUpDown,
   ChevronsDownUp,
 } from "lucide-react";
@@ -33,10 +31,6 @@ type AiChatContextTimelineProps = {
   isOpen?: boolean;
   // 是否启用过渡。
   isTransitionEnabled?: boolean;
-  // 是否全屏展示（替代原本聊天列表）
-  isFullscreen?: boolean;
-  // 切换全屏显示的回调。
-  onToggleFullscreen?: () => void;
 };
 
 // QA 回合条目结构。
@@ -161,8 +155,6 @@ export const AiChatContextTimeline = ({
   messages = [],
   isOpen = false,
   isTransitionEnabled = true,
-  isFullscreen = false,
-  onToggleFullscreen,
 }: AiChatContextTimelineProps): React.JSX.Element => {
   const [expandedTurns, setExpandedTurns] = useState<Record<string, boolean>>(
     {},
@@ -226,17 +218,15 @@ export const AiChatContextTimeline = ({
   return (
     <div
       style={{
-        width: !isOpen ? "0px" : isFullscreen ? "100%" : "35vw",
+        width: !isOpen ? "0px" : "35vw",
         opacity: isOpen ? 1 : 0,
         paddingLeft: isOpen ? "1rem" : "0px",
         paddingRight: isOpen ? "1rem" : "0px",
-        borderLeftWidth: isOpen && !isFullscreen ? "1px" : "0px",
+        borderLeftWidth: isOpen ? "1px" : "0px",
       }}
       className={`flex-shrink-0 flex flex-col min-h-0 bg-[#161616]/40 text-xs text-white/55 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] select-none border-white/5 ${
         isTransitionEnabled ? "transition-all duration-300 ease-in-out" : ""
-      } ${isOpen ? "overflow-y-auto" : "overflow-hidden pointer-events-none"} ${
-        isFullscreen ? "flex-1" : ""
-      }`}
+      } ${isOpen ? "overflow-y-auto" : "overflow-hidden pointer-events-none"}`}
       aria-label="AI Chat Context Timeline"
     >
       {isOpen && (
@@ -314,22 +304,6 @@ export const AiChatContextTimeline = ({
                     <ChevronsDownUp className="h-3.5 w-3.5" />
                   ) : (
                     <ChevronsUpDown className="h-3.5 w-3.5" />
-                  )}
-                </IconButton>
-              )}
-              {onToggleFullscreen && (
-                <IconButton
-                  onClick={onToggleFullscreen}
-                  title={isFullscreen ? "恢复窗口" : "全屏查看"}
-                  aria-label={
-                    isFullscreen ? "Restore layout" : "Fullscreen timeline"
-                  }
-                  size="small"
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Maximize2 className="h-3.5 w-3.5" />
                   )}
                 </IconButton>
               )}
