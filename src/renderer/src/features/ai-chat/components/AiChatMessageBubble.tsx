@@ -471,8 +471,28 @@ export const AiChatMessageBubble = ({
   const lastHeightRef = useRef<number>(0);
   // 高度过渡清理函数引用。
   const transitionCleanupRef = useRef<(() => void) | null>(null);
+  // 标记是否处于 FLIP 高度过渡中，避免 ResizeObserver 干扰。
+  const isTransitioningRef = useRef<boolean>(false);
 
-  // 监听状态改变动态平滑调整气泡高度（FLIP 动效）。
+  // 使用 ResizeObserver 实时、精准地记录容器的高度变化（如：文本折叠/展开、打字导致输入框增高、窗口大小变化等）
+  useEffect(() => {
+    const el = userBubbleRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      if (isTransitioningRef.current) return;
+      for (const entry of entries) {
+        lastHeightRef.current = entry.target.getBoundingClientRect().height;
+      }
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // 仅在编辑状态 (isEditing) 发生切换时，触发平滑的 FLIP 高度过渡动效
   useLayoutEffect(() => {
     const el = userBubbleRef.current;
     if (!el) return;
@@ -486,6 +506,7 @@ export const AiChatMessageBubble = ({
     if (lastHeightRef.current && lastHeightRef.current !== newHeight) {
       const oldHeight = lastHeightRef.current;
 
+      isTransitioningRef.current = true;
       el.style.overflow = "hidden";
       el.style.transition = "none";
       el.style.height = `${oldHeight}px`;
@@ -500,6 +521,8 @@ export const AiChatMessageBubble = ({
           el.style.transition = "";
           el.style.height = "";
           el.style.overflow = "";
+          isTransitioningRef.current = false;
+          lastHeightRef.current = newHeight;
         }
       };
 
@@ -509,9 +532,9 @@ export const AiChatMessageBubble = ({
         el.removeEventListener("transitionend", handleTransitionEnd);
       };
       transitionCleanupRef.current = cleanup;
+    } else {
+      lastHeightRef.current = newHeight;
     }
-
-    lastHeightRef.current = newHeight;
 
     return () => {
       if (transitionCleanupRef.current) {
@@ -519,7 +542,7 @@ export const AiChatMessageBubble = ({
         transitionCleanupRef.current = null;
       }
     };
-  }, [isEditing, editText, isCollapsed]);
+  }, [isEditing]);
 
   // 根据文本内容长度，动态平滑调整输入框自身高度。
   useEffect(() => {
@@ -760,7 +783,7 @@ export const AiChatMessageBubble = ({
                       maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
                       transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
                     }}
-                    className="overflow-hidden w-full select-text pr-1 text-right"
+                    className="overflow-hidden w-full select-text pr-1 text-left"
                   >
                     {message.content}
                   </div>
