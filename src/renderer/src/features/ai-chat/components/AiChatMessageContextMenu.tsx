@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Clipboard, FileText, RotateCcw, Trash2 } from "lucide-react";
+import { Clipboard, FileText, RotateCcw, Trash2, Edit3 } from "lucide-react";
 
 // AI 消息右键菜单组件属性类型。
 type AiChatMessageContextMenuProps = {
@@ -18,6 +18,8 @@ type AiChatMessageContextMenuProps = {
   onRegenerate: () => void;
   // 删除当前 QA 回调。
   onDeleteQa: () => void;
+  // 编辑当前消息回调 (仅用户消息可用)。
+  onEdit?: () => void;
 };
 
 // 菜单宽度，用于把右键菜单限制在视口内。
@@ -66,6 +68,7 @@ export const AiChatMessageContextMenu = ({
   onCopyMarkdown,
   onRegenerate,
   onDeleteQa,
+  onEdit,
 }: AiChatMessageContextMenuProps): React.JSX.Element => {
   // 是否已进入重新生成二次确认态。
   const [isConfirmingRegenerate, setIsConfirmingRegenerate] =
@@ -73,7 +76,7 @@ export const AiChatMessageContextMenu = ({
   // 是否已进入删除 QA 二次确认态。
   const [isConfirmingDeleteQa, setIsConfirmingDeleteQa] =
     useState<boolean>(false);
-  const menuHeight = canRegenerate ? REGENERATE_MENU_HEIGHT : BASE_MENU_HEIGHT;
+  const menuHeight = (canRegenerate || onEdit) ? REGENERATE_MENU_HEIGHT : BASE_MENU_HEIGHT;
   const position = getMenuPosition(x, y, menuHeight);
 
   useEffect(() => {
@@ -136,12 +139,23 @@ export const AiChatMessageContextMenu = ({
         <FileText className="h-3.5 w-3.5 text-white/45" />
         <span>复制markdown</span>
       </button>
+      {onEdit ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-amber-400/80 transition-colors hover:bg-amber-400/10 hover:text-amber-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/45"
+          role="menuitem"
+          type="button"
+          onClick={onEdit}
+        >
+          <Edit3 className="h-3.5 w-3.5 text-amber-400/80" />
+          <span>编辑消息</span>
+        </button>
+      ) : null}
       {canRegenerate ? (
         <button
-          className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/45 ${
+          className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400/45 ${
             isConfirmingRegenerate
-              ? "bg-amber-500 text-black hover:bg-amber-400"
-              : "text-amber-400/80 hover:bg-amber-400/10 hover:text-amber-300"
+              ? "bg-sky-500 text-black hover:bg-sky-400"
+              : "text-sky-400/80 hover:bg-sky-400/10 hover:text-sky-300"
           }`}
           role="menuitem"
           type="button"
@@ -149,7 +163,7 @@ export const AiChatMessageContextMenu = ({
         >
           <RotateCcw
             className={`h-3.5 w-3.5 ${
-              isConfirmingRegenerate ? "text-black" : "text-amber-400/80"
+              isConfirmingRegenerate ? "text-black" : "text-sky-400/80"
             }`}
           />
           <span>{isConfirmingRegenerate ? "确认重新生成" : "重新生成"}</span>

@@ -709,6 +709,18 @@ export const AiChatWorkspace = ({
   };
 
   /**
+   * 触发编辑当前消息并关闭右键菜单。
+   */
+  const handleEdit = (): void => {
+    if (!messageContextMenu || !messageContextMenu.onEdit) {
+      return;
+    }
+
+    messageContextMenu.onEdit();
+    setMessageContextMenu(null);
+  };
+
+  /**
    * 删除当前菜单指向消息所属的 QA。
    */
   const handleDeleteQa = (): void => {
@@ -817,6 +829,7 @@ export const AiChatWorkspace = ({
           onCopyMarkdown={handleCopyMarkdown}
           onRegenerate={handleRegenerate}
           onDeleteQa={handleDeleteQa}
+          onEdit={messageContextMenu.onEdit ? handleEdit : undefined}
         />
       ) : null}
 

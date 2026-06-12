@@ -75,6 +75,8 @@ export type AiChatMessageContextMenuRequest = {
   plainTextContent: string;
   // 可复制的 Markdown 内容。
   markdownContent: string;
+  // 编辑当前消息回调 (仅用户消息可用)。
+  onEdit?: () => void;
 };
 
 // Markdown 预览组件属性类型。
@@ -462,6 +464,7 @@ export const AiChatMessageBubble = ({
   const [editText, setEditText] = useState(message.content);
   const textRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const remainingCharCountRef = useRef(0);
 
@@ -608,6 +611,20 @@ export const AiChatMessageBubble = ({
     return result;
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (e.nativeEvent.isComposing) {
+        return;
+      }
+      e.preventDefault();
+
+      const isUnchanged = editText.trim() === message.content.trim();
+      if (editText.trim() && !isUnchanged && !isGenerating) {
+        submitButtonRef.current?.click();
+      }
+    }
+  };
+
   const handleToggleCollapse = (): void => {
     const nextCollapsed = !isCollapsed;
     setIsCollapsed(nextCollapsed);
@@ -663,6 +680,7 @@ export const AiChatMessageBubble = ({
       canRegenerate: canRegenerate && !isGenerating,
       plainTextContent,
       markdownContent: resolvedMarkdownContent,
+      onEdit: isUser ? () => setIsEditing(true) : undefined,
     });
   };
 
@@ -695,55 +713,92 @@ export const AiChatMessageBubble = ({
           {isUser ? (
             <div ref={userBubbleRef} className="w-fit max-w-full">
               {isEditing ? (
-                <div className="flex flex-col gap-2 w-[400px] max-w-full bg-[#212121] border border-white/10 rounded-[6px] p-2.5">
-                  <textarea
-                    ref={textareaRef}
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    className="w-full resize-none bg-transparent text-sm text-white focus:outline-none custom-scrollbar"
-                  />
-                  <div className="flex justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
-                    <IconButton
-                      size="small"
-                      preset="close"
-                      title="取消"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditText(message.content);
-                      }}
+                <div className="flex flex-col items-end w-full">
+                  {message.parts && message.parts.some((p) => p.kind === "text-file") && (
+                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                      {message.parts
+                        .filter((p) => p.kind === "text-file")
+                        .map((part, i) => (
+                          <TextFile
+                            key={i}
+                            url={part.url}
+                            fileName={part.fileName}
+                            sizeBytes={part.sizeBytes}
+                            preview={true}
+                          />
+                        ))}
+                    </div>
+                  )}
+                  {message.parts && message.parts.some((p) => p.kind === "image") && (
+                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                      {message.parts
+                        .filter((p) => p.kind === "image")
+                        .map((part, i) => (
+                          <Image
+                            key={i}
+                            src={part.url}
+                            aspectRatio="square"
+                            className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
+                          />
+                        ))}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2 w-[400px] max-w-full bg-[#212121] border border-white/10 rounded-[6px] p-2.5">
+                    <textarea
+                      ref={textareaRef}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="w-full resize-none bg-transparent text-sm text-white focus:outline-none custom-scrollbar"
                     />
-                    {isLastUser ? (
+                    <div className="flex justify-end gap-1.5 mt-1 border-t border-white/5 pt-2">
                       <IconButton
                         size="small"
-                        preset="confirm"
-                        title="发送并重新生成"
-                        disabled={!editText.trim() || isGenerating}
+                        preset="close"
+                        title="取消"
                         onClick={() => {
-                          if (editText.trim() && !isGenerating) {
-                            setIsEditing(false);
-                            void onEditAndResendUserMessage?.(message.id, editText.trim());
-                          }
+                          setIsEditing(false);
+                          setEditText(message.content);
                         }}
                       />
-                    ) : (
-                      <Tooltip
-                        title="编辑历史消息将删除其后所有的对话记录，确定要发送吗？"
-                        placement="top"
-                        onConfirm={() => {
-                          if (editText.trim() && !isGenerating) {
-                            setIsEditing(false);
-                            void onEditAndResendUserMessage?.(message.id, editText.trim());
-                          }
-                        }}
-                      >
-                        <IconButton
-                          size="small"
-                          preset="confirm"
-                          title="发送并重新生成"
-                          disabled={!editText.trim() || isGenerating}
-                        />
-                      </Tooltip>
-                    )}
+                      {(() => {
+                        const isUnchanged = editText.trim() === message.content.trim();
+                        return isLastUser ? (
+                          <IconButton
+                            ref={submitButtonRef}
+                            size="small"
+                            preset="confirm"
+                            title="发送并重新生成"
+                            disabled={!editText.trim() || isUnchanged || isGenerating}
+                            onClick={() => {
+                              if (editText.trim() && !isUnchanged && !isGenerating) {
+                                setIsEditing(false);
+                                void onEditAndResendUserMessage?.(message.id, editText.trim());
+                              }
+                            }}
+                          />
+                        ) : (
+                          <Tooltip
+                            title="编辑历史消息将删除其后所有的对话记录，确定要发送吗？"
+                            placement="top"
+                            onConfirm={() => {
+                              if (editText.trim() && !isUnchanged && !isGenerating) {
+                                setIsEditing(false);
+                                void onEditAndResendUserMessage?.(message.id, editText.trim());
+                              }
+                            }}
+                          >
+                            <IconButton
+                              ref={submitButtonRef}
+                              size="small"
+                              preset="confirm"
+                              title="发送并重新生成"
+                              disabled={!editText.trim() || isUnchanged || isGenerating}
+                            />
+                          </Tooltip>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               ) : (

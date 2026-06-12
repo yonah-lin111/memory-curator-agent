@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { forwardRef } from "react";
 import { Plus, X, Save, Check, Trash2, Edit3, Settings } from "lucide-react";
 
 // 预设类型
@@ -96,7 +96,7 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
  * IconButton - 统一的公共按钮与图标组件
  * 采用极简黑色主题，悬停时仅过渡背景色与前景图标色，取消位移动效与旋转动效
  */
-export const IconButton = ({
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
   children,
   className = "",
   type = "button",
@@ -108,7 +108,7 @@ export const IconButton = ({
   size = "medium",
   disabled,
   ...props
-}: IconButtonProps): React.JSX.Element => {
+}, ref): React.JSX.Element => {
   // 基础样式
   const baseStyles = "flex items-center justify-center rounded-[6px] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 disabled:opacity-35 disabled:cursor-not-allowed";
 
@@ -148,6 +148,7 @@ export const IconButton = ({
 
   return (
     <button
+      ref={ref}
       type={type}
       className={`${baseStyles} ${sizeStyles} ${stateStyles} ${className}`}
       disabled={disabled}
@@ -156,4 +157,4 @@ export const IconButton = ({
       {renderContent}
     </button>
   );
-};
+});
