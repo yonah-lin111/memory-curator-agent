@@ -307,6 +307,8 @@ export type AiChatMessageItem = {
   answer?: string
   // 顺序片段。
   parts?: AiChatMessagePart[]
+  // 调用的模型。
+  model?: string
 }
 
 // 单日数据类型。
@@ -393,6 +395,8 @@ export type AiChatMessageRow = {
   tool_steps_json: string
   // 展示时间。
   time: string
+  // 模型。
+  model?: string | null
   // 创建时间。
   created_at: string
   // 更新时间。

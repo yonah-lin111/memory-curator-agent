@@ -309,6 +309,8 @@ export type AiChatMessage = {
   answer?: string;
   // 可选顺序片段，保留流式文本和工具调用的真实出现顺序。
   parts?: AiChatMessagePart[];
+  // 调用的模型。
+  model?: string;
 };
 
 // AI 会话类型，描述左侧历史列表和右侧聊天主体。

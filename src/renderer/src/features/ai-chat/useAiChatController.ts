@@ -790,6 +790,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
       time: userTime,
       toolSteps: [],
       answer: hasAiBridge ? "" : "The current runtime does not expose the AI IPC bridge.",
+      model: selectedAiModel?.model,
     };
     // 先写入乐观消息，保证 IPC 延迟时界面即时反馈。
     const sourceSessionsById = new Map(

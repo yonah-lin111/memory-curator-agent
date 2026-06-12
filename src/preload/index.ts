@@ -431,12 +431,14 @@ type AiChatMessage = {
   content: string
   // 消息显示时间。
   time: string
-  // 工具调用摘要。
+  // 工具调用摘要.
   toolSteps?: AiToolStep[]
   // 最终回答。
   answer?: string
   // 顺序片段。
   parts?: AiChatMessagePart[]
+  // 调用的模型。
+  model?: string
 }
 
 // AI 对话会话类型。

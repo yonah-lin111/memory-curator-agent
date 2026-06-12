@@ -496,4 +496,24 @@ describe("AiChatMessageBubble", () => {
     expect(textIdx).toBeGreaterThan(-1);
     expect(imgContainerIdx).toBeLessThan(textIdx); // 图片在文本的前面，也即上方
   });
+
+  it("助手消息包含模型时，时间右侧应正确显示模型名称", () => {
+    const message: AiChatMessage = {
+      id: "a1-model",
+      role: "assistant",
+      content: "你好，我是 AI 助手",
+      time: "10:15",
+      model: "gpt-4o",
+    };
+
+    const { getByText } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    const modelSpan = getByText("gpt-4o");
+    expect(modelSpan).toBeInTheDocument();
+  });
 });

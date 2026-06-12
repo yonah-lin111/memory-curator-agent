@@ -419,7 +419,8 @@ const mapMessageRow = (row: AiChatMessageRow): AiChatMessageItem => ({
   time: row.time,
   answer: row.answer ?? undefined,
   parts: parseArray<AiChatMessagePart>(row.parts_json),
-  toolSteps: parseArray<AiToolStep>(row.tool_steps_json)
+  toolSteps: parseArray<AiToolStep>(row.tool_steps_json),
+  model: row.model ?? undefined
 })
 
 /**
@@ -556,10 +557,22 @@ export const createAiChatPersistenceService = (
     const messages = database
       .prepare(
         `
-          SELECT external_id AS id, session_id, role, content, answer, parts_json, tool_steps_json, time, created_at, updated_at
-          FROM ai_chat_messages
-          WHERE session_id = ?
-          ORDER BY created_at ASC, rowid ASC
+          SELECT 
+            m.external_id AS id, 
+            m.session_id, 
+            m.role, 
+            m.content, 
+            m.answer, 
+            m.parts_json, 
+            m.tool_steps_json, 
+            m.time, 
+            m.created_at, 
+            m.updated_at,
+            r.model AS model
+          FROM ai_chat_messages m
+          LEFT JOIN ai_agent_runs r ON m.external_id = r.assistant_message_id
+          WHERE m.session_id = ?
+          ORDER BY m.created_at ASC, m.rowid ASC
         `
       )
       .all(sessionId) as AiChatMessageRow[]

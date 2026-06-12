@@ -511,6 +511,8 @@ type AiChatMessage = {
   answer?: string
   // 顺序片段。
   parts?: AiChatMessagePart[]
+  // 调用的模型。
+  model?: string
 }
 
 // AI 对话会话类型。

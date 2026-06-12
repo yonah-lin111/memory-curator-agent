@@ -477,7 +477,7 @@ export const AiChatMessageBubble = ({
   // 使用 ResizeObserver 实时、精准地记录容器的高度变化（如：文本折叠/展开、打字导致输入框增高、窗口大小变化等）
   useEffect(() => {
     const el = userBubbleRef.current;
-    if (!el) return;
+    if (!el || typeof ResizeObserver === "undefined") return;
 
     const observer = new ResizeObserver((entries) => {
       if (isTransitioningRef.current) return;
@@ -917,6 +917,11 @@ export const AiChatMessageBubble = ({
               message.time
             )}
           </span>
+          {!isUser && message.model && (
+            <span className="text-white/20 select-none scale-90 px-1 py-0.5 rounded-[4px] bg-white/[0.03]">
+              {message.model}
+            </span>
+          )}
         </div>
       </div>
 
