@@ -783,7 +783,7 @@ export const AiChatMessageBubble = ({
                       maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
                       transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
                     }}
-                    className="overflow-hidden w-full select-text pr-1 text-left"
+                    className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"
                   >
                     {message.content}
                   </div>
