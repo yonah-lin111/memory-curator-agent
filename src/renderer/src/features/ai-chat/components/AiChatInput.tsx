@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -57,7 +58,7 @@ export type AiChatInputProps = {
 };
 
 // AI 输入框内置命令标识。
-export type AiChatInputCommandId = "clear" | "undo";
+export type AiChatInputCommandId = "clear" | "undo" | "model";
 
 // AI 输入框斜杠命令配置类型。
 type AiChatInputCommand = {
@@ -87,6 +88,13 @@ const AI_CHAT_INPUT_COMMANDS: AiChatInputCommand[] = [
     name: "/undo",
     aliases: ["/rewind"],
     description: "删除最后一轮消息、运行数据和相关上下文",
+    addToContext: false,
+  },
+  {
+    id: "model",
+    name: "/model",
+    aliases: [],
+    description: "快速切换 AI 语言模型",
     addToContext: false,
   },
 ];
@@ -305,6 +313,7 @@ export const AiChatInput = ({
   const [agentMentionPanelState, setAgentMentionPanelState] =
     useState<AgentMentionPanelState | null>(null);
   const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+  const [activeModelIndex, setActiveModelIndex] = useState(0);
   const selectedModelValue = selectedModel
     ? `${selectedModel.provider}::${selectedModel.model}`
     : "";
@@ -323,6 +332,46 @@ export const AiChatInput = ({
   }, [selectedModelValue, isImageSupported]);
 
   const matchedCommands = getMatchedCommands(inputText);
+  const isModelMode = inputText === "/model" || inputText.startsWith("/model ");
+  const modelQuery = inputText.startsWith("/model ") ? inputText.slice(7).trim() : "";
+
+  const allModels = useMemo(() => {
+    const list: Array<{
+      id: string; // providerId::modelId
+      providerId: string;
+      providerName: string;
+      modelId: string;
+      modelName: string;
+    }> = [];
+    modelOptions.forEach((provider) => {
+      provider.models.forEach((model) => {
+        list.push({
+          id: `${provider.id}::${model.id}`,
+          providerId: provider.id,
+          providerName: provider.name,
+          modelId: model.id,
+          modelName: model.name || model.id,
+        });
+      });
+    });
+    return list;
+  }, [modelOptions]);
+
+  const matchedModels = useMemo(() => {
+    if (!isModelMode) return [];
+    if (!modelQuery) return allModels;
+    const query = modelQuery.toLowerCase();
+    return allModels.filter(
+      (model) =>
+        model.modelName.toLowerCase().includes(query) ||
+        model.providerName.toLowerCase().includes(query) ||
+        model.modelId.toLowerCase().includes(query)
+    );
+  }, [allModels, isModelMode, modelQuery]);
+
+  useEffect(() => {
+    setActiveModelIndex(0);
+  }, [matchedModels.length]);
   const activeCommand =
     matchedCommands[activeCommandIndex] ?? matchedCommands[0];
   const matchedAgentMentions = agentMentionPanelState
@@ -548,6 +597,39 @@ export const AiChatInput = ({
       return Math.max(
         0,
         Math.min(currentIndex + direction, matchedAgentMentions.length - 1),
+      );
+    });
+  };
+
+  /**
+   * 选择指定的 AI 模型并恢复输入状态。
+   */
+  const selectModel = (model: {
+    id: string;
+    providerId: string;
+    providerName: string;
+    modelId: string;
+    modelName: string;
+  }): void => {
+    onModelChange({ provider: model.providerId, model: model.modelId });
+    toast.success(`已切换模型为: ${model.modelName}`);
+    setInputText("");
+    draftInputRef.current = "";
+    historyCursorRef.current = null;
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  /**
+   * 循环切换模型选择面板选中项。
+   */
+  const moveActiveModel = (direction: 1 | -1): void => {
+    setActiveModelIndex((currentIndex) => {
+      if (matchedModels.length === 0) {
+        return 0;
+      }
+      return (
+        (currentIndex + direction + matchedModels.length) %
+        matchedModels.length
       );
     });
   };
@@ -917,6 +999,14 @@ export const AiChatInput = ({
    * 执行指定斜杠命令，并清理命令输入态。
    */
   const executeCommand = (command: AiChatInputCommand): void => {
+    if (command.id === "model") {
+      const text = "/model ";
+      setInputText(text);
+      draftInputRef.current = text;
+      historyCursorRef.current = null;
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
     if (isGenerating) {
       toast.warning("请等待 AI 输出完成");
       return;
@@ -1069,6 +1159,15 @@ export const AiChatInput = ({
     draftInputRef.current = nextValue;
     historyCursorRef.current = null;
     setActiveCommandIndex(0);
+
+    const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+
+    if (isNextModelMode) {
+      setIsCommandPanelOpen(false);
+      closeAgentMentionPanel();
+      return;
+    }
+
     const shouldOpenCommandPanel =
       isCommandInput(nextValue) && nextMatchedCommands.length > 0;
     setIsCommandPanelOpen(shouldOpenCommandPanel);
@@ -1084,6 +1183,41 @@ export const AiChatInput = ({
    * 处理输入框键盘按键事件，支持 Enter 键发送消息，Shift + Enter 换行。
    */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (isModelMode && matchedModels.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveActiveModel(1);
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveActiveModel(-1);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setInputText("");
+        draftInputRef.current = "";
+        historyCursorRef.current = null;
+        requestAnimationFrame(() => textareaRef.current?.focus());
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (e.nativeEvent.isComposing) {
+          return;
+        }
+        e.preventDefault();
+        const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+        if (activeModel) {
+          selectModel(activeModel);
+        }
+        return;
+      }
+    }
+
     if (isCommandPanelOpen && e.key === "ArrowDown") {
       e.preventDefault();
       moveActiveCommand(1);
@@ -1259,6 +1393,63 @@ export const AiChatInput = ({
     onModelChange({ provider, model });
   };
 
+  /**
+   * 处理模型面板键盘事件，支持方向键切换、回车执行、Esc 关闭和 Backspace 退回。
+   */
+  const handleModelPanelKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveModel(1);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveModel(-1);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setInputText("");
+      draftInputRef.current = "";
+      historyCursorRef.current = null;
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+      if (activeModel) {
+        selectModel(activeModel);
+      }
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const nextValue = inputText.slice(0, -1);
+      const nextMatchedCommands = getMatchedCommands(nextValue);
+      setInputText(nextValue);
+      draftInputRef.current = nextValue;
+      historyCursorRef.current = null;
+
+      const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+      if (isNextModelMode) {
+        setActiveModelIndex(0);
+      } else {
+        setActiveCommandIndex(0);
+        setIsCommandPanelOpen(
+          isCommandInput(nextValue) && nextMatchedCommands.length > 0,
+        );
+      }
+      requestAnimationFrame(adjustTextareaHeight);
+    }
+  };
+
   return (
     <div className="flex-shrink-0 p-3 bg-black/5">
       <div
@@ -1326,6 +1517,28 @@ export const AiChatInput = ({
               <span className="text-xs text-white/30">-</span>
               <span className="truncate text-xs text-white/45">
                 {command.description}
+              </span>
+            </span>
+          )}
+        />
+
+        <CommandPanel
+          isOpen={isModelMode && matchedModels.length > 0}
+          ariaLabel="AI Model Selection Panel"
+          items={matchedModels}
+          activeIndex={activeModelIndex}
+          onActiveIndexChange={setActiveModelIndex}
+          onItemSelect={selectModel}
+          onKeyDown={handleModelPanelKeyDown}
+          idPrefix="ai-chat-model"
+          renderItem={(model) => (
+            <span className="flex items-center gap-2 min-w-0">
+              <span className="text-[13px] font-semibold text-white">
+                {model.modelName}
+              </span>
+              <span className="text-xs text-white/30">-</span>
+              <span className="truncate text-xs text-white/45">
+                {model.providerName}
               </span>
             </span>
           )}

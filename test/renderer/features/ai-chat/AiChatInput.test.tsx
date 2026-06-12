@@ -4,7 +4,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AiChatInput } from '@/features/ai-chat/components/AiChatInput'
+import { AiChatInput, type AiChatInputCommandId } from '@/features/ai-chat/components/AiChatInput'
 import type { AiChatSendPayload } from '@/features/ai-chat/aiChatAgentMentions'
 
 const mockToastWarning = vi.fn()
@@ -50,7 +50,7 @@ const selectedModel: AiModelSelection = {
 }
 
 const renderAiChatInput = (
-  onCommandExecute: (command: 'clear' | 'undo') => string | void | Promise<string | void> = () => undefined,
+  onCommandExecute: (command: AiChatInputCommandId) => string | void | Promise<string | void> = () => undefined,
   isGenerating = false,
   onSendMessage: (payload: AiChatSendPayload) => void = () => undefined
 ): void => {
@@ -213,10 +213,16 @@ describe('AiChatInput', () => {
       expect(screen.getByRole('option', { name: /\/undo/ })).toHaveAttribute('aria-selected', 'true')
     })
 
-    // 下键在末项截断，仍选中 /undo
+    // 下键移到 /model
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/undo/ })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('option', { name: /\/model/ })).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 下键在末项截断，仍选中 /model
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/model/ })).toHaveAttribute('aria-selected', 'true')
     })
   })
 
