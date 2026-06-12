@@ -621,7 +621,7 @@ export const registerAiHandlers = (): void => {
   )
   ipcMain.handle('ai:session:get', async (_, sessionId: string) => aiChatService.getSession(sessionId))
   ipcMain.handle('ai:session:title:update', async (_, sessionId: string, title: string) => {
-    aiChatService.updateSessionTitle(sessionId, title, new Date().toISOString())
+    aiChatService.updateSessionTitle(sessionId, title, createTimestamp())
   })
   ipcMain.handle('ai:session:delete', async (_, sessionId: string) => {
     aiChatService.deleteSession(sessionId)
