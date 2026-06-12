@@ -2,7 +2,6 @@ import type React from "react";
 import { useState } from "react";
 import {
   ChevronDown,
-  ChevronRight,
   User,
   Bot,
   Wrench,
@@ -13,6 +12,7 @@ import {
   ChevronsUpDown,
   ChevronsDownUp,
 } from "lucide-react";
+import { IconButton } from "@/components/ui/IconButton";
 import type { AiChatMessage } from "@/features/ai-chat/types";
 import type {
   AiChatContextBudget,
@@ -27,6 +27,10 @@ type AiChatContextTimelineProps = {
   budget: AiChatContextBudget;
   // 当前会话的原始消息列表。
   messages?: AiChatMessage[];
+  // 是否展开。
+  isOpen?: boolean;
+  // 是否启用过渡。
+  isTransitionEnabled?: boolean;
   // 是否全屏展示（替代原本聊天列表）
   isFullscreen?: boolean;
   // 切换全屏显示的回调。
@@ -143,6 +147,8 @@ export const AiChatContextTimeline = ({
   items,
   budget,
   messages = [],
+  isOpen = false,
+  isTransitionEnabled = true,
   isFullscreen = false,
   onToggleFullscreen,
 }: AiChatContextTimelineProps): React.JSX.Element => {
@@ -150,9 +156,6 @@ export const AiChatContextTimeline = ({
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [expandedParams, setExpandedParams] = useState<Record<string, boolean>>({});
   const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
-
-  const toolCount = items.filter((item) => item.kind === "tool").length;
-  void budget;
 
   // 将平铺的数据分组为结构化的 QA 回合
   const turns = groupItemsByQaTurn(items);
@@ -195,51 +198,100 @@ export const AiChatContextTimeline = ({
 
   return (
     <div
-      className={`flex-shrink-0 flex flex-col min-h-0 bg-[#161616]/40 p-4 text-xs text-white/55 overflow-y-auto custom-scrollbar select-none ${
-        isFullscreen ? "flex-1" : "w-[360px] lg:w-[420px] border-l border-white/5"
+      style={{
+        width: !isOpen ? "0px" : (isFullscreen ? "100%" : ""),
+        opacity: isOpen ? 1 : 0,
+        paddingLeft: isOpen ? "1rem" : "0px",
+        paddingRight: isOpen ? "1rem" : "0px",
+        borderLeftWidth: (isOpen && !isFullscreen) ? "1px" : "0px",
+      }}
+      className={`flex-shrink-0 flex flex-col min-h-0 bg-[#161616]/40 text-xs text-white/55 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] select-none border-white/5 ${
+        isTransitionEnabled ? "transition-all duration-300 ease-in-out" : ""
+      } ${
+        isOpen ? "overflow-y-auto" : "overflow-hidden pointer-events-none"
+      } ${
+        isFullscreen ? "flex-1" : "w-[360px] lg:w-[420px]"
       }`}
       aria-label="AI Chat Context Timeline"
     >
-      {/* 上下文概览统计 */}
-      <div className="mb-2.5 flex items-center justify-between border-b border-white/5 pb-2 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <div className="font-medium text-white/80">上下文时间线</div>
-          <div className="text-white/35">·</div>
-          <div>{turns.length} 轮 QA</div>
-          <div className="text-white/35">·</div>
-          <div>{toolCount} 个工具</div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {turns.length > 0 && (
-            <button
-              onClick={handleToggleAll}
-              title={isAllExpanded ? "折叠全部" : "展开全部"}
-              aria-label={isAllExpanded ? "Collapse all turns" : "Expand all turns"}
-              className="text-white/35 hover:text-white transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
-            >
-              {isAllExpanded ? (
-                <ChevronsDownUp className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronsUpDown className="h-3.5 w-3.5" />
+      {isOpen && (
+        <>
+          {/* 上下文概览统计 */}
+          <div className="mb-2.5 flex items-center justify-between border-b border-white/5 pb-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-white/80">上下文时间线</div>
+              <div className="text-white/35">·</div>
+              {/* 上下文使用比例圆形指示器和文本 */}
+              <div className="flex items-center gap-1.5 text-white/50">
+                <div className="relative flex h-5 w-5 shrink-0 items-center justify-center text-white/50">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" className="-rotate-90 h-4 w-4">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r={8}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      className="text-white/10"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r={8}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 8}
+                      strokeDashoffset={
+                        budget.usagePercent === null
+                          ? 2 * Math.PI * 8
+                          : 2 * Math.PI * 8 * (1 - Math.min(Math.max(budget.usagePercent, 0), 100) / 100)
+                      }
+                      className="text-white/80 transition-[stroke-dashoffset] duration-200"
+                    />
+                  </svg>
+                </div>
+                <span className="font-mono">
+                  {budget.usagePercent !== null ? `${Math.round(budget.usagePercent)}%` : "0%"}
+                </span>
+                <span className="text-white/20">
+                  ({budget.totalTokens.toLocaleString("zh-CN")}
+                  {budget.contextLimit !== undefined ? ` / ${budget.contextLimit.toLocaleString("zh-CN")}` : ""} tokens)
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {turns.length > 0 && (
+                <IconButton
+                  onClick={handleToggleAll}
+                  title={isAllExpanded ? "折叠全部" : "展开全部"}
+                  aria-label={isAllExpanded ? "Collapse all turns" : "Expand all turns"}
+                  size="small"
+                >
+                  {isAllExpanded ? (
+                    <ChevronsDownUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                  )}
+                </IconButton>
               )}
-            </button>
-          )}
-          {onToggleFullscreen && (
-            <button
-              onClick={onToggleFullscreen}
-              title={isFullscreen ? "恢复窗口" : "全屏查看"}
-              aria-label={isFullscreen ? "Restore layout" : "Fullscreen timeline"}
-              className="text-white/35 hover:text-white transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-3.5 w-3.5" />
-              ) : (
-                <Maximize2 className="h-3.5 w-3.5" />
+              {onToggleFullscreen && (
+                <IconButton
+                  onClick={onToggleFullscreen}
+                  title={isFullscreen ? "恢复窗口" : "全屏查看"}
+                  aria-label={isFullscreen ? "Restore layout" : "Fullscreen timeline"}
+                  size="small"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </IconButton>
               )}
-            </button>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
 
       {/* 时间线列表 */}
       {turns.length === 0 ? (
@@ -247,7 +299,7 @@ export const AiChatContextTimeline = ({
           暂无上下文记录
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1">
+        <div className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] flex flex-col gap-2 pr-1">
           {turns.map((turn, index) => {
             const isExpanded =
               expandedTurns[turn.id] !== undefined
@@ -271,11 +323,11 @@ export const AiChatContextTimeline = ({
                   className="flex items-center gap-2 py-2 px-2.5 cursor-pointer hover:bg-white/[0.03] transition-colors select-none"
                   onClick={() => toggleTurn(turn.id)}
                 >
-                  {isExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5 text-white/45 shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-white/45 shrink-0" />
-                  )}
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-white/45 shrink-0 transition-transform duration-200 ${
+                      isExpanded ? "" : "-rotate-90"
+                    }`}
+                  />
                   <span className="truncate text-white/75 font-medium flex-1">
                     {titleText}
                   </span>
@@ -369,15 +421,15 @@ export const AiChatContextTimeline = ({
                                   )}
                                 </div>
                                 <div
-                                  onClick={() => toggleNode(part.id)}
+                                  onClick={() => toggleNode(`${turn.id}-${part.id}`)}
                                   className="text-white/45 mt-1 cursor-pointer hover:text-white select-text break-words whitespace-pre-wrap leading-relaxed transition-colors border-l-2 border-white/5 pl-2 italic font-serif text-[11px]"
                                 >
-                                  {expandedNodes[part.id]
+                                  {expandedNodes[`${turn.id}-${part.id}`]
                                     ? part.content
                                     : part.content.slice(0, 80) + (part.content.length > 80 ? "..." : "")}
                                   {part.content.length > 80 && (
                                     <span className="text-white/30 text-[10px] ml-1 select-none hover:underline font-mono not-italic">
-                                      {expandedNodes[part.id] ? "[折叠]" : "...[展开]"}
+                                      {expandedNodes[`${turn.id}-${part.id}`] ? "[折叠]" : "...[展开]"}
                                     </span>
                                   )}
                                 </div>
@@ -487,15 +539,15 @@ export const AiChatContextTimeline = ({
                                     {/* 工具执行观察结果 */}
                                     {step.observation && (
                                       <div
-                                        onClick={() => toggleNode(step.id)}
+                                        onClick={() => toggleNode(`${turn.id}-${step.id}`)}
                                         className="text-white/50 mt-1 cursor-pointer hover:text-white/80 select-text break-words whitespace-pre-wrap leading-relaxed transition-colors"
                                       >
-                                        {expandedNodes[step.id]
+                                        {expandedNodes[`${turn.id}-${step.id}`]
                                           ? step.observation
                                           : step.observation.slice(0, 80) + (step.observation.length > 80 ? "..." : "")}
                                         {step.observation.length > 80 && (
                                           <span className="text-white/30 text-[10px] ml-1 select-none hover:underline">
-                                            {expandedNodes[step.id] ? "[折叠]" : "...[展开]"}
+                                            {expandedNodes[`${turn.id}-${step.id}`] ? "[折叠]" : "...[展开]"}
                                           </span>
                                         )}
                                       </div>
@@ -600,6 +652,8 @@ export const AiChatContextTimeline = ({
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );

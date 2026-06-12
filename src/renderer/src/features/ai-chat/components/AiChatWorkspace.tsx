@@ -142,13 +142,40 @@ export const AiChatWorkspace = ({
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
   // 时间线全屏展示状态（替代左侧聊天列表）。
   const [isTimelineFullscreen, setIsTimelineFullscreen] = useState<boolean>(false);
+  // 全屏切换时是否启用平滑过渡
+  const [isTransitionEnabled, setIsTransitionEnabled] = useState<boolean>(true);
+  const prevFullscreenRef = useRef<boolean>(false);
 
   // 当时间线关闭时，重置全屏状态。
   useEffect(() => {
     if (!isContextTimelineOpen) {
+      setIsTransitionEnabled(false);
       setIsTimelineFullscreen(false);
+      setTimeout(() => {
+        setIsTransitionEnabled(true);
+      }, 50);
     }
   }, [isContextTimelineOpen]);
+
+  // 监听全屏关闭时的滚动调整
+  useEffect(() => {
+    if (prevFullscreenRef.current && !isTimelineFullscreen) {
+      // 当关闭全屏时，原本的消息列表重新展现，直接跳转到底部
+      requestAnimationFrame(() => {
+        scrollMessagesToBottom("auto");
+      });
+    }
+    prevFullscreenRef.current = isTimelineFullscreen;
+  }, [isTimelineFullscreen]);
+
+  // 切换全屏状态（不启用过渡以实现瞬时切换）
+  const handleToggleFullscreen = () => {
+    setIsTransitionEnabled(false);
+    setIsTimelineFullscreen((prev) => !prev);
+    setTimeout(() => {
+      setIsTransitionEnabled(true);
+    }, 50);
+  };
 
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
@@ -740,13 +767,23 @@ export const AiChatWorkspace = ({
       <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
 
       {/* 消息区域容器：支持左右并排（两个列表）展示 */}
-      <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-white/5">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* 左侧：消息列表 */}
-        {!isTimelineFullscreen && (
-          <div
-            ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] p-4 flex flex-col gap-4 min-w-0"
-          >
+        <div
+          ref={messagesContainerRef}
+          style={{
+            width: isTimelineFullscreen ? "0px" : "",
+            flex: isTimelineFullscreen ? "0 0 0px" : "1 1 0px",
+            opacity: isTimelineFullscreen ? 0 : 1,
+            paddingLeft: isTimelineFullscreen ? "0px" : "1rem",
+            paddingRight: isTimelineFullscreen ? "0px" : "1rem",
+          }}
+          className={`overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col gap-4 min-w-0 ${
+            isTransitionEnabled ? "transition-all duration-300 ease-in-out" : ""
+          } ${
+            isTimelineFullscreen ? "overflow-hidden pointer-events-none" : ""
+          }`}
+        >
             {session.messages.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
                 <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
@@ -805,18 +842,17 @@ export const AiChatWorkspace = ({
             )}
             <div ref={messagesEndRef} />
           </div>
-        )}
 
         {/* 右侧：上下文时间线 */}
-        {isContextTimelineOpen && (
-          <AiChatContextTimeline
-            items={contextItems}
-            budget={contextBudget}
-            messages={session.messages}
-            isFullscreen={isTimelineFullscreen}
-            onToggleFullscreen={() => setIsTimelineFullscreen((prev) => !prev)}
-          />
-        )}
+        <AiChatContextTimeline
+          items={contextItems}
+          budget={contextBudget}
+          messages={session.messages}
+          isOpen={isContextTimelineOpen}
+          isTransitionEnabled={isTransitionEnabled}
+          isFullscreen={isTimelineFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
+        />
       </div>
 
       {messageContextMenu ? (
