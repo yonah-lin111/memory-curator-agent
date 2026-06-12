@@ -13,6 +13,8 @@ import {
   ChevronsDownUp,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { Image } from "@/components/ui/Image";
+import { TextFile } from "@/components/ui/TextFile";
 import type { AiChatMessage } from "@/features/ai-chat/types";
 import type {
   AiChatContextBudget,
@@ -138,6 +140,16 @@ const groupItemsByQaTurn = (items: AiChatContextItem[]): QaTurn[] => {
   }
 
   return turns;
+};
+
+/**
+ * 格式化时间戳为精确到秒的时间点字符串 (HH:mm:ss)。
+ */
+const formatTimePoint = (timestamp: number): string => {
+  if (!timestamp) return "";
+  const d = new Date(timestamp);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
 /**
@@ -331,8 +343,10 @@ export const AiChatContextTimeline = ({
                   <span className="truncate text-white/75 font-medium flex-1">
                     {titleText}
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-white/35">
-                    {turn.tokens.toLocaleString("zh-CN")} tokens
+                  <span className="shrink-0 font-mono text-[11px] text-white/35 flex items-center gap-1.5">
+                    <span>{formatTimePoint(turn.createdAt)}</span>
+                    <span className="text-white/10">|</span>
+                    <span>{turn.tokens.toLocaleString("zh-CN")} tokens</span>
                   </span>
                 </div>
 
@@ -340,31 +354,81 @@ export const AiChatContextTimeline = ({
                 {isExpanded && (
                   <div className="mx-3 mb-2.5 pl-3 border-l border-white/5 flex flex-col gap-3 relative mt-1 select-text">
                     {/* 1. 用户消息节点 */}
-                    {turn.userMessage && (
-                      <div className="relative pl-3 select-text">
-                        <div className="absolute left-[-16px] top-1.5 flex h-1.5 w-1.5 items-center justify-center rounded-full bg-white/40 ring-[3px] ring-[#161616]" />
-                        <div className="flex items-center gap-1.5 text-[11px] text-white/35 font-mono select-none">
-                          <User className="h-3 w-3 shrink-0" />
-                          <span>用户消息</span>
-                          <span className="ml-auto text-white/20">
-                            {turn.userMessage.tokens} tokens
-                          </span>
-                        </div>
-                        <div
-                          onClick={() => toggleNode(turn.userMessage!.key)}
-                          className="text-white/70 mt-1 cursor-pointer hover:text-white select-text break-words whitespace-pre-wrap leading-relaxed transition-colors"
-                        >
-                          {expandedNodes[turn.userMessage.key]
-                            ? turn.userMessage.content
-                            : turn.userMessage.summary}
-                          {turn.userMessage.content.length > turn.userMessage.summary.length && (
-                            <span className="text-white/30 text-[10px] ml-1 select-none hover:underline">
-                              {expandedNodes[turn.userMessage.key] ? "[折叠]" : "...[展开]"}
+                    {turn.userMessage && (() => {
+                      const userMsgKey = turn.userMessage.sourceId;
+                      const fullUserMsg = messages.find((m) => m.id === userMsgKey);
+                      
+                      let parts: any[] = [];
+                      if (fullUserMsg?.parts) {
+                        parts = fullUserMsg.parts;
+                      } else if (turn.userMessage.meta?.parts) {
+                        try {
+                          parts = JSON.parse(turn.userMessage.meta.parts as string);
+                        } catch {
+                          // Ignore
+                        }
+                      }
+                      
+                      const textFiles = parts.filter((p) => p.kind === "text-file");
+                      const images = parts.filter((p) => p.kind === "image");
+
+                      return (
+                        <div className="relative pl-3 select-text">
+                          <div className="absolute left-[-16px] top-1.5 flex h-1.5 w-1.5 items-center justify-center rounded-full bg-white/40 ring-[3px] ring-[#161616]" />
+                          <div className="flex items-center gap-1.5 text-[11px] text-white/35 font-mono select-none">
+                            <User className="h-3 w-3 shrink-0" />
+                            <span>用户消息</span>
+                            <span className="text-white/20">({formatTimePoint(turn.userMessage.createdAt)})</span>
+                            <span className="ml-auto text-white/20">
+                              {turn.userMessage.tokens} tokens
                             </span>
+                          </div>
+
+                          {/* 渲染上传的文本文件 */}
+                          {textFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1.5 w-full select-none">
+                              {textFiles.map((part, i) => (
+                                <TextFile
+                                  key={i}
+                                  url={part.url}
+                                  fileName={part.fileName}
+                                  sizeBytes={part.sizeBytes}
+                                  preview={true}
+                                />
+                              ))}
+                            </div>
                           )}
+
+                          {/* 渲染上传的图片 */}
+                          {images.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1.5 w-full select-none">
+                              {images.map((part, i) => (
+                                <Image
+                                  key={i}
+                                  src={part.url}
+                                  aspectRatio="square"
+                                  className="w-14 h-14 rounded-[4px] border border-white/5 shadow-md shrink-0 object-cover"
+                                />
+                              ))}
+                            </div>
+                          )}
+
+                          <div
+                            onClick={() => toggleNode(turn.userMessage!.key)}
+                            className="text-white/70 mt-1 cursor-pointer hover:text-white select-text break-words whitespace-pre-wrap leading-relaxed transition-colors"
+                          >
+                            {expandedNodes[turn.userMessage.key]
+                              ? turn.userMessage.content
+                              : turn.userMessage.summary}
+                            {turn.userMessage.content.length > turn.userMessage.summary.length && (
+                              <span className="text-white/30 text-[10px] ml-1 select-none hover:underline">
+                                {expandedNodes[turn.userMessage.key] ? "[折叠]" : "...[展开]"}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* 2. 注入上下文节点 */}
                     {turn.injectedContexts.length > 0 && (
@@ -373,6 +437,7 @@ export const AiChatContextTimeline = ({
                         <div className="flex items-center gap-1.5 text-[11px] text-white/35 font-mono select-none">
                           <FileText className="h-3 w-3 shrink-0 text-blue-400/70" />
                           <span>注入上下文 ({turn.injectedContexts.length} 项)</span>
+                          <span className="text-white/20">({formatTimePoint(turn.injectedContexts[0].createdAt)})</span>
                         </div>
                         <div className="mt-1 flex flex-col gap-1.5 select-text">
                           {turn.injectedContexts.map((ctx) => (
@@ -455,6 +520,7 @@ export const AiChatContextTimeline = ({
                                   <div className="flex items-center gap-1.5 text-[11px] text-amber-400/70 font-mono select-none">
                                     <Wrench className="h-3 w-3 shrink-0" />
                                     <span>Tool: {String(tool.meta?.tool || "unknown")}</span>
+                                    <span className="text-white/20">({formatTimePoint(tool.createdAt)})</span>
                                     <span className="ml-auto text-white/20">{tool.tokens} tokens</span>
                                   </div>
 
@@ -578,6 +644,7 @@ export const AiChatContextTimeline = ({
                               <div className="flex items-center gap-1.5 text-[11px] text-amber-400/70 font-mono select-none">
                                 <Wrench className="h-3 w-3 shrink-0" />
                                 <span>Tool: {String(tool.meta?.tool || "unknown")}</span>
+                                <span className="text-white/20">({formatTimePoint(tool.createdAt)})</span>
                                 <span className="ml-auto text-white/20">{tool.tokens} tokens</span>
                               </div>
 
@@ -627,6 +694,7 @@ export const AiChatContextTimeline = ({
                         <div className="flex items-center gap-1.5 text-[11px] text-purple-400/80 font-mono select-none">
                           <Bot className="h-3 w-3 shrink-0" />
                           <span>助手回复</span>
+                          <span className="text-white/20">({formatTimePoint(turn.assistantMessage.createdAt)})</span>
                           <span className="ml-auto text-white/20">
                             {turn.assistantMessage.tokens} tokens
                           </span>
