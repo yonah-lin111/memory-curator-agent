@@ -1,0 +1,696 @@
+import type React from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useToast } from "@/components/ui/Toast";
+import type { AiChatMessagePart } from "@/features/ai-chat/types";
+import {
+  createAiChatSendPayload,
+  getAiChatAgentMentionDeletionRange,
+} from "@/features/ai-chat/aiChatAgentMentions";
+import type {
+  AiChatInputProps,
+  AiChatInputCommand,
+} from "@/features/ai-chat/components/AiChatInput/types";
+import {
+  TEXTAREA_MIN_ROWS,
+  TEXTAREA_MAX_ROWS,
+  FALLBACK_LINE_HEIGHT,
+  INTERACTIVE_SELECTOR,
+} from "@/features/ai-chat/components/AiChatInput/constants";
+import {
+  isCommandInput,
+  getMatchedCommands,
+} from "@/features/ai-chat/components/AiChatInput/utils";
+
+// 引入微逻辑 Hook
+import { useAiChatFiles } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatFiles";
+import { useAiChatHistory } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatHistory";
+import { useAiChatMentions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatMentions";
+import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatModels";
+
+/**
+ * useAiChatInput - 输入框总状态与逻辑总调度编排 Hook。
+ *
+ * 通过组合 useAiChatFiles, useAiChatHistory, useAiChatMentions, useAiChatModels 这 4 个微 Hook，
+ * 统筹管理所有事件、状态拼装及键盘交互按键拦截的分发。
+ */
+export const useAiChatInput = (props: AiChatInputProps) => {
+  const {
+    modelOptions,
+    selectedModel,
+    isGenerating = false,
+    onSendMessage,
+    onCommandExecute,
+    onModelChange,
+  } = props;
+
+  const toast = useToast();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // 1. 基础输入文本与 Slash 命令状态
+  const [inputText, setInputText] = useState("");
+  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+
+  const selectedModelValue = selectedModel
+    ? `${selectedModel.provider}::${selectedModel.model}`
+    : "";
+
+  const selectedModelOption = modelOptions
+    .find((p) => p.id === selectedModel?.provider)
+    ?.models.find((m) => m.id === selectedModel?.model);
+
+  const isImageSupported =
+    selectedModelOption?.modalities?.input?.includes("image") ?? false;
+
+  const matchedCommands = getMatchedCommands(inputText);
+  const activeCommand =
+    matchedCommands[activeCommandIndex] ?? matchedCommands[0];
+
+  const inputSendPayload = createAiChatSendPayload(inputText);
+  const hasModelOptions = modelOptions.some(
+    (provider) => provider.models.length > 0,
+  );
+
+  /**
+   * 根据内容真实高度调整输入框高度，最多显示 6 行，超过后内部滚动。
+   */
+  const adjustTextareaHeight = useCallback((): void => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight);
+    const lineHeight = Number.isNaN(parsedLineHeight)
+      ? FALLBACK_LINE_HEIGHT
+      : parsedLineHeight;
+    const verticalPadding =
+      Number.parseFloat(computedStyle.paddingTop || "0") +
+      Number.parseFloat(computedStyle.paddingBottom || "0");
+    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding;
+    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding;
+
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(
+      Math.max(textarea.scrollHeight, minHeight),
+      maxHeight,
+    );
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight, inputText]);
+
+  // 2. 引入上传文件 Micro Hook
+  const {
+    fileInputRef,
+    selectedImages,
+    selectedTextFiles,
+    isDragging,
+    setSelectedImages,
+    setSelectedTextFiles,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handlePaste,
+    handleAttachmentClick,
+    handleUploadFilesProxy,
+    clearFiles,
+  } = useAiChatFiles(isImageSupported);
+
+  // 3. 引入历史记录 Micro Hook
+  const {
+    promptHistory,
+    isBrowsingHistory,
+    historyCursorRef,
+    savePromptHistory,
+    movePromptHistory,
+    canMovePromptHistory,
+    resetHistoryCursor,
+    updateDraftInput,
+  } = useAiChatHistory(setInputText, textareaRef, adjustTextareaHeight);
+
+  // 4. 引入 Agent Mentions (@) Micro Hook
+  const {
+    activeAgentIndex,
+    matchedAgentMentions,
+    isAgentPanelOpen,
+    activeAgent,
+    setActiveAgentIndex,
+    syncAgentMentionPanel,
+    closeAgentMentionPanel,
+    selectAgentMention,
+    moveActiveAgent,
+    handleTextareaCursorMove,
+  } = useAiChatMentions(inputText, setInputText, textareaRef, adjustTextareaHeight, resetHistoryCursor);
+
+  // 5. 引入 AI 快速切换模型 (/model) Micro Hook
+  const {
+    activeModelIndex,
+    matchedModels,
+    isModelMode,
+    setActiveModelIndex,
+    selectModel,
+    moveActiveModel,
+    handleModelChange,
+  } = useAiChatModels(inputText, setInputText, modelOptions, textareaRef, resetHistoryCursor, onModelChange);
+
+  // 输入变化后的统一计算分发
+  const handleInputChange = useCallback((
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+  ): void => {
+    const nextValue = e.target.value;
+    const nextMatchedCommands = getMatchedCommands(nextValue);
+
+    setInputText(nextValue);
+    updateDraftInput(nextValue);
+    resetHistoryCursor();
+    setActiveCommandIndex(0);
+
+    const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+
+    if (isNextModelMode) {
+      setIsCommandPanelOpen(false);
+      closeAgentMentionPanel();
+      return;
+    }
+
+    const shouldOpenCommandPanel =
+      isCommandInput(nextValue) && nextMatchedCommands.length > 0;
+    setIsCommandPanelOpen(shouldOpenCommandPanel);
+    if (shouldOpenCommandPanel) {
+      closeAgentMentionPanel();
+      return;
+    }
+
+    syncAgentMentionPanel(nextValue, e.target.selectionStart);
+  }, [updateDraftInput, resetHistoryCursor, closeAgentMentionPanel, syncAgentMentionPanel]);
+
+  const canSend = useMemo(() => {
+    return Boolean(
+      inputSendPayload.text.trim() ||
+      selectedImages.length > 0 ||
+      selectedTextFiles.length > 0,
+    );
+  }, [inputSendPayload.text, selectedImages.length, selectedTextFiles.length]);
+
+  /**
+   * 发送消息处理函数。
+   */
+  const handleSend = useCallback((): void => {
+    const parts: AiChatMessagePart[] = [];
+    const textToSend = inputSendPayload.text.trim();
+    if (textToSend) {
+      parts.push({
+        id: `msg-text-${Date.now()}`,
+        kind: "text",
+        content: textToSend,
+      });
+    }
+
+    selectedTextFiles.forEach((file, i) => {
+      parts.push({
+        id: `msg-txtfile-${i}-${Date.now()}`,
+        kind: "text-file",
+        url: file.url,
+        fileName: file.originalName,
+        sizeBytes: file.sizeBytes,
+      });
+    });
+
+    selectedImages.forEach((url, i) => {
+      parts.push({
+        id: `msg-img-${i}-${Date.now()}`,
+        kind: "image",
+        url,
+      });
+    });
+
+    if (parts.length === 0) return;
+
+    if (isGenerating) {
+      toast.warning("请等待 AI 输出完成");
+      return;
+    }
+
+    onSendMessage({
+      text: textToSend,
+      agents: inputSendPayload.agents,
+      ...(selectedImages.length > 0 || selectedTextFiles.length > 0
+        ? { parts }
+        : {}),
+    });
+
+    savePromptHistory(inputText);
+    setInputText("");
+    resetHistoryCursor();
+    clearFiles();
+    setIsCommandPanelOpen(false);
+    closeAgentMentionPanel();
+  }, [
+    inputSendPayload.text,
+    inputSendPayload.agents,
+    selectedTextFiles,
+    selectedImages,
+    isGenerating,
+    onSendMessage,
+    savePromptHistory,
+    inputText,
+    resetHistoryCursor,
+    clearFiles,
+    closeAgentMentionPanel,
+    toast,
+  ]);
+
+  /**
+   * 清空输入框内容。
+   */
+  const handleClearInput = useCallback((): void => {
+    setInputText("");
+    resetHistoryCursor();
+    clearFiles();
+    closeAgentMentionPanel();
+    setIsCommandPanelOpen(false);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [resetHistoryCursor, clearFiles, closeAgentMentionPanel]);
+
+  /**
+   * 执行指定斜杠命令，并清理命令输入态。
+   */
+  const executeCommand = useCallback((command: AiChatInputCommand): void => {
+    if (command.id === "model") {
+      const text = "/model ";
+      setInputText(text);
+      resetHistoryCursor();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+    if (isGenerating) {
+      toast.warning("请等待 AI 输出完成");
+      return;
+    }
+    setIsCommandPanelOpen(false);
+    closeAgentMentionPanel();
+    void Promise.resolve(onCommandExecute(command.id))
+      .then((nextInputText) => {
+        if (!command.addToContext) {
+          const text = nextInputText ?? "";
+          setInputText(text);
+          resetHistoryCursor();
+        }
+      })
+      .catch(() => {
+        if (!command.addToContext) {
+          setInputText("");
+          resetHistoryCursor();
+        }
+      });
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [isGenerating, onCommandExecute, resetHistoryCursor, closeAgentMentionPanel, toast]);
+
+  /**
+   * 循环切换命令面板选中项。
+   */
+  const moveActiveCommand = useCallback((direction: 1 | -1): void => {
+    setActiveCommandIndex((currentIndex) => {
+      if (matchedCommands.length === 0) {
+        return 0;
+      }
+
+      return Math.max(
+        0,
+        Math.min(currentIndex + direction, matchedCommands.length - 1),
+      );
+    });
+  }, [matchedCommands.length]);
+
+  /**
+   * 构造供 Select 组件使用的选项列表，支持 provider 分组。
+   */
+  const selectOptions = useMemo(() => {
+    return hasModelOptions
+      ? modelOptions.map((provider) => ({
+          label: provider.name,
+          options: provider.models.map((model) => ({
+            value: `${provider.id}::${model.id}`,
+            label: model.name,
+          })),
+        }))
+      : [{ value: "", label: "无可用模型" }];
+  }, [hasModelOptions, modelOptions]);
+
+  /**
+   * 处理输入区域点击，空白区域点击时聚焦文本框。
+   */
+  const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
+    const target = e.target as HTMLElement;
+    if (
+      target !== textareaRef.current &&
+      target.closest(INTERACTIVE_SELECTOR)
+    ) {
+      return;
+    }
+    textareaRef.current?.focus();
+  }, []);
+
+  /**
+   * 处理输入框键盘按键事件，支持 Enter 键发送消息，Shift + Enter 换行。
+   */
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (isModelMode && matchedModels.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveActiveModel(1);
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveActiveModel(-1);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setInputText("");
+        resetHistoryCursor();
+        requestAnimationFrame(() => textareaRef.current?.focus());
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (e.nativeEvent.isComposing) {
+          return;
+        }
+        e.preventDefault();
+        const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+        if (activeModel) {
+          selectModel(activeModel);
+        }
+        return;
+      }
+    }
+
+    if (isCommandPanelOpen && e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveCommand(1);
+      return;
+    }
+
+    if (isCommandPanelOpen && e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveCommand(-1);
+      return;
+    }
+
+    if (isCommandPanelOpen && e.key === "Escape") {
+      e.preventDefault();
+      setIsCommandPanelOpen(false);
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveAgent(1);
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveAgent(-1);
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "Escape") {
+      e.preventDefault();
+      closeAgentMentionPanel();
+      return;
+    }
+
+    if (isAgentPanelOpen && e.key === "Enter" && activeAgent) {
+      if (e.nativeEvent.isComposing) {
+        return;
+      }
+      e.preventDefault();
+      selectAgentMention(activeAgent);
+      return;
+    }
+
+    if (e.key === "Backspace" && !isCommandPanelOpen && !isAgentPanelOpen) {
+      const textarea = textareaRef.current;
+      if (textarea && textarea.selectionStart === textarea.selectionEnd) {
+        const deletionRange = getAiChatAgentMentionDeletionRange(
+          inputText,
+          textarea.selectionStart,
+        );
+        if (deletionRange) {
+          e.preventDefault();
+          const nextValue = `${inputText.slice(0, deletionRange.start)}${inputText.slice(deletionRange.end)}`;
+          setInputText(nextValue);
+          resetHistoryCursor();
+          requestAnimationFrame(() => {
+            adjustTextareaHeight();
+            textarea.setSelectionRange(
+              deletionRange.start,
+              deletionRange.start,
+            );
+          });
+          return;
+        }
+      }
+    }
+
+    if (
+      !isCommandPanelOpen &&
+      e.key === "ArrowDown" &&
+      canMovePromptHistory(1)
+    ) {
+      e.preventDefault();
+      movePromptHistory(1);
+      return;
+    }
+
+    if (
+      !isCommandPanelOpen &&
+      e.key === "ArrowUp" &&
+      canMovePromptHistory(-1)
+    ) {
+      e.preventDefault();
+      movePromptHistory(-1);
+      return;
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      if (e.nativeEvent.isComposing) {
+        return;
+      }
+      e.preventDefault();
+
+      if (isCommandPanelOpen && activeCommand) {
+        executeCommand(activeCommand);
+        return;
+      }
+
+      handleSend();
+    }
+  }, [
+    isModelMode,
+    matchedModels,
+    moveActiveModel,
+    activeModelIndex,
+    selectModel,
+    isCommandPanelOpen,
+    moveActiveCommand,
+    isAgentPanelOpen,
+    moveActiveAgent,
+    activeAgent,
+    selectAgentMention,
+    inputText,
+    adjustTextareaHeight,
+    canMovePromptHistory,
+    movePromptHistory,
+    activeCommand,
+    executeCommand,
+    handleSend,
+    resetHistoryCursor,
+  ]);
+
+  /**
+   * 处理命令面板键盘事件，支持方向键切换、回车执行和 Esc 关闭。
+   */
+  const handleCommandPanelKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveCommand(1);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveCommand(-1);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setIsCommandPanelOpen(false);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
+    if (e.key === "Enter" && activeCommand) {
+      e.preventDefault();
+      executeCommand(activeCommand);
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const nextValue = inputText.slice(0, -1);
+      const nextMatchedCommands = getMatchedCommands(nextValue);
+      setInputText(nextValue);
+      resetHistoryCursor();
+      setActiveCommandIndex(0);
+      setIsCommandPanelOpen(
+        isCommandInput(nextValue) && nextMatchedCommands.length > 0,
+      );
+      requestAnimationFrame(adjustTextareaHeight);
+      return;
+    }
+
+    if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      const nextValue = `${inputText}${e.key}`;
+      const nextMatchedCommands = getMatchedCommands(nextValue);
+      setInputText(nextValue);
+      resetHistoryCursor();
+      setActiveCommandIndex(0);
+      setIsCommandPanelOpen(
+        isCommandInput(nextValue) && nextMatchedCommands.length > 0,
+      );
+      requestAnimationFrame(adjustTextareaHeight);
+    }
+  }, [activeCommand, executeCommand, moveActiveCommand, inputText, resetHistoryCursor, adjustTextareaHeight]);
+
+  /**
+   * 处理模型面板键盘事件，支持方向键切换、回车执行、Esc 关闭和 Backspace 退回。
+   */
+  const handleModelPanelKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveModel(1);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveModel(-1);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setInputText("");
+      resetHistoryCursor();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+      if (activeModel) {
+        selectModel(activeModel);
+      }
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const nextValue = inputText.slice(0, -1);
+      const nextMatchedCommands = getMatchedCommands(nextValue);
+      setInputText(nextValue);
+      resetHistoryCursor();
+
+      const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+      if (isNextModelMode) {
+        setActiveModelIndex(0);
+      } else {
+        setActiveCommandIndex(0);
+        setIsCommandPanelOpen(
+          isCommandInput(nextValue) && nextMatchedCommands.length > 0,
+        );
+      }
+      requestAnimationFrame(adjustTextareaHeight);
+    }
+  }, [
+    moveActiveModel,
+    matchedModels,
+    activeModelIndex,
+    selectModel,
+    inputText,
+    resetHistoryCursor,
+    adjustTextareaHeight,
+  ]);
+
+  return {
+    textareaRef,
+    fileInputRef,
+    inputText,
+    selectedImages,
+    selectedTextFiles,
+    isCommandPanelOpen,
+    isDragging,
+    activeCommandIndex,
+    activeModelIndex,
+    activeAgentIndex,
+    promptHistory,
+    isBrowsingHistory,
+    historyCursorRef,
+
+    // 计算属性
+    selectedModelValue,
+    isImageSupported,
+    matchedCommands,
+    isModelMode,
+    matchedModels,
+    matchedAgentMentions,
+    isAgentPanelOpen,
+    canSend,
+    hasModelOptions,
+    selectOptions,
+
+    // 修改方法
+    setSelectedImages,
+    setSelectedTextFiles,
+    setActiveCommandIndex,
+    setActiveModelIndex,
+    setActiveAgentIndex,
+
+    // 回调
+    handleInputChange,
+    handleKeyDown,
+    handleTextareaCursorMove,
+    handlePaste,
+    handleContainerClick,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleAttachmentClick,
+    handleClearInput,
+    handleSend,
+    executeCommand,
+    selectModel,
+    selectAgentMention,
+    handleCommandPanelKeyDown,
+    handleModelPanelKeyDown,
+    handleModelChange,
+    handleUploadFilesProxy,
+  };
+};
