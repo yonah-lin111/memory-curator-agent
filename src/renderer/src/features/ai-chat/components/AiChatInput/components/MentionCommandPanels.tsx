@@ -2,6 +2,7 @@ import type React from "react";
 import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
 import type { AiChatInputCommand } from "@/features/ai-chat/components/AiChatInput/types";
 import type { AiChatAgentMentionOption } from "@/features/ai-chat/aiChatAgentMentions";
+import type { AiChatSession } from "@/features/ai-chat/types";
 
 // 联合面板群属性定义。
 export interface MentionCommandPanelsProps {
@@ -43,6 +44,21 @@ export interface MentionCommandPanelsProps {
   // 快速模型面板专有的键盘事件拦截器。
   onModelPanelKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 
+  // AI 会话模式面板显示状态。
+  isSessionMode: boolean;
+  // 当前快速匹配过滤出的 AI 会话列表。
+  matchedSessions: AiChatSession[];
+  // 当前快速会话面板活动焦点索引。
+  activeSessionIndex: number;
+  // 修改快速会话面板活动焦点索引回调。
+  onActiveSessionIndexChange: (idx: number) => void;
+  // 确认选择快速会话回调。
+  onSessionSelect: (session: AiChatSession) => void;
+  // 快速会话面板专有的键盘事件拦截器。
+  onSessionPanelKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  // 快速会话面板触底滚动加载的回调。
+  onSessionScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+
   // Agent 提到面板显示状态。
   isAgentPanelOpen: boolean;
   // 当前匹配到的 Agent 列表。
@@ -72,6 +88,14 @@ export const MentionCommandPanels = ({
   onActiveModelIndexChange,
   onModelSelect,
   onModelPanelKeyDown,
+
+  isSessionMode,
+  matchedSessions,
+  activeSessionIndex,
+  onActiveSessionIndexChange,
+  onSessionSelect,
+  onSessionPanelKeyDown,
+  onSessionScroll,
 
   isAgentPanelOpen,
   matchedAgentMentions,
@@ -120,6 +144,29 @@ export const MentionCommandPanels = ({
             <span className="text-xs text-white/30">-</span>
             <span className="truncate text-xs text-white/45">
               {model.providerName}
+            </span>
+          </span>
+        )}
+      />
+
+      <CommandPanel
+        isOpen={isSessionMode && matchedSessions.length > 0}
+        ariaLabel="AI Session Selection Panel"
+        items={matchedSessions}
+        activeIndex={activeSessionIndex}
+        onActiveIndexChange={onActiveSessionIndexChange}
+        onItemSelect={onSessionSelect}
+        onKeyDown={onSessionPanelKeyDown}
+        onScroll={onSessionScroll}
+        idPrefix="ai-chat-session"
+        renderItem={(session) => (
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="text-[13px] font-semibold text-white truncate max-w-[200px]">
+              {session.title || "新建对话"}
+            </span>
+            <span className="text-xs text-white/30">-</span>
+            <span className="truncate text-xs text-white/45">
+              {session.time}
             </span>
           </span>
         )}

@@ -1,8 +1,8 @@
-import type { AiModelProviderOption, AiModelSelection } from "@/features/ai-chat/types";
+import type { AiModelProviderOption, AiModelSelection, AiChatSession } from "@/features/ai-chat/types";
 import type { AiChatSendPayload } from "@/features/ai-chat/aiChatAgentMentions";
 
 // AI 输入框内置命令标识。
-export type AiChatInputCommandId = "clear" | "undo" | "model" | "showContextTimeline";
+export type AiChatInputCommandId = "clear" | "undo" | "model" | "showContextTimeline" | "session";
 
 // AI 输入框斜杠命令配置类型。
 export interface AiChatInputCommand {
@@ -60,4 +60,14 @@ export interface AiChatInputProps {
   ) => string | void | Promise<string | void>;
   // AI 模型切换回调。
   onModelChange: (selection: AiModelSelection) => void;
+  // AI 会话列表。
+  chatSessions?: AiChatSession[];
+  // AI 激活会话切换回调。
+  onActiveSessionChange?: (sessionId: string) => void;
+  // 是否还有更多会话。
+  hasMoreChatSessions?: boolean;
+  // 是否正在加载更多会话。
+  isLoadingMoreChatSessions?: boolean;
+  // 加载更多历史会话回调。
+  onLoadMoreChatSessions?: () => Promise<void>;
 }

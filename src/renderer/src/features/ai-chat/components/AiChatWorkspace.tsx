@@ -116,6 +116,16 @@ type AiChatWorkspaceProps = {
   onModelChange: (selection: AiModelSelection) => void;
   // 上下文时间线是否展开
   isContextTimelineOpen?: boolean;
+  // AI 会话列表。
+  chatSessions?: AiChatSession[];
+  // AI 激活会话切换回调.
+  onActiveSessionChange?: (sessionId: string) => void;
+  // 是否还有更多会话。
+  hasMoreChatSessions?: boolean;
+  // 是否正在加载更多会话。
+  isLoadingMoreChatSessions?: boolean;
+  // 加载更多历史会话回调。
+  onLoadMoreChatSessions?: () => Promise<void>;
 };
 
 /**
@@ -135,6 +145,11 @@ export const AiChatWorkspace = ({
   onCommandExecute,
   onModelChange,
   isContextTimelineOpen = false,
+  chatSessions,
+  onActiveSessionChange,
+  hasMoreChatSessions,
+  isLoadingMoreChatSessions,
+  onLoadMoreChatSessions,
 }: AiChatWorkspaceProps): React.JSX.Element => {
   // 消息滚动容器引用。
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -851,6 +866,11 @@ export const AiChatWorkspace = ({
             onSendMessage={onSendMessage}
             onCommandExecute={onCommandExecute}
             onModelChange={onModelChange}
+            chatSessions={chatSessions}
+            onActiveSessionChange={onActiveSessionChange}
+            hasMoreChatSessions={hasMoreChatSessions}
+            isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+            onLoadMoreChatSessions={onLoadMoreChatSessions}
           />
         </div>
 

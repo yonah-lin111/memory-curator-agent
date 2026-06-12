@@ -31,6 +31,7 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
     activeCommandIndex,
     activeModelIndex,
     activeAgentIndex,
+    activeSessionIndex,
     promptHistory,
     isBrowsingHistory,
     historyCursorRef,
@@ -41,6 +42,8 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
     matchedCommands,
     isModelMode,
     matchedModels,
+    isSessionMode,
+    matchedSessions,
     matchedAgentMentions,
     isAgentPanelOpen,
     canSend,
@@ -53,6 +56,7 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
     setActiveCommandIndex,
     setActiveModelIndex,
     setActiveAgentIndex,
+    setActiveSessionIndex,
 
     // 回调
     handleInputChange,
@@ -68,9 +72,12 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
     handleSend,
     executeCommand,
     selectModel,
+    selectSession,
     selectAgentMention,
     handleCommandPanelKeyDown,
     handleModelPanelKeyDown,
+    handleSessionPanelKeyDown,
+    handleSessionScroll,
     handleModelChange,
     handleUploadFilesProxy,
   } = useAiChatInput(props);
@@ -121,6 +128,13 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
           onActiveModelIndexChange={setActiveModelIndex}
           onModelSelect={selectModel}
           onModelPanelKeyDown={handleModelPanelKeyDown}
+          isSessionMode={isSessionMode}
+          matchedSessions={matchedSessions}
+          activeSessionIndex={activeSessionIndex}
+          onActiveSessionIndexChange={setActiveSessionIndex}
+          onSessionSelect={selectSession}
+          onSessionPanelKeyDown={handleSessionPanelKeyDown}
+          onSessionScroll={handleSessionScroll}
           isAgentPanelOpen={isAgentPanelOpen}
           matchedAgentMentions={matchedAgentMentions}
           activeAgentIndex={activeAgentIndex}

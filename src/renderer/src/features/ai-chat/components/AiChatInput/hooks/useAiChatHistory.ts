@@ -117,6 +117,9 @@ export const useAiChatHistory = (
     }
 
     const currentCursor = historyCursorRef.current;
+    if (currentCursor === null) {
+      draftInputRef.current = textareaRef.current?.value || "";
+    }
     const newestIndex = promptHistory.length - 1;
     const nextCursor =
       currentCursor === null

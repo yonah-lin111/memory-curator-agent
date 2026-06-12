@@ -284,6 +284,11 @@ const AppContent = (): React.JSX.Element => {
               onDeleteChatTurn={handleDeleteChatTurn}
               onCommandExecute={handleCommandExecute}
               onModelChange={setSelectedAiModel}
+              chatSessions={chatSessions}
+              onActiveSessionChange={setActiveChatId}
+              hasMoreChatSessions={hasMoreChatSessions}
+              isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+              onLoadMoreChatSessions={handleLoadMoreChatSessions}
             />
           </div>
         </div>

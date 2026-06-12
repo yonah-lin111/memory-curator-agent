@@ -19,6 +19,7 @@ vi.mock('@/components/ui/Toast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
 }))
 import type {
+  AiChatSession,
   AiModelProviderOption,
   AiModelSelection
 } from '@/features/ai-chat/types'
@@ -52,7 +53,9 @@ const selectedModel: AiModelSelection = {
 const renderAiChatInput = (
   onCommandExecute: (command: AiChatInputCommandId) => string | void | Promise<string | void> = () => undefined,
   isGenerating = false,
-  onSendMessage: (payload: AiChatSendPayload) => void = () => undefined
+  onSendMessage: (payload: AiChatSendPayload) => void = () => undefined,
+  chatSessions: any[] = [],
+  onActiveSessionChange: (sessionId: string) => void = () => undefined
 ): void => {
   render(
     <AiChatInput
@@ -65,6 +68,8 @@ const renderAiChatInput = (
       onSendMessage={onSendMessage}
       onCommandExecute={onCommandExecute}
       onModelChange={() => undefined}
+      chatSessions={chatSessions}
+      onActiveSessionChange={onActiveSessionChange}
     />
   )
 }
@@ -220,10 +225,10 @@ describe('AiChatInput', () => {
     // 初始选中 /clear
     expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
 
-    // 上键循环，选中末项 /showContextTimeline
+    // 上键循环，选中末项 /session
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('option', { name: /\/session/ })).toHaveAttribute('aria-selected', 'true')
     })
 
     // 下键循环，返回首项 /clear
@@ -637,6 +642,8 @@ describe('AiChatInput', () => {
         onSendMessage={() => undefined}
         onCommandExecute={() => undefined}
         onModelChange={() => undefined}
+        chatSessions={[]}
+        onActiveSessionChange={() => undefined}
       />
     )
 
@@ -834,5 +841,56 @@ describe('AiChatInput', () => {
     // 手动修改输入内容，统计数字应消失
     fireEvent.change(textarea, { target: { value: '修改内容' } })
     expect(screen.queryByText(/History:/)).not.toBeInTheDocument()
+  })
+
+  it('输入 /session 时，能够渲染会话切换面板并通过关键字过滤和键盘切换会话', async () => {
+    const mockSessions: AiChatSession[] = [
+      { id: 'session-foo', title: 'Vue 对话', time: '10:00', messages: [{ id: 'm1', role: 'user', content: 'test', time: '10:00' }], status: 'completed' },
+      { id: 'session-bar', title: 'React 进阶', time: '11:00', messages: [], status: 'completed' }
+    ]
+    const onActiveSessionChange = vi.fn()
+
+    render(
+      <AiChatInput
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        contextUsagePercent={0}
+        contextTokens={0}
+        contextLimit={204800}
+        isGenerating={false}
+        onSendMessage={() => undefined}
+        onCommandExecute={() => undefined}
+        onModelChange={() => undefined}
+        chatSessions={mockSessions}
+        onActiveSessionChange={onActiveSessionChange}
+      />
+    )
+
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+
+    // 1. 输入 "/session"
+    fireEvent.change(textarea, { target: { value: '/session' } })
+    // 应该打开会话切换面板，由于还没有查询，匹配两个会话
+    expect(screen.getByLabelText('AI Session Selection Panel')).toBeInTheDocument()
+    expect(screen.getByText('Vue 对话')).toBeInTheDocument()
+    expect(screen.getByText('React 进阶')).toBeInTheDocument()
+
+    // 2. 输入 "/session react"
+    fireEvent.change(textarea, { target: { value: '/session react' } })
+    // 只保留 React 进阶 (异步等待 debounce 计时器)
+    await waitFor(() => {
+      expect(screen.queryByText('Vue 对话')).not.toBeInTheDocument()
+      expect(screen.getByText('React 进阶')).toBeInTheDocument()
+    })
+
+    // 3. 回车选中
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+
+    // 验证回调被触发
+    await waitFor(() => {
+      expect(onActiveSessionChange).toHaveBeenCalledWith('session-bar')
+    })
+    // 验证输入框被清空
+    expect(textarea).toHaveValue('')
   })
 })

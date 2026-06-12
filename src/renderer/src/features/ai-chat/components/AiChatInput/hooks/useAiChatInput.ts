@@ -26,11 +26,12 @@ import { useAiChatFiles } from "@/features/ai-chat/components/AiChatInput/hooks/
 import { useAiChatHistory } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatHistory";
 import { useAiChatMentions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatMentions";
 import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatModels";
+import { useAiChatSessions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatSessions";
 
 /**
  * useAiChatInput - 输入框总状态与逻辑总调度编排 Hook。
  *
- * 通过组合 useAiChatFiles, useAiChatHistory, useAiChatMentions, useAiChatModels 这 4 个微 Hook，
+ * 通过组合 useAiChatFiles, useAiChatHistory, useAiChatMentions, useAiChatModels 和 useAiChatSessions 这 5 个微 Hook，
  * 统筹管理所有事件、状态拼装及键盘交互按键拦截的分发。
  */
 export const useAiChatInput = (props: AiChatInputProps) => {
@@ -157,6 +158,28 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     handleModelChange,
   } = useAiChatModels(inputText, setInputText, modelOptions, textareaRef, resetHistoryCursor, onModelChange);
 
+  // 6. 引入 AI 快速切换会话 (/session) Micro Hook
+  const {
+    activeSessionIndex,
+    matchedSessions,
+    isSessionMode,
+    isSearching: isSearchingSessions,
+    setActiveSessionIndex,
+    selectSession,
+    moveActiveSession,
+    handleSessionScroll,
+  } = useAiChatSessions(
+    inputText,
+    setInputText,
+    props.chatSessions || [],
+    textareaRef,
+    resetHistoryCursor,
+    props.onActiveSessionChange || (() => undefined),
+    props.hasMoreChatSessions,
+    props.isLoadingMoreChatSessions,
+    props.onLoadMoreChatSessions,
+  );
+
   // 输入变化后的统一计算分发
   const handleInputChange = useCallback((
     e: React.ChangeEvent<HTMLTextAreaElement>,
@@ -170,8 +193,13 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     setActiveCommandIndex(0);
 
     const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+    const isNextSessionMode =
+      nextValue === "/session" ||
+      nextValue.startsWith("/session ") ||
+      nextValue === "/resume" ||
+      nextValue.startsWith("/resume ");
 
-    if (isNextModelMode) {
+    if (isNextModelMode || isNextSessionMode) {
       setIsCommandPanelOpen(false);
       closeAgentMentionPanel();
       return;
@@ -287,6 +315,13 @@ export const useAiChatInput = (props: AiChatInputProps) => {
       requestAnimationFrame(() => textareaRef.current?.focus());
       return;
     }
+    if (command.id === "session") {
+      const text = "/session ";
+      setInputText(text);
+      resetHistoryCursor();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
     if (isGenerating) {
       toast.warning("请等待 AI 输出完成");
       return;
@@ -359,6 +394,40 @@ export const useAiChatInput = (props: AiChatInputProps) => {
    * 处理输入框键盘按键事件，支持 Enter 键发送消息，Shift + Enter 换行。
    */
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (isSessionMode && matchedSessions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveActiveSession(1);
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveActiveSession(-1);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setInputText("");
+        resetHistoryCursor();
+        requestAnimationFrame(() => textareaRef.current?.focus());
+        return;
+      }
+
+      if (e.key === "Enter") {
+        if (e.nativeEvent.isComposing) {
+          return;
+        }
+        e.preventDefault();
+        const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0];
+        if (activeSession) {
+          selectSession(activeSession);
+        }
+        return;
+      }
+    }
+
     if (isModelMode && matchedModels.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -496,6 +565,11 @@ export const useAiChatInput = (props: AiChatInputProps) => {
       handleSend();
     }
   }, [
+    isSessionMode,
+    matchedSessions,
+    moveActiveSession,
+    activeSessionIndex,
+    selectSession,
     isModelMode,
     matchedModels,
     moveActiveModel,
@@ -639,6 +713,73 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     adjustTextareaHeight,
   ]);
 
+  /**
+   * 处理会话面板键盘事件，支持方向键切换、回车执行、Esc 关闭和 Backspace 退回。
+   */
+  const handleSessionPanelKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ): void => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActiveSession(1);
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActiveSession(-1);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setInputText("");
+      resetHistoryCursor();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0];
+      if (activeSession) {
+        selectSession(activeSession);
+      }
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const nextValue = inputText.slice(0, -1);
+      const nextMatchedCommands = getMatchedCommands(nextValue);
+      setInputText(nextValue);
+      resetHistoryCursor();
+
+      const isNextSessionMode =
+        nextValue === "/session" ||
+        nextValue.startsWith("/session ") ||
+        nextValue === "/resume" ||
+        nextValue.startsWith("/resume ");
+      if (isNextSessionMode) {
+        setActiveSessionIndex(0);
+      } else {
+        setActiveCommandIndex(0);
+        setIsCommandPanelOpen(
+          isCommandInput(nextValue) && nextMatchedCommands.length > 0,
+        );
+      }
+      requestAnimationFrame(adjustTextareaHeight);
+    }
+  }, [
+    moveActiveSession,
+    matchedSessions,
+    activeSessionIndex,
+    selectSession,
+    inputText,
+    resetHistoryCursor,
+    adjustTextareaHeight,
+  ]);
+
   return {
     textareaRef,
     fileInputRef,
@@ -650,6 +791,7 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     activeCommandIndex,
     activeModelIndex,
     activeAgentIndex,
+    activeSessionIndex,
     promptHistory,
     isBrowsingHistory,
     historyCursorRef,
@@ -660,6 +802,9 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     matchedCommands,
     isModelMode,
     matchedModels,
+    isSessionMode,
+    matchedSessions,
+    isSearchingSessions,
     matchedAgentMentions,
     isAgentPanelOpen,
     canSend,
@@ -672,6 +817,7 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     setActiveCommandIndex,
     setActiveModelIndex,
     setActiveAgentIndex,
+    setActiveSessionIndex,
 
     // 回调
     handleInputChange,
@@ -687,9 +833,12 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     handleSend,
     executeCommand,
     selectModel,
+    selectSession,
     selectAgentMention,
     handleCommandPanelKeyDown,
     handleModelPanelKeyDown,
+    handleSessionPanelKeyDown,
+    handleSessionScroll,
     handleModelChange,
     handleUploadFilesProxy,
   };

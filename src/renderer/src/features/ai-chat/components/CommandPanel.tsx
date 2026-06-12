@@ -1,4 +1,5 @@
 import type React from "react";
+import { useEffect, useRef } from "react";
 
 // 输入建议项接口。
 export interface SuggestionItem {
@@ -24,6 +25,8 @@ export interface CommandPanelProps<T extends SuggestionItem> {
   renderItem: (item: T, isActive: boolean) => React.ReactNode;
   // 键盘快捷键监听处理函数（可选，仅用于 slash 命令面板特殊的 keydown 处理）。
   onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+  // 滚动事件处理函数（可选，用于触底自动加载更多等）。
+  onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   // 自定义 ID 前缀，用于构建 aria-activedescendant 对应的元素 ID。
   idPrefix: string;
 }
@@ -40,21 +43,40 @@ export const CommandPanel = <T extends SuggestionItem>({
   onItemSelect,
   renderItem,
   onKeyDown,
+  onScroll,
   idPrefix,
 }: CommandPanelProps<T>): React.JSX.Element | null => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const activeItem = items[activeIndex] ?? items[0];
+
+  useEffect(() => {
+    if (!isOpen || !containerRef.current || !activeItem) {
+      return;
+    }
+
+    const activeEl = containerRef.current.querySelector(
+      `[id="${idPrefix}-${activeItem.id}"]`
+    ) as HTMLElement;
+
+    if (activeEl && typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex, activeItem, isOpen, idPrefix]);
+
   if (!isOpen || items.length === 0) {
     return null;
   }
 
-  const activeItem = items[activeIndex] ?? items[0];
-
   return (
     <div
+      ref={containerRef}
       role="listbox"
       aria-label={ariaLabel}
       aria-activedescendant={`${idPrefix}-${activeItem?.id}`}
       onKeyDown={onKeyDown}
-      className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-hidden rounded-[6px] border border-white/10 bg-[#303030] shadow-2xl outline-none"
+      onScroll={onScroll}
+      className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-y-auto max-h-[30vh] rounded-[6px] border border-white/10 bg-[#303030] shadow-2xl outline-none"
     >
       {items.map((item, index) => {
         const isActive = index === activeIndex;
