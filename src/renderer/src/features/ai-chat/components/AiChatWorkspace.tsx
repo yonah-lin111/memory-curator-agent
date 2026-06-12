@@ -763,79 +763,95 @@ export const AiChatWorkspace = ({
 
       {/* 消息区域容器：支持左右并排（两个列表）展示 */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* 左侧：消息列表 */}
-        <div
-          ref={messagesContainerRef}
-          style={{
-            paddingLeft: "1rem",
-            paddingRight: "1rem",
-          }}
-          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
-        >
-          <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
-            {session.messages.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
-                <div className="mb-2 text-base font-medium text-white/95">
-                  整理记忆与行动启发
-                </div>
-                <p className="max-w-md text-xs text-white/40 leading-relaxed">
-                  在此向 AI 提问。它可以基于你的 Today
-                  待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
-                </p>
-              </div>
-            ) : (
-              session.messages.map((message, index) => {
-                const isLast = index === session.messages.length - 1;
-                const isGenerating =
-                  isLast &&
-                  session.status === "running" &&
-                  message.role === "assistant";
-                const previousMessage = session.messages[index - 1];
-                const canRegenerate =
-                  message.role === "assistant" &&
-                  isLast &&
-                  message.id === latestAssistantMessageId &&
-                  previousMessage?.role === "user" &&
-                  session.status !== "running";
-                const shouldPinToTop = message.id === topPinnedUserId;
-
-                const isLastUser =
-                  message.role === "user" &&
-                  index === session.messages.length - 2;
-
-                return (
-                  <div
-                    key={message.id}
-                    ref={shouldPinToTop ? latestUserMessageRef : null}
-                  >
-                    <AiChatMessageBubble
-                      message={message}
-                      isLastUser={isLastUser}
-                      isGenerating={isGenerating}
-                      canRegenerate={canRegenerate}
-                      onSubmitAskAnswer={onSubmitAskAnswer}
-                      onSubmitToolConfirmationAnswer={
-                        onSubmitToolConfirmationAnswer
-                      }
-                      onOpenContextMenu={handleOpenMessageContextMenu}
-                      onEditAndResendUserMessage={onEditAndResendUserMessage}
-                      onThinkingBlockToggle={handleThinkingBlockToggle}
-                      onToolConfirmationToggle={handleThinkingBlockToggle}
-                      onUserEditStateChange={handleUserEditStateChange}
-                    />
+        {/* 左侧：消息区域（消息列表 + 输入区域） */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* 消息列表 */}
+          <div
+            ref={messagesContainerRef}
+            style={{
+              paddingLeft: "1rem",
+              paddingRight: "1rem",
+            }}
+            className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
+          >
+            <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
+              {session.messages.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
+                  <div className="mb-2 text-base font-medium text-white/95">
+                    整理记忆与行动启发
                   </div>
-                );
-              })
-            )}
-            {bottomSpacerHeight > 0 && (
-              <div
-                data-ai-chat-bottom-spacer="true"
-                style={{ height: `${bottomSpacerHeight}px` }}
-                className="flex-shrink-0"
-              />
-            )}
-            <div ref={messagesEndRef} />
+                  <p className="max-w-md text-xs text-white/40 leading-relaxed">
+                    在此向 AI 提问。它可以基于你的 Today
+                    待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
+                  </p>
+                </div>
+              ) : (
+                session.messages.map((message, index) => {
+                  const isLast = index === session.messages.length - 1;
+                  const isGenerating =
+                    isLast &&
+                    session.status === "running" &&
+                    message.role === "assistant";
+                  const previousMessage = session.messages[index - 1];
+                  const canRegenerate =
+                    message.role === "assistant" &&
+                    isLast &&
+                    message.id === latestAssistantMessageId &&
+                    previousMessage?.role === "user" &&
+                    session.status !== "running";
+                  const shouldPinToTop = message.id === topPinnedUserId;
+
+                  const isLastUser =
+                    message.role === "user" &&
+                    index === session.messages.length - 2;
+
+                  return (
+                    <div
+                      key={message.id}
+                      ref={shouldPinToTop ? latestUserMessageRef : null}
+                    >
+                      <AiChatMessageBubble
+                        message={message}
+                        isLastUser={isLastUser}
+                        isGenerating={isGenerating}
+                        canRegenerate={canRegenerate}
+                        onSubmitAskAnswer={onSubmitAskAnswer}
+                        onSubmitToolConfirmationAnswer={
+                          onSubmitToolConfirmationAnswer
+                        }
+                        onOpenContextMenu={handleOpenMessageContextMenu}
+                        onEditAndResendUserMessage={onEditAndResendUserMessage}
+                        onThinkingBlockToggle={handleThinkingBlockToggle}
+                        onToolConfirmationToggle={handleThinkingBlockToggle}
+                        onUserEditStateChange={handleUserEditStateChange}
+                      />
+                    </div>
+                  );
+                })
+              )}
+              {bottomSpacerHeight > 0 && (
+                <div
+                  data-ai-chat-bottom-spacer="true"
+                  style={{ height: `${bottomSpacerHeight}px` }}
+                  className="flex-shrink-0"
+                />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
           </div>
+
+          {/* 输入区域 */}
+          <AiChatInput
+            modelOptions={modelOptions}
+            selectedModel={selectedModel}
+            contextUsagePercent={contextBudget.usagePercent}
+            contextTokens={contextBudget.totalTokens}
+            contextLimit={contextBudget.contextLimit}
+            isGenerating={session.status === "running"}
+            onSendMessage={onSendMessage}
+            onCommandExecute={onCommandExecute}
+            onModelChange={onModelChange}
+          />
         </div>
 
         {/* 右侧：上下文时间线 */}
@@ -859,19 +875,6 @@ export const AiChatWorkspace = ({
           onEdit={messageContextMenu.onEdit ? handleEdit : undefined}
         />
       ) : null}
-
-      {/* 输入区域 */}
-      <AiChatInput
-        modelOptions={modelOptions}
-        selectedModel={selectedModel}
-        contextUsagePercent={contextBudget.usagePercent}
-        contextTokens={contextBudget.totalTokens}
-        contextLimit={contextBudget.contextLimit}
-        isGenerating={session.status === "running"}
-        onSendMessage={onSendMessage}
-        onCommandExecute={onCommandExecute}
-        onModelChange={onModelChange}
-      />
     </section>
   );
 };
