@@ -319,9 +319,9 @@ export const useAiChatInput = (props: AiChatInputProps) => {
         return 0;
       }
 
-      return Math.max(
-        0,
-        Math.min(currentIndex + direction, matchedCommands.length - 1),
+      return (
+        (currentIndex + direction + matchedCommands.length) %
+        matchedCommands.length
       );
     });
   }, [matchedCommands.length]);

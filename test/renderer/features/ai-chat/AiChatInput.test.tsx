@@ -200,7 +200,7 @@ describe('AiChatInput', () => {
     expect(onCommandExecute).toHaveBeenCalledWith('showContextTimeline')
   })
 
-  it('命令面板上下键在首/末项边界截断，不循环', async () => {
+  it('命令面板上下键循环选择', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
     const textarea = screen.getByLabelText('AI Chat Input Area')
@@ -220,34 +220,50 @@ describe('AiChatInput', () => {
     // 初始选中 /clear
     expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
 
-    // 上键在首项截断，仍选中 /clear
+    // 上键循环，选中末项 /showContextTimeline
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 下键循环，返回首项 /clear
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     await waitFor(() => {
       expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
     })
+  })
 
-    // 下键移到 /undo
-    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
-    await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/undo/ })).toHaveAttribute('aria-selected', 'true')
+  it('Agent 提及面板上下键循环选择', async () => {
+    renderAiChatInput()
+    const textarea = screen.getByLabelText('AI Chat Input Area')
+    textarea.focus()
+
+    fireEvent.change(textarea, {
+      target: {
+        value: '@'
+      }
     })
 
-    // 下键移到 /model
-    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    const agentListBox = screen.getByRole('listbox', { name: 'AI Agent Mention Panel' })
+    await waitFor(() => expect(agentListBox).toBeInTheDocument())
+
+    const options = screen.getAllByRole('option')
+    const firstOption = options[0]
+    const lastOption = options[options.length - 1]
+
+    // 初始选中首项
+    expect(firstOption).toHaveAttribute('aria-selected', 'true')
+
+    // 上键循环选择末项
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/model/ })).toHaveAttribute('aria-selected', 'true')
+      expect(lastOption).toHaveAttribute('aria-selected', 'true')
     })
 
-    // 下键移到 /showContextTimeline
+    // 下键循环选择首项
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toHaveAttribute('aria-selected', 'true')
-    })
-
-    // 下键在末项截断，仍选中 /showContextTimeline
-    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
-    await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toHaveAttribute('aria-selected', 'true')
+      expect(firstOption).toHaveAttribute('aria-selected', 'true')
     })
   })
 

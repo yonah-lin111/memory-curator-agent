@@ -96,9 +96,9 @@ export const useAiChatMentions = (
         return 0;
       }
 
-      return Math.max(
-        0,
-        Math.min(currentIndex + direction, matchedAgentMentions.length - 1),
+      return (
+        (currentIndex + direction + matchedAgentMentions.length) %
+        matchedAgentMentions.length
       );
     });
   }, [matchedAgentMentions.length]);
