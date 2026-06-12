@@ -1,3 +1,29 @@
+# Context Usage Tooltip Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the custom, primitive local group-hover token tooltip in `ContextUsageCircle` with the high-fidelity `@/components/ui/Tooltip` component.
+
+**Architecture:** Use `@/components/ui/Tooltip` as a wrapper around the token progress circle trigger, specifying `content={contextTooltipLabel}` and `placement="top"`.
+
+**Tech Stack:** React, Tailwind CSS, TypeScript
+
+---
+
+### Task 1: Refactor ContextUsageCircle Component
+
+**Files:**
+- Modify: `src/renderer/src/features/ai-chat/components/AiChatInput/components/ContextUsageCircle.tsx`
+
+- [ ] **Step 1: Check existing ContextUsageCircle implementation**
+
+Verify imports and structure of `src/renderer/src/features/ai-chat/components/AiChatInput/components/ContextUsageCircle.tsx`.
+
+- [ ] **Step 2: Apply Tooltip wrapper and remove custom div**
+
+Refactor the component to import and wrap the element inside `<Tooltip>`.
+
+```tsx
 import type React from "react";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -79,3 +105,9 @@ export const ContextUsageCircle = ({
     </Tooltip>
   );
 };
+```
+
+- [ ] **Step 3: Run typescript check to verify no syntax or module import errors**
+
+Run: `pnpm typecheck`
+Expected: PASS with no compilation errors.
