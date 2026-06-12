@@ -157,7 +157,7 @@ const AppContent = (): React.JSX.Element => {
   const handleCommandExecute = (
     command: AiChatInputCommandId,
   ): string | void | Promise<string | void> => {
-    if (command === "contextTimeline") {
+    if (command === "showContextTimeline") {
       setIsContextTimelineOpen((prev) => !prev);
       return;
     }

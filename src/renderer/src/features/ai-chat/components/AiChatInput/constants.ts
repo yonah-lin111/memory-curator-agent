@@ -24,8 +24,8 @@ export const AI_CHAT_INPUT_COMMANDS: AiChatInputCommand[] = [
     addToContext: false,
   },
   {
-    id: "contextTimeline",
-    name: "/contextTimeline",
+    id: "showContextTimeline",
+    name: "/showContextTimeline",
     aliases: [],
     description: "显示或隐藏上下文时间线",
     addToContext: false,
