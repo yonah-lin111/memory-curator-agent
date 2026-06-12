@@ -137,16 +137,6 @@ const groupItemsByQaTurn = (items: AiChatContextItem[]): QaTurn[] => {
 };
 
 /**
- * 格式化时间戳为精确到秒的时间点字符串 (HH:mm:ss)。
- */
-const formatTimePoint = (timestamp: number): string => {
-  if (!timestamp) return "";
-  const d = new Date(timestamp);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-};
-
-/**
  * AiChatContextTimeline - 以两个聊天列表形式展示在消息列表右侧的上下文调试时间线。
  */
 export const AiChatContextTimeline = ({
@@ -355,11 +345,11 @@ export const AiChatContextTimeline = ({
                         {titleText}
                       </span>
                       <span className="shrink-0 font-mono text-[11px] text-white/35 flex items-center gap-1.5">
-                        <span>{formatTimePoint(turn.createdAt)}</span>
-                        <span className="text-white/10">|</span>
                         <span>
                           {turn.tokens.toLocaleString("zh-CN")} tokens
                         </span>
+                        <span className="text-white/10">|</span>
+                        <span>{`${(turn.assistantMessage?.createdAt ?? turn.createdAt) / 1000}s`}</span>
                       </span>
                     </div>
 
@@ -400,13 +390,6 @@ export const AiChatContextTimeline = ({
                                 <div className="flex items-center gap-1.5 text-[11px] text-white/35 font-mono select-none">
                                   <User className="h-3 w-3 shrink-0" />
                                   <span>用户消息</span>
-                                  <span className="text-white/20">
-                                    (
-                                    {formatTimePoint(
-                                      turn.userMessage.createdAt,
-                                    )}
-                                    )
-                                  </span>
                                   <span className="ml-auto text-white/20">
                                     {turn.userMessage.tokens} tokens
                                   </span>
@@ -473,13 +456,6 @@ export const AiChatContextTimeline = ({
                               <FileText className="h-3 w-3 shrink-0 text-blue-400/70" />
                               <span>
                                 注入上下文 ({turn.injectedContexts.length} 项)
-                              </span>
-                              <span className="text-white/20">
-                                (
-                                {formatTimePoint(
-                                  turn.injectedContexts[0].createdAt,
-                                )}
-                                )
                               </span>
                             </div>
                             <div className="mt-1 flex flex-col gap-1.5 select-text">
@@ -608,9 +584,6 @@ export const AiChatContextTimeline = ({
                                         <span>
                                           Tool:{" "}
                                           {String(tool.meta?.tool || "unknown")}
-                                        </span>
-                                        <span className="text-white/20">
-                                          ({formatTimePoint(tool.createdAt)})
                                         </span>
                                         <span className="ml-auto text-white/20">
                                           {tool.tokens} tokens
@@ -797,9 +770,6 @@ export const AiChatContextTimeline = ({
                                       Tool:{" "}
                                       {String(tool.meta?.tool || "unknown")}
                                     </span>
-                                    <span className="text-white/20">
-                                      ({formatTimePoint(tool.createdAt)})
-                                    </span>
                                     <span className="ml-auto text-white/20">
                                       {tool.tokens} tokens
                                     </span>
@@ -863,14 +833,7 @@ export const AiChatContextTimeline = ({
                             <div className="absolute left-[-16px] top-1.5 flex h-1.5 w-1.5 items-center justify-center rounded-full bg-purple-500/50 ring-[3px] ring-[#161616]" />
                             <div className="flex items-center gap-1.5 text-[11px] text-purple-400/80 font-mono select-none">
                               <Bot className="h-3 w-3 shrink-0" />
-                              <span>助手回复</span>
-                              <span className="text-white/20">
-                                (
-                                {formatTimePoint(
-                                  turn.assistantMessage.createdAt,
-                                )}
-                                )
-                              </span>
+                              <span>{fullMessage?.model || "助手回复"}</span>
                               <span className="ml-auto text-white/20">
                                 {turn.assistantMessage.tokens} tokens
                               </span>
