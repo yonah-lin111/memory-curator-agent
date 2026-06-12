@@ -54,7 +54,10 @@ const calculateBottomSpacerHeight = (
 
   return Math.max(
     0,
-    targetScrollTop + viewportHeight - container.scrollHeight + currentSpacerHeight,
+    targetScrollTop +
+      viewportHeight -
+      container.scrollHeight +
+      currentSpacerHeight,
   );
 };
 
@@ -91,7 +94,9 @@ type AiChatWorkspaceProps = {
   // 发送消息回调。
   onSendMessage: (payload: AiChatSendPayload) => void;
   // 提交 Ask 回答回调。
-  onSubmitAskAnswer: (payload: AiAskAnswerSubmitPayload) => void | Promise<void>;
+  onSubmitAskAnswer: (
+    payload: AiAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
   // 提交工具确认回答回调。
   onSubmitToolConfirmationAnswer?: (
     payload: AiToolConfirmationAnswerSubmitPayload,
@@ -99,7 +104,10 @@ type AiChatWorkspaceProps = {
   // 重新生成最新 AI 回答回调。
   onRegenerateLatestAnswer: () => void;
   // 编辑并重新发送用户消息回调。
-  onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
+  onEditAndResendUserMessage?: (
+    messageId: string,
+    text: string,
+  ) => void | Promise<void>;
   // 删除指定消息所属 QA 回调。
   onDeleteChatTurn: (messageId: string) => void;
   // 执行输入框命令回调。
@@ -135,9 +143,7 @@ export const AiChatWorkspace = ({
   // 最新用户消息外层节点引用。
   const latestUserMessageRef = useRef<HTMLDivElement>(null);
   // 需要置顶显示的最新用户消息标识。
-  const [topPinnedUserId, setTopPinnedUserId] = useState<
-    string | null
-  >(null);
+  const [topPinnedUserId, setTopPinnedUserId] = useState<string | null>(null);
   // 动态底部间距高度，确保最新用户消息置顶时，AI 回答底部刚好贴合视口底部。
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState<number>(0);
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
@@ -341,7 +347,10 @@ export const AiChatWorkspace = ({
   /**
    * 将消息容器滚动到底部。
    */
-  const scrollMessagesToBottom = (behavior: ScrollBehavior, onComplete?: () => void): void => {
+  const scrollMessagesToBottom = (
+    behavior: ScrollBehavior,
+    onComplete?: () => void,
+  ): void => {
     const container = messagesContainerRef.current;
     if (!container) {
       onComplete?.();
@@ -354,7 +363,10 @@ export const AiChatWorkspace = ({
   /**
    * 将最新用户问题滚动到消息视口顶部。
    */
-  const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void): void => {
+  const scrollLatestUserToTop = (
+    behavior: ScrollBehavior,
+    onComplete?: () => void,
+  ): void => {
     const container = messagesContainerRef.current;
     const userMessage = latestUserMessageRef.current;
     if (!container || !userMessage) {
@@ -370,7 +382,7 @@ export const AiChatWorkspace = ({
     console.log("DEBUG scrollLatestUserToTop:", {
       userMessageOffsetTop: userMessage.offsetTop,
       userMessageText: userMessage.textContent,
-      targetTop
+      targetTop,
     });
     scrollMessagesToPosition(targetTop, behavior, onComplete);
   };
@@ -490,7 +502,12 @@ export const AiChatWorkspace = ({
   useEffect(() => {
     const container = messagesContainerRef.current;
     const userMessage = latestUserMessageRef.current;
-    if (!topPinnedUserId || !container || !userMessage || !window.ResizeObserver) {
+    if (
+      !topPinnedUserId ||
+      !container ||
+      !userMessage ||
+      !window.ResizeObserver
+    ) {
       return undefined;
     }
 
@@ -602,7 +619,10 @@ export const AiChatWorkspace = ({
     }
 
     // 确保置顶消息存在，且属于当前会话，避免切换会话时由于状态滞后对旧消息执行多余定位
-    if (!topPinnedUserId || !session.messages.some((m) => m.id === topPinnedUserId)) {
+    if (
+      !topPinnedUserId ||
+      !session.messages.some((m) => m.id === topPinnedUserId)
+    ) {
       prevScrolledPinnedUserIdRef.current = null;
       return;
     }
@@ -750,13 +770,17 @@ export const AiChatWorkspace = ({
             paddingLeft: "1rem",
             paddingRight: "1rem",
           }}
-          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col gap-4 min-w-0 transition-all duration-300 ease-in-out"
+          className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
         >
+          <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
             {session.messages.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none">
-                <div className="mb-2 text-base font-medium text-white/95">整理记忆与行动启发</div>
+                <div className="mb-2 text-base font-medium text-white/95">
+                  整理记忆与行动启发
+                </div>
                 <p className="max-w-md text-xs text-white/40 leading-relaxed">
-                  在此向 AI 提问。它可以基于你的 Today 待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
+                  在此向 AI 提问。它可以基于你的 Today
+                  待办、随记和日记草稿等上下文，为你梳理核心记忆线索并生成具体行动建议。
                 </p>
               </div>
             ) : (
@@ -775,7 +799,9 @@ export const AiChatWorkspace = ({
                   session.status !== "running";
                 const shouldPinToTop = message.id === topPinnedUserId;
 
-                const isLastUser = message.role === "user" && index === session.messages.length - 2;
+                const isLastUser =
+                  message.role === "user" &&
+                  index === session.messages.length - 2;
 
                 return (
                   <div
@@ -810,6 +836,7 @@ export const AiChatWorkspace = ({
             )}
             <div ref={messagesEndRef} />
           </div>
+        </div>
 
         {/* 右侧：上下文时间线 */}
         <AiChatContextTimeline

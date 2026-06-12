@@ -440,9 +440,7 @@ describe('AiChatWorkspace', () => {
     Object.defineProperty(messagesContainer, 'scrollHeight', {
       configurable: true,
       get: () => {
-        const spacer = Array.from(messagesContainer.children).find((child) =>
-          child instanceof HTMLElement && child.style.height.endsWith('px')
-        )
+        const spacer = messagesContainer.querySelector('[data-ai-chat-bottom-spacer="true"]') as HTMLElement | null
         const spacerHeight =
           spacer instanceof HTMLElement ? Number.parseFloat(spacer.style.height) || 0 : 0
 
@@ -465,11 +463,9 @@ describe('AiChatWorkspace', () => {
     )
 
     const getSpacerHeight = () => {
-      const spacer = Array.from(messagesContainer.children).find((child) =>
-        child instanceof HTMLElement && child.style.height.endsWith('px')
-      )
+      const spacer = messagesContainer.querySelector('[data-ai-chat-bottom-spacer="true"]') as HTMLElement | null
 
-      return spacer instanceof HTMLElement ? Number.parseFloat(spacer.style.height) : 0
+      return spacer ? Number.parseFloat(spacer.style.height) : 0
     }
 
     await waitFor(() => {

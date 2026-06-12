@@ -1,5 +1,10 @@
 import type React from "react";
-import { Paperclip, RotateCcw, SendHorizontal, SlidersHorizontal } from "lucide-react";
+import {
+  Paperclip,
+  RotateCcw,
+  SendHorizontal,
+  SlidersHorizontal,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import type { AiChatInputProps } from "@/features/ai-chat/components/AiChatInput/types";
@@ -78,7 +83,7 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2"
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full"
       >
         <input
           type="file"
@@ -110,14 +115,12 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
           onActiveCommandIndexChange={setActiveCommandIndex}
           onCommandSelect={executeCommand}
           onCommandPanelKeyDown={handleCommandPanelKeyDown}
-
           isModelMode={isModelMode}
           matchedModels={matchedModels}
           activeModelIndex={activeModelIndex}
           onActiveModelIndexChange={setActiveModelIndex}
           onModelSelect={selectModel}
           onModelPanelKeyDown={handleModelPanelKeyDown}
-
           isAgentPanelOpen={isAgentPanelOpen}
           matchedAgentMentions={matchedAgentMentions}
           activeAgentIndex={activeAgentIndex}
