@@ -181,7 +181,7 @@ describe('AiChatInput', () => {
     expect(onCommandExecute).toHaveBeenCalledWith('clear')
   })
 
-  it('支持 /showContextTimeline 命令匹配与触发', async () => {
+  it('支持 /contextTimeline 命令匹配与触发', async () => {
     const onCommandExecute = vi.fn()
     renderAiChatInput(onCommandExecute)
     const textarea = screen.getByLabelText('AI Chat Input Area')
@@ -189,15 +189,15 @@ describe('AiChatInput', () => {
 
     fireEvent.change(textarea, {
       target: {
-        value: '/show'
+        value: '/context'
       }
     })
 
-    await waitFor(() => expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('option', { name: /\/contextTimeline/ })).toBeInTheDocument())
     fireEvent.keyDown(textarea, {
       key: 'Enter'
     })
-    expect(onCommandExecute).toHaveBeenCalledWith('showContextTimeline')
+    expect(onCommandExecute).toHaveBeenCalledWith('contextTimeline')
   })
 
   it('命令面板上下键循环选择', async () => {
@@ -220,10 +220,10 @@ describe('AiChatInput', () => {
     // 初始选中 /clear
     expect(screen.getByRole('option', { name: /\/clear/ })).toHaveAttribute('aria-selected', 'true')
 
-    // 上键循环，选中末项 /showContextTimeline
+    // 上键循环，选中末项 /contextTimeline
     fireEvent.keyDown(textarea, { key: 'ArrowUp' })
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: /\/showContextTimeline/ })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('option', { name: /\/contextTimeline/ })).toHaveAttribute('aria-selected', 'true')
     })
 
     // 下键循环，返回首项 /clear
