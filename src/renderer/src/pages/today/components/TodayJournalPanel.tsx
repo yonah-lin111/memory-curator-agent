@@ -49,7 +49,7 @@ export const TodayJournalPanel = ({
       <div className="p-1">
         <MarkdownEditor
           className="notes-markdown-editor"
-          height={560}
+          height={"77vh"}
           id="today-journal-editor"
           placeholder="写下今天的日记与主观感受..."
           value={journalContent}
