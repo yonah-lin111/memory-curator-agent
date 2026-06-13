@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { FileText, X } from "lucide-react";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
@@ -181,6 +181,29 @@ export const TextFile = ({
   const extension = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
   const iconColor = TEXT_EXTENSION_COLORS[extension] ?? "text-white/50";
 
+  const isBackdropMouseDownRef = useRef(false);
+
+  /**
+   * 监听遮罩层按下，判断是否是背景本身。
+   */
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
+    if (e.target === e.currentTarget) {
+      isBackdropMouseDownRef.current = true;
+    } else {
+      isBackdropMouseDownRef.current = false;
+    }
+  }, []);
+
+  /**
+   * 监听遮罩层松开，若按下与松开均在背景本身，则关闭预览。
+   */
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
+    if (isBackdropMouseDownRef.current && e.target === e.currentTarget) {
+      setShowPreview(false);
+    }
+    isBackdropMouseDownRef.current = false;
+  }, []);
+
   // 关闭预览时重置状态。
   useEffect(() => {
     if (!showPreview) {
@@ -258,8 +281,9 @@ export const TextFile = ({
       {showPreview && (
         <div
           data-testid="text-file-preview"
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-          onClick={() => setShowPreview(false)}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm whitespace-normal"
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
         >
           {/* 标题栏 */}
           <div
