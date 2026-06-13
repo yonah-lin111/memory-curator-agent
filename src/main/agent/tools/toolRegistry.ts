@@ -2,10 +2,12 @@ import { createPeopleTools } from '@/agent/tools/peopleTool'
 import { createTodoTools } from '@/agent/tools/todoTool'
 import { createSnippetTools } from '@/agent/tools/snippetTool'
 import { createNoteTools } from '@/agent/tools/noteTool'
+import { createJournalTools } from '@/agent/tools/journalTool'
 import { createDateOffsetTool, createTimeNowTool } from '@/agent/tools/commonTimeTool'
 import { createAskTool } from '@/agent/tools/askTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
 import type { NotesService } from '@/services/notesService'
+import type { JournalsService } from '@/services/journalsService'
 import type { PeopleService } from '@/services/peopleService'
 import type { TodosService } from '@/services/todosService'
 import type { SnippetsService } from '@/services/snippetsService'
@@ -14,6 +16,8 @@ import type { SnippetsService } from '@/services/snippetsService'
 export type AgentToolRegistryContext = {
   // Notes 服务。
   notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delete'>
+  // Journals 服务。
+  journalsService: Pick<JournalsService, 'querySql' | 'save' | 'delete'>
   // People 服务。
   peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'>
   // Todos 服务。
@@ -49,6 +53,7 @@ export type AgentToolRegistry = {
 const builtinToolFactories: AgentToolFactory[] = [
   () => createAskTool(),
   ({ notesService }) => createNoteTools(notesService),
+  ({ journalsService }) => createJournalTools(journalsService),
   ({ peopleService }) => createPeopleTools(peopleService),
   ({ todosService }) => createTodoTools(todosService),
   ({ snippetsService }) => createSnippetTools(snippetsService),

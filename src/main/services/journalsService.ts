@@ -28,6 +28,8 @@ export type JournalsService = {
   save: (input: JournalSaveInput) => JournalItem
   // 删除日记。
   delete: (entryDate: string) => void
+  // 执行只读 SQL 查询。
+  querySql: (sql: string) => unknown[]
 }
 
 /**
@@ -132,5 +134,8 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
   delete: (entryDate) => {
     validateEntryDate(entryDate)
     database.prepare('DELETE FROM journals WHERE entry_date = ?').run(entryDate)
+  },
+  querySql: (sql) => {
+    return database.prepare(sql).all()
   }
 })

@@ -1,4 +1,4 @@
-import { AssociatedPersonItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
+import { AssociatedPersonItem, JournalItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -492,6 +492,34 @@ export type NoteQueryToolItem = Pick<
 export type NoteQueryToolResult = AgentToolResult & {
   // 命中的笔记条目。
   items: NoteQueryToolItem[]
+  // SQL 查询返回的原始行。
+  rows?: unknown[]
+}
+
+// Journal 查询工具入参。
+export type JournalQueryToolInput = {
+  // 搜索关键字（LIKE 匹配 content 字段）。
+  query?: string
+  // 日记所属日期（精确匹配 YYYY-MM-DD）。
+  entryDate?: string
+  // 日期前缀匹配（如 2026-06 匹配六月全部日记）。
+  datePrefix?: string
+  // 只读 SQL 查询。
+  sql?: string
+  // 返回数量上限。
+  limit?: number
+}
+
+// Journal 查询工具返回项。
+export type JournalQueryToolItem = Pick<
+  JournalItem,
+  'id' | 'entryDate' | 'content' | 'createdAt' | 'updatedAt'
+>
+
+// Journal 查询工具返回结果。
+export type JournalQueryToolResult = AgentToolResult & {
+  // 命中的日记条目。
+  items: JournalQueryToolItem[]
   // SQL 查询返回的原始行。
   rows?: unknown[]
 }
