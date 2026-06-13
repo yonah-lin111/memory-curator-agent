@@ -1,4 +1,4 @@
-import { AssociatedPersonItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
+import { AssociatedPersonItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -462,6 +462,36 @@ export type SnippetQueryToolItem = Pick<
 export type SnippetQueryToolResult = AgentToolResult & {
   // 命中的片段条目。
   items: SnippetQueryToolItem[]
+  // SQL 查询返回的原始行。
+  rows?: unknown[]
+}
+
+// Note 查询工具入参。
+export type NoteQueryToolInput = {
+  // 搜索关键字（LIKE 匹配 title 或 content 字段）。
+  query?: string
+  // 来源过滤。
+  source?: string
+  // 标签包含条件。
+  tag?: string
+  // 是否已策展归档。
+  isCurated?: boolean
+  // 只读 SQL 查询。
+  sql?: string
+  // 返回数量上限。
+  limit?: number
+}
+
+// Note 查询工具返回项。
+export type NoteQueryToolItem = Pick<
+  NoteMaterialItem,
+  'id' | 'title' | 'content' | 'source' | 'tags' | 'time' | 'isCurated' | 'clue'
+>
+
+// Note 查询工具返回结果。
+export type NoteQueryToolResult = AgentToolResult & {
+  // 命中的笔记条目。
+  items: NoteQueryToolItem[]
   // SQL 查询返回的原始行。
   rows?: unknown[]
 }

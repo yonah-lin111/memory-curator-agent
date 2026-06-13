@@ -26,6 +26,8 @@ export type NotesService = {
   update: (id: number, input: NoteUpdateInput) => NoteMaterialItem
   // 删除笔记。
   delete: (id: number) => void
+  // 执行只读 SQL 查询。
+  querySql: (sql: string) => unknown[]
 }
 
 /**
@@ -157,5 +159,8 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
   },
   delete: (id) => {
     database.prepare('DELETE FROM notes WHERE id = ?').run(id)
+  },
+  querySql: (sql) => {
+    return database.prepare(sql).all()
   }
 })

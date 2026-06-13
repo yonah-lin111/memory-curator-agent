@@ -1,9 +1,36 @@
 import { describe, expect, it } from 'vitest'
 import { createAgentToolRegistry, prepareToolsForModel, selectToolsForTurn } from '@/agent/tools/toolRegistry'
 import type { AgentTool } from '@/agent/types'
+import type { NotesService } from '@/services/notesService'
 import type { PeopleService } from '@/services/peopleService'
 import type { TodosService } from '@/services/todosService'
 import type { SnippetsService } from '@/services/snippetsService'
+
+// Notes 服务桩。
+const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delete'> = {
+  querySql: () => [],
+  create: (input) => ({
+    id: 1,
+    title: input.title,
+    content: input.content,
+    source: input.source,
+    tags: input.tags,
+    time: '2026-06-13 10:00',
+    isCurated: false,
+    clue: '可能关联主题「Markdown 新素材」'
+  }),
+  update: (id, input) => ({
+    id,
+    title: input.title,
+    content: input.content,
+    source: input.source,
+    tags: input.tags,
+    time: '2026-06-13 10:00',
+    isCurated: false,
+    clue: '可能关联主题「Markdown 新素材」'
+  }),
+  delete: () => undefined
+}
 
 // People 服务桩。
 const peopleService: Pick<PeopleService, 'list' | 'querySql' | 'create' | 'update' | 'delete'> = {
@@ -93,6 +120,7 @@ const createTestTool = (name: string): AgentTool => ({
 describe('toolRegistry', () => {
   it('集中注册内置工具并支持按名称读取', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -100,6 +128,13 @@ describe('toolRegistry', () => {
 
     expect(registry.ids()).toEqual([
       'common_tool_ask',
+      'notes_tool_query',
+      'notes_tool_add',
+      'notes_tool_update',
+      'notes_tool_delete',
+      'notes_tool_batch_add',
+      'notes_tool_batch_update',
+      'notes_tool_batch_delete',
       'people_tool_query',
       'people_tool_add',
       'people_tool_update',
@@ -126,19 +161,24 @@ describe('toolRegistry', () => {
     ])
     expect(registry.get('common_tool_ask')?.description).toContain('structured clarification')
     expect(registry.get('common_tool.explain')).toBeUndefined()
+    expect(registry.get('notes_tool_query')?.description).toContain('Notes table')
+    expect(registry.get('notes_tool_add')?.description).toContain('Create a note')
+    expect(registry.get('notes_tool_update')?.description).toContain('Update an existing note')
+    expect(registry.get('notes_tool_delete')?.description).toContain('Delete an existing note')
     expect(registry.get('people_tool_query')?.description).toContain('People table')
     expect(registry.get('people_tool_add')?.description).toContain('Create a people profile')
     expect(registry.get('people_tool_update')?.description).toContain('Update an existing people profile')
     expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(24)
+    expect(registry.all()).toHaveLength(31)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
     expect(() =>
       createAgentToolRegistry(
         {
+          notesService,
           peopleService,
           todosService,
           snippetsService
@@ -184,6 +224,7 @@ describe('toolRegistry', () => {
 
   it('people_tool_query 使用结构化 prompt 元数据', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -199,6 +240,7 @@ describe('toolRegistry', () => {
 
   it('common_tool_ask 使用结构化 prompt 并每轮常驻', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -213,6 +255,7 @@ describe('toolRegistry', () => {
 
   it('people 写入工具声明内部确认配置', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -228,6 +271,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，普通闲聊不再硬过滤 People 工具', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -240,6 +284,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，当前时间工具无需关键词硬注入', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -250,6 +295,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，日期偏移工具无需关键词硬注入', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -260,6 +306,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，人物关系问题不再依赖硬过滤注入 query', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -272,6 +319,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，亲密关系称谓不再依赖硬过滤注入 query', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -284,6 +332,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，人物写入工具不再依赖关键词注入', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -302,6 +351,7 @@ describe('toolRegistry', () => {
 
   it('注册工具默认对模型可见，人物恢复不再依赖关键词注入 add', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
@@ -312,6 +362,7 @@ describe('toolRegistry', () => {
 
   it('工具回灌后的后续轮仍保留完整注册工具面', () => {
     const registry = createAgentToolRegistry({
+      notesService,
       peopleService,
       todosService,
       snippetsService
