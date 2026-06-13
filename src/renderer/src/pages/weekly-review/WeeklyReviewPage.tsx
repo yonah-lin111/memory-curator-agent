@@ -426,276 +426,297 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     >
       <div className="flex-1 flex flex-col gap-6 pr-1">
         {/* 1. 上部面板：数据透视 (Dashboard) */}
-      <div className="w-full flex flex-col bg-[#000000]">
-        <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-white/60" />
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-              数据透视 (Dashboard)
-            </h3>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {/* 卡片 1: 周数据透视 (独占一行，高度自适应，内部卡片水平排列) */}
-          <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-auto relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-4 w-4 text-white/60" />
-              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                周数据透视
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">待办完成率</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-2xl font-bold text-white/90 leading-none">{stats.completionRate}%</span>
-                  <span className="text-xs text-white/30 font-mono leading-none">{stats.completedTodos} / {stats.totalTodos}</span>
-                </div>
-              </div>
-              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">知识沉淀</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-2xl font-bold text-white/90 leading-none">{stats.totalSnippets}</span>
-                  <span className="text-xs text-white/30 font-mono leading-none">个片段捕获</span>
-                </div>
-              </div>
-              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">日记连续性</span>
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-2xl font-bold text-white/90 leading-none">{stats.journalsCount}/7</span>
-                  <span className="text-xs text-white/30 font-mono leading-none">天写作记录</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* echart 图表展示网格 (同一行) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
-            {/* 卡片 2: 记忆标签占比 */}
-            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Bookmark className="h-3.5 w-3.5 text-white/40" />
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                  记忆标签占比
-                </span>
-              </div>
-              <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
-            </div>
-
-            {/* 卡片 3: 每日行动与片段趋势 */}
-            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
-              <div className="flex items-center gap-1.5 mb-1">
-                <TrendingUp className="h-3.5 w-3.5 text-white/40" />
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                  每日行动与片段趋势
-                </span>
-              </div>
-              <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. 下部面板：时间溪流与周度总结并排平分宽度 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-        {/* 左列：时间溪流 */}
         <div className="w-full flex flex-col bg-[#000000]">
           <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-white/60" />
+              <Sparkles className="h-4 w-4 text-white/60" />
               <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                时间溪流 (Time Stream)
+                数据透视
               </h3>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            {isLoading ? (
-              <div className="flex items-center justify-center font-mono text-white/40 text-xs py-12">
-                正在追溯时光碎片...
+          <div className="flex flex-col gap-3">
+            {/* 卡片 1: 周数据透视 (独占一行，高度自适应，内部卡片水平排列) */}
+            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-auto relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-4 w-4 text-white/60" />
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+                  周数据透视
+                </h3>
               </div>
-            ) : (
-              weeklyData.map((day) => {
-                const isExpanded = expandedDates.includes(day.entryDate);
-                return (
-                  <div
-                    key={day.entryDate}
-                    className={`group bg-[#212121] rounded-[6px] border transition-all duration-300 p-4 flex flex-col cursor-default ${
-                      isExpanded
-                        ? "border-white/15 bg-[#1a1a1a]"
-                        : "border-white/5 hover:border-white/10"
-                    }`}
-                  >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    待办完成率
+                  </span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-bold text-white/90 leading-none">
+                      {stats.completionRate}%
+                    </span>
+                    <span className="text-xs text-white/30 font-mono leading-none">
+                      {stats.completedTodos} / {stats.totalTodos}
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    知识沉淀
+                  </span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-bold text-white/90 leading-none">
+                      {stats.totalSnippets}
+                    </span>
+                    <span className="text-xs text-white/30 font-mono leading-none">
+                      个片段捕获
+                    </span>
+                  </div>
+                </div>
+                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    日记连续性
+                  </span>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-bold text-white/90 leading-none">
+                      {stats.journalsCount}/7
+                    </span>
+                    <span className="text-xs text-white/30 font-mono leading-none">
+                      天写作记录
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* echart 图表展示网格 (同一行) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
+              {/* 卡片 2: 记忆标签占比 */}
+              <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Bookmark className="h-3.5 w-3.5 text-white/40" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+                    记忆标签占比
+                  </span>
+                </div>
+                <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
+              </div>
+
+              {/* 卡片 3: 每日行动与片段趋势 */}
+              <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="h-3.5 w-3.5 text-white/40" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+                    每日行动与片段趋势
+                  </span>
+                </div>
+                <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. 下部面板：时间溪流与周度总结并排平分宽度 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          {/* 左列：时间溪流 */}
+          <div className="w-full flex flex-col bg-[#000000]">
+            <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-white/60" />
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+                  时间溪流
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center font-mono text-white/40 text-xs py-12">
+                  正在追溯时光碎片...
+                </div>
+              ) : (
+                weeklyData.map((day) => {
+                  const isExpanded = expandedDates.includes(day.entryDate);
+                  return (
                     <div
-                      onClick={() => {
-                        setExpandedDates((prev) =>
-                          prev.includes(day.entryDate)
-                            ? prev.filter((d) => d !== day.entryDate)
-                            : [...prev, day.entryDate],
-                        );
-                      }}
-                      className="flex items-center justify-between cursor-pointer"
+                      key={day.entryDate}
+                      className={`group bg-[#212121] rounded-[6px] border transition-all duration-300 p-4 flex flex-col cursor-default ${
+                        isExpanded
+                          ? "border-white/15 bg-[#1a1a1a]"
+                          : "border-white/5 hover:border-white/10"
+                      }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-bold font-mono transition-colors ${
-                            isExpanded
-                              ? "text-white"
-                              : "text-white/80 group-hover:text-white"
-                          }`}
-                        >
-                          {day.weekdayName}
-                        </span>
-                        <span className="text-xs font-mono text-white/30 bg-black/40 px-1.5 py-0.5 rounded-[6px] border border-white/5">
-                          {day.entryDate}
-                        </span>
-                        {/* 折叠时显示简单的徽章总结 */}
-                        {!isExpanded && (
-                          <div className="hidden sm:flex items-center gap-2 ml-3 text-xs text-white/40 font-mono">
-                            <span>
-                              {day.journal ? "📝 已写日记" : "📝 无日记"}
-                            </span>
-                            <span className="text-white/10">|</span>
-                            <span>
-                              ✅ 待办{" "}
-                              {day.todos.filter((t) => t.completed).length}/
-                              {day.todos.length}
-                            </span>
-                            <span className="text-white/10">|</span>
-                            <span>🔖 片段 {day.snippets.length}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
-                        )}
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 animate-todo-item-enter pt-3 border-t border-white/[0.03]">
-                        {/* A栏：日记正文策展高光 */}
-                        <div className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <FileText className="h-3.5 w-3.5 text-white/40" />
-                            <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                              时光高光 / Journal
-                            </span>
-                          </div>
-                          {day.journal ? (
-                            <p className="text-xs text-white/70 leading-relaxed font-normal bg-black/30 p-2.5 rounded-[6px] border border-white/[0.03] break-all select-text max-h-[140px] overflow-y-auto custom-scrollbar">
-                              {day.journal.content}
-                            </p>
-                          ) : (
-                            <div className="text-xs text-white/20 font-mono py-4 bg-black/10 rounded-[6px] text-center border border-dashed border-white/5">
-                              此日未执笔写日记
+                      <div
+                        onClick={() => {
+                          setExpandedDates((prev) =>
+                            prev.includes(day.entryDate)
+                              ? prev.filter((d) => d !== day.entryDate)
+                              : [...prev, day.entryDate],
+                          );
+                        }}
+                        className="flex items-center justify-between cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm font-bold font-mono transition-colors ${
+                              isExpanded
+                                ? "text-white"
+                                : "text-white/80 group-hover:text-white"
+                            }`}
+                          >
+                            {day.weekdayName}
+                          </span>
+                          <span className="text-xs font-mono text-white/30 bg-black/40 px-1.5 py-0.5 rounded-[6px] border border-white/5">
+                            {day.entryDate}
+                          </span>
+                          {/* 折叠时显示简单的徽章总结 */}
+                          {!isExpanded && (
+                            <div className="hidden sm:flex items-center gap-2 ml-3 text-xs text-white/40 font-mono">
+                              <span>
+                                {day.journal ? "📝 已写日记" : "📝 无日记"}
+                              </span>
+                              <span className="text-white/10">|</span>
+                              <span>
+                                ✅ 待办{" "}
+                                {day.todos.filter((t) => t.completed).length}/
+                                {day.todos.length}
+                              </span>
+                              <span className="text-white/10">|</span>
+                              <span>🔖 片段 {day.snippets.length}</span>
                             </div>
                           )}
                         </div>
 
-                        {/* B栏：高内聚的待办列表与捕获的片段 */}
-                        <div className="flex flex-col gap-3">
-                          {/* 行动待办 */}
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-white/40" />
-                              <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                每日行动 / Todo (
-                                {day.todos.filter((t: any) => t.completed).length}
-                                /{day.todos.length})
-                              </span>
-                            </div>
-                            {day.todos.length === 0 ? (
-                              <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
-                                无行动待办
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
-                                {day.todos.map((todo: any) => (
-                                  <div
-                                    key={todo.id}
-                                    className="flex items-center gap-2 text-xs text-white/65"
-                                  >
-                                    {todo.completed ? (
-                                      <CheckCircle2 className="h-3 w-3 text-white/40 flex-shrink-0" />
-                                    ) : (
-                                      <Circle className="h-3 w-3 text-white/20 flex-shrink-0" />
-                                    )}
-                                    <span
-                                      className={`truncate ${todo.completed ? "line-through text-white/30" : ""}`}
-                                    >
-                                      {todo.text}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 记忆碎片 */}
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Bookmark className="h-3.5 w-3.5 text-white/40" />
-                              <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                记忆碎片 / Snippets ({day.snippets.length})
-                              </span>
-                            </div>
-                            {day.snippets.length === 0 ? (
-                              <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
-                                无捕获片段
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
-                                {day.snippets.map((snip: any) => (
-                                  <div
-                                    key={snip.id}
-                                    className="text-xs text-white/65 flex items-center gap-1.5 truncate"
-                                  >
-                                    <span className="text-xs font-mono text-white/30 select-none">
-                                      [{snip.time || "碎片"}]
-                                    </span>
-                                    <span className="truncate font-semibold">
-                                      {snip.title || snip.content}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-1">
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
 
-        {/* 右列：周度总结 */}
-        <div className="w-full flex flex-col bg-[#000000]">
-          <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-white/60" />
-              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                周度总结 (Weekly Summary)
-              </h3>
+                      {isExpanded && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 animate-todo-item-enter pt-3 border-t border-white/[0.03]">
+                          {/* A栏：日记正文策展高光 */}
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <FileText className="h-3.5 w-3.5 text-white/40" />
+                              <span className="text-xs font-mono uppercase tracking-wider text-white/30">
+                                时光高光 / Journal
+                              </span>
+                            </div>
+                            {day.journal ? (
+                              <p className="text-xs text-white/70 leading-relaxed font-normal bg-black/30 p-2.5 rounded-[6px] border border-white/[0.03] break-all select-text max-h-[140px] overflow-y-auto custom-scrollbar">
+                                {day.journal.content}
+                              </p>
+                            ) : (
+                              <div className="text-xs text-white/20 font-mono py-4 bg-black/10 rounded-[6px] text-center border border-dashed border-white/5">
+                                此日未执笔写日记
+                              </div>
+                            )}
+                          </div>
+
+                          {/* B栏：高内聚的待办列表与捕获的片段 */}
+                          <div className="flex flex-col gap-3">
+                            {/* 行动待办 */}
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-white/40" />
+                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
+                                  每日行动 / Todo (
+                                  {
+                                    day.todos.filter((t: any) => t.completed)
+                                      .length
+                                  }
+                                  /{day.todos.length})
+                                </span>
+                              </div>
+                              {day.todos.length === 0 ? (
+                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
+                                  无行动待办
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                  {day.todos.map((todo: any) => (
+                                    <div
+                                      key={todo.id}
+                                      className="flex items-center gap-2 text-xs text-white/65"
+                                    >
+                                      {todo.completed ? (
+                                        <CheckCircle2 className="h-3 w-3 text-white/40 flex-shrink-0" />
+                                      ) : (
+                                        <Circle className="h-3 w-3 text-white/20 flex-shrink-0" />
+                                      )}
+                                      <span
+                                        className={`truncate ${todo.completed ? "line-through text-white/30" : ""}`}
+                                      >
+                                        {todo.text}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 记忆碎片 */}
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <Bookmark className="h-3.5 w-3.5 text-white/40" />
+                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
+                                  记忆碎片 / Snippets ({day.snippets.length})
+                                </span>
+                              </div>
+                              {day.snippets.length === 0 ? (
+                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
+                                  无捕获片段
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                  {day.snippets.map((snip: any) => (
+                                    <div
+                                      key={snip.id}
+                                      className="text-xs text-white/65 flex items-center gap-1.5 truncate"
+                                    >
+                                      <span className="text-xs font-mono text-white/30 select-none">
+                                        [{snip.time || "碎片"}]
+                                      </span>
+                                      <span className="truncate font-semibold">
+                                        {snip.title || snip.content}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow">
-            <div className="flex-1 flex items-center justify-center text-xs text-white/25 border border-dashed border-white/5 rounded-[6px] py-12">
-              总结功能筹备中...
+          {/* 右列：周度总结 */}
+          <div className="w-full flex flex-col bg-[#000000]">
+            <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-white/60" />
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+                  周度总结
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow">
+              <div className="flex-1 flex items-center justify-center text-xs text-white/25 border border-dashed border-white/5 rounded-[6px] py-12">
+                总结功能筹备中...
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
   );
 };
