@@ -4,6 +4,7 @@ import { Image } from "@/components/ui/Image";
 import { TextFile } from "@/components/ui/TextFile";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Tag } from "@/components/ui/Tag";
 import type {
   AiChatMessage,
   AiChatMessagePart,
@@ -52,7 +53,10 @@ type AiChatMessageBubbleProps = {
   // 打开消息右键菜单回调。
   onOpenContextMenu: (request: AiChatMessageContextMenuRequest) => void;
   // 编辑并重新发送用户消息。
-  onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
+  onEditAndResendUserMessage?: (
+    messageId: string,
+    text: string,
+  ) => void | Promise<void>;
   // 思考内容展开折叠时的回调。
   onThinkingBlockToggle?: () => void;
   // 工具确认表单状态/高度改变时的回调。
@@ -276,7 +280,10 @@ const AiMarkdownPreview = ({
       const images = container.querySelectorAll("img");
       images.forEach((img) => {
         // 如果已经处理过（已经有 class img-loaded 并且没有 img-loading），则跳过
-        if (img.classList.contains("img-loaded") && !img.classList.contains("img-loading")) {
+        if (
+          img.classList.contains("img-loaded") &&
+          !img.classList.contains("img-loading")
+        ) {
           return;
         }
 
@@ -323,7 +330,10 @@ const AiMarkdownPreview = ({
     const handleLoad = (e: Event) => {
       if (e.target instanceof HTMLImageElement) {
         const img = e.target;
-        if (img.classList.contains("img-loaded") && !img.classList.contains("img-loading")) {
+        if (
+          img.classList.contains("img-loaded") &&
+          !img.classList.contains("img-loading")
+        ) {
           return;
         }
 
@@ -606,7 +616,10 @@ export const AiChatMessageBubble = ({
     if (scrollHeight <= 93) return 0;
     const ratio = (scrollHeight - 93) / scrollHeight;
     const estimatedRemaining = Math.round(message.content.length * ratio);
-    const result = Math.max(1, Math.min(estimatedRemaining, message.content.length - 1));
+    const result = Math.max(
+      1,
+      Math.min(estimatedRemaining, message.content.length - 1),
+    );
     remainingCharCountRef.current = result;
     return result;
   };
@@ -714,35 +727,37 @@ export const AiChatMessageBubble = ({
             <div ref={userBubbleRef} className="w-fit max-w-full">
               {isEditing ? (
                 <div className="flex flex-col items-end w-full">
-                  {message.parts && message.parts.some((p) => p.kind === "text-file") && (
-                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
-                      {message.parts
-                        .filter((p) => p.kind === "text-file")
-                        .map((part, i) => (
-                          <TextFile
-                            key={i}
-                            url={part.url}
-                            fileName={part.fileName}
-                            sizeBytes={part.sizeBytes}
-                            preview={true}
-                          />
-                        ))}
-                    </div>
-                  )}
-                  {message.parts && message.parts.some((p) => p.kind === "image") && (
-                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
-                      {message.parts
-                        .filter((p) => p.kind === "image")
-                        .map((part, i) => (
-                          <Image
-                            key={i}
-                            src={part.url}
-                            aspectRatio="square"
-                            className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
-                          />
-                        ))}
-                    </div>
-                  )}
+                  {message.parts &&
+                    message.parts.some((p) => p.kind === "text-file") && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                        {message.parts
+                          .filter((p) => p.kind === "text-file")
+                          .map((part, i) => (
+                            <TextFile
+                              key={i}
+                              url={part.url}
+                              fileName={part.fileName}
+                              sizeBytes={part.sizeBytes}
+                              preview={true}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  {message.parts &&
+                    message.parts.some((p) => p.kind === "image") && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                        {message.parts
+                          .filter((p) => p.kind === "image")
+                          .map((part, i) => (
+                            <Image
+                              key={i}
+                              src={part.url}
+                              aspectRatio="square"
+                              className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
+                            />
+                          ))}
+                      </div>
+                    )}
                   <div className="flex flex-col gap-2 w-[400px] max-w-full bg-[#212121] border border-white/10 rounded-[6px] p-2.5">
                     <textarea
                       ref={textareaRef}
@@ -762,18 +777,28 @@ export const AiChatMessageBubble = ({
                         }}
                       />
                       {(() => {
-                        const isUnchanged = editText.trim() === message.content.trim();
+                        const isUnchanged =
+                          editText.trim() === message.content.trim();
                         return isLastUser ? (
                           <IconButton
                             ref={submitButtonRef}
                             size="small"
                             preset="confirm"
                             title="发送并重新生成"
-                            disabled={!editText.trim() || isUnchanged || isGenerating}
+                            disabled={
+                              !editText.trim() || isUnchanged || isGenerating
+                            }
                             onClick={() => {
-                              if (editText.trim() && !isUnchanged && !isGenerating) {
+                              if (
+                                editText.trim() &&
+                                !isUnchanged &&
+                                !isGenerating
+                              ) {
                                 setIsEditing(false);
-                                void onEditAndResendUserMessage?.(message.id, editText.trim());
+                                void onEditAndResendUserMessage?.(
+                                  message.id,
+                                  editText.trim(),
+                                );
                               }
                             }}
                           />
@@ -782,9 +807,16 @@ export const AiChatMessageBubble = ({
                             title="编辑历史消息将删除其后所有的对话记录，确定要发送吗？"
                             placement="top"
                             onConfirm={() => {
-                              if (editText.trim() && !isUnchanged && !isGenerating) {
+                              if (
+                                editText.trim() &&
+                                !isUnchanged &&
+                                !isGenerating
+                              ) {
                                 setIsEditing(false);
-                                void onEditAndResendUserMessage?.(message.id, editText.trim());
+                                void onEditAndResendUserMessage?.(
+                                  message.id,
+                                  editText.trim(),
+                                );
                               }
                             }}
                           >
@@ -793,7 +825,9 @@ export const AiChatMessageBubble = ({
                               size="small"
                               preset="confirm"
                               title="发送并重新生成"
-                              disabled={!editText.trim() || isUnchanged || isGenerating}
+                              disabled={
+                                !editText.trim() || isUnchanged || isGenerating
+                              }
                             />
                           </Tooltip>
                         );
@@ -803,40 +837,48 @@ export const AiChatMessageBubble = ({
                 </div>
               ) : (
                 <div className="relative flex flex-col items-end w-full group/msg-bubble">
-                  {message.parts && message.parts.some((p) => p.kind === "text-file") && (
-                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
-                      {message.parts
-                        .filter((p) => p.kind === "text-file")
-                        .map((part, i) => (
-                          <TextFile
-                            key={i}
-                            url={part.url}
-                            fileName={part.fileName}
-                            sizeBytes={part.sizeBytes}
-                            preview={true}
-                          />
-                        ))}
-                    </div>
-                  )}
-                  {message.parts && message.parts.some((p) => p.kind === "image") && (
-                    <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
-                      {message.parts
-                        .filter((p) => p.kind === "image")
-                        .map((part, i) => (
-                          <Image
-                            key={i}
-                            src={part.url}
-                            aspectRatio="square"
-                            className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
-                          />
-                        ))}
-                    </div>
-                  )}
+                  {message.parts &&
+                    message.parts.some((p) => p.kind === "text-file") && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                        {message.parts
+                          .filter((p) => p.kind === "text-file")
+                          .map((part, i) => (
+                            <TextFile
+                              key={i}
+                              url={part.url}
+                              fileName={part.fileName}
+                              sizeBytes={part.sizeBytes}
+                              preview={true}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  {message.parts &&
+                    message.parts.some((p) => p.kind === "image") && (
+                      <div className="flex flex-wrap gap-2 mb-2 justify-end w-full">
+                        {message.parts
+                          .filter((p) => p.kind === "image")
+                          .map((part, i) => (
+                            <Image
+                              key={i}
+                              src={part.url}
+                              aspectRatio="square"
+                              className="w-16 h-16 rounded-[6px] border border-white/5 shadow-md shrink-0 object-cover"
+                            />
+                          ))}
+                      </div>
+                    )}
                   <div
                     ref={textRef}
                     style={{
-                      maxHeight: hasOverflow && isCollapsed ? "93px" : (hasOverflow ? `${textRef.current?.scrollHeight || 1000}px` : "none"),
-                      transition: "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
+                      maxHeight:
+                        hasOverflow && isCollapsed
+                          ? "93px"
+                          : hasOverflow
+                            ? `${textRef.current?.scrollHeight || 1000}px`
+                            : "none",
+                      transition:
+                        "max-height 0.3s cubic-bezier(0.2, 0.85, 0.2, 1)",
                     }}
                     className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"
                   >
@@ -845,7 +887,9 @@ export const AiChatMessageBubble = ({
                   {hasOverflow && (
                     <div className="flex items-center gap-1.5 mt-1.5 select-none text-white/45 hover:text-white/80 transition-colors">
                       <span className="text-xs scale-90 origin-right opacity-60">
-                        {isCollapsed ? `展开 (余 ${getRemainingCharCount()} 字)` : "收起"}
+                        {isCollapsed
+                          ? `展开 (余 ${getRemainingCharCount()} 字)`
+                          : "收起"}
                       </span>
                       <IconButton
                         size="small"
@@ -939,11 +983,33 @@ export const AiChatMessageBubble = ({
 
                 return groupedElements;
               })()}
-
-
             </div>
           )}
         </div>
+
+        {/* 提及的 Agent 行 */}
+        {isUser &&
+          message.parts &&
+          message.parts.some((p) => p.kind === "agent") && (
+            <div className="flex items-center gap-1 mt-1 px-1 justify-end">
+              {message.parts
+                .filter((p) => p.kind === "agent")
+                .map((part) => {
+                  if (part.kind !== "agent") return null;
+                  return (
+                    <Tag
+                      key={part.id}
+                      size="small"
+                      prefix="@"
+                      color="default"
+                      bgClass="border-white/5 bg-white/[0.03] text-white/45"
+                    >
+                      {part.agentId}
+                    </Tag>
+                  );
+                })}
+            </div>
+          )}
 
         {/* 消息时间 */}
         <div
@@ -973,13 +1039,17 @@ export const AiChatMessageBubble = ({
             )}
           </span>
           {!isUser && message.model && (
-            <span className="text-white/20 select-none scale-90 px-1 py-0.5 rounded-[4px] bg-white/[0.03]">
+            <Tag
+              size="default"
+              color="default"
+              bgClass="border-white/5 bg-white/[0.03] text-white/30 select-none"
+              className="scale-90 origin-left"
+            >
               {message.model}
-            </span>
+            </Tag>
           )}
         </div>
       </div>
-
     </div>
   );
 };

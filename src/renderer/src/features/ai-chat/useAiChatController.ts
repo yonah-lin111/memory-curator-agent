@@ -43,6 +43,7 @@ import {
 } from "@/features/ai-chat/core/aiChatSessionCommands";
 import {
   toAiChatAgentHints,
+  parseAiChatAgentMentionText,
   type AiChatSendPayload,
 } from "@/features/ai-chat/aiChatAgentMentions";
 
@@ -77,15 +78,18 @@ const createSessionListTimestamp = (): string => {
 };
 
 /**
- * 归一化 AI 对话发送输入，历史重发路径不恢复旧 agent。
+ * 归一化 AI 对话发送输入，支持解析字符串中的 agent 标记。
  */
-const normalizeAiChatSendInput = (input: AiChatSendInput): AiChatSendPayload =>
-  typeof input === "string"
-    ? {
-        text: input,
-        agents: [],
-      }
-    : input;
+const normalizeAiChatSendInput = (input: AiChatSendInput): AiChatSendPayload => {
+  if (typeof input === "string") {
+    const parsed = parseAiChatAgentMentionText(input);
+    return {
+      text: parsed.text,
+      agents: parsed.agents,
+    };
+  }
+  return input;
+};
 
 // AI 对话控制器返回值。
 type UseAiChatControllerResult = {
@@ -776,11 +780,34 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     const contextItems = buildStartContextItems(sessionId, sourceSessions);
     const optimisticSessionTitle = text.slice(0, 15) + (text.length > 15 ? "..." : "");
 
+    const userMessageParts = [...(sendPayload.parts || [])];
+    const hasTextPart = userMessageParts.some((p) => p.kind === "text");
+    if (!hasTextPart && text) {
+      userMessageParts.push({
+        id: `msg-text-${Date.now()}`,
+        kind: "text",
+        content: text,
+      });
+    }
+
+    sendPayload.agents.forEach((agent, i) => {
+      const exists = userMessageParts.some(
+        (p) => p.kind === "agent" && p.agentId === agent.id
+      );
+      if (!exists) {
+        userMessageParts.push({
+          id: `msg-agent-${i}-${Date.now()}`,
+          kind: "agent",
+          agentId: agent.id,
+        });
+      }
+    });
+
     const userMessage = {
       id: userMessageId,
       role: "user" as const,
       content: text,
-      parts: sendPayload.parts,
+      parts: userMessageParts,
       time: userTime,
     };
     const aiMessage = {
@@ -836,7 +863,7 @@ export const useAiChatController = (): UseAiChatControllerResult => {
         assistantMessageId,
         sessionId,
         message: text,
-        parts: sendPayload.parts,
+        parts: userMessageParts,
         provider: selectedAiModel?.provider,
         model: selectedAiModel?.model,
         context: contextItems,

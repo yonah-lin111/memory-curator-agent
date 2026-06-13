@@ -494,6 +494,14 @@ type AiChatMessagePart =
       // 文件大小（字节）。
       sizeBytes: number
     }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'agent'
+      // Agent 唯一标识。
+      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+    }
 
 // AI 对话消息类型。
 type AiChatMessage = {

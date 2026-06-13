@@ -420,6 +420,34 @@ type AiChatMessagePart =
       // 对应工具步骤 ID。
       stepId: string
     }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型.
+      kind: 'image'
+      // 图片的本地协议地址。
+      url: string
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'text-file'
+      // 文本文件的本地协议地址。
+      url: string
+      // 原始文件名。
+      fileName: string
+      // 文件大小（字节）。
+      sizeBytes: number
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: 'agent'
+      // Agent 唯一标识。
+      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+    }
 
 // AI 对话消息类型。
 type AiChatMessage = {
