@@ -4,8 +4,22 @@
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { App } from '@/App'
+
+// Mock ResizeObserver for JSDOM
+const originalResizeObserver = globalThis.ResizeObserver;
+beforeAll(() => {
+  globalThis.ResizeObserver = class ResizeObserverMock implements ResizeObserver {
+    constructor() {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
+afterAll(() => {
+  globalThis.ResizeObserver = originalResizeObserver;
+});
 import type {
   AiChatEvent,
   AiChatSession,

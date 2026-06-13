@@ -32,6 +32,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
+    "echarts": "^6.1.0",
     "lucide-react": "^0.561.0",
     "md-editor-rt": "^6.5.1",
     "react": "^19.2.3",
@@ -41,8 +42,8 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/rebuild": "^4.0.4",
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

@@ -43,7 +43,7 @@ export const Header = ({
         </span>
         <span className="text-white/20">/</span>
         <span className="text-white font-bold">{activePage}</span>
-        {["today", "todo", "snippets", "journal"].includes(activePage) && !isChatOpen && dateNavigator && (
+        {["today", "todo", "snippets", "journal", "weekly"].includes(activePage) && !isChatOpen && dateNavigator && (
           <span className="flex items-center ml-2">{dateNavigator}</span>
         )}
         {!isChatOpen && customTitle && (
