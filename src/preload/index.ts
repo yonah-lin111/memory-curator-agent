@@ -446,7 +446,7 @@ type AiChatMessagePart =
       // 片段类型。
       kind: 'agent'
       // Agent 唯一标识。
-      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
     }
 
 // AI 对话消息类型。

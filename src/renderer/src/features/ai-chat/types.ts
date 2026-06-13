@@ -45,7 +45,7 @@ export type AiChatStartContextItem = {
 // AI 对话 agent hint 类型。
 export type AiChatAgentHint = {
   // Agent 唯一标识。
-  id: "people" | "todo" | "snippets" | "journal" | "notes" | "today";
+  id: "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common";
   // 本轮 agent 优先级，数字越小越优先。
   priority: number;
 };
@@ -298,7 +298,7 @@ export type AiChatMessagePart =
       // 片段类型。
       kind: "agent";
       // Agent 唯一标识。
-      agentId: "people" | "todo" | "snippets" | "journal" | "notes" | "today";
+      agentId: "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common";
     };
 
 // AI 对话消息类型，描述聊天气泡所需数据。

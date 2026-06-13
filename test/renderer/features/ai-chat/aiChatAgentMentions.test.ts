@@ -8,14 +8,15 @@ import {
 } from '@/features/ai-chat/aiChatAgentMentions'
 
 describe('aiChatAgentMentions', () => {
-  it('声明 6 个内置 agent mention 选项', () => {
+  it('声明 7 个内置 agent mention 选项', () => {
     expect(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => option.id)).toEqual([
       'people',
       'todo',
       'snippets',
       'journal',
       'notes',
-      'today'
+      'today',
+      'common'
     ])
     expect(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => option.token)).toEqual([
       '@people_agent',
@@ -23,7 +24,8 @@ describe('aiChatAgentMentions', () => {
       '@snippets_agent',
       '@journal_agent',
       '@notes_agent',
-      '@today_agent'
+      '@today_agent',
+      '@common_agent'
     ])
   })
 
@@ -62,7 +64,7 @@ describe('aiChatAgentMentions', () => {
   })
 
   it('支持 agent 面板模糊匹配', () => {
-    expect(getMatchedAiChatAgentMentions('').map((option) => option.id)).toHaveLength(6)
+    expect(getMatchedAiChatAgentMentions('').map((option) => option.id)).toHaveLength(7)
     expect(getMatchedAiChatAgentMentions('pe').map((option) => option.id)).toEqual(['people', 'snippets'])
     expect(getMatchedAiChatAgentMentions('peo').map((option) => option.id)).toEqual(['people'])
     expect(getMatchedAiChatAgentMentions('peo_').map((option) => option.id)).toEqual(['people'])
@@ -71,6 +73,7 @@ describe('aiChatAgentMentions', () => {
     expect(getMatchedAiChatAgentMentions('eo').map((option) => option.id)).toEqual(['people'])
     expect(getMatchedAiChatAgentMentions('ty').map((option) => option.id)).toEqual(['today'])
     expect(getMatchedAiChatAgentMentions('todo').map((option) => option.id)).toEqual(['todo'])
+    expect(getMatchedAiChatAgentMentions('co').map((option) => option.id)).toEqual(['common'])
   })
 
   it('计算 Backspace 删除完整 token 的范围', () => {

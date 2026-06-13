@@ -1,7 +1,7 @@
 import type { AgentMessage } from '@/agent/types'
 
 // AI 对话 agent 标识。
-export type AiChatAgentId = 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+export type AiChatAgentId = 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
 
 // AI 对话 agent hint。
 export type AiChatAgentHint = {
@@ -55,6 +55,12 @@ const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
     id: 'today',
     token: 'today_agent',
     description: 'Prefer Today-related daily input, current-day records, and short-term flow context first.'
+  },
+  {
+    id: 'common',
+    token: 'common_agent',
+    description: 'Prefer general knowledge to answer directly. Use only common tools (like time, date, or ask) when relevant. DO NOT use any business-specific tools or context from people, todo, snippets, journal, notes, or today agents.',
+    tools: ['common_tool_time_now', 'common_tool_date_offset', 'common_tool_ask']
   }
 ]
 

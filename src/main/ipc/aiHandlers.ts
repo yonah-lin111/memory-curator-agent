@@ -714,8 +714,14 @@ export const registerAiHandlers = (): void => {
       throw new Error(`Provider ${providerId} 未配置模型`)
     }
 
-    const tools = toolRegistry.all()
+    let tools = toolRegistry.all()
     const agentHints = normalizeAiChatAgentHints(payload.agents)
+
+    // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具，隔离所有业务 Agent 的工具
+    const hasCommonAgent = agentHints.some((hint) => hint.id === 'common')
+    if (hasCommonAgent) {
+      tools = tools.filter((tool) => tool.name.startsWith('common_tool_'))
+    }
     const modelConfig = providerConfig.models[modelId]
     const timestamp = createTimestamp()
     const userTime = createDisplayTime(timestamp)
