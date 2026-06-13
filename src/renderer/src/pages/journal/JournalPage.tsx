@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
 import { JournalDateRail } from "@/pages/journal/components/JournalDateRail";
 import { JournalEditorSurface } from "@/pages/journal/components/JournalEditorSurface";
@@ -49,6 +50,8 @@ export const JournalPage = (): React.JSX.Element => {
   // 月历标记是否正在加载。
   const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
     useState<boolean>(true);
+  // 头部导航器 setter。
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
   // 持久化函数引用，避免 effect 反复重建。
   const persistRef = useRef<(rawValue: string) => Promise<void>>(async () => undefined);
 
@@ -190,6 +193,31 @@ export const JournalPage = (): React.JSX.Element => {
     return () => window.clearTimeout(timer);
   }, [entryDate, isLoading, journalContent]);
 
+  useEffect(() => {
+    setDateNavigator(
+      <PageDateNavigator
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        visibleMonth={visibleMonth}
+        onChange={handleEntryDateChange}
+        onVisibleMonthChange={setVisibleMonth}
+      />,
+    );
+
+    return () => {
+      setDateNavigator(null);
+    };
+  }, [
+    entryDate,
+    visibleMonth,
+    monthEntryCounts,
+    isMonthOverviewLoading,
+    journalContent,
+    savedJournalContent,
+    setDateNavigator,
+  ]);
+
   // 根据关键词给出克制的情绪线索。
   const moodLabel = useMemo(() => {
     if (journalContent.includes("焦虑")) {
@@ -209,16 +237,7 @@ export const JournalPage = (): React.JSX.Element => {
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
         <JournalEditorSurface
           value={journalContent}
-          headerLeft={
-            <PageDateNavigator
-              entryCountMap={monthEntryCounts}
-              entryDate={entryDate}
-              isMonthOverviewLoading={isMonthOverviewLoading}
-              visibleMonth={visibleMonth}
-              onChange={handleEntryDateChange}
-              onVisibleMonthChange={setVisibleMonth}
-            />
-          }
+          headerLeft={<h3 className="text-sm font-bold text-white/80">当日随笔</h3>}
           onBlur={() => {
             void persistRef.current(journalContent);
           }}

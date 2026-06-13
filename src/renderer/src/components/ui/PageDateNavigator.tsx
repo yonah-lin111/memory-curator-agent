@@ -220,7 +220,7 @@ export const PageDateNavigator = ({
                       <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white opacity-80" />
                     ) : null}
                     {entryCount > 0 ? (
-                      <span className="absolute -top-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[8px] font-bold text-black">
+                      <span className="absolute -top-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white p-0 text-[8px] font-bold text-black leading-none">
                         {formatBadgeCount(entryCount)}
                       </span>
                     ) : null}

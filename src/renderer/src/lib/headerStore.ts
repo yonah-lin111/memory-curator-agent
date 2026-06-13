@@ -5,6 +5,8 @@ import type React from "react";
 type HeaderState = {
   // 自定义面包屑标题
   customTitle: React.ReactNode | null;
+  // 页面日期导航器组件
+  dateNavigator: React.ReactNode | null;
   // 自定义头部动作
   extraActions: React.ReactNode | null;
   // 是否隐藏 AI 聊天按钮
@@ -18,6 +20,8 @@ type HeaderState = {
   } | null;
   // 设置自定义面包屑标题
   setCustomTitle: (title: React.ReactNode | null) => void;
+  // 设置页面日期导航器组件
+  setDateNavigator: (navigator: React.ReactNode | null) => void;
   // 设置自定义头部动作
   setExtraActions: (actions: React.ReactNode | null) => void;
   // 设置是否隐藏 AI 聊天按钮
@@ -34,12 +38,14 @@ type HeaderState = {
  */
 export const useHeaderStore = create<HeaderState>((set) => ({
   customTitle: null,
+  dateNavigator: null,
   extraActions: null,
   hideChatButton: false,
   settingsState: null,
   setCustomTitle: (title) => set({ customTitle: title }),
+  setDateNavigator: (navigator) => set({ dateNavigator: navigator }),
   setExtraActions: (actions) => set({ extraActions: actions }),
   setHideChatButton: (hide) => set({ hideChatButton: hide }),
   setSettingsState: (state) => set({ settingsState: state }),
-  resetHeader: () => set({ customTitle: null, extraActions: null, hideChatButton: false, settingsState: null }),
+  resetHeader: () => set({ customTitle: null, dateNavigator: null, extraActions: null, hideChatButton: false, settingsState: null }),
 }));

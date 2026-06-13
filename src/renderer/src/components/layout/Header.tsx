@@ -32,7 +32,7 @@ export const Header = ({
   chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
-  const { customTitle, extraActions, hideChatButton, settingsState } = useHeaderStore();
+  const { customTitle, dateNavigator, extraActions, hideChatButton, settingsState } = useHeaderStore();
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
@@ -43,6 +43,9 @@ export const Header = ({
         </span>
         <span className="text-white/20">/</span>
         <span className="text-white font-bold">{activePage}</span>
+        {["today", "todo", "snippets", "journal"].includes(activePage) && !isChatOpen && dateNavigator && (
+          <span className="flex items-center ml-2">{dateNavigator}</span>
+        )}
         {!isChatOpen && customTitle && (
           <>
             <span className="text-white/20">/</span>

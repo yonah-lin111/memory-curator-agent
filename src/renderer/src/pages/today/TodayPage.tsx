@@ -14,6 +14,9 @@ import {
 } from "@/pages/todo/components/todoShared";
 import { TodayJournalPanel } from "@/pages/today/components/TodayJournalPanel";
 import type { TodoItem } from "@/pages/todo/components/todoShared";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useHeaderStore } from "@/lib/headerStore";
+import { getEntryMonth } from "@/lib/dailyShared";
 
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {
@@ -182,7 +185,15 @@ export const TodayPage = (): React.JSX.Element => {
   // 当前运行环境是否存在 daily bridge。
   const hasDailyApi = Boolean(window.api?.daily);
   // 当前日期。
-  const [entryDate] = useState<string>(() => createTodayEntryDate());
+  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  // 当前月历可见月份。
+  const [visibleMonth, setVisibleMonth] = useState<string>(() => getEntryMonth(entryDate));
+  // 每一天是否有内容的数量字典。
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>({});
+  // 月历加载状态。
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] = useState<boolean>(false);
+  // 头部导航器 setter。
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
   // 随记卡片列表状态。
   const [notes, setNotes] = useState<TodayNoteItem[]>([]);
   // 随记编辑弹窗是否打开。
@@ -305,6 +316,76 @@ export const TodayPage = (): React.JSX.Element => {
   useEffect(() => {
     void loadToday();
   }, [entryDate]);
+
+  /**
+   * 切换当前选中日期。
+   */
+  const handleEntryDateChange = async (nextDate: string): Promise<void> => {
+    if (journalContent.trim() !== savedJournalContent.trim()) {
+      await persistJournalRef.current(journalContent);
+    }
+    setVisibleMonth(getEntryMonth(nextDate));
+    setEntryDate(nextDate);
+  };
+
+  useEffect(() => {
+    /**
+     * 读取当前可见月份的记录数概览。
+     */
+    const loadMonthOverview = async (): Promise<void> => {
+      setIsMonthOverviewLoading(true);
+
+      try {
+        if (!hasDailyApi) {
+          setMonthEntryCounts({});
+          return;
+        }
+
+        const overview = await window.api.daily.listMonthOverview(visibleMonth);
+        setMonthEntryCounts(
+          Object.fromEntries(
+            overview.entries
+              .map((item) => [
+                item.entryDate,
+                item.todoCount + item.snippetCount + (item.journalCount > 0 ? 1 : 0),
+              ])
+              .filter(([_, count]) => (count as number) > 0),
+          ),
+        );
+      } catch {
+        toast.error("读取月历标记失败");
+      } finally {
+        setIsMonthOverviewLoading(false);
+      }
+    };
+
+    void loadMonthOverview();
+  }, [visibleMonth]);
+
+  useEffect(() => {
+    setDateNavigator(
+      <PageDateNavigator
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        visibleMonth={visibleMonth}
+        onChange={handleEntryDateChange}
+        onVisibleMonthChange={setVisibleMonth}
+      />,
+    );
+
+    return () => {
+      setDateNavigator(null);
+    };
+  }, [
+    entryDate,
+    visibleMonth,
+    monthEntryCounts,
+    isMonthOverviewLoading,
+    journalContent,
+    savedJournalContent,
+    setDateNavigator,
+  ]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

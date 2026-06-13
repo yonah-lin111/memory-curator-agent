@@ -2,6 +2,7 @@ import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Tag as TagIcon, StickyNote } from "lucide-react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
+import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
@@ -52,6 +53,8 @@ export const SnippetsPage = (): React.JSX.Element => {
   // 月历标记是否正在加载。
   const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
     useState<boolean>(true);
+  // 头部导航器 setter。
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
 
   // 随记弹窗状态。
   const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
@@ -116,6 +119,32 @@ export const SnippetsPage = (): React.JSX.Element => {
 
     void loadMonthOverview();
   }, [toast, visibleMonth]);
+
+  useEffect(() => {
+    setDateNavigator(
+      <PageDateNavigator
+        entryCountMap={monthEntryCounts}
+        entryDate={entryDate}
+        isMonthOverviewLoading={isMonthOverviewLoading}
+        visibleMonth={visibleMonth}
+        onChange={(nextDate) => {
+          setVisibleMonth(getEntryMonth(nextDate));
+          setEntryDate(nextDate);
+        }}
+        onVisibleMonthChange={setVisibleMonth}
+      />,
+    );
+
+    return () => {
+      setDateNavigator(null);
+    };
+  }, [
+    entryDate,
+    visibleMonth,
+    monthEntryCounts,
+    isMonthOverviewLoading,
+    setDateNavigator,
+  ]);
 
   // 当前可见片段列表。
   const visibleSnippets = useMemo(
@@ -323,19 +352,7 @@ export const SnippetsPage = (): React.JSX.Element => {
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <div className="flex items-center gap-2">
-              <PageDateNavigator
-                entryCountMap={monthEntryCounts}
-                entryDate={entryDate}
-                isMonthOverviewLoading={isMonthOverviewLoading}
-                visibleMonth={visibleMonth}
-                onChange={(nextDate) => {
-                  setVisibleMonth(getEntryMonth(nextDate));
-                  setEntryDate(nextDate);
-                }}
-                onVisibleMonthChange={setVisibleMonth}
-              />
-            </div>
+            <h3 className="text-sm font-bold text-white/80">片段列表</h3>
             <IconButton
               aria-label="Add snippet"
               preset="add"
