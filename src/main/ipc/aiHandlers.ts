@@ -856,11 +856,7 @@ export const registerAiHandlers = (): void => {
           }
         }
 
-        // 回退到主 provider
-        if (!compactionProvider) {
-          compactionProvider = provider
-          compactionModel = modelId
-        }
+
 
         for await (const agentEvent of runReactAgent({
           provider,

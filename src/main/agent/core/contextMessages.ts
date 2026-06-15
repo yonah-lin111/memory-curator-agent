@@ -539,7 +539,7 @@ const compactMessages = async (input: CompactionInput): Promise<string> => {
     .join('\n\n')
 
   if (!historyText.trim()) {
-    return '历史对话为空，无需要总结的内容。'
+    return ''
   }
 
   let summary = ''
@@ -561,7 +561,7 @@ const compactMessages = async (input: CompactionInput): Promise<string> => {
     }
   }
 
-  return summary.trim() || '历史对话总结生成失败。'
+  return summary.trim()
 }
 
 /**
@@ -612,6 +612,10 @@ export const tryCompactMessages = async (
       signal: input.signal
     })
 
+    if (!summary.trim()) {
+      return undefined
+    }
+
     const compactedMessage: AgentMessage = {
       role: 'user',
       content: [
@@ -624,7 +628,8 @@ export const tryCompactMessages = async (
     }
 
     return [...(systemTurn ?? []), compactedMessage, ...tailMessages]
-  } catch {
+  } catch (error) {
+    console.error('Compaction failed, falling back to uncompressed messages:', error)
     return undefined
   }
 }
