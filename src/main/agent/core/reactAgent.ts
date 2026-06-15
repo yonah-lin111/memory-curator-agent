@@ -401,6 +401,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
       if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
         appendSilentToolFailureMessage(messages, toolCall, PEOPLE_MUTATION_ASK_REJECTION_MESSAGE)
+        executedAnyNonDoomLoop = true
         continue
       }
 
