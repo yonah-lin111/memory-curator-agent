@@ -471,10 +471,6 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
   throwIfAborted(input.signal)
 
-  yield {
-    type: 'assistant_message_started'
-  }
-
   let finalTurnEmittedText = false
 
   for await (const event of input.provider.streamTurn({
@@ -486,7 +482,13 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     throwIfAborted(input.signal)
 
     if (event.type === 'text_delta') {
-      finalTurnEmittedText = true
+      if (!finalTurnEmittedText) {
+        finalTurnEmittedText = true
+        yield {
+          type: 'assistant_message_started'
+        }
+      }
+
       yield {
         type: 'text_delta',
         delta: event.delta
@@ -501,13 +503,13 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
     }
 
-    // 忽略模型的 tool_call_done（已传 tools: []，但部分模型可能仍输出）
+    // 忽略模型的所有工具事件（已传 tools: []，但部分模型可能仍输出）
   }
 
   if (!finalTurnEmittedText) {
     yield {
       type: 'error',
-      message: 'Agent reached the maximum turn count without producing a final answer.'
+      message: '到达最大轮数后模型未生成最终回答。'
     }
     return
   }
