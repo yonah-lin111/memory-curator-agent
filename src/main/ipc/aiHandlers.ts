@@ -30,7 +30,7 @@ import {
   type ToolConfirmationRequestData
 } from '@/agent/tools/toolConfirmation'
 import { buildContextAgentMessages, type AgentContextPayloadItem } from '@/agent/core/contextMessages'
-import type { AgentMessage, AgentStreamEvent } from '@/agent/types'
+import type { AgentMessage, AgentStreamEvent, ModelProvider } from '@/agent/types'
 import type { AiChatMessagePart, AiToolStep } from '@/db/schema'
 
 // AI 对话启动载荷。
@@ -843,9 +843,31 @@ export const registerAiHandlers = (): void => {
 
         const provider = await createModelProvider(providerConfig)
 
+        // 创建 compaction provider（如果配置了）
+        let compactionProvider: ModelProvider | undefined
+        let compactionModel: string | undefined
+
+        const compactionConfig = config.compaction
+        if (compactionConfig) {
+          const compactionProviderConfig = config.providers[compactionConfig.provider]
+          if (compactionProviderConfig && compactionProviderConfig.models[compactionConfig.model]) {
+            compactionProvider = await createModelProvider(compactionProviderConfig)
+            compactionModel = compactionConfig.model
+          }
+        }
+
+        // 回退到主 provider
+        if (!compactionProvider) {
+          compactionProvider = provider
+          compactionModel = modelId
+        }
+
         for await (const agentEvent of runReactAgent({
           provider,
           model: modelId,
+          compactionProvider,
+          compactionModel,
+          contextLimit: modelConfig.limit?.context,
           messages: buildContextAgentMessages({
             systemMessage: appendAiChatAgentDirectiveToSystemMessage(createSystemPrompt(), agentHints),
             userMessage: payload.message,

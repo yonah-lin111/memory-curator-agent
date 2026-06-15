@@ -57,6 +57,14 @@ export type TitleSummaryConfig = {
   model: string
 }
 
+// Compaction 模型配置。
+export type CompactionConfig = {
+  // Compaction 使用的 provider 标识。
+  provider: string
+  // Compaction 使用的模型标识。
+  model: string
+}
+
 // Provider 连接参数。
 export type ProviderOptions = {
   // API Key。
@@ -93,6 +101,8 @@ export type NormalizedAiConfig = {
   providers: Record<string, NormalizedProviderConfig>
   // Agent 行为配置。
   agent: AgentConfig
+  // Compaction 模型配置，未配置时 fallback 到当前对话模型。
+  compaction?: CompactionConfig
 }
 
 // Agent 消息角色。
@@ -267,6 +277,12 @@ export type ReactAgentRunInput = {
    * 等待用户确认工具写操作。
    */
   toolConfirmationProvider?: (request: ToolConfirmationRequestData) => Promise<ToolConfirmationAnswerData>
+  // Compaction 模型 provider（可选，不配置则不启用 compaction）。
+  compactionProvider?: ModelProvider
+  // Compaction 模型名（可选）。
+  compactionModel?: string
+  // 模型上下文窗口上限（用于溢出检测）。
+  contextLimit?: number
 }
 
 // Agent 流式输出事件。

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type {
   AgentConfig,
+  CompactionConfig,
   ModelConfig,
   NormalizedAiConfig,
   NormalizedProviderConfig,
@@ -72,6 +73,8 @@ type RawConfigFile = {
     defaultModel?: RawDefaultModelConfig
     // 标题总结模型配置。
     titleSummary?: RawModelSelectionConfig
+    // Compaction 模型配置。
+    compaction?: RawModelSelectionConfig
     // 启用的 provider 标识列表。
     enabled_providers?: string[]
     // Provider 配置表。
@@ -203,6 +206,28 @@ const normalizeTitleSummaryConfig = (
 }
 
 /**
+ * 归一化 compaction 模型配置，未配置时 undefined。
+ */
+const normalizeCompactionConfig = (
+  value: RawModelSelectionConfig | undefined,
+  providers: Record<string, NormalizedProviderConfig>,
+  defaultProvider: string,
+  defaultModel: string
+): CompactionConfig | undefined => {
+  if (!value) {
+    return undefined
+  }
+  const provider = value.provider && providers[value.provider] ? value.provider : defaultProvider
+  const providerModels = providers[provider]?.models ?? {}
+  const model = value.model && providerModels[value.model] ? value.model : Object.keys(providerModels)[0] ?? defaultModel
+
+  return {
+    provider,
+    model
+  }
+}
+
+/**
  * 读取并归一化模型 provider 配置。
  */
 export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): NormalizedAiConfig => {
@@ -248,6 +273,9 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     ),
     enabledProviders: providerIds,
     providers,
-    agent: normalizeAgentConfig(rawConfig.ai?.agent)
+    agent: normalizeAgentConfig(rawConfig.ai?.agent),
+    compaction: rawConfig.ai?.compaction
+      ? normalizeCompactionConfig(rawConfig.ai.compaction, providers, defaultProvider, defaultModel)
+      : undefined
   }
 }

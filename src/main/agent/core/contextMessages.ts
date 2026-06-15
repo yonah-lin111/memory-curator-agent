@@ -1,4 +1,4 @@
-import type { AgentMessage, AgentMessageRole } from '@/agent/types'
+import type { AgentMessage, AgentMessageRole, ModelProvider } from '@/agent/types'
 import type { AiChatMessagePart } from '@/db/schema'
 
 // Agent 上下文载荷来源类型。
@@ -82,6 +82,12 @@ const UNTRUSTED_CONTEXT_START = 'UNTRUSTED_CONTEXT_START'
 
 // 不可信上下文结束标记。
 const UNTRUSTED_CONTEXT_END = 'UNTRUSTED_CONTEXT_END'
+
+// Compaction 触发缓冲（接近 context limit 多少 token 时触发）。
+const COMPACTION_BUFFER = 4096
+
+// 保留最近轮次数不被 compaction。
+const COMPACTION_TAIL_TURNS = 2
 
 /**
  * 将外部上下文包成数据块，避免模型把其中的文字当成新指令。
@@ -466,4 +472,159 @@ export const buildContextAgentMessages = ({
       parts: userParts
     }
   ]
+}
+
+/**
+ * 以 assistant 消息（含 toolCalls）为轮边界，分割消息为轮次列表。
+ * 每条消息只属于一个轮次。system 消息单独一组。
+ */
+const splitTurns = (messages: readonly AgentMessage[]): AgentMessage[][] => {
+  const turns: AgentMessage[][] = []
+  let currentTurn: AgentMessage[] = []
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      turns.push([msg])
+      continue
+    }
+
+    currentTurn.push(msg)
+
+    // assistant 含 toolCalls 标记一个轮次结束，工具结果和后续响应属于下一轮
+    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+      turns.push(currentTurn)
+      currentTurn = []
+    }
+  }
+
+  if (currentTurn.length > 0) {
+    turns.push(currentTurn)
+  }
+
+  return turns
+}
+
+/**
+ * Compaction 所需的最小依赖。
+ */
+type CompactionInput = {
+  // 要总结的历史消息。
+  messages: AgentMessage[]
+  // Compaction 模型 provider。
+  provider: ModelProvider
+  // Compaction 模型名。
+  model: string
+  // 取消信号。
+  signal?: AbortSignal
+}
+
+// Compaction 总结指令。
+const COMPACTION_SUMMARY_PROMPT = [
+  '你是一个对话摘要助手。请用简洁的中文总结以下对话历史和工具调用结果。',
+  '',
+  '要求：',
+  '- 保留关键事实和数据（人物、日期、数字、决策）',
+  '- 保留待处理的任务和用户请求',
+  '- 省略工具调用的技术细节（SQL 语句、工具名等）',
+  '- 直接用 3-5 段话输出摘要，不要加任何前缀或解释'
+].join('\n')
+
+/**
+ * 调用 compaction 模型生成历史总结。
+ */
+const compactMessages = async (input: CompactionInput): Promise<string> => {
+  const historyText = input.messages
+    .filter((msg) => msg.role !== 'system' && msg.content.trim())
+    .map((msg) => `[${msg.role}]: ${msg.content}`)
+    .join('\n\n')
+
+  if (!historyText.trim()) {
+    return '历史对话为空，无需要总结的内容。'
+  }
+
+  let summary = ''
+
+  for await (const event of input.provider.streamTurn({
+    model: input.model,
+    messages: [
+      { role: 'system', content: COMPACTION_SUMMARY_PROMPT },
+      { role: 'user', content: historyText }
+    ],
+    tools: [],
+    signal: input.signal
+  })) {
+    if (input.signal?.aborted) {
+      throw input.signal.reason instanceof Error ? input.signal.reason : new Error('Compaction was cancelled')
+    }
+    if (event.type === 'text_delta') {
+      summary += event.delta
+    }
+  }
+
+  return summary.trim() || '历史对话总结生成失败。'
+}
+
+/**
+ * 执行上下文 compaction，返回替换后的消息列表。
+ * 返回 undefined 表示无需 compaction 或 compaction 失败。
+ */
+export const tryCompactMessages = async (
+  messages: AgentMessage[],
+  input: {
+    provider: ModelProvider
+    model: string
+    contextLimit?: number
+    signal?: AbortSignal
+  }
+): Promise<AgentMessage[] | undefined> => {
+  if (!input.contextLimit) {
+    return undefined
+  }
+
+  // 溢出检测
+  const totalCharCount = messages.reduce((sum, msg) => sum + (msg.content?.length ?? 0), 0)
+  const estimatedTokens = Math.ceil(totalCharCount / 4)
+  const usableTokens = input.contextLimit - COMPACTION_BUFFER
+
+  if (estimatedTokens < usableTokens) {
+    return undefined
+  }
+
+  // 分割轮次
+  const turns = splitTurns(messages)
+  if (turns.length <= COMPACTION_TAIL_TURNS + 1) {
+    return undefined
+  }
+
+  // 保留尾部 2 轮
+  const tailTurns = turns.slice(-COMPACTION_TAIL_TURNS)
+  const historyTurns = turns.slice(0, -COMPACTION_TAIL_TURNS)
+
+  const systemTurn = turns.find((turn) => turn.length === 1 && turn[0].role === 'system')
+  const historyMessages = historyTurns.flat()
+  const tailMessages = tailTurns.flat()
+
+  try {
+    const summary = await compactMessages({
+      messages: historyMessages,
+      provider: input.provider,
+      model: input.model,
+      signal: input.signal
+    })
+
+    const compactedMessage: AgentMessage = {
+      role: 'user',
+      content: [
+        '[上下文已压缩。以下是之前对话的摘要。如果需要详细内容请基于摘要继续，或重新查询工具。]',
+        '',
+        summary,
+        '',
+        '上下文已压缩，请基于以上摘要和最近的对话继续回答用户的问题。'
+      ].join('\n')
+    }
+
+    return [...(systemTurn ?? []), compactedMessage, ...tailMessages]
+  } catch {
+    return undefined
+  }
 }

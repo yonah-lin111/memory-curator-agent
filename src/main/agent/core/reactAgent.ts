@@ -6,6 +6,7 @@ import type {
   ReactAgentRunInput
 } from '@/agent/types'
 import { prepareToolsForModel } from '@/agent/tools/toolRegistry'
+import { tryCompactMessages } from '@/agent/core/contextMessages'
 import {
   formatAskAnswerObservation,
   isAskRequestData
@@ -268,7 +269,7 @@ const appendSilentToolFailureMessage = (
  * 运行 Claude Code 风格的 ReAct Agent Loop。
  */
 export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<AgentStreamEvent> {
-  const messages: AgentMessage[] = [...input.messages]
+  let messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
   let pendingToolConfirmationCompletion: string | null = null
   const toolCallHistory: ToolCallRecord[] = []
@@ -554,6 +555,22 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
     yield {
       type: 'turn_finished'
+    }
+
+    // 检查并执行 compaction
+    if (input.compactionProvider && input.compactionModel) {
+      throwIfAborted(input.signal)
+
+      const compacted = await tryCompactMessages(messages, {
+        provider: input.compactionProvider,
+        model: input.compactionModel,
+        contextLimit: input.contextLimit,
+        signal: input.signal
+      })
+
+      if (compacted) {
+        messages = compacted
+      }
     }
   }
 
