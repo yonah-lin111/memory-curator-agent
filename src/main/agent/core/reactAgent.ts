@@ -19,6 +19,13 @@ import {
 // 默认最大 Agent 循环轮数。
 const DEFAULT_MAX_TURNS = 5
 
+// 到达最大轮数时回灌模型的提示。
+const MAX_TURNS_REACHED_MESSAGE = [
+  '已到达最大工具调用轮数。',
+  '请基于当前已有的所有工具返回结果和对话上下文，用纯文本直接回答用户的问题。',
+  '不要再调用任何工具，也不要请求调用工具。'
+].join(' ')
+
 // Ask 被用户界面作废时的固定错误文本。
 const ASK_CANCELLED_MESSAGE = 'Ask request was cancelled.'
 
@@ -456,5 +463,60 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     }
   }
 
-  throw new Error(`Agent exceeded the maximum turn count: ${maxTurns}`)
+  // 到达最大轮数，注入提示并请求一次无工具文本回答
+  messages.push({
+    role: 'user',
+    content: MAX_TURNS_REACHED_MESSAGE
+  })
+
+  throwIfAborted(input.signal)
+
+  yield {
+    type: 'assistant_message_started'
+  }
+
+  let finalTurnEmittedText = false
+
+  for await (const event of input.provider.streamTurn({
+    model: input.model,
+    messages,
+    tools: [],
+    signal: input.signal
+  })) {
+    throwIfAborted(input.signal)
+
+    if (event.type === 'text_delta') {
+      finalTurnEmittedText = true
+      yield {
+        type: 'text_delta',
+        delta: event.delta
+      }
+    }
+
+    if (event.type === 'reasoning_delta') {
+      yield {
+        type: 'reasoning_delta',
+        id: event.id,
+        delta: event.delta
+      }
+    }
+
+    // 忽略模型的 tool_call_done（已传 tools: []，但部分模型可能仍输出）
+  }
+
+  if (!finalTurnEmittedText) {
+    yield {
+      type: 'error',
+      message: 'Agent reached the maximum turn count without producing a final answer.'
+    }
+    return
+  }
+
+  yield {
+    type: 'turn_finished'
+  }
+  yield {
+    type: 'done'
+  }
+  return
 }
