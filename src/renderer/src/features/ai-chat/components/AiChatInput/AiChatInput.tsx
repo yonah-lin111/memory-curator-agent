@@ -199,13 +199,6 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
-            <IconButton
-              aria-label="Set tool mode"
-              disabled
-              className="text-white/30 cursor-not-allowed"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-            </IconButton>
           </div>
 
           {/* 右侧发送与清空按钮 */}
