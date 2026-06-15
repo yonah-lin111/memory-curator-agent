@@ -317,6 +317,8 @@ export type AiChatMessageItem = {
   parts?: AiChatMessagePart[]
   // 调用的模型。
   model?: string
+  // 是否已被用户主动取消。
+  cancelled?: boolean
 }
 
 // 单日数据类型。
@@ -409,6 +411,8 @@ export type AiChatMessageRow = {
   created_at: string
   // 更新时间。
   updated_at: string
+  // 是否已被用户主动取消（0 = 否，1 = 是）。
+  cancelled: number
 }
 
 // 待办数据库行类型。

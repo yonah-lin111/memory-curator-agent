@@ -721,7 +721,7 @@ export const AiChatMessageBubble = ({
             isUser
               ? "bg-transparent text-white font-medium whitespace-pre-wrap"
               : "  text-white/80"
-          }`}
+          } ${message.cancelled ? "line-through opacity-50" : ""}`}
         >
           {isUser ? (
             <div ref={userBubbleRef} className="w-fit max-w-full">

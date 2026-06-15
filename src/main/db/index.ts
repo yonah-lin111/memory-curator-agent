@@ -322,7 +322,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       tool_steps_json TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
       created_at TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP NOT NULL
+      updated_at TIMESTAMP NOT NULL,
+      cancelled INTEGER NOT NULL DEFAULT 0
     `.trim(),
     insertColumns: [
       'external_id',
@@ -334,7 +335,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       'tool_steps_json',
       'time',
       'created_at',
-      'updated_at'
+      'updated_at',
+      'cancelled'
     ],
     selectColumns: [
       'external_id',
@@ -346,7 +348,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       'tool_steps_json',
       'time',
       'created_at',
-      'updated_at'
+      'updated_at',
+      'cancelled'
     ],
     orderByClause: 'created_at ASC, id ASC',
     timestampColumns: ['time', 'created_at', 'updated_at'],
@@ -453,6 +456,11 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
 
   if (tableExists(database, 'workspace_snippets') && !tableExists(database, 'snippets')) {
     database.exec('ALTER TABLE workspace_snippets RENAME TO snippets;')
+  }
+
+  // 为已存在的 ai_chat_messages 表补加 cancelled 列。
+  if (tableExists(database, 'ai_chat_messages') && !columnExists(database, 'ai_chat_messages', 'cancelled')) {
+    database.exec('ALTER TABLE ai_chat_messages ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0;')
   }
 
   database.exec(`
@@ -606,19 +614,20 @@ export const createAiChatPersistenceTables = (database: Database.Database): void
     CREATE INDEX IF NOT EXISTS idx_ai_chat_sessions_updated_at
     ON ai_chat_sessions(updated_at DESC);
 
-    CREATE TABLE IF NOT EXISTS ai_chat_messages (
-      id INTEGER PRIMARY KEY,
-      external_id TEXT NOT NULL UNIQUE,
-      session_id TEXT NOT NULL,
-      role TEXT NOT NULL,
-      content TEXT NOT NULL,
-      answer TEXT,
-      parts_json TEXT NOT NULL,
-      tool_steps_json TEXT NOT NULL,
-      time TIMESTAMP NOT NULL,
-      created_at TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP NOT NULL
-    );
+     CREATE TABLE IF NOT EXISTS ai_chat_messages (
+       id INTEGER PRIMARY KEY,
+       external_id TEXT NOT NULL UNIQUE,
+       session_id TEXT NOT NULL,
+       role TEXT NOT NULL,
+       content TEXT NOT NULL,
+       answer TEXT,
+       parts_json TEXT NOT NULL,
+       tool_steps_json TEXT NOT NULL,
+       time TIMESTAMP NOT NULL,
+       created_at TIMESTAMP NOT NULL,
+       updated_at TIMESTAMP NOT NULL,
+       cancelled INTEGER NOT NULL DEFAULT 0
+     );
 
     CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_session_created_at
     ON ai_chat_messages(session_id, created_at ASC);

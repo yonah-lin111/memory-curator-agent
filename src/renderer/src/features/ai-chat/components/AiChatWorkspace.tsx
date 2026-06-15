@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   AiChatSession,
   AiModelProviderOption,
@@ -28,6 +28,7 @@ import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { isEmptyAiChatDraftSession } from "@/features/ai-chat/core/aiChatSessionReducer";
 import { AiChatContextTimeline } from "@/features/ai-chat/components/AiChatContextTimeline";
+import { useToast } from "@/components/ui/Toast";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
 const EMPTY_CONTEXT_ITEMS: AiChatContextItem[] = [];
@@ -114,6 +115,8 @@ type AiChatWorkspaceProps = {
   onCommandExecute: (command: AiChatInputCommandId) => void;
   // AI 模型切换回调。
   onModelChange: (selection: AiModelSelection) => void;
+  // 取消当前 AI 生成回调。
+  onCancelGeneration?: () => void;
   // 上下文时间线是否展开
   isContextTimelineOpen?: boolean;
   // AI 会话列表。
@@ -144,6 +147,7 @@ export const AiChatWorkspace = ({
   onDeleteChatTurn,
   onCommandExecute,
   onModelChange,
+  onCancelGeneration,
   isContextTimelineOpen = false,
   chatSessions,
   onActiveSessionChange,
@@ -164,6 +168,13 @@ export const AiChatWorkspace = ({
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
     useState<AiChatMessageContextMenuRequest | null>(null);
+  // 外部注入到输入框的文本（取消生成时回显提示词）。
+  const [injectedInputText, setInjectedInputText] = useState<string | undefined>(undefined);
+  // 双击 Esc 取消状态：idle = 初始，pending = 第一次按下等待二次确认。
+  const escCancelStateRef = useRef<"idle" | "pending">("idle");
+  // 双击 Esc 超时计时器。
+  const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
   const syncMessageItems = useAiChatContextStore(
     (state) => state.syncMessageItems,
   );
@@ -712,6 +723,69 @@ export const AiChatWorkspace = ({
   };
 
   /**
+   * 双击 Esc 取消生成：
+   * - 第一次按 Esc 时提示用户，进入 pending 状态（2s 内有效）；
+   * - 2s 内再次按 Esc 时执行取消，回显提示词并标记 QA 为已取消。
+   */
+  const handleCancelEsc = useCallback((): void => {
+    if (session.status !== "running" || !onCancelGeneration) {
+      return;
+    }
+
+    if (escCancelStateRef.current === "idle") {
+      escCancelStateRef.current = "pending";
+      toast.info("再按一次 Esc 取消 AI 回答");
+
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current);
+      }
+      escCancelTimerRef.current = setTimeout(() => {
+        escCancelStateRef.current = "idle";
+        escCancelTimerRef.current = null;
+      }, 2000);
+    } else {
+      // 第二次按下：执行取消
+      escCancelStateRef.current = "idle";
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current);
+        escCancelTimerRef.current = null;
+      }
+
+      // 将最新用户消息内容注入输入框
+      const latestUserMsg = [...session.messages].reverse().find((m) => m.role === "user");
+      if (latestUserMsg?.content) {
+        setInjectedInputText(latestUserMsg.content);
+      }
+
+      onCancelGeneration();
+    }
+  }, [session.status, session.messages, onCancelGeneration, toast]);
+
+  // 监听全局键盘事件，处理双击 Esc 取消逻辑。
+  useEffect(() => {
+    if (session.status !== "running") {
+      // 会话不在运行中时，重置 Esc 取消状态
+      escCancelStateRef.current = "idle";
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current);
+        escCancelTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        handleCancelEsc();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [session.status, handleCancelEsc]);
+
+  /**
    * 复制当前菜单指向消息的纯文本内容。
    */
   const handleCopyText = (): void => {
@@ -863,6 +937,8 @@ export const AiChatWorkspace = ({
             contextTokens={contextBudget.totalTokens}
             contextLimit={contextBudget.contextLimit}
             isGenerating={session.status === "running"}
+            injectedText={injectedInputText}
+            onInjectedTextConsumed={() => setInjectedInputText(undefined)}
             onSendMessage={onSendMessage}
             onCommandExecute={onCommandExecute}
             onModelChange={onModelChange}

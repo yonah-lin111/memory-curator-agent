@@ -21,6 +21,34 @@ export type AiChatMessageUpdater = (message: AiChatMessage) => AiChatMessage;
 // AI 会话更新函数。
 export type AiChatSessionUpdater = (session: AiChatSession) => AiChatSession;
 
+/**
+ * mergeSessionCancelledFlags - 将旧会话消息中的 cancelled 纯前端字段合并到新会话中，
+ * 防止数据库快照覆盖时丢失取消标记。
+ */
+const mergeSessionCancelledFlags = (
+  newSession: AiChatSession,
+  oldSession: AiChatSession,
+): AiChatSession => {
+  // 构建旧消息 cancelled 状态的快速查找表
+  const cancelledIds = new Set<string>();
+  for (const msg of oldSession.messages) {
+    if (msg.cancelled) {
+      cancelledIds.add(msg.id);
+    }
+  }
+
+  if (cancelledIds.size === 0) {
+    return newSession;
+  }
+
+  return {
+    ...newSession,
+    messages: newSession.messages.map((msg) =>
+      cancelledIds.has(msg.id) ? { ...msg, cancelled: true } : msg,
+    ),
+  };
+};
+
 // AI 会话 reducer 动作。
 export type AiChatSessionAction =
   | {
@@ -239,7 +267,14 @@ export const aiChatSessionReducer = (
   switch (action.type) {
     case "reset":
       return {
-        sessions: action.sessions,
+        // 将旧会话中消息的 cancelled 纯前端字段合并回新会话，防止被数据库快照覆盖丢失。
+        sessions: action.sessions.map((newSession) => {
+          const oldSession = state.sessions.find((s) => s.id === newSession.id);
+          if (!oldSession) {
+            return newSession;
+          }
+          return mergeSessionCancelledFlags(newSession, oldSession);
+        }),
         activeId: action.activeId,
       };
     case "set-active":
@@ -278,13 +313,16 @@ export const aiChatSessionReducer = (
       }
       return {
         ...state,
-        sessions: state.sessions.map((session) =>
-          session.id === action.session.id
-            ? isStaleRunningSessionSnapshot(session, action.session)
-              ? session
-              : action.session
-            : session,
-        ),
+        sessions: state.sessions.map((session) => {
+          if (session.id !== action.session.id) {
+            return session;
+          }
+          if (isStaleRunningSessionSnapshot(session, action.session)) {
+            return session;
+          }
+          // 合并旧消息的 cancelled 纯前端字段，防止被快照覆盖丢失。
+          return mergeSessionCancelledFlags(action.session, session);
+        }),
       };
     }
     case "discard": {

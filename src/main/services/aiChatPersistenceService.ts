@@ -257,6 +257,8 @@ export type AiChatPersistenceService = {
   appendMessage: (input: AppendMessageInput) => void
   // 更新助手消息展示快照。
   updateAssistantMessage: (input: UpdateAssistantMessageInput) => void
+  // 将指定消息标记为已取消。
+  cancelMessages: (messageIds: string[]) => void
   // 创建 Agent run。
   startRun: (input: StartRunInput) => void
   // 原子创建会话、初始消息和 Agent run。
@@ -420,7 +422,8 @@ const mapMessageRow = (row: AiChatMessageRow): AiChatMessageItem => ({
   answer: row.answer ?? undefined,
   parts: parseArray<AiChatMessagePart>(row.parts_json),
   toolSteps: parseArray<AiToolStep>(row.tool_steps_json),
-  model: row.model ?? undefined
+  model: row.model ?? undefined,
+  cancelled: row.cancelled === 1 ? true : undefined
 })
 
 /**
@@ -813,9 +816,10 @@ export const createAiChatPersistenceService = (
             tool_steps_json,
             time,
             created_at,
-            updated_at
+            updated_at,
+            cancelled
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
         `
       )
       .run(
@@ -863,6 +867,21 @@ export const createAiChatPersistenceService = (
         input.timestamp,
         input.messageId
       )
+  }
+
+  /**
+   * 将指定消息标记为已取消。
+   */
+  const cancelMessages = (messageIds: string[]): void => {
+    if (messageIds.length === 0) {
+      return
+    }
+    const placeholders = messageIds.map(() => '?').join(', ')
+    database
+      .prepare(
+        `UPDATE ai_chat_messages SET cancelled = 1 WHERE external_id IN (${placeholders})`
+      )
+      .run(...messageIds)
   }
 
   const startRun = (input: StartRunInput): void => {
@@ -1061,6 +1080,7 @@ export const createAiChatPersistenceService = (
     ensureSession,
     appendMessage,
     updateAssistantMessage,
+    cancelMessages,
     startRun,
     createRunWithMessages,
     finishRun,

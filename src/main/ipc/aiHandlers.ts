@@ -200,6 +200,8 @@ type ActiveAiChatRun = {
   sessionTitle: string
   // 本轮用户问题。
   prompt: string
+  // 用户消息 ID。
+  userMessageId: string
   // 助手消息 ID。
   assistantMessageId: string
   // 取消控制器。
@@ -577,6 +579,9 @@ export const registerAiHandlers = (): void => {
     cancelPendingToolConfirmationsByRun(runId, new Error(message))
     activeRun.controller.abort(new Error(message))
 
+    // 将本轮 QA 的用户消息和助手消息持久化为已取消。
+    aiChatService.cancelMessages([activeRun.userMessageId, activeRun.assistantMessageId])
+
     const failedTimestamp = createTimestamp()
     aiChatService.failRunWithAssistantMessage({
       run: {
@@ -789,6 +794,7 @@ export const registerAiHandlers = (): void => {
       sessionId: payload.sessionId,
       sessionTitle,
       prompt: payload.message,
+      userMessageId,
       assistantMessageId,
       controller,
       sender: event.sender,

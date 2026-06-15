@@ -153,6 +153,8 @@ type UseAiChatControllerResult = {
   handleAiChatCommand: (
     command: AiChatInputCommandId,
   ) => string | void | Promise<string | void>;
+  // 取消当前正在生成的 AI 回答，并将最新 QA 标记为已取消。
+  handleCancelGeneration: () => void;
 };
 
 /**
@@ -887,6 +889,46 @@ export const useAiChatController = (): UseAiChatControllerResult => {
   };
 
   /**
+   * 取消当前正在生成的 AI 回答。
+   * 通过 runId 中断主进程 AbortController，并在前端将最新 QA 标记为 cancelled。
+   */
+  const handleCancelGeneration = (): void => {
+    const session = activeChatSession;
+    if (session.status !== "running") {
+      return;
+    }
+
+    // 找到当前会话对应的 runId
+    let activeRunId: string | null = null;
+    for (const [runId, mapping] of runMessageMapRef.current.entries()) {
+      if (mapping.sessionId === session.id) {
+        activeRunId = runId;
+        break;
+      }
+    }
+
+    if (activeRunId) {
+      void window.api?.ai?.cancelChat?.(activeRunId).catch(() => undefined);
+    }
+
+    // 找到最新的用户消息和 AI 消息，标记为 cancelled
+    const messages = session.messages;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const msg = messages[i];
+      if (msg.role === "user" || msg.role === "assistant") {
+        updateAiMessage(session.id, msg.id, (prev) => ({
+          ...prev,
+          cancelled: true,
+        }));
+        // 找到最近的一对 QA（用户+助手），标记完即停
+        if (msg.role === "user") {
+          break;
+        }
+      }
+    }
+  };
+
+  /**
    * 提交 Ask 回答，主进程会在同一个 Agent run 内继续执行。
    */
   const handleSubmitAskAnswer = async (
@@ -1060,5 +1102,6 @@ export const useAiChatController = (): UseAiChatControllerResult => {
     handleEditAndResendUserMessage,
     handleDeleteChatTurn,
     handleAiChatCommand,
+    handleCancelGeneration,
   };
 };

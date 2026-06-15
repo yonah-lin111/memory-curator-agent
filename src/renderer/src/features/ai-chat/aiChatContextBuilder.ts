@@ -196,7 +196,7 @@ export const buildMessageContextItems = (
   return messages.flatMap((message, index) => {
     const content = getMessageContextContent(message);
     const createdAt = index * 1000;
-    const shouldSkipMessageContext = erroredQaMessageIds.has(message.id);
+    const shouldSkipMessageContext = erroredQaMessageIds.has(message.id) || Boolean(message.cancelled);
     const items: AiChatContextItem[] = [];
 
     if (message.role === "user" && content && !shouldSkipMessageContext) {
@@ -232,6 +232,11 @@ export const buildMessageContextItems = (
     }
 
     if (message.role !== "assistant") {
+      return items;
+    }
+
+    // 已取消的 assistant 消息整体跳过（含工具步骤）
+    if (shouldSkipMessageContext) {
       return items;
     }
 

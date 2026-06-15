@@ -319,6 +319,8 @@ export type AiChatMessage = {
   parts?: AiChatMessagePart[];
   // 调用的模型。
   model?: string;
+  // 是否已被用户主动取消（仅前端状态，不落库）。
+  cancelled?: boolean;
 };
 
 // AI 会话类型，描述左侧历史列表和右侧聊天主体。

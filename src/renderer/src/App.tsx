@@ -151,6 +151,7 @@ const AppContent = (): React.JSX.Element => {
     handleEditAndResendUserMessage,
     handleDeleteChatTurn,
     handleAiChatCommand,
+    handleCancelGeneration,
   } = useAiChatController();
 
   // 执行 AI 对话斜杠命令。
@@ -275,26 +276,27 @@ const AppContent = (): React.JSX.Element => {
             }`}
             aria-hidden={!isChatOpen}
           >
-            <AiChatWorkspace
-              isChatOpen={isChatOpen}
-              session={activeChatSession}
-              modelOptions={aiModelOptions}
-              selectedModel={selectedAiModel}
-              isContextTimelineOpen={isContextTimelineOpen}
-              onSendMessage={handleSendMessage}
-              onSubmitAskAnswer={handleSubmitAskAnswer}
-              onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
-              onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
-              onEditAndResendUserMessage={handleEditAndResendUserMessage}
-              onDeleteChatTurn={handleDeleteChatTurn}
-              onCommandExecute={handleCommandExecute}
-              onModelChange={setSelectedAiModel}
-              chatSessions={chatSessions}
-              onActiveSessionChange={setActiveChatId}
-              hasMoreChatSessions={hasMoreChatSessions}
-              isLoadingMoreChatSessions={isLoadingMoreChatSessions}
-              onLoadMoreChatSessions={handleLoadMoreChatSessions}
-            />
+             <AiChatWorkspace
+               isChatOpen={isChatOpen}
+               session={activeChatSession}
+               modelOptions={aiModelOptions}
+               selectedModel={selectedAiModel}
+               isContextTimelineOpen={isContextTimelineOpen}
+               onSendMessage={handleSendMessage}
+               onSubmitAskAnswer={handleSubmitAskAnswer}
+               onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
+               onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
+               onEditAndResendUserMessage={handleEditAndResendUserMessage}
+               onDeleteChatTurn={handleDeleteChatTurn}
+               onCommandExecute={handleCommandExecute}
+               onModelChange={setSelectedAiModel}
+               onCancelGeneration={handleCancelGeneration}
+               chatSessions={chatSessions}
+               onActiveSessionChange={setActiveChatId}
+               hasMoreChatSessions={hasMoreChatSessions}
+               isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+               onLoadMoreChatSessions={handleLoadMoreChatSessions}
+             />
           </div>
         </div>
       </div>
