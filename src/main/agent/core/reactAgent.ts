@@ -36,6 +36,17 @@ const ASK_TOOL_NAME = 'common_tool_ask'
 const PEOPLE_MUTATION_ASK_REJECTION_MESSAGE =
   'Do not use common_tool_ask to confirm People add/update/delete operations. Call the relevant people_tool add/update/delete tool directly; the system will request internal confirmation before execution.'
 
+// 连续相同调用判定阈值。
+const DOOM_LOOP_THRESHOLD = 3
+
+// doom loop 检测豁免工具前缀（写入型工具由 confirmation 属性自动豁免）。
+const DOOM_LOOP_EXEMPT_PREFIXES: readonly string[] = ['common_tool_ask']
+
+/**
+ * doom loop 命中时回灌模型的停止消息。
+ */
+const DOOM_LOOP_STOP_MESSAGE = 'STOP: You have called this tool with identical arguments 3 times. Use the existing results from previous calls instead. Do not call this tool again with the same arguments.'
+
 /**
  * 如果当前 run 已取消，直接中断 Agent 循环。
  */
@@ -56,6 +67,42 @@ const parseToolArguments = (toolCall: ModelToolCallDoneEvent): unknown => {
   }
 
   return JSON.parse(argumentsText) as unknown
+}
+
+/**
+ * 工具调用记录。
+ */
+type ToolCallRecord = {
+  // 工具名。
+  name: string
+  // 序列化后的入参。
+  serializedInput: string
+}
+
+/**
+ * 判断该工具是否参与 doom loop 检测。
+ */
+const shouldCheckDoomLoop = (tool: AgentTool): boolean => {
+  if (DOOM_LOOP_EXEMPT_PREFIXES.some((prefix) => tool.name.startsWith(prefix))) {
+    return false
+  }
+  // 写入型工具（有 confirmation）不参与检测
+  if (tool.confirmation) {
+    return false
+  }
+  return true
+}
+
+/**
+ * 检测最近 N 次调用是否全部为同工具同入参。
+ */
+const isDoomLoop = (history: readonly ToolCallRecord[], name: string, serializedInput: string): boolean => {
+  if (history.length !== DOOM_LOOP_THRESHOLD) {
+    return false
+  }
+  return history.every(
+    (record) => record.name === name && record.serializedInput === serializedInput
+  )
 }
 
 /**
@@ -224,6 +271,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
   const messages: AgentMessage[] = [...input.messages]
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS
   let pendingToolConfirmationCompletion: string | null = null
+  const toolCallHistory: ToolCallRecord[] = []
 
   throwIfAborted(input.signal)
 
@@ -308,6 +356,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       toolCalls: normalizedToolCalls
     })
 
+    let executedAnyNonDoomLoop = false
+
     for (const toolCall of normalizedToolCalls) {
       throwIfAborted(input.signal)
 
@@ -317,6 +367,35 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       const toolInput = parseToolArguments(toolCall)
+
+      if (shouldCheckDoomLoop(tool)) {
+        const serializedInput = JSON.stringify(toolInput)
+
+        if (isDoomLoop(toolCallHistory, toolCall.name, serializedInput)) {
+          messages.push({
+            role: 'tool',
+            toolCallId: toolCall.id,
+            name: toolCall.name,
+            content: renderToolResultContent(DOOM_LOOP_STOP_MESSAGE, { rejected: true, reason: 'doom_loop' })
+          })
+
+          yield {
+            type: 'tool_failed',
+            id: toolCall.id,
+            name: toolCall.name,
+            input: toolInput,
+            error: DOOM_LOOP_STOP_MESSAGE
+          }
+
+          continue
+        }
+
+        toolCallHistory.push({ name: toolCall.name, serializedInput })
+        if (toolCallHistory.length > DOOM_LOOP_THRESHOLD) {
+          toolCallHistory.shift()
+        }
+      }
+
       if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
         appendSilentToolFailureMessage(messages, toolCall, PEOPLE_MUTATION_ASK_REJECTION_MESSAGE)
         continue
@@ -371,6 +450,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
+
+        executedAnyNonDoomLoop = true
 
         yield {
           type: 'tool_finished',
@@ -456,6 +537,15 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           content: renderToolFailureContent(toolCall.name, errorMessage)
         })
       }
+    }
+
+    if (!executedAnyNonDoomLoop && normalizedToolCalls.length > 0) {
+      messages.push({
+        role: 'user',
+        content: 'All your tool calls were blocked because they repeated previously executed queries. Please answer the user with the information you already have — do not call any more tools.'
+      })
+
+      break
     }
 
     yield {
