@@ -282,6 +282,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
   for (let turn = 0; turn < maxTurns; turn += 1) {
     throwIfAborted(input.signal)
 
+    toolCallHistory.length = 0
+
     const tools = prepareToolsForModel(input.tools, messages)
     const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
     const toolCalls: ModelToolCallDoneEvent[] = []
@@ -371,6 +373,11 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       if (shouldCheckDoomLoop(tool)) {
         const serializedInput = JSON.stringify(toolInput)
 
+        toolCallHistory.push({ name: toolCall.name, serializedInput })
+        if (toolCallHistory.length > DOOM_LOOP_THRESHOLD) {
+          toolCallHistory.shift()
+        }
+
         if (isDoomLoop(toolCallHistory, toolCall.name, serializedInput)) {
           messages.push({
             role: 'tool',
@@ -389,11 +396,6 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
           continue
         }
-
-        toolCallHistory.push({ name: toolCall.name, serializedInput })
-        if (toolCallHistory.length > DOOM_LOOP_THRESHOLD) {
-          toolCallHistory.shift()
-        }
       }
 
       if (toolCall.name === ASK_TOOL_NAME && isPeopleMutationConfirmationAskInput(toolInput)) {
@@ -407,6 +409,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         name: toolCall.name,
         input: toolInput
       }
+
+      executedAnyNonDoomLoop = true
 
       try {
         if (tool.confirmation) {
@@ -450,8 +454,6 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
         const result = await tool.execute(toolInput)
         throwIfAborted(input.signal)
-
-        executedAnyNonDoomLoop = true
 
         yield {
           type: 'tool_finished',
@@ -545,7 +547,9 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         content: 'All your tool calls were blocked because they repeated previously executed queries. Please answer the user with the information you already have — do not call any more tools.'
       })
 
-      break
+      yield { type: 'turn_finished' }
+      yield { type: 'done' }
+      return
     }
 
     yield {
