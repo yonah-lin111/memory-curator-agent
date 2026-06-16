@@ -726,6 +726,22 @@ export const createAiChatPersistenceTables = (database: Database.Database): void
 }
 
 /**
+ * 创建周度总结表。
+ */
+export const createWeeklySummariesTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS weekly_summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_start_date TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      model_used TEXT,
+      generated_at TEXT NOT NULL
+    );
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -743,6 +759,7 @@ export const initDatabase = (): Database.Database => {
   createJournalsTable(sqlite)
   createAssociatedPeopleTable(sqlite)
   createAiChatPersistenceTables(sqlite)
+  createWeeklySummariesTable(sqlite)
 
   return sqlite
 }

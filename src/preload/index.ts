@@ -535,6 +535,37 @@ type MonthOverview = {
   entries: MonthEntryOverview[]
 }
 
+// 周度总结项类型（preload 本地声明，与 main 的 WeeklySummaryItem 对齐）。
+type WeeklySummaryItem = {
+  id: number
+  weekStartDate: string
+  title: string
+  content: string
+  modelUsed: string | null
+  generatedAt: string
+}
+
+// 周度总结保存载荷类型。
+type WeeklySummarySavePayload = {
+  weekStartDate: string
+  title: string
+  content: string
+  modelUsed?: string | null
+  generatedAt: string
+}
+
+// 周度总结生成载荷类型。
+type WeeklySummaryGeneratePayload = {
+  weekStartDate: string
+  model?: string
+  provider?: string
+}
+
+// 周度总结 delta 事件。
+type WeeklySummaryDeltaEvent = {
+  text: string
+}
+
 // 渲染进程安全 API。
 const api = {
   config: {
@@ -631,6 +662,32 @@ const api = {
 
       return () => {
         ipcRenderer.removeListener('ai:chat:event', wrappedListener)
+      }
+    }
+  },
+  weekly: {
+    summary: {
+      get: (weekStartDate: string): Promise<WeeklySummaryItem | null> =>
+        ipcRenderer.invoke('weekly:summary:get', weekStartDate),
+      save: (payload: WeeklySummarySavePayload): Promise<WeeklySummaryItem> =>
+        ipcRenderer.invoke('weekly:summary:save', payload),
+      delete: (weekStartDate: string): Promise<void> =>
+        ipcRenderer.invoke('weekly:summary:delete', weekStartDate),
+      generate: (payload: WeeklySummaryGeneratePayload): Promise<WeeklySummaryItem> =>
+        ipcRenderer.invoke('weekly:summary:generate', payload),
+      onDelta: (listener: (event: WeeklySummaryDeltaEvent) => void): (() => void) => {
+        const wrapped = (_: Electron.IpcRendererEvent, event: WeeklySummaryDeltaEvent): void => {
+          listener(event)
+        }
+        ipcRenderer.on('weekly:summary:delta', wrapped)
+        return () => ipcRenderer.removeListener('weekly:summary:delta', wrapped)
+      },
+      onDone: (listener: (item: WeeklySummaryItem) => void): (() => void) => {
+        const wrapped = (_: Electron.IpcRendererEvent, item: WeeklySummaryItem): void => {
+          listener(item)
+        }
+        ipcRenderer.on('weekly:summary:done', wrapped)
+        return () => ipcRenderer.removeListener('weekly:summary:done', wrapped)
       }
     }
   }

@@ -640,6 +640,52 @@ type MonthOverview = {
   entries: MonthEntryOverview[]
 }
 
+// 周度总结项类型（与 main/preload 对齐）。
+type WeeklySummaryItem = {
+  // 自增主键。
+  id: number
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
+  // 总结标题。
+  title: string
+  // 总结正文，Markdown 格式。
+  content: string
+  // 生成所用模型标识。
+  modelUsed: string | null
+  // 生成时间，格式 'YYYY-MM-DD HH:mm'。
+  generatedAt: string
+}
+
+// 周度总结保存载荷类型。
+type WeeklySummarySavePayload = {
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
+  // 总结标题。
+  title: string
+  // 总结正文，Markdown 格式。
+  content: string
+  // 生成所用模型标识。
+  modelUsed?: string | null
+  // 生成时间，格式 'YYYY-MM-DD HH:mm'。
+  generatedAt: string
+}
+
+// 周度总结生成载荷类型。
+type WeeklySummaryGeneratePayload = {
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
+  // 可选模型标识。
+  model?: string
+  // 可选 provider 标识。
+  provider?: string
+}
+
+// 周度总结 delta 事件。
+type WeeklySummaryDeltaEvent = {
+  // delta 文本。
+  text: string
+}
+
 // 渲染进程安全 API 类型。
 type AppAPI = {
   // 配置文件 API。
@@ -757,6 +803,24 @@ type AppAPI = {
     submitToolConfirmationAnswer?: (payload: AiToolConfirmationAnswerPayload) => Promise<void>
     // 监听 AI 对话事件。
     onChatEvent: (listener: (event: AiChatEvent) => void) => () => void
+  }
+  // 周度总结 API。
+  weekly?: {
+    // 周度总结服务。
+    summary: {
+      // 按周起始日期查询总结。
+      get: (weekStartDate: string) => Promise<WeeklySummaryItem | null>
+      // 保存（upsert）总结。
+      save: (payload: WeeklySummarySavePayload) => Promise<WeeklySummaryItem>
+      // 删除总结。
+      delete: (weekStartDate: string) => Promise<void>
+      // AI 流式生成总结。
+      generate: (payload: WeeklySummaryGeneratePayload) => Promise<WeeklySummaryItem>
+      // 监听流式生成 delta 事件。
+      onDelta: (listener: (event: WeeklySummaryDeltaEvent) => void) => () => void
+      // 监听流式生成完成事件。
+      onDone: (listener: (item: WeeklySummaryItem) => void) => () => void
+    }
   }
 }
 

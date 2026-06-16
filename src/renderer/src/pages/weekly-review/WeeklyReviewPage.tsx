@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel";
 
 // 单日聚合并格式化后的数据接口
 interface DayDataAggregated {
@@ -700,20 +701,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
           {/* 右列：周度总结 */}
           <div className="w-full flex flex-col bg-[#000000]">
-            <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-white/60" />
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                  周度总结
-                </h3>
-              </div>
-            </div>
-
-            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow">
-              <div className="flex-1 flex items-center justify-center text-xs text-white/25 border border-dashed border-white/5 rounded-[6px] py-12">
-                总结功能筹备中...
-              </div>
-            </div>
+            <WeeklySummaryPanel weekStartDate={getMonday(entryDate)} />
           </div>
         </div>
       </div>

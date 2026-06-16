@@ -558,6 +558,52 @@ export const journals = sqliteTable('journals', {
 })
 
 // 关联人物 SQLite 表定义。
+// 周度总结数据库行类型。
+export type WeeklySummaryRow = {
+  // 自增主键。
+  id: number
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  week_start_date: string
+  // 总结标题。
+  title: string
+  // 总结正文，Markdown 格式。
+  content: string
+  // 生成所用模型标识。
+  model_used: string | null
+  // 生成时间，格式 'YYYY-MM-DD HH:mm'。
+  generated_at: string
+}
+
+// 页面使用的周度总结类型。
+export type WeeklySummaryItem = {
+  // 自增主键。
+  id: number
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
+  // 总结标题。
+  title: string
+  // 总结正文，Markdown 格式。
+  content: string
+  // 生成所用模型标识。
+  modelUsed: string | null
+  // 生成时间，格式 'YYYY-MM-DD HH:mm'。
+  generatedAt: string
+}
+
+// 周度总结保存输入类型。
+export type WeeklySummarySaveInput = {
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
+  // 总结标题。
+  title: string
+  // 总结正文，Markdown 格式。
+  content: string
+  // 生成所用模型标识。
+  modelUsed?: string | null
+  // 生成时间，格式 'YYYY-MM-DD HH:mm'。
+  generatedAt: string
+}
+
 export const associatedPeople = sqliteTable('associated_people', {
   id: integer('id').primaryKey(),
   externalId: text('external_id').notNull().unique(),
