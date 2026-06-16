@@ -39,11 +39,6 @@ export const AiChatThinkingBlock = ({
         }}
         aria-expanded={isExpanded}
       >
-        <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform duration-200 ${
-            isExpanded ? "" : "-rotate-90"
-          }`}
-        />
         <Brain className="w-3.5 h-3.5" />
         <span>{isGenerating ? "Thinking" : "Thought Process"}</span>
         {isGenerating && (
@@ -52,6 +47,11 @@ export const AiChatThinkingBlock = ({
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50"></span>
           </span>
         )}
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+            isExpanded ? "" : "-rotate-90"
+          }`}
+        />
       </button>
 
       {/* 展开的思考内容区域，带平滑高度与透明度过渡 */}
