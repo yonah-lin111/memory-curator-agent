@@ -23,8 +23,6 @@ export interface NoteMaterialItem {
   title: string;
   // 笔记正文。
   content: string;
-  // 笔记来源渠道。
-  source: "随手速记" | "聊天粘贴" | "截图文字" | "会议摘要";
   // 关联标签列表。
   tags: string[];
   // 记录日期与时间。
@@ -41,10 +39,10 @@ export interface NoteDraft {
   title: string;
   // 草稿 Markdown 正文。
   content: string;
-  // 草稿来源。
-  source: NoteMaterialItem["source"];
   // 草稿标签列表。
   tags: string[];
+  // 分类 ID。
+  categoryId?: number;
   // 草稿记录日期与时间。
   time?: string;
 }
@@ -212,8 +210,8 @@ export const NotesPage = (): React.JSX.Element => {
       const updatedNote = await window.api.notes.update(id, {
         title: draft.title.trim(),
         content: draft.content.trim(),
-        source: draft.source,
         tags: draft.tags,
+        categoryId: draft.categoryId,
       });
 
       setNotes((currentNotes) =>
@@ -237,8 +235,8 @@ export const NotesPage = (): React.JSX.Element => {
       const newNote = await window.api.notes.create({
         title: draft.title.trim(),
         content: draft.content.trim(),
-        source: draft.source,
         tags: draft.tags,
+        categoryId: draft.categoryId,
       });
 
       setNotes((currentNotes) => [newNote, ...currentNotes]);
@@ -262,12 +260,13 @@ export const NotesPage = (): React.JSX.Element => {
               ? {
                   title: editingNote.title,
                   content: editingNote.content,
-                  source: editingNote.source,
                   tags: editingNote.tags,
+                  categoryId: editingNote.categoryId,
                   time: editingNote.time,
                 }
               : undefined
           }
+          categories={categories}
           onClose={() => {
             setIsMarkdownModalOpen(false);
             setEditingNote(null);
@@ -409,9 +408,6 @@ export const NotesPage = (): React.JSX.Element => {
                             {note.categoryName}
                           </span>
                         )}
-                        <span className="rounded-[6px] bg-white/10 px-1.5 py-0.5 text-[11px] text-white/60 font-medium">
-                          {note.source}
-                        </span>
                         {note.tags.map((tag) => (
                           <Tag
                             key={tag}

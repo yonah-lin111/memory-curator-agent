@@ -1,13 +1,14 @@
 import type React from "react";
-import { useEffect, useState } from "react";
-import { FileText, Tag as TagIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FileText, Folder, Tag as TagIcon } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import { Select, type SelectOption } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHeaderStore } from "@/lib/headerStore";
-import type { NoteMaterialItem, NoteDraft } from "@/pages/notes/NotesPage";
+import type { NoteDraft } from "@/pages/notes/NotesPage";
+import type { NoteCategory } from "@/pages/notes/components/NoteCategoryPanel";
 
 // 笔记编辑面板属性。
 type NoteMarkdownPanelProps = {
@@ -17,29 +18,15 @@ type NoteMarkdownPanelProps = {
   onSave: (draft: NoteDraft) => void;
   // 初始草稿（编辑时传入）。
   initialDraft?: NoteDraft;
+  // 可选分类列表。
+  categories: NoteCategory[];
 };
-
-// 笔记来源选项。
-const NOTE_SOURCE_OPTIONS: NoteMaterialItem["source"][] = [
-  "随手速记",
-  "聊天粘贴",
-  "截图文字",
-  "会议摘要",
-];
-
-// 笔记来源下拉选项。
-const NOTE_SOURCE_SELECT_OPTIONS: SelectOption<NoteMaterialItem["source"]>[] =
-  NOTE_SOURCE_OPTIONS.map((source) => ({
-    value: source,
-    label: source,
-  }));
 
 // Markdown 笔记初始草稿。
 const INITIAL_NOTE_DRAFT: NoteDraft = {
   title: "",
   content:
-    "## 今天的新素材\n\n- [ ] 先保留原始想法\n- [ ] 再交给 Agent 做主题策展\n\n> Markdown 支持标题、列表、引用、表格与任务列表。\n\n| 字段 | 状态 |\n| --- | --- |\n| 来源 | 待整理 |",
-  source: "随手速记",
+    "## 今天的新素材\n\n- [ ] 先保留原始想法\n- [ ] 再交给 Agent 做主题策展\n\n> Markdown 支持标题、列表、引用、表格与任务列表。\n\n| 字段 | 状态 |\n| --- | --- |\n| 分类 | 待整理 |",
   tags: [],
 };
 
@@ -87,6 +74,7 @@ export const NoteMarkdownPanel = ({
   onClose,
   onSave,
   initialDraft,
+  categories,
 }: NoteMarkdownPanelProps): React.JSX.Element => {
   // 当前 Markdown 草稿。
   const [draft, setDraft] = useState<NoteDraft>(
@@ -95,6 +83,16 @@ export const NoteMarkdownPanel = ({
   // 全局标题与右侧动作 Store。
   const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
     useHeaderStore();
+
+  // 分类下拉选项（含"无分类"项，用空字符串表示）。
+  // 用 useMemo 稳定引用，避免每次渲染产生新数组触发 useEffect 循环。
+  const categorySelectOptions: SelectOption<string>[] = useMemo(
+    () => [
+      { value: "", label: "无分类" },
+      ...categories.map((cat) => ({ value: String(cat.id), label: cat.name })),
+    ],
+    [categories],
+  );
 
   /**
    * 更新草稿局部字段。
@@ -141,13 +139,14 @@ export const NoteMarkdownPanel = ({
     resetHeader,
   ]);
 
-  // 2. 同步设置标签、来源渠道的 Tooltip 弹出面板，以及关闭和保存按钮至全局 Header 右侧
+  // 2. 同步设置标签、分类的 Tooltip 弹出面板，以及关闭和保存按钮至全局 Header 右侧
   useEffect(() => {
     const isSaveDisabled = !draft.title.trim() || !draft.content.trim();
+    const activeCategory = categories.find((c) => c.id === draft.categoryId);
 
     setExtraActions(
       <div className="flex items-center gap-1.5 animate-card-modal-in">
-        {/* 设置标签和来源渠道的 Tooltip */}
+        {/* 设置标签和分类的 Tooltip */}
         <Tooltip
           trigger="click"
           placement="bottom"
@@ -169,14 +168,18 @@ export const NoteMarkdownPanel = ({
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] font-bold text-white/45 uppercase tracking-wider text-left">
-                  来源渠道
+                  所属分类
                 </span>
                 <Select
-                  value={draft.source}
-                  options={NOTE_SOURCE_SELECT_OPTIONS}
+                  value={draft.categoryId !== undefined ? String(draft.categoryId) : ""}
+                  options={categorySelectOptions}
                   position="down"
                   align="left"
-                  onChange={(source) => handleDraftChange({ source })}
+                  onChange={(val) =>
+                    handleDraftChange({
+                      categoryId: val ? Number(val) : undefined,
+                    })
+                  }
                 />
               </div>
             </>
@@ -193,7 +196,10 @@ export const NoteMarkdownPanel = ({
               {draft.tags.length > 0 ? draft.tags.join(", ") : "无标签"}
             </span>
             <span className="text-white/20">|</span>
-            <span className="text-[11px] text-white/45">{draft.source}</span>
+            <Folder className="h-3 w-3" />
+            <span className="text-[11px] text-white/45">
+              {activeCategory ? activeCategory.name : "无分类"}
+            </span>
           </IconButton>
         </Tooltip>
 
@@ -215,7 +221,7 @@ export const NoteMarkdownPanel = ({
         />
       </div>,
     );
-  }, [draft, initialDraft, onClose, setExtraActions]);
+  }, [draft, initialDraft, onClose, setExtraActions, categories, categorySelectOptions]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in rounded-[6px] border border-white/6 bg-[#212121]">

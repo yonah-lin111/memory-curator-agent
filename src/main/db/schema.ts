@@ -5,9 +5,6 @@ const timestamp = customType<{ data: string; driverData: string }>({
   dataType: () => 'timestamp'
 })
 
-// 笔记来源类型。
-export type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
-
 // 待办优先级类型。
 export type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
@@ -17,8 +14,6 @@ export type NoteCreateInput = {
   title: string
   // 笔记正文。
   content: string
-  // 笔记来源。
-  source: NoteSource
   // 笔记标签列表。
   tags: string[]
   // 分类 ID。
@@ -126,8 +121,6 @@ export type NoteMaterialItem = {
   title: string
   // 笔记正文。
   content: string
-  // 笔记来源。
-  source: NoteSource
   // 笔记标签列表。
   tags: string[]
   // 记录日期与时间。
@@ -381,8 +374,6 @@ export type NoteRow = {
   title: string
   // 笔记正文。
   content: string
-  // 笔记来源。
-  source: NoteSource
   // JSON 字符串标签列表。
   tags: string
   // 记录日期与时间。
@@ -522,7 +513,6 @@ export const notes = sqliteTable('notes', {
   id: integer('id').primaryKey(),
   title: text('title').notNull(),
   content: text('content').notNull(),
-  source: text('source').$type<NoteSource>().notNull(),
   tags: text('tags').notNull(),
   time: timestamp('time').notNull(),
   categoryId: integer('category_id')

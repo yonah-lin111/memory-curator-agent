@@ -34,8 +34,10 @@ type RebuildTableConfig = {
   timestampColumns?: string[]
   // 需要存在的字段。
   requiredColumns?: string[]
-  // 需要单列唯一约束的字段。
+  // 单列唯一约束字段。
   requiredUniqueColumns?: string[]
+  // 必须不存在的字段（存在则触发重建以删除）。
+  forbiddenColumns?: string[]
 }
 
 // SQLite 数据库连接。
@@ -114,12 +116,14 @@ const shouldRebuildTable = (
   tableName: MigratableTableName,
   timestampColumns: string[] = [],
   requiredColumns: string[] = [],
-  requiredUniqueColumns: string[] = []
+  requiredUniqueColumns: string[] = [],
+  forbiddenColumns: string[] = []
 ): boolean =>
   !usesIntegerPrimaryKey(database, tableName) ||
   timestampColumns.some((columnName) => getColumnType(database, tableName, columnName) !== 'TIMESTAMP') ||
   requiredColumns.some((columnName) => !columnExists(database, tableName, columnName)) ||
-  requiredUniqueColumns.some((columnName) => !columnHasUniqueIndex(database, tableName, columnName))
+  requiredUniqueColumns.some((columnName) => !columnHasUniqueIndex(database, tableName, columnName)) ||
+  forbiddenColumns.some((columnName) => columnExists(database, tableName, columnName))
 
 /**
  * 生成旧表读取字段，缺失字段用替代字段兜底。
@@ -160,7 +164,8 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
       config.tableName,
       config.timestampColumns,
       config.requiredColumns,
-      config.requiredUniqueColumns
+      config.requiredUniqueColumns,
+      config.forbiddenColumns
     )
   ) {
     return
@@ -197,16 +202,16 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
     columnsSql: `
       title TEXT NOT NULL,
       content TEXT NOT NULL,
-      source TEXT NOT NULL,
       tags TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
       category_id INTEGER
     `.trim(),
-    insertColumns: ['title', 'content', 'source', 'tags', 'time', 'category_id'],
-    selectColumns: ['title', 'content', 'source', 'tags', 'time', 'category_id'],
+    insertColumns: ['title', 'content', 'tags', 'time', 'category_id'],
+    selectColumns: ['title', 'content', 'tags', 'time', 'category_id'],
     orderByClause: 'time ASC, id ASC',
     timestampColumns: ['time'],
-    requiredColumns: ['category_id']
+    requiredColumns: ['category_id'],
+    forbiddenColumns: ['source']
   })
   rebuildTable(database, {
     tableName: 'todos',
@@ -494,7 +499,6 @@ export const createNotesTable = (database: Database.Database): void => {
       id INTEGER PRIMARY KEY,
       title TEXT NOT NULL,
       content TEXT NOT NULL,
-      source TEXT NOT NULL,
       tags TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
       category_id INTEGER

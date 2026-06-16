@@ -17,7 +17,7 @@ class MemoryNotesDatabase implements DatabaseConnection {
    * 准备内存 SQL 语句。
    */
   prepare = (sql: string): DatabaseStatement => {
-    if (sql.startsWith('SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name')) {
+    if (sql.startsWith('SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name')) {
       return {
         all: (...values: unknown[]) => {
           const categoryId = values[0] as number | undefined
@@ -42,10 +42,9 @@ class MemoryNotesDatabase implements DatabaseConnection {
             id: insertedId,
             title: values[0] as string,
             content: values[1] as string,
-            source: values[2] as NoteRow['source'],
-            tags: values[3] as string,
-            time: values[4] as string,
-            category_id: (values[5] as number | null) ?? null,
+            tags: values[2] as string,
+            time: values[3] as string,
+            category_id: (values[4] as number | null) ?? null,
             category_name: null
           })
 
@@ -60,14 +59,13 @@ class MemoryNotesDatabase implements DatabaseConnection {
         get: () => undefined,
         run: (...values) => {
           this.rows = this.rows.map((row) =>
-            row.id === values[5]
+            row.id === values[4]
               ? {
                   ...row,
                   title: values[0] as string,
                   content: values[1] as string,
-                  source: values[2] as NoteRow['source'],
-                  tags: values[3] as string,
-                  category_id: (values[4] as number | null) ?? null
+                  tags: values[2] as string,
+                  category_id: (values[3] as number | null) ?? null
                 }
               : row
           )
@@ -106,14 +104,12 @@ describe('notesService', () => {
     const created = service.create({
       title: 'SQLite 笔记',
       content: '持久化 Markdown 内容',
-      source: '随手速记',
       tags: ['本地存储', 'CRUD']
     })
 
     expect(created).toMatchObject({
       title: 'SQLite 笔记',
       content: '持久化 Markdown 内容',
-      source: '随手速记',
       tags: ['本地存储', 'CRUD']
     })
     expect(typeof created.id).toBe('number')
@@ -123,7 +119,6 @@ describe('notesService', () => {
     const updated = service.update(created.id, {
       title: '更新后的笔记',
       content: '更新后的 Markdown 内容',
-      source: '会议摘要',
       tags: ['更新']
     })
 
@@ -131,7 +126,6 @@ describe('notesService', () => {
       ...created,
       title: '更新后的笔记',
       content: '更新后的 Markdown 内容',
-      source: '会议摘要',
       tags: ['更新']
     })
     expect(service.list()).toEqual([updated])

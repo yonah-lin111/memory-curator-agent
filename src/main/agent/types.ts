@@ -486,8 +486,6 @@ export type SnippetQueryToolResult = AgentToolResult & {
 export type NoteQueryToolInput = {
   // 搜索关键字（LIKE 匹配 title 或 content 字段）。
   query?: string
-  // 来源过滤。
-  source?: string
   // 标签包含条件。
   tag?: string
   // 分类 ID 过滤。
@@ -501,7 +499,7 @@ export type NoteQueryToolInput = {
 // Note 查询工具返回项。
 export type NoteQueryToolItem = Pick<
   NoteMaterialItem,
-  'id' | 'title' | 'content' | 'source' | 'tags' | 'time' | 'categoryId' | 'categoryName'
+  'id' | 'title' | 'content' | 'tags' | 'time' | 'categoryId' | 'categoryName'
 >
 
 // Note 查询工具返回结果。

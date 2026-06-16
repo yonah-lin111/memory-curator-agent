@@ -7,8 +7,6 @@ type NoteDraftPayload = {
   title: string
   // 笔记正文。
   content: string
-  // 笔记来源。
-  source: '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
   // 笔记标签列表。
   tags: string[]
 }

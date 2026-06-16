@@ -2,9 +2,6 @@
 
 import type { ElectronAPI } from '@electron-toolkit/preload'
 
-// 笔记来源类型。
-type NoteSource = '随手速记' | '聊天粘贴' | '截图文字' | '会议摘要'
-
 // 待办优先级类型。
 type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
@@ -22,8 +19,6 @@ type NoteDraftPayload = {
   title: string
   // 笔记正文。
   content: string
-  // 笔记来源。
-  source: NoteSource
   // 笔记标签列表。
   tags: string[]
   // 分类 ID。

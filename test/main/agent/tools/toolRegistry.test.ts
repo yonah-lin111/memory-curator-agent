@@ -15,7 +15,6 @@ const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delet
     id: 1,
     title: input.title,
     content: input.content,
-    source: input.source,
     tags: input.tags,
     time: '2026-06-13 10:00',
     categoryId: input.categoryId
@@ -24,7 +23,6 @@ const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delet
     id,
     title: input.title,
     content: input.content,
-    source: input.source,
     tags: input.tags,
     time: '2026-06-13 10:00',
     categoryId: input.categoryId

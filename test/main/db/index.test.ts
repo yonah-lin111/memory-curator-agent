@@ -588,6 +588,8 @@ describe('db schema migration', () => {
       id: 1,
       title: '旧笔记'
     })
+    // 迁移后 source 列应被删除。
+    expect(() => database.getColumn('notes', 'source')).toThrow()
     expect(database.prepare('SELECT id, text FROM todos').get()).toMatchObject({
       id: 1,
       text: '旧待办'
@@ -627,5 +629,43 @@ describe('db schema migration', () => {
         )
         .get()
     ).toBeUndefined()
+  })
+
+  it('迁移已存在的 notes 表时删除 source 列并保留业务数据', () => {
+    const database = new MemoryMigrationDatabase()
+
+    // 模拟带有 source 列的旧版 notes 表（已有整型主键）。
+    database.exec(`
+      CREATE TABLE notes (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL,
+        tags TEXT NOT NULL,
+        time TIMESTAMP NOT NULL,
+        category_id INTEGER
+      );
+    `)
+    database.insertRow('notes', {
+      id: 1,
+      title: '保留笔记',
+      content: '保留内容',
+      source: '随手速记',
+      tags: '["测试"]',
+      time: '2026-06-16 10:00',
+      category_id: null
+    })
+
+    migrateLegacySchema(database as never)
+    createNotesTable(database as never)
+
+    // source 列应被删除。
+    expect(() => database.getColumn('notes', 'source')).toThrow()
+    // 其他数据应保留。
+    expect(database.prepare('SELECT id, title, content FROM notes').get()).toMatchObject({
+      id: 1,
+      title: '保留笔记',
+      content: '保留内容'
+    })
   })
 })

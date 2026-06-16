@@ -1,4 +1,4 @@
-import type { NoteCreateInput, NoteMaterialItem, NoteSource } from '@/db/schema'
+import type { NoteCreateInput, NoteMaterialItem } from '@/db/schema'
 import type { NotesService } from '@/services/notesService'
 import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation'
 import type {
@@ -49,17 +49,10 @@ const NOTE_TABLE_NAME = 'notes'
 
 // Note 查询字段清单。
 const NOTE_COLUMNS =
-  'n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name'
+  'n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name'
 
 // Note FROM 子句（含分类 LEFT JOIN）。
 const NOTE_FROM_CLAUSE = 'notes n LEFT JOIN note_categories nc ON n.category_id = nc.id'
-
-// Note 来源枚举 Schema。
-const NOTE_SOURCE_SCHEMA = {
-  type: 'string',
-  enum: ['随手速记', '聊天粘贴', '截图文字', '会议摘要'],
-  description: 'Note source'
-}
 
 // 禁止 AI SQL 使用的高风险关键字。
 const FORBIDDEN_SQL_PATTERN =
@@ -78,7 +71,6 @@ const toToolItem = (note: NoteMaterialItem): NoteQueryToolItem => ({
   id: note.id,
   title: note.title,
   content: note.content,
-  source: note.source,
   tags: note.tags,
   time: note.time,
   categoryId: note.categoryId,
@@ -113,7 +105,6 @@ const isNoteSqlRow = (value: unknown): value is NoteSqlRow =>
   typeof value.id === 'number' &&
   typeof value.title === 'string' &&
   typeof value.content === 'string' &&
-  typeof value.source === 'string' &&
   typeof value.tags === 'string' &&
   typeof value.time === 'string'
 
@@ -125,7 +116,6 @@ const sqlRowToToolItem = (row: NoteSqlRow): NoteQueryToolItem =>
     id: row.id as number,
     title: row.title as string,
     content: row.content as string,
-    source: row.source as NoteSource,
     tags: parseSqlTags(row.tags as string),
     time: row.time as string,
     categoryId: (row.category_id as number | null) ?? undefined,
@@ -161,7 +151,6 @@ const parseInput = (input: unknown): NoteQueryToolInput => {
 
   return {
     query: parseString(input.query),
-    source: parseString(input.source),
     tag: parseString(input.tag),
     categoryId: typeof input.categoryId === 'number' ? input.categoryId : undefined,
     sql: parseString(input.sql),
@@ -202,9 +191,6 @@ const buildLikeCondition = (
  */
 const buildStructuredWhere = (parsed: NoteQueryToolInput): string => {
   const whereParts: (string | null)[] = [
-    parsed.source
-      ? `n.source = '${escapeSqlString(parsed.source.trim())}'`
-      : null,
     buildLikeCondition('tags', parsed.tag),
     typeof parsed.categoryId === 'number'
       ? `n.category_id = ${parsed.categoryId}`
@@ -339,9 +325,9 @@ export const createNoteQueryTool = (
       'Return the note facts needed to answer the user. Do not repeat irrelevant fields.',
     examples: [
       `{"limit":10}`,
-      `{"query":"React","source":"聊天粘贴"}`,
+      `{"query":"React"}`,
       `{"tag":"前端","categoryId":1}`,
-      `{"sql":"SELECT ${NOTE_COLUMNS} FROM ${NOTE_FROM_CLAUSE} WHERE n.source = '随手速记' ORDER BY n.time DESC","limit":5}`
+      `{"sql":"SELECT ${NOTE_COLUMNS} FROM ${NOTE_FROM_CLAUSE} ORDER BY n.time DESC","limit":5}`
     ]
   },
   parameters: {
@@ -350,10 +336,6 @@ export const createNoteQueryTool = (
       query: {
         type: 'string',
         description: 'Search text contains (LIKE matching on title or content).'
-      },
-      source: {
-        ...NOTE_SOURCE_SCHEMA,
-        description: 'Exact source filter'
       },
       tag: {
         type: 'string',
@@ -410,10 +392,6 @@ const NOTE_PROFILE_PROPERTIES = {
   content: {
     type: 'string',
     description: 'Note content'
-  },
-  source: {
-    ...NOTE_SOURCE_SCHEMA,
-    description: 'Note source'
   },
   tags: {
     type: 'array',
@@ -548,7 +526,6 @@ const parseCreateInput = (input: unknown): NoteCreateInput => {
 
   const title = parseString(input.title)?.trim()
   const content = parseString(input.content)?.trim() ?? ''
-  const source = parseString(input.source)?.trim()
   const tags = parseStringArray(input.tags)
 
   if (!title) {
@@ -559,11 +536,7 @@ const parseCreateInput = (input: unknown): NoteCreateInput => {
     throw new Error('Note create requires content')
   }
 
-  if (!source) {
-    throw new Error('Note create requires source')
-  }
-
-  return { title, content, source: source as NoteSource, tags }
+  return { title, content, tags }
 }
 
 /**
@@ -582,7 +555,6 @@ const parseUpdateInput = (
 
   const title = parseString(input.title)?.trim()
   const content = parseString(input.content)?.trim() ?? ''
-  const source = parseString(input.source)?.trim()
   const tags = parseStringArray(input.tags)
 
   if (!title) {
@@ -593,13 +565,9 @@ const parseUpdateInput = (
     throw new Error('Note update requires content')
   }
 
-  if (!source) {
-    throw new Error('Note update requires source')
-  }
-
   return {
     id: input.id,
-    profile: { title, content, source: source as NoteSource, tags }
+    profile: { title, content, tags }
   }
 }
 
@@ -654,12 +622,12 @@ export const createNoteAddTool = (
     output:
       'Include confirmationSummary in the tool arguments; return the created note facts needed by the user.',
     examples: [
-      '{"confirmationSummary":"将创建笔记：**React 学习笔记**（聊天粘贴）。","title":"React 学习笔记","content":"React 的核心概念包括组件、状态和属性…","source":"聊天粘贴","tags":["前端","学习"]}'
+      '{"confirmationSummary":"将创建笔记：**React 学习笔记**。","title":"React 学习笔记","content":"React 的核心概念包括组件、状态和属性…","tags":["前端","学习"]}'
     ]
   },
   parameters: {
     type: 'object',
-    required: ['title', 'content', 'source', 'tags', 'confirmationSummary'],
+    required: ['title', 'content', 'tags', 'confirmationSummary'],
     properties: {
       ...NOTE_PROFILE_PROPERTIES
     }
@@ -705,19 +673,19 @@ export const createNoteUpdateTool = (
       'Do not call common_tool_ask only to confirm updates; the system will request internal confirmation before execution.',
       'Write confirmationSummary yourself in concise Markdown Chinese before confirmation.',
       'For updates, confirmationSummary must name the note title and list the key fields that will change.',
-      'Require the note id and the complete replacement fields (title, content, source, tags).',
+      'Require the note id and the complete replacement fields (title, content, tags).',
       'Query first when the user only provides a title, then merge unchanged fields before updating.',
       'Never overwrite fields with guesses.'
     ],
     output:
       'Include confirmationSummary in the tool arguments; return the updated note facts needed by the user.',
     examples: [
-      '{"confirmationSummary":"将更新笔记：**React 学习笔记**。\\n- 来源：随手速记\\n- 标签：前端","id":1,"title":"React 学习笔记","content":"React 的核心概念包括组件、状态和属性…","source":"随手速记","tags":["前端"]}'
+      '{"confirmationSummary":"将更新笔记：**React 学习笔记**。\\n- 标签：前端","id":1,"title":"React 学习笔记","content":"React 的核心概念包括组件、状态和属性…","tags":["前端"]}'
     ]
   },
   parameters: {
     type: 'object',
-    required: ['id', 'title', 'content', 'source', 'tags', 'confirmationSummary'],
+    required: ['id', 'title', 'content', 'tags', 'confirmationSummary'],
     properties: {
       id: {
         type: 'number',
@@ -935,7 +903,7 @@ const createNoteBatchAddTool = (
     output:
       'Include confirmationSummary in the tool arguments; return count and created note facts needed by the user.',
     examples: [
-      '{"confirmationSummary":"将批量创建 2 项笔记。\\n- React 学习笔记\\n- Vue 3 速记","items":[{"title":"React 学习笔记","content":"React 的核心概念…","source":"聊天粘贴","tags":["前端","学习"]},{"title":"Vue 3 速记","content":"Vue 3 的 Composition API…","source":"聊天粘贴","tags":["前端","学习"]}]}'
+      '{"confirmationSummary":"将批量创建 2 项笔记。\\n- React 学习笔记\\n- Vue 3 速记","items":[{"title":"React 学习笔记","content":"React 的核心概念…","tags":["前端","学习"]},{"title":"Vue 3 速记","content":"Vue 3 的 Composition API…","tags":["前端","学习"]}]}'
     ]
   },
   parameters: {
@@ -952,7 +920,7 @@ const createNoteBatchAddTool = (
         description: 'Array of note items to create',
         items: {
           type: 'object',
-          required: ['title', 'content', 'source', 'tags'],
+          required: ['title', 'content', 'tags'],
           properties: {
             title: {
               type: 'string',
@@ -961,10 +929,6 @@ const createNoteBatchAddTool = (
             content: {
               type: 'string',
               description: 'Note content'
-            },
-            source: {
-              ...NOTE_SOURCE_SCHEMA,
-              description: 'Note source'
             },
             tags: {
               type: 'array',
@@ -1030,7 +994,7 @@ const createNoteBatchUpdateTool = (
     output:
       'Include confirmationSummary in the tool arguments; return count and updated note facts needed by the user.',
     examples: [
-      '{"confirmationSummary":"将批量更新 2 项笔记的标签。","items":[{"id":1,"title":"React 学习笔记","content":"React 的核心概念…","source":"聊天粘贴","tags":["前端","极客"]},{"id":2,"title":"Vue 3 速记","content":"Vue 3 的 Composition API…","source":"聊天粘贴","tags":["前端","极客"]}]}'
+      '{"confirmationSummary":"将批量更新 2 项笔记的标签。","items":[{"id":1,"title":"React 学习笔记","content":"React 的核心概念…","tags":["前端","极客"]},{"id":2,"title":"Vue 3 速记","content":"Vue 3 的 Composition API…","tags":["前端","极客"]}]}'
     ]
   },
   parameters: {
@@ -1047,7 +1011,7 @@ const createNoteBatchUpdateTool = (
         description: 'Array of note items to update, each with id and replacement fields',
         items: {
           type: 'object',
-          required: ['id', 'title', 'content', 'source', 'tags'],
+          required: ['id', 'title', 'content', 'tags'],
           properties: {
             id: {
               type: 'number',
@@ -1060,10 +1024,6 @@ const createNoteBatchUpdateTool = (
             content: {
               type: 'string',
               description: 'Note content'
-            },
-            source: {
-              ...NOTE_SOURCE_SCHEMA,
-              description: 'Note source'
             },
             tags: {
               type: 'array',

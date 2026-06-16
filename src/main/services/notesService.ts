@@ -94,7 +94,6 @@ const mapNoteRow = (row: NoteRow): NoteMaterialItem => ({
   id: row.id,
   title: row.title,
   content: row.content,
-  source: row.source,
   tags: parseStoredTags(row.tags),
   time: row.time,
   categoryId: row.category_id ?? undefined,
@@ -108,7 +107,7 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
   list: (categoryId?) => {
     const whereClause = categoryId !== undefined ? ' WHERE n.category_id = ?' : ''
     const stmt = database.prepare(
-      `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+      `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
        FROM notes n
        LEFT JOIN note_categories nc ON n.category_id = nc.id${whereClause}
        ORDER BY n.time DESC, n.id DESC`
@@ -124,19 +123,18 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
 
     const inserted = database
       .prepare(
-        'INSERT INTO notes (title, content, source, tags, time, category_id) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO notes (title, content, tags, time, category_id) VALUES (?, ?, ?, ?, ?)'
       )
       .run(
         input.title.trim(),
         input.content.trim(),
-        input.source,
         JSON.stringify(input.tags),
         createDisplayTime(),
         input.categoryId ?? null
       )
     const row = database
       .prepare(
-        `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+        `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
          FROM notes n
          LEFT JOIN note_categories nc ON n.category_id = nc.id
          WHERE n.id = ?`
@@ -153,11 +151,10 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
     validateNoteInput(input)
 
     database
-      .prepare('UPDATE notes SET title = ?, content = ?, source = ?, tags = ?, category_id = ? WHERE id = ?')
+      .prepare('UPDATE notes SET title = ?, content = ?, tags = ?, category_id = ? WHERE id = ?')
       .run(
         input.title.trim(),
         input.content.trim(),
-        input.source,
         JSON.stringify(input.tags),
         input.categoryId ?? null,
         id
@@ -165,7 +162,7 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
 
     const row = database
       .prepare(
-        `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+        `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
          FROM notes n
          LEFT JOIN note_categories nc ON n.category_id = nc.id
          WHERE n.id = ?`
