@@ -7,7 +7,7 @@ import { IconButton } from "@/components/ui/IconButton";
 export type TooltipPlacement = "top" | "bottom" | "left" | "right";
 // Tooltip 触发方式
 export type TooltipTrigger = "hover" | "click" | "both";
-// 确认按钮样式变体类型
+  // 确认按钮样式变体类型
 export type TooltipVariant = "danger" | "primary";
 
 // Tooltip 组件属性接口
@@ -20,6 +20,8 @@ export interface TooltipProps {
   title?: string;
   // 行为确认的详细描述/副作用警告（可选）
   description?: string;
+  // 确认气泡的自定义表单内容（替换 title 展示，仅在确认模式下生效）
+  form?: React.ReactNode;
   // 确认回调函数（若提供此回调，则自动启用行为确认气泡模式）
   onConfirm?: () => void;
   // 取旧的回调函数（可选）
@@ -48,6 +50,7 @@ export const Tooltip = ({
   children,
   content,
   title,
+  form,
   onConfirm,
   onCancel,
   placement = "top",
@@ -320,7 +323,7 @@ export const Tooltip = ({
     };
   }, [isVisible, isConfirmMode, onCancel]);
 
-  // 键盘 Esc 键安全关闭支持
+  // 键盘 Esc 键关闭支持
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
@@ -448,30 +451,60 @@ export const Tooltip = ({
             aria-hidden={!isVisible}
           >
             {isConfirmMode ? (
-              /* 二次确认气泡模式 */
-              <div className="flex flex-col">
-                <span className="text-sm leading-snug">{title || content}</span>
-                <div className="flex items-center justify-end mt-0.5 gap-1">
-                  <IconButton
-                    preset="close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsVisible(false);
-                      onCancel?.();
-                    }}
-                    title="取消"
-                  />
-                  <IconButton
-                    preset={variant === "danger" ? "delete" : "confirm"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsVisible(false);
-                      onConfirm?.();
-                    }}
-                    title="确认"
-                  />
+              form ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsVisible(false);
+                    onConfirm?.();
+                  }}
+                  className="flex flex-col"
+                >
+                  {form}
+                  <div className="flex items-center justify-end mt-0.5 gap-1">
+                    <IconButton
+                      type="button"
+                      preset="close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsVisible(false);
+                        onCancel?.();
+                      }}
+                      title="取消"
+                    />
+                    <IconButton
+                      type="submit"
+                      preset={variant === "danger" ? "delete" : "confirm"}
+                      title="确认"
+                    />
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-col">
+                  <span className="text-sm leading-snug">{title || content}</span>
+                  <div className="flex items-center justify-end mt-0.5 gap-1">
+                    <IconButton
+                      preset="close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsVisible(false);
+                        onCancel?.();
+                      }}
+                      title="取消"
+                    />
+                    <IconButton
+                      preset={variant === "danger" ? "delete" : "confirm"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsVisible(false);
+                        onConfirm?.();
+                      }}
+                      title="确认"
+                    />
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               /* 普通文字提示模式 */
               content || title

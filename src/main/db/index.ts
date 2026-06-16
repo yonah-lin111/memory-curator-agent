@@ -16,6 +16,7 @@ type MigratableTableName =
   | 'ai_chat_messages'
   | 'ai_agent_runs'
   | 'ai_agent_tool_calls'
+  | 'note_categories'
 
 // 重建表配置。
 type RebuildTableConfig = {
@@ -137,6 +138,11 @@ const resolveSelectColumns = (
       return 'id'
     }
 
+    // 缺失的列用 NULL 填充（兼容新增字段迁移）。
+    if (columnName === 'category_id') {
+      return 'NULL AS category_id'
+    }
+
     throw new Error(`无法迁移缺失字段: ${tableName}.${columnName}`)
   })
 
@@ -194,13 +200,13 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       source TEXT NOT NULL,
       tags TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
-      is_curated INTEGER NOT NULL DEFAULT 0,
-      clue TEXT
+      category_id INTEGER
     `.trim(),
-    insertColumns: ['title', 'content', 'source', 'tags', 'time', 'is_curated', 'clue'],
-    selectColumns: ['title', 'content', 'source', 'tags', 'time', 'is_curated', 'clue'],
+    insertColumns: ['title', 'content', 'source', 'tags', 'time', 'category_id'],
+    selectColumns: ['title', 'content', 'source', 'tags', 'time', 'category_id'],
     orderByClause: 'time ASC, id ASC',
-    timestampColumns: ['time']
+    timestampColumns: ['time'],
+    requiredColumns: ['category_id']
   })
   rebuildTable(database, {
     tableName: 'todos',
@@ -491,8 +497,20 @@ export const createNotesTable = (database: Database.Database): void => {
       source TEXT NOT NULL,
       tags TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
-      is_curated INTEGER NOT NULL DEFAULT 0,
-      clue TEXT
+      category_id INTEGER
+    );
+  `)
+}
+
+/**
+ * 创建笔记分类表。
+ */
+export const createNoteCategoriesTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS note_categories (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
     );
   `)
 }
@@ -715,6 +733,7 @@ export const initDatabase = (): Database.Database => {
   sqlite = new Database(getDatabasePath())
   migrateLegacySchema(sqlite)
   createNotesTable(sqlite)
+  createNoteCategoriesTable(sqlite)
   createTodosTable(sqlite)
   createSnippetsTable(sqlite)
   createJournalsTable(sqlite)

@@ -17,10 +17,16 @@ class MemoryNotesDatabase implements DatabaseConnection {
    * 准备内存 SQL 语句。
    */
   prepare = (sql: string): DatabaseStatement => {
-    if (sql.startsWith('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes ORDER BY')) {
+    if (sql.startsWith('SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name')) {
       return {
-        all: () => [...this.rows].sort((left, right) => right.time.localeCompare(left.time) || right.id - left.id),
-        get: () => undefined,
+        all: (...values: unknown[]) => {
+          const categoryId = values[0] as number | undefined
+          const filtered = categoryId !== undefined
+            ? this.rows.filter((row) => row.category_id === categoryId)
+            : this.rows
+          return [...filtered].sort((left, right) => right.time.localeCompare(left.time) || right.id - left.id)
+        },
+        get: (...values: unknown[]) => this.rows.find((row) => row.id === values[0]),
         run: () => undefined
       }
     }
@@ -39,8 +45,8 @@ class MemoryNotesDatabase implements DatabaseConnection {
             source: values[2] as NoteRow['source'],
             tags: values[3] as string,
             time: values[4] as string,
-            is_curated: values[5] as number,
-            clue: values[6] as string | null
+            category_id: (values[5] as number | null) ?? null,
+            category_name: null
           })
 
           return { lastInsertRowid: insertedId }
@@ -54,25 +60,18 @@ class MemoryNotesDatabase implements DatabaseConnection {
         get: () => undefined,
         run: (...values) => {
           this.rows = this.rows.map((row) =>
-            row.id === values[4]
+            row.id === values[5]
               ? {
                   ...row,
                   title: values[0] as string,
                   content: values[1] as string,
                   source: values[2] as NoteRow['source'],
-                  tags: values[3] as string
+                  tags: values[3] as string,
+                  category_id: (values[4] as number | null) ?? null
                 }
               : row
           )
         }
-      }
-    }
-
-    if (sql.startsWith('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes WHERE id =')) {
-      return {
-        all: () => [],
-        get: (...values) => this.rows.find((row) => row.id === values[0]),
-        run: () => undefined
       }
     }
 
@@ -115,9 +114,7 @@ describe('notesService', () => {
       title: 'SQLite 笔记',
       content: '持久化 Markdown 内容',
       source: '随手速记',
-      tags: ['本地存储', 'CRUD'],
-      isCurated: false,
-      clue: '可能关联主题「Markdown 新素材」'
+      tags: ['本地存储', 'CRUD']
     })
     expect(typeof created.id).toBe('number')
     expect(created.time).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)

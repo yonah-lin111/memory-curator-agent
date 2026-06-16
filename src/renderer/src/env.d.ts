@@ -26,6 +26,8 @@ type NoteDraftPayload = {
   source: NoteSource
   // 笔记标签列表。
   tags: string[]
+  // 分类 ID。
+  categoryId?: number
 }
 
 // 页面使用的笔记类型。
@@ -34,10 +36,8 @@ type NoteMaterialItem = NoteDraftPayload & {
   id: number
   // 记录日期与时间。
   time: string
-  // 是否已经被策展归档。
-  isCurated: boolean
-  // 主题线索提示。
-  clue?: string
+  // 分类名称。
+  categoryName?: string
 }
 
 // 待办创建载荷类型。
@@ -674,13 +674,24 @@ type AppAPI = {
   }
   // Notes 页面 API。
   notes: {
-    // 读取全部笔记。
-    list: () => Promise<NoteMaterialItem[]>
+    // 读取笔记，可按分类筛选。
+    list: (categoryId?: number) => Promise<NoteMaterialItem[]>
     // 创建笔记。
     create: (draft: NoteDraftPayload) => Promise<NoteMaterialItem>
     // 更新笔记。
     update: (id: number, draft: NoteDraftPayload) => Promise<NoteMaterialItem>
     // 删除笔记。
+    delete: (id: number) => Promise<void>
+  }
+  // Note 分类 API。
+  noteCategories: {
+    // 读取全部分类。
+    list: () => Promise<Array<{ id: number; name: string; sortOrder: number }>>
+    // 创建分类。
+    create: (name: string) => Promise<{ id: number; name: string; sortOrder: number }>
+    // 更新分类名称。
+    update: (id: number, name: string) => Promise<{ id: number; name: string; sortOrder: number }>
+    // 删除分类。
     delete: (id: number) => Promise<void>
   }
   // Daily 页面 API。

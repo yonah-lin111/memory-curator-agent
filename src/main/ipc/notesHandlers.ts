@@ -13,7 +13,7 @@ export const registerNotesHandlers = (): void => {
   const notesService = createNotesService(database as unknown as DatabaseConnection)
   const filesService = createFilesService({ database: database as unknown as FilesDatabaseConnection })
 
-  ipcMain.handle('notes:list', () => notesService.list())
+  ipcMain.handle('notes:list', (_, categoryId?: number) => notesService.list(categoryId))
   ipcMain.handle('notes:create', (_, input: NoteCreateInput) => {
     const note = notesService.create(input)
 

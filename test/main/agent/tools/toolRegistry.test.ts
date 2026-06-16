@@ -6,6 +6,7 @@ import type { JournalsService } from '@/services/journalsService'
 import type { PeopleService } from '@/services/peopleService'
 import type { TodosService } from '@/services/todosService'
 import type { SnippetsService } from '@/services/snippetsService'
+import type { NoteCategoryService } from '@/services/noteCategoryService'
 
 // Notes 服务桩。
 const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delete'> = {
@@ -17,8 +18,7 @@ const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delet
     source: input.source,
     tags: input.tags,
     time: '2026-06-13 10:00',
-    isCurated: false,
-    clue: '可能关联主题「Markdown 新素材」'
+    categoryId: input.categoryId
   }),
   update: (id, input) => ({
     id,
@@ -27,8 +27,7 @@ const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delet
     source: input.source,
     tags: input.tags,
     time: '2026-06-13 10:00',
-    isCurated: false,
-    clue: '可能关联主题「Markdown 新素材」'
+    categoryId: input.categoryId
   }),
   delete: () => undefined
 }
@@ -117,6 +116,14 @@ const snippetsService: Pick<SnippetsService, 'querySql' | 'create' | 'update' | 
   delete: () => undefined
 }
 
+// NoteCategory 服务桩。
+const noteCategoryService: Pick<NoteCategoryService, 'querySql' | 'create' | 'update' | 'delete'> = {
+  querySql: () => [],
+  create: (name) => ({ id: 1, name, sortOrder: 0 }),
+  update: (id, name) => ({ id, name, sortOrder: 0 }),
+  delete: () => undefined
+}
+
 // 创建测试工具。
 const createTestTool = (name: string): AgentTool => ({
   name,
@@ -138,7 +145,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(registry.ids()).toEqual([
@@ -178,6 +186,10 @@ describe('toolRegistry', () => {
       'snippets_tool_batch_add',
       'snippets_tool_batch_update',
       'snippets_tool_batch_delete',
+      'note_categories_query',
+      'note_categories_add',
+      'note_categories_update',
+      'note_categories_delete',
       'common_tool_time_now',
       'common_tool_date_offset'
     ])
@@ -197,7 +209,7 @@ describe('toolRegistry', () => {
     expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(38)
+    expect(registry.all()).toHaveLength(42)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
@@ -208,7 +220,8 @@ describe('toolRegistry', () => {
           journalsService,
           peopleService,
           todosService,
-          snippetsService
+          snippetsService,
+          noteCategoryService
         },
         [() => createTestTool('same_tool'), () => createTestTool('same_tool')]
       )
@@ -255,7 +268,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
     const peopleTool = registry.get('people_tool_query')
     const prepared = prepareToolsForModel(registry.all()).find((tool) => tool.name === 'people_tool_query')
@@ -272,7 +286,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
     const askTool = registry.get('common_tool_ask')
     const [prepared] = prepareToolsForModel([askTool!])
@@ -288,7 +303,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
     const addTool = registry.get('people_tool_add')
     const updateTool = registry.get('people_tool_update')
@@ -305,7 +321,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '你好，今天聊点轻松的' }]).map((tool) => tool.name)).toEqual(
@@ -319,7 +336,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '现在几点？' }]).map((tool) => tool.name)).toEqual(registry.ids())
@@ -331,7 +349,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '明天是星期几？' }]).map((tool) => tool.name)).toEqual(registry.ids())
@@ -343,7 +362,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '阿明是谁，他和我什么关系？' }]).map((tool) => tool.name)).toEqual(
@@ -357,7 +377,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '我女朋友喜欢吃什么？' }]).map((tool) => tool.name)).toEqual(
@@ -371,7 +392,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '帮我添加一个朋友小陈' }]).map((tool) => tool.name)).toEqual(
@@ -391,7 +413,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(selectToolsForTurn(registry.all(), [{ role: 'user', content: '恢复一下吧' }]).map((tool) => tool.name)).toEqual(registry.ids())
@@ -403,7 +426,8 @@ describe('toolRegistry', () => {
       journalsService,
       peopleService,
       todosService,
-      snippetsService
+      snippetsService,
+      noteCategoryService
     })
 
     expect(

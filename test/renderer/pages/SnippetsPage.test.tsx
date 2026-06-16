@@ -60,6 +60,12 @@ describe("SnippetsPage", () => {
         update: vi.fn(),
         delete: vi.fn(),
       },
+      noteCategories: {
+        list: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
     } as Window["api"];
   });
 
@@ -251,6 +257,12 @@ describe("SnippetsPage", () => {
         update: vi.fn(),
         delete: vi.fn(),
       },
+      noteCategories: {
+        list: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
     } as Window["api"];
 
     renderSnippetsPage();
@@ -273,6 +285,12 @@ describe("SnippetsPage", () => {
       },
       daily: undefined as never,
       notes: {
+        list: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      noteCategories: {
         list: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),

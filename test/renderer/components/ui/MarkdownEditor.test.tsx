@@ -50,6 +50,12 @@ describe("MarkdownEditor", () => {
         update: vi.fn(),
         delete: vi.fn(),
       },
+      noteCategories: {
+        list: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
     } as Window["api"];
   });
 

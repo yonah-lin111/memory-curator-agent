@@ -18,8 +18,8 @@ export type DatabaseConnection = {
 
 // Notes 服务方法集合。
 export type NotesService = {
-  // 读取全部笔记。
-  list: () => NoteMaterialItem[]
+  // 读取笔记，可按分类筛选。
+  list: (categoryId?: number) => NoteMaterialItem[]
   // 创建笔记。
   create: (input: NoteCreateInput) => NoteMaterialItem
   // 更新笔记。
@@ -97,20 +97,25 @@ const mapNoteRow = (row: NoteRow): NoteMaterialItem => ({
   source: row.source,
   tags: parseStoredTags(row.tags),
   time: row.time,
-  isCurated: row.is_curated === 1,
-  clue: row.clue ?? undefined
+  categoryId: row.category_id ?? undefined,
+  categoryName: row.category_name ?? undefined
 })
 
 /**
  * 创建 Notes 服务。
  */
 export const createNotesService = (database: DatabaseConnection): NotesService => ({
-  list: () => {
-    const rows = database
-      .prepare(
-        'SELECT id, title, content, source, tags, time, is_curated, clue FROM notes ORDER BY time DESC, id DESC'
-      )
-      .all() as NoteRow[]
+  list: (categoryId?) => {
+    const whereClause = categoryId !== undefined ? ' WHERE n.category_id = ?' : ''
+    const stmt = database.prepare(
+      `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+       FROM notes n
+       LEFT JOIN note_categories nc ON n.category_id = nc.id${whereClause}
+       ORDER BY n.time DESC, n.id DESC`
+    )
+    const rows = categoryId !== undefined
+      ? stmt.all(categoryId) as NoteRow[]
+      : stmt.all() as NoteRow[]
 
     return rows.map(mapNoteRow)
   },
@@ -119,7 +124,7 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
 
     const inserted = database
       .prepare(
-        'INSERT INTO notes (title, content, source, tags, time, is_curated, clue) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO notes (title, content, source, tags, time, category_id) VALUES (?, ?, ?, ?, ?, ?)'
       )
       .run(
         input.title.trim(),
@@ -127,11 +132,15 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
         input.source,
         JSON.stringify(input.tags),
         createDisplayTime(),
-        0,
-        '可能关联主题「Markdown 新素材」'
+        input.categoryId ?? null
       )
     const row = database
-      .prepare('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes WHERE id = ?')
+      .prepare(
+        `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+         FROM notes n
+         LEFT JOIN note_categories nc ON n.category_id = nc.id
+         WHERE n.id = ?`
+      )
       .get(getInsertedRowId(inserted)) as NoteRow | undefined
 
     if (!row) {
@@ -144,11 +153,23 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
     validateNoteInput(input)
 
     database
-      .prepare('UPDATE notes SET title = ?, content = ?, source = ?, tags = ? WHERE id = ?')
-      .run(input.title.trim(), input.content.trim(), input.source, JSON.stringify(input.tags), id)
+      .prepare('UPDATE notes SET title = ?, content = ?, source = ?, tags = ?, category_id = ? WHERE id = ?')
+      .run(
+        input.title.trim(),
+        input.content.trim(),
+        input.source,
+        JSON.stringify(input.tags),
+        input.categoryId ?? null,
+        id
+      )
 
     const row = database
-      .prepare('SELECT id, title, content, source, tags, time, is_curated, clue FROM notes WHERE id = ?')
+      .prepare(
+        `SELECT n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name
+         FROM notes n
+         LEFT JOIN note_categories nc ON n.category_id = nc.id
+         WHERE n.id = ?`
+      )
       .get(id) as NoteRow | undefined
 
     if (!row) {

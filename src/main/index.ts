@@ -4,6 +4,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { initDatabase } from '@/db'
 import { registerNotesHandlers } from '@/ipc/notesHandlers'
 import { registerDailyHandlers } from '@/ipc/dailyHandlers'
+import { registerNoteCategoryHandlers } from '@/ipc/noteCategoryHandlers'
 import { registerFilesHandlers } from '@/ipc/filesHandlers'
 import { registerPeopleHandlers } from '@/ipc/peopleHandlers'
 import { registerAiHandlers } from '@/ipc/aiHandlers'
@@ -53,6 +54,7 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.memorycurator.agent')
   const database = initDatabase()
   registerNotesHandlers()
+  registerNoteCategoryHandlers()
   registerDailyHandlers()
   registerFilesHandlers()
   registerPeopleHandlers()

@@ -490,8 +490,8 @@ export type NoteQueryToolInput = {
   source?: string
   // 标签包含条件。
   tag?: string
-  // 是否已策展归档。
-  isCurated?: boolean
+  // 分类 ID 过滤。
+  categoryId?: number
   // 只读 SQL 查询。
   sql?: string
   // 返回数量上限。
@@ -501,7 +501,7 @@ export type NoteQueryToolInput = {
 // Note 查询工具返回项。
 export type NoteQueryToolItem = Pick<
   NoteMaterialItem,
-  'id' | 'title' | 'content' | 'source' | 'tags' | 'time' | 'isCurated' | 'clue'
+  'id' | 'title' | 'content' | 'source' | 'tags' | 'time' | 'categoryId' | 'categoryName'
 >
 
 // Note 查询工具返回结果。
@@ -509,6 +509,26 @@ export type NoteQueryToolResult = AgentToolResult & {
   // 命中的笔记条目。
   items: NoteQueryToolItem[]
   // SQL 查询返回的原始行。
+  rows?: unknown[]
+}
+
+// NoteCategory 查询工具入参。
+export type NoteCategoryQueryToolInput = {
+  query?: string
+  sql?: string
+  limit?: number
+}
+
+// NoteCategory 查询工具返回项。
+export type NoteCategoryQueryToolItem = {
+  id: number
+  name: string
+  sortOrder: number
+}
+
+// NoteCategory 查询工具返回结果。
+export type NoteCategoryQueryToolResult = AgentToolResult & {
+  items: NoteCategoryQueryToolItem[]
   rows?: unknown[]
 }
 

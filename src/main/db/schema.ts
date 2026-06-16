@@ -21,6 +21,8 @@ export type NoteCreateInput = {
   source: NoteSource
   // 笔记标签列表。
   tags: string[]
+  // 分类 ID。
+  categoryId?: number
 }
 
 // 笔记更新输入类型。
@@ -130,10 +132,10 @@ export type NoteMaterialItem = {
   tags: string[]
   // 记录日期与时间。
   time: string
-  // 是否已经被策展归档。
-  isCurated: boolean
-  // 主题线索提示。
-  clue?: string
+  // 分类 ID。
+  categoryId?: number
+  // 分类名称。
+  categoryName?: string
 }
 
 // 页面使用的待办类型。
@@ -351,6 +353,26 @@ export type MonthOverview = {
   entries: MonthEntryOverview[]
 }
 
+// 数据库分类行类型。
+export type NoteCategoryRow = {
+  // 分类唯一标识。
+  id: number
+  // 分类名称。
+  name: string
+  // 排序序号。
+  sort_order: number
+}
+
+// 页面使用的分类类型。
+export type NoteCategoryItem = {
+  // 分类唯一标识。
+  id: number
+  // 分类名称。
+  name: string
+  // 排序序号。
+  sortOrder: number
+}
+
 // 数据库笔记行类型。
 export type NoteRow = {
   // 笔记唯一标识。
@@ -365,10 +387,10 @@ export type NoteRow = {
   tags: string
   // 记录日期与时间。
   time: string
-  // 是否已经被策展归档。
-  is_curated: number
-  // 主题线索提示。
-  clue: string | null
+  // 分类 ID。
+  category_id: number | null
+  // 分类名称（JOIN 填充）。
+  category_name: string | null
 }
 
 // AI 对话会话数据库行。
@@ -503,8 +525,14 @@ export const notes = sqliteTable('notes', {
   source: text('source').$type<NoteSource>().notNull(),
   tags: text('tags').notNull(),
   time: timestamp('time').notNull(),
-  isCurated: integer('is_curated').notNull().default(0),
-  clue: text('clue')
+  categoryId: integer('category_id')
+})
+
+// 笔记分类 SQLite 表定义。
+export const noteCategories = sqliteTable('note_categories', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0)
 })
 
 // 待办 SQLite 表定义。

@@ -49,7 +49,10 @@ const NOTE_TABLE_NAME = 'notes'
 
 // Note 查询字段清单。
 const NOTE_COLUMNS =
-  'id, title, content, source, tags, time, is_curated, clue'
+  'n.id, n.title, n.content, n.source, n.tags, n.time, n.category_id, nc.name AS category_name'
+
+// Note FROM 子句（含分类 LEFT JOIN）。
+const NOTE_FROM_CLAUSE = 'notes n LEFT JOIN note_categories nc ON n.category_id = nc.id'
 
 // Note 来源枚举 Schema。
 const NOTE_SOURCE_SCHEMA = {
@@ -60,7 +63,7 @@ const NOTE_SOURCE_SCHEMA = {
 
 // 禁止 AI SQL 使用的高风险关键字。
 const FORBIDDEN_SQL_PATTERN =
-  /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|replace|reindex|begin|commit|rollback|union|join)\b/i
+  /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|replace|reindex|begin|commit|rollback|union)\b/i
 
 // SQL 注释片段。
 const SQL_COMMENT_PATTERN = /--|\/\*|\*\//
@@ -78,8 +81,8 @@ const toToolItem = (note: NoteMaterialItem): NoteQueryToolItem => ({
   source: note.source,
   tags: note.tags,
   time: note.time,
-  isCurated: note.isCurated,
-  clue: note.clue
+  categoryId: note.categoryId,
+  categoryName: note.categoryName
 })
 
 /**
@@ -112,8 +115,7 @@ const isNoteSqlRow = (value: unknown): value is NoteSqlRow =>
   typeof value.content === 'string' &&
   typeof value.source === 'string' &&
   typeof value.tags === 'string' &&
-  typeof value.time === 'string' &&
-  typeof value.is_curated === 'number'
+  typeof value.time === 'string'
 
 /**
  * 将完整 SQL 笔记行映射为工具返回项。
@@ -126,8 +128,8 @@ const sqlRowToToolItem = (row: NoteSqlRow): NoteQueryToolItem =>
     source: row.source as NoteSource,
     tags: parseSqlTags(row.tags as string),
     time: row.time as string,
-    isCurated: (row.is_curated as number) === 1,
-    clue: (row.clue as string) ?? undefined
+    categoryId: (row.category_id as number | null) ?? undefined,
+    categoryName: (row.category_name as string | null) ?? undefined
   })
 
 /**
@@ -161,7 +163,7 @@ const parseInput = (input: unknown): NoteQueryToolInput => {
     query: parseString(input.query),
     source: parseString(input.source),
     tag: parseString(input.tag),
-    isCurated: typeof input.isCurated === 'boolean' ? input.isCurated : undefined,
+    categoryId: typeof input.categoryId === 'number' ? input.categoryId : undefined,
     sql: parseString(input.sql),
     limit: typeof input.limit === 'number' ? input.limit : undefined
   }
@@ -201,14 +203,14 @@ const buildLikeCondition = (
 const buildStructuredWhere = (parsed: NoteQueryToolInput): string => {
   const whereParts: (string | null)[] = [
     parsed.source
-      ? `source = '${escapeSqlString(parsed.source.trim())}'`
+      ? `n.source = '${escapeSqlString(parsed.source.trim())}'`
       : null,
     buildLikeCondition('tags', parsed.tag),
-    typeof parsed.isCurated === 'boolean'
-      ? `is_curated = ${parsed.isCurated ? 1 : 0}`
+    typeof parsed.categoryId === 'number'
+      ? `n.category_id = ${parsed.categoryId}`
       : null,
     parsed.query
-      ? `(title LIKE '%${escapeSqlLike(parsed.query.trim())}%' OR content LIKE '%${escapeSqlLike(parsed.query.trim())}%')`
+      ? `(n.title LIKE '%${escapeSqlLike(parsed.query.trim())}%' OR n.content LIKE '%${escapeSqlLike(parsed.query.trim())}%')`
       : null
   ]
 
@@ -221,7 +223,7 @@ const buildStructuredWhere = (parsed: NoteQueryToolInput): string => {
  * 将结构化查询编译为受控 SQL。
  */
 const buildStructuredSql = (parsed: NoteQueryToolInput): string =>
-  `SELECT ${NOTE_COLUMNS} FROM ${NOTE_TABLE_NAME}${buildStructuredWhere(parsed)} ORDER BY time DESC, id DESC`
+  `SELECT ${NOTE_COLUMNS} FROM ${NOTE_FROM_CLAUSE}${buildStructuredWhere(parsed)} ORDER BY n.time DESC, n.id DESC`
 
 /**
  * 校验并限制 AI 生成的 Note SQL。
@@ -252,12 +254,14 @@ const prepareNoteSql = (sql: string, limit: number): string => {
   }
 
   if (
-    !new RegExp(`\\bfrom\\s+${NOTE_TABLE_NAME}\\b`, 'i').test(normalizedSql)
+    !/\bfrom\s+notes\b/i.test(normalizedSql) &&
+    !/\bfrom\s+notes\s+n\b/i.test(normalizedSql) &&
+    !/\bfrom\s+notes\s+n\s+LEFT\s+JOIN\s+note_categories\b/i.test(normalizedSql)
   ) {
-    throw new Error(`Note SQL can only query the ${NOTE_TABLE_NAME} table`)
+    throw new Error(`Note SQL can only query the notes table`)
   }
 
-  if (/\bfrom\s+(?!notes\b)[a-z_][\w]*/i.test(normalizedSql)) {
+  if (/\bfrom\s+(?!notes\b|notes\s+n(\s+LEFT\s+JOIN\s+note_categories\s+nc)?)[a-z_][\w]*/i.test(normalizedSql)) {
     throw new Error(`Note SQL can only query the ${NOTE_TABLE_NAME} table`)
   }
 
@@ -317,8 +321,7 @@ export const createNoteQueryTool = (
     ],
     whenToUse: [
       'Use when the user asks about notes, quick notes, jottings, or captured materials.',
-      'Use when the user asks what notes exist by source, tags, or content keywords.',
-      'Use when the user asks about curated/archived materials.',
+      'Use when the user asks what notes exist by source, tags, category, or content keywords.',
       'Use read-only SQL against notes when the user needs combined filters, sorting, or more precise filtering.'
     ],
     whenNotToUse: [
@@ -337,8 +340,8 @@ export const createNoteQueryTool = (
     examples: [
       `{"limit":10}`,
       `{"query":"React","source":"聊天粘贴"}`,
-      `{"tag":"前端","isCurated":false}`,
-      `{"sql":"SELECT ${NOTE_COLUMNS} FROM ${NOTE_TABLE_NAME} WHERE source = '随手速记' ORDER BY time DESC","limit":5}`
+      `{"tag":"前端","categoryId":1}`,
+      `{"sql":"SELECT ${NOTE_COLUMNS} FROM ${NOTE_FROM_CLAUSE} WHERE n.source = '随手速记' ORDER BY n.time DESC","limit":5}`
     ]
   },
   parameters: {
@@ -356,13 +359,13 @@ export const createNoteQueryTool = (
         type: 'string',
         description: 'Tag filter (LIKE matching on tags JSON string).'
       },
-      isCurated: {
-        type: 'boolean',
-        description: 'Whether the note has been curated/archived.'
+      categoryId: {
+        type: 'number',
+        description: 'Filter by category ID'
       },
       sql: {
         type: 'string',
-        description: `Controlled read-only SQL. Must SELECT FROM ${NOTE_TABLE_NAME}; WHERE, ORDER BY, LIMIT, and COUNT(*) AS count are allowed.`
+        description: `Controlled read-only SQL. Must SELECT FROM ${NOTE_TABLE_NAME} (with optional LEFT JOIN note_categories nc); WHERE, ORDER BY, LIMIT, and COUNT(*) AS count are allowed.`
       },
       limit: {
         type: 'number',

@@ -561,10 +561,16 @@ const api = {
       ipcRenderer.invoke('files:ai-chat-text:read', url)
   },
   notes: {
-    list: () => ipcRenderer.invoke('notes:list'),
-    create: (draft: NoteDraftPayload) => ipcRenderer.invoke('notes:create', draft),
-    update: (id: number, draft: NoteDraftPayload) => ipcRenderer.invoke('notes:update', id, draft),
+    list: (categoryId?: number) => ipcRenderer.invoke('notes:list', categoryId),
+    create: (draft: NoteDraftPayload & { categoryId?: number }) => ipcRenderer.invoke('notes:create', draft),
+    update: (id: number, draft: NoteDraftPayload & { categoryId?: number }) => ipcRenderer.invoke('notes:update', id, draft),
     delete: (id: number) => ipcRenderer.invoke('notes:delete', id)
+  },
+  noteCategories: {
+    list: () => ipcRenderer.invoke('note-categories:list'),
+    create: (name: string) => ipcRenderer.invoke('note-categories:create', name),
+    update: (id: number, name: string) => ipcRenderer.invoke('note-categories:update', id, name),
+    delete: (id: number) => ipcRenderer.invoke('note-categories:delete', id)
   },
   daily: {
     listDay: (entryDate: string) => ipcRenderer.invoke('daily:list-day', entryDate),
