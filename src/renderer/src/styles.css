@@ -238,7 +238,19 @@ html:hover::-webkit-scrollbar-thumb,
 .markdown-preview-container .md-editor-preview-wrapper {
   background-color: transparent !important;
   --md-bk-color: transparent !important;
+  --md-color: rgba(255, 255, 255, 0.78);
   font-size: 14px !important;
+}
+
+/* 恢复 Tailwind preflight 重置的列表记号 */
+.markdown-preview-container ul {
+  list-style-type: disc;
+}
+.markdown-preview-container ol {
+  list-style-type: decimal;
+}
+.markdown-preview-container li {
+  list-style: inherit;
 }
 
 /* AI 聊天气泡内 Markdown 预览的图片尺寸限制，圆角符合 6px 规范 */
