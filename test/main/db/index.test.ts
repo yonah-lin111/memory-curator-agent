@@ -23,6 +23,8 @@ type MemoryTable = {
   columns: Record<string, MemoryColumn>
   // 测试行集合。
   rows: Array<Record<string, unknown>>
+  // 模拟创建 SQL。
+  sql?: string
 }
 
 // 内存迁移数据库。
@@ -100,6 +102,20 @@ class MemoryMigrationDatabase {
       }
     }
 
+    const schemaLookup = sql.match(
+      /^SELECT sql FROM sqlite_schema WHERE type='table' AND name='(\w+)'$/
+    )
+
+    if (schemaLookup) {
+      const [, tableName] = schemaLookup
+      return {
+        get: () => {
+          const table = this.tables.get(tableName)
+          return table ? { sql: table.sql || '' } : undefined
+        }
+      }
+    }
+
     const selectMatched = sql.match(/^SELECT ([\w,\s]+) FROM (\w+)/)
 
     if (selectMatched) {
@@ -167,6 +183,11 @@ class MemoryMigrationDatabase {
 
         if (statement.startsWith('UPDATE ai_chat_sessions')) {
           this.normalizeAiChatSessionStatuses()
+          return
+        }
+
+        if (statement.startsWith('UPDATE weekly_summaries')) {
+          this.normalizeWeeklySummariesTypes()
           return
         }
 
@@ -251,7 +272,8 @@ class MemoryMigrationDatabase {
 
     this.tables.set(tableName, {
       columns,
-      rows: this.tables.get(tableName)?.rows ?? []
+      rows: this.tables.get(tableName)?.rows ?? [],
+      sql: statement
     })
   }
 
@@ -280,6 +302,28 @@ class MemoryMigrationDatabase {
    * 复制旧表数据到新表，同时给整型主键自动分配顺序 id。
    */
   private copyRows = (statement: string): void => {
+    if (statement.includes('weekly_summaries_new')) {
+      const sourceTable = this.tables.get('weekly_summaries')
+      const targetTable = this.tables.get('weekly_summaries_new')
+      if (sourceTable && targetTable) {
+        targetTable.rows = sourceTable.rows.map((row) => {
+          const week_start_date = String(row.week_start_date || '')
+          const type = row.type ?? (week_start_date.endsWith('-curator') ? 'interpersonal' : 'summary')
+          const clean_week_start_date = week_start_date.replace('-curator', '')
+          return {
+            id: row.id,
+            week_start_date: clean_week_start_date,
+            type,
+            title: row.title,
+            content: row.content,
+            model_used: row.model_used,
+            generated_at: row.generated_at
+          }
+        })
+      }
+      return
+    }
+
     const matched = statement.match(
       /^INSERT INTO (\w+) \(([\w,\s]+)\)\s+SELECT ([\w,\s]+)\s+FROM (\w+)\s+ORDER BY ([\w,\s]+)$/m
     )
@@ -355,6 +399,24 @@ class MemoryMigrationDatabase {
     table.rows = table.rows.map((row) => {
       const status = typeof row.status === 'string' ? statusMap[row.status] : undefined
       return status ? { ...row, status } : row
+    })
+  }
+
+  /**
+   * 模拟周度总结类型值清洗迁移。
+   */
+  private normalizeWeeklySummariesTypes = (): void => {
+    const table = this.tables.get('weekly_summaries')
+
+    if (!table) {
+      return
+    }
+
+    table.rows = table.rows.map((row) => {
+      if (row.type === 'curator') {
+        return { ...row, type: 'interpersonal' }
+      }
+      return row
     })
   }
 }
@@ -666,6 +728,118 @@ describe('db schema migration', () => {
       id: 1,
       title: '保留笔记',
       content: '保留内容'
+    })
+  })
+
+  it('迁移旧版没有 type 列的 weekly_summaries 表为包含 type 列且带有 UNIQUE(week_start_date, type) 联合唯一约束的表', () => {
+    const database = new MemoryMigrationDatabase()
+
+    database.exec(`
+      CREATE TABLE weekly_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_start_date TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        model_used TEXT,
+        generated_at TEXT NOT NULL
+      );
+    `)
+
+    database.insertRow('weekly_summaries', {
+      id: 1,
+      week_start_date: '2026-06-08',
+      title: '本周总结',
+      content: '周度总结内容',
+      model_used: 'gpt-4o',
+      generated_at: '2026-06-15 00:00:00'
+    })
+
+    database.insertRow('weekly_summaries', {
+      id: 2,
+      week_start_date: '2026-06-08-curator',
+      title: '本周人际',
+      content: '人际分析内容',
+      model_used: 'gpt-4o',
+      generated_at: '2026-06-15 00:01:00'
+    })
+
+    migrateLegacySchema(database as never)
+
+    // 重建后应该是包含 type 的新表，并且具有 UNIQUE(week_start_date, type) 联合唯一约束
+    const row = database.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='weekly_summaries'").get() as { sql: string } | undefined
+    expect(row?.sql).toContain('UNIQUE(week_start_date, type)')
+
+    // 两个数据行应该被合并
+    expect(database.getColumn('weekly_summaries', 'type')).toMatchObject({ type: 'TEXT' })
+    const table = (database as any).tables.get('weekly_summaries')
+    expect(table.rows[1]).toMatchObject({
+      type: 'interpersonal'
+    })
+  })
+
+  it('当 weekly_summaries 已经有 type 列，但依然只有旧的 week_start_date UNIQUE 约束时，应能自动重建为带有 UNIQUE(week_start_date, type) 联合唯一约束的表', () => {
+    const database = new MemoryMigrationDatabase()
+
+    database.exec(`
+      CREATE TABLE weekly_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_start_date TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        model_used TEXT,
+        generated_at TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'summary'
+      );
+    `)
+
+    database.insertRow('weekly_summaries', {
+      id: 1,
+      week_start_date: '2026-06-08',
+      title: '本周总结',
+      content: '周度总结内容',
+      model_used: 'gpt-4o',
+      generated_at: '2026-06-15 00:00:00',
+      type: 'summary'
+    })
+
+    migrateLegacySchema(database as never)
+
+    // 重建后应该有正确的 UNIQUE(week_start_date, type) 约束
+    const row = database.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='weekly_summaries'").get() as { sql: string } | undefined
+    expect(row?.sql).toContain('UNIQUE(week_start_date, type)')
+  })
+
+  it('若存在已是 type 列，但带有旧 "curator" 数据，在迁移中应能将 type 全量更新为 "interpersonal"', () => {
+    const database = new MemoryMigrationDatabase()
+
+    database.exec(`
+      CREATE TABLE weekly_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_start_date TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        model_used TEXT,
+        generated_at TEXT NOT NULL,
+        UNIQUE(week_start_date, type)
+      );
+    `)
+
+    database.insertRow('weekly_summaries', {
+      id: 1,
+      week_start_date: '2026-06-08',
+      type: 'curator',
+      title: '本周总结',
+      content: '周度总结内容',
+      model_used: 'gpt-4o',
+      generated_at: '2026-06-15 00:00:00'
+    })
+
+    migrateLegacySchema(database as never)
+
+    // type 应该被清洗更新为 interpersonal
+    expect(database.prepare("SELECT type FROM weekly_summaries WHERE id = 1").get()).toMatchObject({
+      type: 'interpersonal'
     })
   })
 })

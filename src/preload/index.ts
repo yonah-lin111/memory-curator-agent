@@ -686,7 +686,6 @@ const api = {
       },
       onDone: (listener: (item: WeeklySummaryItem) => void): (() => void) => {
         const wrapped = (_: Electron.IpcRendererEvent, item: WeeklySummaryItem): void => {
-          item.weekStartDate = item.weekStartDate.replace('-curator', '') // 去除后端保存时的 -curator 后缀，让前端无缝使用 weekStartDate
           listener(item)
         }
         ipcRenderer.on('weekly:summary:done', wrapped)
@@ -711,7 +710,6 @@ const api = {
       },
       onDone: (listener: (item: WeeklySummaryItem) => void): (() => void) => {
         const wrapped = (_: Electron.IpcRendererEvent, item: WeeklySummaryItem): void => {
-          item.weekStartDate = item.weekStartDate.replace('-curator', '') // 去除后端保存时的 -curator 后缀，让前端无缝使用 weekStartDate
           listener(item)
         }
         ipcRenderer.on('weekly:curator:done', wrapped)

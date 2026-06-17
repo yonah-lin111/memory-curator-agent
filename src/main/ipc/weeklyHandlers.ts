@@ -59,37 +59,32 @@ export const registerWeeklyHandlers = (): void => {
 
   // 获取某周总结。
   ipcMain.handle("weekly:summary:get", (_, weekStartDate: string) =>
-    weeklySummaryService.getByWeekStart(weekStartDate),
+    weeklySummaryService.getByWeekStart(weekStartDate, "summary"),
   );
 
   // 手动保存总结。
   ipcMain.handle("weekly:summary:save", (_, input: WeeklySummarySaveInput) =>
-    weeklySummaryService.save(input),
+    weeklySummaryService.save({ ...input, type: "summary" }),
   );
 
   // 删除总结。
   ipcMain.handle("weekly:summary:delete", (_, weekStartDate: string) =>
-    weeklySummaryService.delete(weekStartDate),
+    weeklySummaryService.delete(weekStartDate, "summary"),
   );
 
   // 获取人际策展。
   ipcMain.handle("weekly:curator:get", (_, weekStartDate: string) =>
-    weeklySummaryService.getByWeekStart(weekStartDate + "-curator"),
+    weeklySummaryService.getByWeekStart(weekStartDate, "interpersonal"),
   );
 
   // 手动保存人际策展。
-  ipcMain.handle("weekly:curator:save", (_, input: WeeklySummarySaveInput) => {
-    return weeklySummaryService.save({
-      ...input,
-      weekStartDate: input.weekStartDate.endsWith("-curator")
-        ? input.weekStartDate
-        : input.weekStartDate + "-curator"
-    });
-  });
+  ipcMain.handle("weekly:curator:save", (_, input: WeeklySummarySaveInput) =>
+    weeklySummaryService.save({ ...input, type: "interpersonal" }),
+  );
 
   // 删除人际策展。
   ipcMain.handle("weekly:curator:delete", (_, weekStartDate: string) =>
-    weeklySummaryService.delete(weekStartDate + "-curator"),
+    weeklySummaryService.delete(weekStartDate, "interpersonal"),
   );
 
   // AI 流式生成总结（核心）。
@@ -138,36 +133,37 @@ export const registerWeeklyHandlers = (): void => {
       // 构造 prompt。
       const systemMessage: AgentMessage = {
         role: "system",
-        content: `你是一位专注于个人成长的顶级记忆策展助理。请根据用户提供的一周数据（包含待办完成情况、关键片段和日记），运用高级记忆梳理与反思模型【ORID（焦点讨论法）+ KPT（持续改进模型）】进行深度整合与重构，为用户生成一份学术且专业的周度总结报告。
+        content: `你是一位专注于个人成长的记忆助理。请根据用户提供的一周数据（包含待办完成情况、关键片段和日记），进行归纳、整合与重构，为用户生成一份客观、深刻且具有启发性的周度总结报告。
 
 输出格式要求：
-1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [具有深刻洞察力的本周总结标题]
+1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [本周总结主标题]
 2. 正文必须严格遵守以下固定的 Markdown 标题与结构，禁止包含任何 Emoji 图标：
 
-## 客观纪实与成果映射
-- **待办达成度分析**：[结合本周待办列表数据，客观计算完成率并剖析核心攻坚成果]
-- **黄金记忆片段**：[整理并串联本周沉淀的关键片段与重点事件，提炼高光记忆]
+## 本周记录与进展
+- **待办达成分析**：[结合本周待办列表数据，总结完成率并提炼核心工作进展]
+- **重要片段梳理**：[梳理并串联本周沉淀的关键片段与重点事件]
 
-## 情绪图谱与心智觉察
-- **能量巅峰 (Flow)**：[分析本周何时感到最专注、高效或极具成就感，提炼出其核心触发因子]
-- **能量阻抗 (Resistance)**：[分析本周何时感到阻碍、焦虑或习惯性拖延，剖析深层的心智卡点]
+## 状态与情绪反思
+- **专注与高效时刻**：[分析本周何时感到最专注、高效或有成就感，并提炼其原因]
+- **焦虑与拖延时刻**：[分析本周何时感到阻碍、焦虑或习惯性拖延，剖析核心原因]
 
-## 意义解析与认知升级
-- **认知偏差剖析**：[本周暴露了哪些思维局限（如完美主义陷阱、决策疲劳、信息过载、行动滞后等）]
-- **跨领域通用原则**：[从本周经历中沉淀出的、未来可在其他领域/场景中复用的底层行动原则与方法论]
+## 发现的问题与收获
+- **思维误区分析**：[分析本周暴露了哪些思维或行为局限（如完美主义、决策疲劳、信息过载、行动滞后等）]
+- **原则与经验总结**：[从本周经历中沉淀出的、未来可复用的底层行动原则与方法]
 
-## 持续进化与高杠杆行动
-- **Keep (习惯固化)**：[明确本周哪些行之有效的优秀实践或思维模式需要继续保持，并形成长期固化的行为习惯]
-- **Problem (负熵优化)**：[识别出本周哪些动作、习惯或环境产生了不必要的内耗，下周必须予以停止或修正]
-- **Try (高杠杆尝试)**：[制定一个下周可立即执行的、能够撬动大改变的最小微步干预方案]
+## 习惯改进与行动
+- **继续保持**：[明确本周哪些行之有效的优秀实践在下周需要继续保持，并逐步形成习惯]
+- **需要改掉**：[识别出本周哪些动作、习惯产生了不必要的内耗，下周必须予以停止或修正]
+- **下周尝试**：[制定一个下周可立即执行的、有助改善现状的具体微步行动方案]
 
 ---
-## 策展助理深度发问
-*基于本周暴露出的最核心系统性漏洞或心智卡点，提出 1-2 个直击本质、促成知行合一的深度反思问题。*
+## 核心反思问题
+*基于本周暴露出的核心问题，提出 1-2 个能促进知行合一、直接而诚恳的深度反思问题。*
 
 写作原则：
 - 拒绝任何 Emoji。
-- 语言高度专业、真诚、深刻、直接，杜绝AI腔、废话和陈词滥调（例如：少用“本周充满了挑战”等空洞修辞，多用客观细节与深刻反思）。
+- 禁止使用斜体
+- 语言平实、真诚、深刻、直接，杜绝 AI 腔、废话和陈词滥调（例如：少用“本周充满了挑战”等空洞修辞，多用客观细节与深刻反思）。
 - 总字数控制在 600 字以内。
 - 必须严格保留规定的大标题结构，确保排版的专业美观与一致性。`,
       };
@@ -200,6 +196,7 @@ export const registerWeeklyHandlers = (): void => {
         firstLine.replace(/^#+\s*/, "").trim() || `${weekStartDate} 周度总结`;
       const saveInput: WeeklySummarySaveInput = {
         weekStartDate,
+        type: "summary",
         title,
         content: fullText,
         modelUsed: modelId,
@@ -268,30 +265,31 @@ export const registerWeeklyHandlers = (): void => {
       // 构造 prompt。
       const systemMessage: AgentMessage = {
         role: "system",
-        content: `你是一位顶级亲密关系专家、心理学家与个人成长记忆策展助理。请根据用户提供的一周数据（包含待办完成情况、关键片段和日记），并结合其系统内已建立的【核心人物档案】，进行深度人际关系与事件重构，为用户生成一份充满温情、深度洞察力且极具行动指引的【人际关系与事件策展报告】。
+        content: `你是一位专注于人际关系与个人成长的温和、诚恳的助手。请根据用户提供的一周数据（包含待办完成情况、关键片段和日记），并结合其系统内已建立的【核心人物档案】，进行深度分析，为用户生成一份充满温情、具有启发性的人际互动分析报告。
 
 输出格式要求：
-1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [人际关系的深刻洞察标题]
+1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [人际关系总结标题]
 2. 正文必须严格遵守以下固定的 Markdown 标题与结构，禁止包含任何 Emoji 图标：
 
-## 本周人际连结与微纪实
-- **[人物名称] (关系分类)**：[客观分析本周此人在用户日志中出现的细节。他们共同经历了什么？用户的字里行间流露了怎样的态度或心智反应？若本周有多个核心人物出现，请依次拆分出多个子段落。若无特定人物出现，客观分析本周用户在整体人际交往上的状态，是充实、疏离还是陷入社交内耗。]
+## 本周人际互动
+- **[人物名称] (关系分类)**：[客观分析本周此人在用户日志中出现的细节。他们共同经历了什么？用户的字里行间流露了怎样的态度？若本周有多个核心人物出现，请依次拆分出多个子段落。若无特定人物出现，客观分析本周用户在整体人际交往上的状态，是充实、疏离还是陷入社交内耗。]
 
-## 关系温度计与心智发现
-- **情感暖流 (Connection)**：[本周哪些人际互动、工作协作或日常关怀让用户感受到了连结、支持或愉悦？这触动了用户怎样的深层情感需求？]
-- **关系阻抗 (Friction)**：[本周在人际交往、亲密关系或协作中，暴露了用户怎样的心智卡点（如：过度讨好、社交疲劳、防备心、沟通失误、忽略亲密关系、承诺行动滞后等）？]
+## 互动感受与反思
+- **拉近距离的时刻**：[本周哪些人际互动、工作协作或日常关怀让用户感受到了连结、支持或愉悦？这触动了用户怎样的情感需求？]
+- **沟通卡点或隔阂**：[本周在人际交往、亲密关系或协作中，暴露了用户怎样的交往阻碍或心理顾虑（如：过度讨好、社交疲劳、防备心、沟通失误、忽略亲密关系、承诺未兑现等）？]
 
-## 档案交叉碰撞与策展洞察
-- **[人物名称] 深度洞察**：[结合人物的【详细背景档案、偏好、备忘录、特征标签】，将当周日志里的客观细节与该人物的画像进行深度交叉碰撞。比如：根据档案，某人极易换季敏感，本周日志提及她稍微咳嗽，这说明什么？或者某人爱吃某种食物，本周提及了某餐饮，是否是一次机会？给出极其细节、有洞察力的对照关联分析。]
+## 人物细节洞察
+- **[人物名称] 深度洞察**：[结合人物的【详细背景档案、偏好、备忘录、特征标签】，将当周日志里的客观细节与该人物的画像进行深度交叉碰撞。例如：根据档案，某人极易换季敏感，本周日志提及她稍微咳嗽，这说明什么？或者某人爱吃某种食物，本周提及了某餐饮，是否是一次机会？给出极其细节、有洞察力的对照关联分析。]
 
-## 关系进化之高杠杆微动作
-- **Keep (保持与深挖)**：[明确本周哪些行之经验交往实践、倾听方式或反馈机制在下周需要继续保持，并巩固关系温度]
-- **Problem (修复与止损)**：[识别本周有哪些误解、忽略、冷淡、过度承诺未兑现等负熵交往行为，下周必须予以停止或修正]
-- **Try (高杠杆行动提案)**：[根据人物档案与本周的实际互动状况，制定一个下周可立即执行的、最容易让对方感受到暖意、或促成极佳合作的最小微步干预行动]
+## 关系改进与行动
+- **继续保持**：[明确本周哪些行之有效的沟通、倾听方式或反馈机制在下周需要继续保持，并巩固关系]
+- **需要避免**：[识别本周有哪些误解、忽略、冷淡、过度承诺未兑现等不当交往行为，下周必须予以停止或修正]
+- **建议尝试**：[根据人物档案与本周的实际互动状况，制定一个下周可立即执行的、最容易让对方感受到暖意、或促成良好合作的最小具体行动]
 
 写作原则：
 - 拒绝任何 Emoji。
-- 语言高度专业、真诚、深刻、直接，温暖且有力量，杜绝 AI 腔、废话和陈词滥调。
+- 禁止使用斜体
+- 语言平实、真诚、深刻、直接，温暖且有力量，杜绝 AI 腔、废话和陈词滥调。
 - 总字数控制在 600 字以内。
 - 必须严格保留规定的大标题结构，确保排版的专业美观与一致性。`,
       };
@@ -323,7 +321,8 @@ export const registerWeeklyHandlers = (): void => {
       const title =
         firstLine.replace(/^#+\s*/, "").trim() || `${weekStartDate} 人际策展`;
       const saveInput: WeeklySummarySaveInput = {
-        weekStartDate: weekStartDate + "-curator",
+        weekStartDate,
+        type: "interpersonal",
         title,
         content: fullText,
         modelUsed: modelId,

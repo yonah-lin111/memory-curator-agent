@@ -648,6 +648,8 @@ type WeeklySummaryItem = {
   id: number
   // 周起始日期，格式 'YYYY-MM-DD'（周一）。
   weekStartDate: string
+  // 总结类型：'summary' | 'interpersonal'。
+  type: string
   // 总结标题。
   title: string
   // 总结正文，Markdown 格式。

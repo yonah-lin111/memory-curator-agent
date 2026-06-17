@@ -474,6 +474,70 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
     database.exec('ALTER TABLE ai_chat_messages ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0;')
   }
 
+  // 为已存在的 weekly_summaries 表补加 type 列并迁移旧 curator 后缀数据。
+  if (tableExists(database, 'weekly_summaries') && !columnExists(database, 'weekly_summaries', 'type')) {
+    database.exec(`
+      CREATE TABLE weekly_summaries_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        week_start_date TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'summary',
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        model_used TEXT,
+        generated_at TEXT NOT NULL,
+        UNIQUE(week_start_date, type)
+      );
+
+      INSERT INTO weekly_summaries_new (id, week_start_date, type, title, content, model_used, generated_at)
+      SELECT
+        id,
+        REPLACE(week_start_date, '-curator', ''),
+        CASE WHEN week_start_date LIKE '%-curator' THEN 'interpersonal' ELSE 'summary' END,
+        title,
+        content,
+        model_used,
+        generated_at
+      FROM weekly_summaries;
+
+      DROP TABLE weekly_summaries;
+      ALTER TABLE weekly_summaries_new RENAME TO weekly_summaries;
+      CREATE INDEX IF NOT EXISTS idx_weekly_summaries_week_start_date_type ON weekly_summaries(week_start_date, type);
+    `)
+  }
+
+  // 检查已存在的 weekly_summaries 表是否具备 UNIQUE(week_start_date, type) 联合唯一约束。
+  // 若只具备旧的单列唯一约束或没有联合唯一约束，必须重建表以防止 ON CONFLICT 报错。
+  if (tableExists(database, 'weekly_summaries')) {
+    const row = database.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='weekly_summaries'").get() as { sql: string } | undefined
+    const sql = row?.sql || ''
+    if (!sql.includes('UNIQUE(week_start_date, type)') && !sql.includes('UNIQUE (week_start_date, type)')) {
+      database.exec(`
+        CREATE TABLE weekly_summaries_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          week_start_date TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'summary',
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          model_used TEXT,
+          generated_at TEXT NOT NULL,
+          UNIQUE(week_start_date, type)
+        );
+
+        INSERT INTO weekly_summaries_new (id, week_start_date, type, title, content, model_used, generated_at)
+        SELECT id, week_start_date, type, title, content, model_used, generated_at FROM weekly_summaries;
+
+        DROP TABLE weekly_summaries;
+        ALTER TABLE weekly_summaries_new RENAME TO weekly_summaries;
+        CREATE INDEX IF NOT EXISTS idx_weekly_summaries_week_start_date_type ON weekly_summaries(week_start_date, type);
+      `)
+    }
+  }
+
+  // 清洗可能已存在的历史数据，将 'curator' 统一更新为 'interpersonal'。
+  if (tableExists(database, 'weekly_summaries') && columnExists(database, 'weekly_summaries', 'type')) {
+    database.exec("UPDATE weekly_summaries SET type = 'interpersonal' WHERE type = 'curator';")
+  }
+
   database.exec(`
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date;
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date_completed_sort_order;
@@ -732,12 +796,15 @@ export const createWeeklySummariesTable = (database: Database.Database): void =>
   database.exec(`
     CREATE TABLE IF NOT EXISTS weekly_summaries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      week_start_date TEXT NOT NULL UNIQUE,
+      week_start_date TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'summary',
       title TEXT NOT NULL,
       content TEXT NOT NULL,
       model_used TEXT,
-      generated_at TEXT NOT NULL
+      generated_at TEXT NOT NULL,
+      UNIQUE(week_start_date, type)
     );
+    CREATE INDEX IF NOT EXISTS idx_weekly_summaries_week_start_date_type ON weekly_summaries(week_start_date, type);
   `)
 }
 

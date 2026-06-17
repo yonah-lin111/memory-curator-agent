@@ -14,12 +14,12 @@ export type DatabaseConnection = {
 
 // Weekly summary service 方法集合。
 export type WeeklySummaryService = {
-  // 按周起始日期查询总结，不存在返回 null。
-  getByWeekStart: (weekStartDate: string) => WeeklySummaryItem | null
+  // 按周起始日期查询总结，不存在返回 null，可选按 type 过滤。
+  getByWeekStart: (weekStartDate: string, type?: string) => WeeklySummaryItem | null
   // 保存（upsert）总结，返回保存后的完整记录。
   save: (input: WeeklySummarySaveInput) => WeeklySummaryItem
-  // 按周起始日期删除总结。
-  delete: (weekStartDate: string) => void
+  // 按周起始日期删除总结，可选按 type 过滤。
+  delete: (weekStartDate: string, type?: string) => void
 }
 
 /**
@@ -28,6 +28,7 @@ export type WeeklySummaryService = {
 const rowToItem = (row: WeeklySummaryRow): WeeklySummaryItem => ({
   id: row.id,
   weekStartDate: row.week_start_date,
+  type: row.type,
   title: row.title,
   content: row.content,
   modelUsed: row.model_used,
@@ -38,20 +39,25 @@ const rowToItem = (row: WeeklySummaryRow): WeeklySummaryItem => ({
  * 创建 WeeklySummary 服务。
  */
 export const createWeeklySummaryService = (database: DatabaseConnection): WeeklySummaryService => ({
-  getByWeekStart: (weekStartDate) => {
+  getByWeekStart: (weekStartDate, type) => {
+    const sql = type
+      ? "SELECT * FROM weekly_summaries WHERE week_start_date = ? AND type = ?"
+      : "SELECT * FROM weekly_summaries WHERE week_start_date = ?"
+    const params = type ? [weekStartDate, type] : [weekStartDate]
     const row = database
-      .prepare('SELECT * FROM weekly_summaries WHERE week_start_date = ?')
-      .get(weekStartDate) as WeeklySummaryRow | undefined
+      .prepare(sql)
+      .get(...params) as WeeklySummaryRow | undefined
 
     return row ? rowToItem(row) : null
   },
 
   save: (input) => {
+    const resolvedType = input.type ?? "summary"
     database
       .prepare(
-        `INSERT INTO weekly_summaries (week_start_date, title, content, model_used, generated_at)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(week_start_date) DO UPDATE SET
+        `INSERT INTO weekly_summaries (week_start_date, type, title, content, model_used, generated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(week_start_date, type) DO UPDATE SET
            title = excluded.title,
            content = excluded.content,
            model_used = excluded.model_used,
@@ -59,6 +65,7 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
       )
       .run(
         input.weekStartDate,
+        resolvedType,
         input.title,
         input.content,
         input.modelUsed ?? null,
@@ -66,15 +73,17 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
       )
 
     const row = database
-      .prepare('SELECT * FROM weekly_summaries WHERE week_start_date = ?')
-      .get(input.weekStartDate) as WeeklySummaryRow
+      .prepare("SELECT * FROM weekly_summaries WHERE week_start_date = ? AND type = ?")
+      .get(input.weekStartDate, resolvedType) as WeeklySummaryRow
 
     return rowToItem(row)
   },
 
-  delete: (weekStartDate) => {
-    database
-      .prepare('DELETE FROM weekly_summaries WHERE week_start_date = ?')
-      .run(weekStartDate)
+  delete: (weekStartDate, type) => {
+    const sql = type
+      ? "DELETE FROM weekly_summaries WHERE week_start_date = ? AND type = ?"
+      : "DELETE FROM weekly_summaries WHERE week_start_date = ?"
+    const params = type ? [weekStartDate, type] : [weekStartDate]
+    database.prepare(sql).run(...params)
   }
 })
