@@ -538,6 +538,11 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
     database.exec("UPDATE weekly_summaries SET type = 'interpersonal' WHERE type = 'curator';")
   }
 
+  // 为已存在的 weekly_summaries 表补加 is_meaningful 列（默认 1 = 有意义）。
+  if (tableExists(database, 'weekly_summaries') && !columnExists(database, 'weekly_summaries', 'is_meaningful')) {
+    database.exec('ALTER TABLE weekly_summaries ADD COLUMN is_meaningful INTEGER NOT NULL DEFAULT 1;')
+  }
+
   database.exec(`
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date;
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date_completed_sort_order;
@@ -802,6 +807,7 @@ export const createWeeklySummariesTable = (database: Database.Database): void =>
       content TEXT NOT NULL,
       model_used TEXT,
       generated_at TEXT NOT NULL,
+      is_meaningful INTEGER NOT NULL DEFAULT 1,
       UNIQUE(week_start_date, type)
     );
     CREATE INDEX IF NOT EXISTS idx_weekly_summaries_week_start_date_type ON weekly_summaries(week_start_date, type);

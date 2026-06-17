@@ -25,6 +25,7 @@ type WeeklySummaryItem = {
   content: string
   modelUsed: string | null
   generatedAt: string
+  isMeaningful: number
 }
 
 // 面板状态类型。
@@ -258,6 +259,13 @@ export const WeeklySummaryPanel = ({
         ? curatorStreamTextRef.current
         : (curator?.content ?? "");
 
+  // 无意义内容时使用前端兜底文案
+  const fallbackText =
+    activeTab === "summary"
+      ? "本周暂无值得总结的记录。"
+      : "本周暂无涉及人际关系的记录。";
+  const isMeaningful = currentTabSummary?.isMeaningful !== 0;
+
   const currentTabHandleSaveEdit =
     activeTab === "summary" ? handleSaveSummaryEdit : handleSaveCuratorEdit;
   const currentTabHandleCancelEdit = () =>
@@ -368,17 +376,23 @@ export const WeeklySummaryPanel = ({
               className="flex-1 overflow-y-auto markdown-preview-container ai-chat-markdown-preview select-text max-w-full"
               data-render-tick={currentTabStreamRenderTick}
             >
-              <MdPreview
-                theme="dark"
-                modelValue={currentTabDisplayText}
-                previewTheme="default"
-                codeTheme="atom"
-                style={{ backgroundColor: "transparent" }}
-                autoFoldThreshold={
-                  currentTabState === "streaming" ? Infinity : 0
-                }
-                showCodeRowNumber={false}
-              />
+              {currentTabState === "done" && !isMeaningful ? (
+                <p className="text-xs text-white/25 py-8 text-center">
+                  {fallbackText}
+                </p>
+              ) : (
+                <MdPreview
+                  theme="dark"
+                  modelValue={currentTabDisplayText}
+                  previewTheme="default"
+                  codeTheme="atom"
+                  style={{ backgroundColor: "transparent" }}
+                  autoFoldThreshold={
+                    currentTabState === "streaming" ? Infinity : 0
+                  }
+                  showCodeRowNumber={false}
+                />
+              )}
               {currentTabState === "streaming" && (
                 <span className="inline-block w-2 h-3 bg-white/40 animate-pulse ml-0.5" />
               )}

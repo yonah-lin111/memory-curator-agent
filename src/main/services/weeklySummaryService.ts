@@ -32,7 +32,8 @@ const rowToItem = (row: WeeklySummaryRow): WeeklySummaryItem => ({
   title: row.title,
   content: row.content,
   modelUsed: row.model_used,
-  generatedAt: row.generated_at
+  generatedAt: row.generated_at,
+  isMeaningful: row.is_meaningful ?? 1,
 })
 
 /**
@@ -53,15 +54,17 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
 
   save: (input) => {
     const resolvedType = input.type ?? "summary"
+    const isMeaningful = input.isMeaningful ?? 1
     database
       .prepare(
-        `INSERT INTO weekly_summaries (week_start_date, type, title, content, model_used, generated_at)
-         VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO weekly_summaries (week_start_date, type, title, content, model_used, generated_at, is_meaningful)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(week_start_date, type) DO UPDATE SET
            title = excluded.title,
            content = excluded.content,
            model_used = excluded.model_used,
-           generated_at = excluded.generated_at`
+           generated_at = excluded.generated_at,
+           is_meaningful = excluded.is_meaningful`
       )
       .run(
         input.weekStartDate,
@@ -69,7 +72,8 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
         input.title,
         input.content,
         input.modelUsed ?? null,
-        input.generatedAt
+        input.generatedAt,
+        isMeaningful
       )
 
     const row = database

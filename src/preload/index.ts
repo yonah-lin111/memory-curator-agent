@@ -545,6 +545,7 @@ type WeeklySummaryItem = {
   content: string
   modelUsed: string | null
   generatedAt: string
+  isMeaningful: number
 }
 
 // 周度总结保存载荷类型。

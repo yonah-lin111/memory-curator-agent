@@ -187,10 +187,11 @@ export const registerWeeklyHandlers = (): void => {
         const saveInput: WeeklySummarySaveInput = {
           weekStartDate,
           type: "summary",
-          title: defaultContent.slice(0, 20),
-          content: defaultContent,
+          title: "",
+          content: "",
           modelUsed: modelId,
           generatedAt: formatNow(),
+          isMeaningful: 0,
         };
         const savedItem = weeklySummaryService.save(saveInput);
         event.sender.send("weekly:summary:delta", { text: defaultContent });
@@ -264,6 +265,7 @@ export const registerWeeklyHandlers = (): void => {
         content: fullText,
         modelUsed: modelId,
         generatedAt: formatNow(),
+        isMeaningful: 1,
       };
       const savedItem = weeklySummaryService.save(saveInput);
 
@@ -343,10 +345,11 @@ export const registerWeeklyHandlers = (): void => {
         const saveInput: WeeklySummarySaveInput = {
           weekStartDate,
           type: "interpersonal",
-          title: defaultContent.slice(0, 20),
-          content: defaultContent,
+          title: "",
+          content: "",
           modelUsed: modelId,
           generatedAt: formatNow(),
+          isMeaningful: 0,
         };
         const savedItem = weeklySummaryService.save(saveInput);
         event.sender.send("weekly:curator:delta", { text: defaultContent });
@@ -416,6 +419,7 @@ export const registerWeeklyHandlers = (): void => {
         content: fullText,
         modelUsed: modelId,
         generatedAt: formatNow(),
+        isMeaningful: 1,
       };
       const savedItem = weeklySummaryService.save(saveInput);
 

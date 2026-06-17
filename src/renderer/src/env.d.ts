@@ -658,6 +658,8 @@ type WeeklySummaryItem = {
   modelUsed: string | null
   // 生成时间，格式 'YYYY-MM-DD HH:mm'。
   generatedAt: string
+  // 是否为有意义内容（1=有，0=无），用于前端兜底展示。
+  isMeaningful: number
 }
 
 // 周度总结保存载荷类型。
