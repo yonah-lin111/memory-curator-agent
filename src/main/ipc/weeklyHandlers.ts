@@ -9,7 +9,7 @@ import { createPeopleService } from "@/services/peopleService";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
 import type { WeeklySummarySaveInput } from "@/db/schema";
-import type { AgentMessage, ModelStreamEvent } from "@/agent/types";
+import type { AgentMessage, ModelProvider, ModelStreamEvent } from "@/agent/types";
 
 // 周度总结生成载荷。
 type WeeklySummaryGeneratePayload = {
@@ -40,6 +40,45 @@ const formatNow = (): string => {
   const now = new Date();
   const pad = (n: number): string => String(n).padStart(2, "0");
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+};
+
+/** 把关检查结果 */
+type GatekeeperResult = {
+  /** 是否值得生成 */
+  shouldGenerate: boolean;
+  /** 跳过时使用的默认内容 */
+  defaultContent: string;
+};
+
+/**
+ * 调用 AI 做生成前的把关检查，判断是否值得生成完整内容。
+ */
+const gatekeeperCheck = async (
+  provider: ModelProvider,
+  model: string,
+  systemPrompt: string,
+  userData: string,
+): Promise<GatekeeperResult> => {
+  const messages: AgentMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userData },
+  ];
+
+  let fullResponse = "";
+  for await (const event of provider.streamTurn({ model, messages, tools: [] })) {
+    if (event.type === "text_delta") {
+      fullResponse += event.delta;
+    }
+  }
+
+  const firstLine = fullResponse.split("\n")[0]?.trim() ?? "";
+  const shouldGenerate = firstLine.toUpperCase() === "YES";
+  const defaultContent = shouldGenerate
+    ? ""
+    : fullResponse.substring(firstLine.length).trim() ||
+      "本周暂无值得总结的记录。";
+
+  return { shouldGenerate, defaultContent };
 };
 
 /**
@@ -130,6 +169,35 @@ export const registerWeeklyHandlers = (): void => {
       }
       const provider = await createModelProvider(providerConfig);
 
+      // 把关检查：判断本周是否有实质内容值得总结。
+      const summaryGateResult = await gatekeeperCheck(
+        provider,
+        modelId,
+        `你是周度总结的内容把关助手。请分析以下一周数据，判断是否有值得总结的实质内容（如待办记录、工作进展、个人反思、情绪状态等）。
+
+如果数据中存在任何值得总结的实质内容，仅回复单词：YES
+
+如果一周数据完全为空或没有任何实质内容，仅回复：NO
+并在下一行提供默认总结文本，例如：本周暂无值得总结的记录。`,
+        `请判断以下一周数据是否有实质内容：\n\n${weekDataSummary}`,
+      );
+
+      if (!summaryGateResult.shouldGenerate) {
+        const defaultContent = summaryGateResult.defaultContent;
+        const saveInput: WeeklySummarySaveInput = {
+          weekStartDate,
+          type: "summary",
+          title: defaultContent.slice(0, 20),
+          content: defaultContent,
+          modelUsed: modelId,
+          generatedAt: formatNow(),
+        };
+        const savedItem = weeklySummaryService.save(saveInput);
+        event.sender.send("weekly:summary:delta", { text: defaultContent });
+        event.sender.send("weekly:summary:done", savedItem);
+        return savedItem;
+      }
+
       // 构造 prompt。
       const systemMessage: AgentMessage = {
         role: "system",
@@ -137,35 +205,30 @@ export const registerWeeklyHandlers = (): void => {
 
 输出格式要求：
 1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [本周总结主标题]
-2. 正文必须严格遵守以下固定的 Markdown 标题与结构，禁止包含任何 Emoji 图标：
+2. 正文参考以下 Markdown 标题结构，每个标题下的内容必须以无序列表（- 开头）自由展开。若某个维度本周确实没有有意义的内容，可以删除对应的标题：
 
 ## 本周记录与进展
-- **待办达成分析**：[结合本周待办列表数据，总结完成率并提炼核心工作进展]
-- **重要片段梳理**：[梳理并串联本周沉淀的关键片段与重点事件]
+（围绕待办完成情况、核心工作进展、关键片段串联等）
 
 ## 状态与情绪反思
-- **专注与高效时刻**：[分析本周何时感到最专注、高效或有成就感，并提炼其原因]
-- **焦虑与拖延时刻**：[分析本周何时感到阻碍、焦虑或习惯性拖延，剖析核心原因]
+（围绕专注与高效时刻、焦虑与拖延时刻等）
 
 ## 发现的问题与收获
-- **思维误区分析**：[分析本周暴露了哪些思维或行为局限（如完美主义、决策疲劳、信息过载、行动滞后等）]
-- **原则与经验总结**：[从本周经历中沉淀出的、未来可复用的底层行动原则与方法]
+（围绕思维行为局限、可复用的原则与经验等）
 
 ## 习惯改进与行动
-- **继续保持**：[明确本周哪些行之有效的优秀实践在下周需要继续保持，并逐步形成习惯]
-- **需要改掉**：[识别出本周哪些动作、习惯产生了不必要的内耗，下周必须予以停止或修正]
-- **下周尝试**：[制定一个下周可立即执行的、有助改善现状的具体微步行动方案]
+（围绕继续保持、需要改掉、下周尝试等）
 
 ---
 ## 核心反思问题
-*基于本周暴露出的核心问题，提出 1-2 个能促进知行合一、直接而诚恳的深度反思问题。*
+基于本周暴露出的核心问题，提出 1-2 个能促进知行合一、直接而诚恳的深度反思问题。该项可使用段落形式。
 
 写作原则：
 - 拒绝任何 Emoji。
-- 禁止使用斜体
-- 语言平实、真诚、深刻、直接，杜绝 AI 腔、废话和陈词滥调（例如：少用“本周充满了挑战”等空洞修辞，多用客观细节与深刻反思）。
-- 总字数控制在 600 字以内。
-- 必须严格保留规定的大标题结构，确保排版的专业美观与一致性。`,
+- 禁止使用斜体。
+- 正文内容必须以无序列表（- 开头）呈现，核心反思问题除外。
+- 语言平实、真诚、深刻、直接，杜绝 AI 腔、废话和陈词滥调（例如：少用"本周充满了挑战"等空洞修辞，多用客观细节与深刻反思）。
+- 总字数控制在 600 字以内。`,
       };
 
       const userMessage: AgentMessage = {
@@ -262,6 +325,35 @@ export const registerWeeklyHandlers = (): void => {
       }
       const provider = await createModelProvider(providerConfig);
 
+      // 把关检查：判断本周是否涉及人际关系内容。
+      const curatorGateResult = await gatekeeperCheck(
+        provider,
+        modelId,
+        `你是人际关系策展的内容把关助手。请分析以下一周数据，结合人物档案，判断是否存在与人际互动相关的实质内容（如与他人的沟通、协作、见面、情感互动、人际反思等）。
+
+如果存在与人际互动相关的实质内容，仅回复单词：YES
+
+如果完全没有涉及人际互动的内容，仅回复：NO
+并在下一行提供默认文本，例如：本周暂无涉及人际关系的记录。`,
+        `人物档案：\n${peopleSummary || "暂无人物档案"}\n\n一周数据：\n${weekDataSummary}`,
+      );
+
+      if (!curatorGateResult.shouldGenerate) {
+        const defaultContent = curatorGateResult.defaultContent;
+        const saveInput: WeeklySummarySaveInput = {
+          weekStartDate,
+          type: "interpersonal",
+          title: defaultContent.slice(0, 20),
+          content: defaultContent,
+          modelUsed: modelId,
+          generatedAt: formatNow(),
+        };
+        const savedItem = weeklySummaryService.save(saveInput);
+        event.sender.send("weekly:curator:delta", { text: defaultContent });
+        event.sender.send("weekly:curator:done", savedItem);
+        return savedItem;
+      }
+
       // 构造 prompt。
       const systemMessage: AgentMessage = {
         role: "system",
@@ -269,29 +361,26 @@ export const registerWeeklyHandlers = (): void => {
 
 输出格式要求：
 1. 第一行必须是文章的主标题，字数控制在 15 字以内。格式为：# [人际关系总结标题]
-2. 正文必须严格遵守以下固定的 Markdown 标题与结构，禁止包含任何 Emoji 图标：
+2. 正文参考以下 Markdown 标题结构，每个标题下的内容必须以无序列表（- 开头）自由展开。若某个维度本周确实没有有意义的内容，可以删除对应的标题：
 
 ## 本周人际互动
-- **[人物名称] (关系分类)**：[客观分析本周此人在用户日志中出现的细节。他们共同经历了什么？用户的字里行间流露了怎样的态度？若本周有多个核心人物出现，请依次拆分出多个子段落。若无特定人物出现，客观分析本周用户在整体人际交往上的状态，是充实、疏离还是陷入社交内耗。]
+（围绕本周出现或互动的人物、整体人际交往状态等）
 
 ## 互动感受与反思
-- **拉近距离的时刻**：[本周哪些人际互动、工作协作或日常关怀让用户感受到了连结、支持或愉悦？这触动了用户怎样的情感需求？]
-- **沟通卡点或隔阂**：[本周在人际交往、亲密关系或协作中，暴露了用户怎样的交往阻碍或心理顾虑（如：过度讨好、社交疲劳、防备心、沟通失误、忽略亲密关系、承诺未兑现等）？]
+（围绕拉近距离的时刻、沟通卡点或隔阂等）
 
 ## 人物细节洞察
-- **[人物名称] 深度洞察**：[结合人物的【详细背景档案、偏好、备忘录、特征标签】，将当周日志里的客观细节与该人物的画像进行深度交叉碰撞。例如：根据档案，某人极易换季敏感，本周日志提及她稍微咳嗽，这说明什么？或者某人爱吃某种食物，本周提及了某餐饮，是否是一次机会？给出极其细节、有洞察力的对照关联分析。]
+（结合人物档案，对本周互动细节进行深度交叉分析）
 
 ## 关系改进与行动
-- **继续保持**：[明确本周哪些行之有效的沟通、倾听方式或反馈机制在下周需要继续保持，并巩固关系]
-- **需要避免**：[识别本周有哪些误解、忽略、冷淡、过度承诺未兑现等不当交往行为，下周必须予以停止或修正]
-- **建议尝试**：[根据人物档案与本周的实际互动状况，制定一个下周可立即执行的、最容易让对方感受到暖意、或促成良好合作的最小具体行动]
+（围绕继续保持、需要避免、建议尝试等）
 
 写作原则：
 - 拒绝任何 Emoji。
-- 禁止使用斜体
+- 禁止使用斜体。
+- 正文内容必须以无序列表（- 开头）呈现。
 - 语言平实、真诚、深刻、直接，温暖且有力量，杜绝 AI 腔、废话和陈词滥调。
-- 总字数控制在 600 字以内。
-- 必须严格保留规定的大标题结构，确保排版的专业美观与一致性。`,
+- 总字数控制在 600 字以内。`,
       };
 
       const userMessage: AgentMessage = {
