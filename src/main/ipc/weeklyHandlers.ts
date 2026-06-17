@@ -9,7 +9,11 @@ import { createPeopleService } from "@/services/peopleService";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
 import type { WeeklySummarySaveInput } from "@/db/schema";
-import type { AgentMessage, ModelProvider, ModelStreamEvent } from "@/agent/types";
+import type {
+  AgentMessage,
+  ModelProvider,
+  ModelStreamEvent,
+} from "@/agent/types";
 
 // 周度总结生成载荷。
 type WeeklySummaryGeneratePayload = {
@@ -65,7 +69,11 @@ const gatekeeperCheck = async (
   ];
 
   let fullResponse = "";
-  for await (const event of provider.streamTurn({ model, messages, tools: [] })) {
+  for await (const event of provider.streamTurn({
+    model,
+    messages,
+    tools: [],
+  })) {
     if (event.type === "text_delta") {
       fullResponse += event.delta;
     }
@@ -229,7 +237,8 @@ export const registerWeeklyHandlers = (): void => {
 - 禁止使用斜体。
 - 正文内容必须以无序列表（- 开头）呈现，核心反思问题除外。
 - 语言平实、真诚、深刻、直接，杜绝 AI 腔、废话和陈词滥调（例如：少用"本周充满了挑战"等空洞修辞，多用客观细节与深刻反思）。
-- 总字数控制在 600 字以内。`,
+- 总字数控制在 600 字以内。
+- 提到人物、人名、地名时，使用 \`内容\` markdown格式标记。`,
       };
 
       const userMessage: AgentMessage = {
@@ -383,7 +392,8 @@ export const registerWeeklyHandlers = (): void => {
 - 禁止使用斜体。
 - 正文内容必须以无序列表（- 开头）呈现。
 - 语言平实、真诚、深刻、直接，温暖且有力量，杜绝 AI 腔、废话和陈词滥调。
-- 总字数控制在 600 字以内。`,
+- 总字数控制在 600 字以内。
+- 提到人物、人名、地名时，使用 \`内容\` markdown格式标记。`,
       };
 
       const userMessage: AgentMessage = {
