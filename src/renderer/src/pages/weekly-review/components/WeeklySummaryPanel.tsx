@@ -197,10 +197,15 @@ export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySum
         )}
 
         {(state === 'streaming' || state === 'done') && !isEditing && (
-          <div className="flex-1 overflow-y-auto prose prose-invert prose-sm max-w-none text-white/80 text-xs leading-relaxed" data-render-tick={streamRenderTick}>
+          <div className="flex-1 overflow-y-auto markdown-preview-container ai-chat-markdown-preview select-text max-w-full" data-render-tick={streamRenderTick}>
             <MdPreview
-              modelValue={displayText}
               theme="dark"
+              modelValue={displayText}
+              previewTheme="default"
+              codeTheme="atom"
+              style={{ backgroundColor: "transparent" }}
+              autoFoldThreshold={state === 'streaming' ? Infinity : 0}
+              showCodeRowNumber={false}
             />
             {state === 'streaming' && (
               <span className="inline-block w-2 h-3 bg-white/40 animate-pulse ml-0.5" />

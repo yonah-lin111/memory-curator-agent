@@ -563,8 +563,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
           </div>
         </div>
 
-        {/* 2. 下部面板：时间溪流与周度总结并排平分宽度 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        {/* 2. 下部面板：时间溪流与周度总结各自独占一行 */}
+        <div className="flex flex-col gap-6 w-full">
           {/* 左列：时间溪流 */}
           <div className="w-full flex flex-col bg-[#000000]">
             <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
