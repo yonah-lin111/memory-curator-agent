@@ -73,6 +73,8 @@ type RawConfigFile = {
     defaultModel?: RawDefaultModelConfig
     // 标题总结模型配置。
     titleSummary?: RawModelSelectionConfig
+    // 周度总结模型配置。
+    weeklySummary?: RawModelSelectionConfig
     // Compaction 模型配置。
     compaction?: RawModelSelectionConfig
     // 启用的 provider 标识列表。
@@ -267,6 +269,12 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     defaultModel,
     titleSummary: normalizeTitleSummaryConfig(
       rawConfig.ai?.titleSummary,
+      providers,
+      defaultProvider,
+      defaultModel
+    ),
+    weeklySummary: normalizeTitleSummaryConfig(
+      rawConfig.ai?.weeklySummary,
       providers,
       defaultProvider,
       defaultModel

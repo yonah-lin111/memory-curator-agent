@@ -321,7 +321,7 @@ export const SettingsPage = (): React.JSX.Element => {
    * 更新模型选择。
    */
   const updateModelSelection = (
-    key: "defaultModel" | "titleSummary",
+    key: "defaultModel" | "titleSummary" | "weeklySummary",
     field: keyof AiSettingsModelSelection,
     value: string,
   ): void => {
@@ -411,6 +411,15 @@ export const SettingsPage = (): React.JSX.Element => {
                   "",
               }
             : current.titleSummary,
+        weeklySummary:
+          current.weeklySummary.provider === providerKey
+            ? {
+                provider: fallbackProvider,
+                model:
+                  Object.keys(providers[fallbackProvider]?.models ?? {})[0] ??
+                  "",
+              }
+            : current.weeklySummary,
       };
     });
   };
@@ -602,13 +611,19 @@ export const SettingsPage = (): React.JSX.Element => {
 
     return (
       <div className="grid gap-3 lg:grid-cols-2">
-        {(["defaultModel", "titleSummary"] as const).map((selectionKey) => {
+        {(["defaultModel", "titleSummary", "weeklySummary"] as const).map((selectionKey) => {
           const selection = settings[selectionKey];
           const models = Object.values(
             settings.providers[selection.provider]?.models ?? {},
           );
-          const title =
-            selectionKey === "defaultModel" ? "默认对话模型" : "标题总结模型";
+          let title = "默认模型";
+          if (selectionKey === "defaultModel") {
+            title = "默认对话模型";
+          } else if (selectionKey === "titleSummary") {
+            title = "标题总结模型";
+          } else if (selectionKey === "weeklySummary") {
+            title = "周度总结模型";
+          }
 
           const modelOptions = models.map((model) => ({
             value: model.id,

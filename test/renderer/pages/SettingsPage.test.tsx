@@ -25,6 +25,10 @@ const createSettings = (): AiSettingsConfig => ({
     provider: 'gemini',
     model: 'gemini-3.5-flash'
   },
+  weeklySummary: {
+    provider: 'gemini',
+    model: 'gemini-3.5-flash'
+  },
   enabledProviders: ['gemini'],
   providers: {
     gemini: {

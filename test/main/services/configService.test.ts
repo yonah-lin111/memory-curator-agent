@@ -44,6 +44,10 @@ const createSettings = (): AiSettingsConfig => ({
     provider: 'gemini',
     model: 'gemini-3.5-flash'
   },
+  weeklySummary: {
+    provider: 'gemini',
+    model: 'gemini-3.5-flash'
+  },
   enabledProviders: ['gemini'],
   providers: {
     gemini: {
@@ -96,6 +100,10 @@ describe('configService', () => {
           provider: 'gemini',
           model: 'gemini-3.5-flash'
         },
+        weeklySummary: {
+          provider: 'gemini',
+          model: 'gemini-3.5-flash'
+        },
         enabled_providers: ['gemini'],
         providers: {
           gemini: {
@@ -137,6 +145,10 @@ describe('configService', () => {
       model: 'gemini-3.5-flash'
     })
     expect(settings.titleSummary).toEqual({
+      provider: 'gemini',
+      model: 'gemini-3.5-flash'
+    })
+    expect(settings.weeklySummary).toEqual({
       provider: 'gemini',
       model: 'gemini-3.5-flash'
     })

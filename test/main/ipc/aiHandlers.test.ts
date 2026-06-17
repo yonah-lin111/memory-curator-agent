@@ -39,6 +39,10 @@ vi.mock('../../../src/main/agent/providers/providerConfig', () => ({
       provider: 'bailian',
       model: 'MiniMax-M2.5'
     },
+    weeklySummary: {
+      provider: 'bailian',
+      model: 'MiniMax-M2.5'
+    },
     enabledProviders: ['bailian'],
     agent: {
       context: {

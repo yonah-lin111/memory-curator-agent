@@ -50,6 +50,8 @@ export type AiSettingsConfig = {
   defaultModel: AiSettingsModelSelection
   // 标题总结模型。
   titleSummary: AiSettingsModelSelection
+  // 周度总结模型。
+  weeklySummary: AiSettingsModelSelection
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
@@ -88,6 +90,8 @@ type RawAiConfig = {
   defaultModel?: string | Partial<AiSettingsModelSelection>
   // 标题总结模型。
   titleSummary?: Partial<AiSettingsModelSelection>
+  // 周度总结模型。
+  weeklySummary?: Partial<AiSettingsModelSelection>
   // 已启用 provider 标识列表。
   enabled_providers?: string[]
   // Provider 配置表。
@@ -103,6 +107,10 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
     model: 'MiniMax-M2.5'
   },
   titleSummary: {
+    provider: 'bailian',
+    model: 'MiniMax-M2.5'
+  },
+  weeklySummary: {
     provider: 'bailian',
     model: 'MiniMax-M2.5'
   },
@@ -313,6 +321,7 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     configPath,
     defaultModel,
     titleSummary: normalizeSelection(rawAi.titleSummary, undefined, providers, defaultModel),
+    weeklySummary: normalizeSelection(rawAi.weeklySummary, undefined, providers, defaultModel),
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
     agent: normalizeAgent(rawAi.agent)
@@ -409,6 +418,7 @@ const validateSettings = (settings: AiSettingsConfig): void => {
   })
   validateSelection('默认模型', settings.defaultModel, settings.providers)
   validateSelection('标题总结模型', settings.titleSummary, settings.providers)
+  validateSelection('周度总结模型', settings.weeklySummary, settings.providers)
 
   if (!isPositiveInteger(settings.agent.context.toolOutputMaxChars)) {
     throw new Error('toolOutputMaxChars 必须为正整数')
@@ -449,6 +459,7 @@ const preserveExistingApiKeys = (
 const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   defaultModel: settings.defaultModel,
   titleSummary: settings.titleSummary,
+  weeklySummary: settings.weeklySummary,
   enabled_providers: settings.enabledProviders,
   providers: Object.fromEntries(
     Object.values(settings.providers).map((provider) => [

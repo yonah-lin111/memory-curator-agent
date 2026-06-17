@@ -320,6 +320,8 @@ type AiSettingsConfig = {
   defaultModel: AiSettingsModelSelection
   // 标题总结模型。
   titleSummary: AiSettingsModelSelection
+  // 周度总结模型。
+  weeklySummary: AiSettingsModelSelection
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。

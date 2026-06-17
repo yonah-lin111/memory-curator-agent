@@ -52,6 +52,10 @@ describe('providerConfig', () => {
       provider: 'bailian',
       model: 'MiniMax-M2.5'
     })
+    expect(config.weeklySummary).toEqual({
+      provider: 'bailian',
+      model: 'MiniMax-M2.5'
+    })
     expect(config.providers.bailian.type).toBe('openai-compatible')
     expect(config.providers.bailian.options.baseURL).toBe('https://example.com/v1')
     expect(config.agent.context).toEqual({
@@ -239,6 +243,60 @@ describe('providerConfig', () => {
     const config = loadProviderConfig(configPath)
 
     expect(config.titleSummary).toEqual({
+      provider: 'zhipu',
+      model: 'glm-4.7-flash'
+    })
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
+  it('读取 ai.weeklySummary 周度总结模型配置', () => {
+    const directory = join(tmpdir(), `mc-config-weekly-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          weeklySummary: {
+            provider: 'zhipu',
+            model: 'glm-4.7-flash'
+          },
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'MiniMax-M2.5': {
+                  name: 'MiniMax-M2.5'
+                }
+              }
+            },
+            zhipu: {
+              name: 'Zhipu',
+              options: {
+                apiKey: 'test-key',
+                baseURL: 'https://example.com/v1'
+              },
+              models: {
+                'glm-4.7-flash': {
+                  name: 'GLM-4.7-Flash'
+                }
+              }
+            }
+          }
+        }
+      })
+    )
+
+    const config = loadProviderConfig(configPath)
+
+    expect(config.weeklySummary).toEqual({
       provider: 'zhipu',
       model: 'glm-4.7-flash'
     })

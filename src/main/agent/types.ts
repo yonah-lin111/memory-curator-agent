@@ -95,6 +95,8 @@ export type NormalizedAiConfig = {
   defaultModel: string
   // 标题总结模型配置。
   titleSummary: TitleSummaryConfig
+  // 周度总结模型配置。
+  weeklySummary: TitleSummaryConfig
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
