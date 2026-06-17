@@ -701,7 +701,10 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
           {/* 右列：周度总结 */}
           <div className="w-full flex flex-col bg-[#000000]">
-            <WeeklySummaryPanel weekStartDate={getMonday(entryDate)} />
+            <WeeklySummaryPanel
+              weekStartDate={getMonday(entryDate)}
+              isEmpty={stats.totalTodos === 0 && stats.totalSnippets === 0 && stats.journalsCount === 0}
+            />
           </div>
         </div>
       </div>

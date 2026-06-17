@@ -3,7 +3,6 @@ import {
   Paperclip,
   RotateCcw,
   SendHorizontal,
-  SlidersHorizontal,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";

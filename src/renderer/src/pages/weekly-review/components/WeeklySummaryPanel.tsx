@@ -8,6 +8,8 @@ import { RefreshCw, Edit2, FileText } from 'lucide-react'
 interface WeeklySummaryPanelProps {
   // 当前周的起始日期，格式 'YYYY-MM-DD'。
   weekStartDate: string
+  // 本周全部内容是否为空。
+  isEmpty?: boolean
 }
 
 // 周度总结项类型（与 preload 对齐）。
@@ -27,7 +29,7 @@ type PanelState = 'idle' | 'loading' | 'streaming' | 'done'
  * 周度总结面板。
  * 状态机：idle -> loading -> streaming -> done，支持重新生成与编辑。
  */
-export const WeeklySummaryPanel = ({ weekStartDate }: WeeklySummaryPanelProps) => {
+export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySummaryPanelProps) => {
   // 当前面板状态。
   const [state, setState] = useState<PanelState>('idle')
   // 已保存的总结数据。
@@ -140,7 +142,13 @@ export const WeeklySummaryPanel = ({ weekStartDate }: WeeklySummaryPanelProps) =
             </button>
             <button
               onClick={handleGenerate}
-              className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+              disabled={isEmpty}
+              className={`flex items-center gap-1 text-xs transition-colors ${
+                isEmpty
+                  ? 'text-white/10 cursor-not-allowed'
+                  : 'text-white/30 hover:text-white/60'
+              }`}
+              title={isEmpty ? '本周无任何记录，无法重新生成' : undefined}
             >
               <RefreshCw className="h-3 w-3" />
               重新生成
@@ -153,10 +161,18 @@ export const WeeklySummaryPanel = ({ weekStartDate }: WeeklySummaryPanelProps) =
       <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow overflow-hidden">
         {(state === 'idle') && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <p className="text-xs text-white/25">本周尚无总结</p>
+            <p className="text-xs text-white/25">
+              {isEmpty ? '本周无任何行动、片段或日记记录' : '本周尚无总结'}
+            </p>
             <button
               onClick={handleGenerate}
-              className="px-4 py-2 text-xs bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 rounded-[6px] border border-white/10 transition-colors"
+              disabled={isEmpty}
+              className={`px-4 py-2 text-xs rounded-[6px] border transition-colors ${
+                isEmpty
+                  ? 'bg-white/0 text-white/10 border-white/5 cursor-not-allowed'
+                  : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 border-white/10'
+              }`}
+              title={isEmpty ? '本周无任何记录，无法生成总结' : undefined}
             >
               生成周度总结
             </button>
