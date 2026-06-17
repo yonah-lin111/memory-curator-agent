@@ -26,7 +26,8 @@ describe("aiChatMessageParts", () => {
     expect(nextMessage.answer).toBe("已有正文");
     expect(nextMessage.parts).toEqual([
       {
-        id: "reasoning-1",
+        id: "a1-reasoning-1",
+        sourceId: "reasoning-1",
         kind: "reasoning",
         content: "先拆问题。",
         status: "streaming",
@@ -50,7 +51,8 @@ describe("aiChatMessageParts", () => {
 
     expect(nextMessage.parts).toEqual([
       {
-        id: "reasoning-1",
+        id: "a2-reasoning-1",
+        sourceId: "reasoning-1",
         kind: "reasoning",
         content: "先拆问题。",
         status: "done",
@@ -79,7 +81,8 @@ describe("aiChatMessageParts", () => {
 
     expect(nextMessage.parts).toEqual([
       {
-        id: "reasoning-1",
+        id: "a3-reasoning-1",
+        sourceId: "reasoning-1",
         kind: "reasoning",
         content: "先查库。",
         status: "done",
@@ -118,7 +121,8 @@ describe("aiChatMessageParts", () => {
 
     expect(nextMessage.parts).toEqual([
       {
-        id: "reasoning-reused",
+        id: "a4-reasoning-reused",
+        sourceId: "reasoning-reused",
         kind: "reasoning",
         content: "第一段思考。",
         status: "done",

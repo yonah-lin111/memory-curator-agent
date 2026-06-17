@@ -21,8 +21,10 @@ const resolveNextReasoningPartId = (
   parts: AiChatMessagePart[],
   reasoningId: string,
 ): string => {
-  if (!parts.some((part) => part.id === reasoningId)) {
-    return reasoningId;
+  const scopedId = `${message.id}-${reasoningId}`;
+
+  if (!parts.some((part) => part.id === scopedId)) {
+    return scopedId;
   }
 
   return `${message.id}-reasoning-${parts.length}`;

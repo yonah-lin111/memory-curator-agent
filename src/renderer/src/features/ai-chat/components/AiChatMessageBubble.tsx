@@ -945,7 +945,7 @@ export const AiChatMessageBubble = ({
                     flushToolSteps();
                     groupedElements.push(
                       <AiMarkdownPreview
-                        key={part.id}
+                        key={`${message.id}-${part.id}`}
                         content={displayText}
                         isGenerating={isGenerating}
                       />,
@@ -961,7 +961,7 @@ export const AiChatMessageBubble = ({
                     flushToolSteps();
                     groupedElements.push(
                       <AiChatThinkingBlock
-                        key={part.id}
+                        key={`${message.id}-${part.id}`}
                         content={displayReasoning}
                         isGenerating={isReasoningPartGenerating(
                           messageParts,
@@ -975,7 +975,7 @@ export const AiChatMessageBubble = ({
                     const step = findToolStepByPart(message.toolSteps, part);
                     if (step) {
                       currentToolSteps.push(step);
-                      currentToolKeys.push(part.id);
+                      currentToolKeys.push(`${message.id}-${part.id}`);
                     }
                   }
                 }
@@ -998,7 +998,7 @@ export const AiChatMessageBubble = ({
                   if (part.kind !== "agent") return null;
                   return (
                     <Tag
-                      key={part.id}
+                      key={`${message.id}-${part.id}`}
                       size="small"
                       prefix="@"
                       color="default"
