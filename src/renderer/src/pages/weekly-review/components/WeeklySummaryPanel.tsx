@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createTodayEntryDate, shiftEntryDate } from '@/lib/dailyShared'
 import { MdEditor, MdPreview } from 'md-editor-rt'
 import 'md-editor-rt/lib/preview.css'
 import 'md-editor-rt/lib/style.css'
@@ -31,7 +32,7 @@ type PanelState = 'idle' | 'loading' | 'streaming' | 'done'
  */
 export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySummaryPanelProps) => {
   // 当前面板状态。
-  const [state, setState] = useState<PanelState>('idle')
+  const [state, setState] = useState<PanelState>('loading')
   // 已保存的总结数据。
   const [summary, setSummary] = useState<WeeklySummaryItem | null>(null)
   // 流式累积文本（使用 ref 避免频繁 state 更新）。
@@ -44,6 +45,9 @@ export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySum
   const [isEditing, setIsEditing] = useState(false)
   // 编辑中的内容。
   const [editContent, setEditContent] = useState('')
+
+  // 判断当前选中周是否已经是历史周（即该周的周日已在今天之前）。
+  const isHistoricWeek = shiftEntryDate(weekStartDate, 6) < createTodayEntryDate()
 
   // 初始化时加载已有总结。
   useEffect(() => {
@@ -63,7 +67,7 @@ export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySum
   /**
    * 触发 AI 生成。
    */
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     setState('loading')
     streamTextRef.current = ''
     setStreamRenderTick(0)
@@ -96,7 +100,14 @@ export const WeeklySummaryPanel = ({ weekStartDate, isEmpty = false }: WeeklySum
       setState(summary ? 'done' : 'idle')
       console.error('周度总结生成失败', err)
     }
-  }
+  }, [weekStartDate, summary])
+
+  // 历史周无总结且数据非空时，自动静默触发生成。
+  useEffect(() => {
+    if (state === 'idle' && isHistoricWeek && !isEmpty && !summary) {
+      void handleGenerate()
+    }
+  }, [state, isHistoricWeek, isEmpty, summary, handleGenerate])
 
   /**
    * 保存编辑内容。

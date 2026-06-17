@@ -107,6 +107,53 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
   }, [entryDate, setDateNavigator]);
 
   /**
+   * 页面加载时默认静默检查上一周（相对于今天）是否需要生成总结并自动触发。
+   */
+  useEffect(() => {
+    const autoSummaryLastWeek = async (): Promise<void> => {
+      try {
+        const today = createTodayEntryDate();
+        const currentMonday = getMonday(today);
+        const lastWeekStartDate = shiftEntryDate(currentMonday, -7);
+
+        // 1. 检查上一周是否已经有总结
+        if (window.api?.weekly?.summary) {
+          const lastWeekSummary = await window.api.weekly.summary.get(lastWeekStartDate);
+          if (lastWeekSummary) return; // 已有总结，静默跳过
+
+          // 2. 检查上一周是否有数据（非空）
+          const datesArray = Array.from({ length: 7 }, (_, i) =>
+            shiftEntryDate(lastWeekStartDate, i),
+          );
+          const daysData = await Promise.all(
+            datesArray.map(async (d) => {
+              if (window.api?.daily) {
+                return await window.api.daily.listDay(d);
+              }
+              return { todos: [], snippets: [], journal: null };
+            }),
+          );
+          const lastWeekIsEmpty = daysData.every(
+            (day) =>
+              (!day.todos || day.todos.length === 0) &&
+              (!day.snippets || day.snippets.length === 0) &&
+              !day.journal,
+          );
+
+          // 3. 如果上一周尚未生成总结且内容非空，则在后台静默发起生成
+          if (!lastWeekIsEmpty) {
+            await window.api.weekly.summary.generate({ weekStartDate: lastWeekStartDate });
+          }
+        }
+      } catch (err) {
+        console.error("静默生成上一周总结失败", err);
+      }
+    };
+
+    void autoSummaryLastWeek();
+  }, []);
+
+  /**
    * 并发异步读取当前周（周一至周日）的 7 天 SQLite 数据库原始数据
    */
   useEffect(() => {
