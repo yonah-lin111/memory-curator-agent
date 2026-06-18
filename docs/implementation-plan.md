@@ -149,7 +149,7 @@ idle ──→ loading ──→ streaming ──→ done
 
 ### 目标
 
-用户手动定义 + AI 自动建议长期主题（如「职业转型」「亲密关系」等），将笔记/日记/片段关联到主题，追踪叙事演变。
+用户手动定义 + AI 自动建议长期主题（如「职业转型」「亲密关系」等），将笔记/日记/片段关联到主题，追踪叙事演变。**核心增强：打通「周度总结 → 长期主题」闭环，在每次周总结生成时自动提取主题建议，实现无感的主题积累。**
 
 ### 2.1 数据库 — `themes` + `theme_items` 表
 
@@ -257,6 +257,128 @@ themes:items:list / themes:items:add / themes:items:remove
 | `src/main/index.ts`                    | `registerThemesHandlers()` |
 | `src/preload/index.ts`                 | `window.api.themes`        |
 | `src/renderer/src/pages/themes/`       | 重写为完整页面             |
+
+### 2.7 周度总结联动 — 自动主题提取（核心增强）
+
+#### 背景与机会
+
+当前周度总结流程（`weeklyHandlers.ts` `weekly:summary:generate`）：
+1. 拉取 7 天数据 → 压缩（各 500 字）
+2. 把关检查（gatekeeperCheck）
+3. LLM 生成结构化 Markdown 总结 → 保存
+
+**问题**：总结存入 `weekly_summaries` 表后即结束，不产生任何主题数据。
+**机会**：LLM 在生成总结时已深度理解本周内容，在同一轮生成中追加主题建议几乎零额外 token 成本。
+
+#### 方案
+
+**推荐路径 A：在总结 prompt 中追加「主题建议」结构化输出段落。**
+
+在 `weeklyHandlers.ts` 的 system prompt（`weekly:summary:generate` 和 `weekly:curator:generate`）末尾追加：
+
+```markdown
+---
+## 主题建议
+根据上述分析，提取 2-5 个可追踪的长期主题建议。每个主题一行，JSON 格式：
+{"name": "主题名", "confidence": 0-100, "evidence": "引用分析中的关键句", "relatedSection": "关联的总结章节"}
+
+如果本周内容不足以提取新主题，输出空数组 []。
+```
+
+**解析与存储**：`weekly:summary:done` / `weekly:curator:done` 发送完成后，主进程在 handler 内解析 `fullText` 末尾的主题 JSON → 调用 `themesService`：
+- 若主题名已存在（模糊匹配）→ 更新 `updatedAt`，递增关联计数
+- 若为新主题 → `themesService.create(name, description=evidence, status=active)`
+- 同时 `themeItems.add(themeExternalId, sourceType='weekly_summary', sourceId=总结id, aiExtracted=1)`
+
+**后端解析逻辑**（`src/main/services/themesService.ts` 新增方法）：
+
+```typescript
+// 从总结全文解析并批量 upsert 主题建议
+extractThemesFromSummary(summaryContent: string, summaryId: number): Promise<number>
+```
+
+解析步骤：
+1. 正则匹配 `## 主题建议` 之后的代码块/JSON 段落
+2. `JSON.parse` 得到主题数组
+3. 对每个主题：查询已有主题名（SQL LIKE 模糊匹配）→ upsert + 创建 theme_items 关联
+
+**后备路径 B（fallback）**：若路径 A 的 prompt 追加影响总结质量，降级为在 `weekly:summary:done` 后触发独立的后台异步提取 —— 用一个轻量 prompt（~200 tokens）从 summary content 中提取主题关键词，不影响主流程。
+
+#### 双类型主题区分
+
+周度总结（`type='summary'`）和人际策展（`type='interpersonal'`）产生的主题应有不同处理：
+
+- **总结主题**：工作、学习、习惯、情绪等维度 → 主题 `sourceType='weekly_summary'`
+- **人际主题**：特定人物的关系演变 → 主题 `sourceType='interpersonal'`，且主题名可绑定人物名
+
+在 theme 表增加 `source_type` 字段已通过 `theme_items.source_type` 覆盖，主题本身不区分类型。但前端展示时可按来源类型分组。
+
+#### 注册点变更
+
+| 文件                                     | 变更                                  |
+| ---------------------------------------- | ------------------------------------- |
+| `src/main/ipc/weeklyHandlers.ts`         | prompt 追加主题 JSON 输出要求         |
+| `src/main/services/themesService.ts`     | 新增 `extractThemesFromSummary()`      |
+| `src/main/ipc/weeklyHandlers.ts`         | `done` 后调用 themesService 提取存储  |
+
+### 2.8 标签预热 — 从现有片段标签引导主题种子
+
+#### 背景
+
+`WeeklyReviewPage.tsx` 的 `stats.topTags`（第240行）已计算本周高频标签 `[tag, count][]`，但仅用于前端环形图展示后即丢弃。这些标签是天然的主题种子数据。
+
+#### 方案
+
+在 ThemesPage 首次加载或 themes 表为空时，提供「从标签导入」一键操作：
+
+```
+themes:import-from-tags
+```
+
+前端调用 `window.api.daily.listDay(...)` 循环所有有数据的日期 → 聚合所有 `snippet.tags` → 去重 → 写入为初始 `themes` 记录（`aiExtracted=0`，标记为手动种子）。
+
+**重要性**：这是 Phase 2 上线后用户看到「已有主题」的最快路径，避免面对空白的 ThemesPage。
+
+#### 注册点变更
+
+| 文件                                   | 变更                            |
+| -------------------------------------- | ------------------------------- |
+| `src/main/services/themesService.ts`   | 新增 `batchCreateFromTags()`    |
+| `src/main/ipc/themesHandlers.ts`       | 新增 `themes:import-from-tags`  |
+| `src/renderer/src/pages/themes/`       | 空态 + 一键导入按钮            |
+
+### 2.9 跨周主题追踪与演化视图
+
+#### 背景
+
+Phase 2 基础设计已支持主题 ↔ 素材关联（`theme_items`），但缺失跨时间维度的叙事能力。
+
+#### 方案
+
+在 ThemesPage 选中主题后的详情面板中增加「时间线视图」：
+
+- **横轴**：自然周（从主题首次出现到最近一次，中间所有周）
+- **纵轴**：该周该主题关联的素材数量（柱状图或热力图）
+- **标记点**：周度总结中该主题被提及的证据高亮
+
+实现：`themesService.getTimeline(themeExternalId)` 查询 `theme_items` 表，join `weekly_summaries` 获取时间分布。
+
+前端可用 ECharts 柱状图（复用 WeeklyReviewPage 已有的 ECharts 封装模式）。
+
+### 2.10 完整注册点汇总（Phase 2 增强后）
+
+| 文件                                     | 变更                                          |
+| ---------------------------------------- | --------------------------------------------- |
+| `src/main/db/schema.ts`                  | 新增 `themes` + `theme_items` 2 表 + 类型     |
+| `src/main/services/themesService.ts`     | **新文件**：CRUD + `extractThemesFromSummary` + `batchCreateFromTags` + `getTimeline` |
+| `src/main/agent/tools/themeTool.ts`      | **新文件**：6 个 Agent tool                   |
+| `src/main/agent/tools/toolRegistry.ts`   | 注册 themeTools                               |
+| `src/main/ipc/themesHandlers.ts`         | **新文件**：CRUD + `import-from-tags`         |
+| `src/main/ipc/weeklyHandlers.ts`         | prompt 追加主题 JSON 输出 + done 后提取存储    |
+| `src/main/index.ts`                      | `registerThemesHandlers()`                    |
+| `src/preload/index.ts`                   | `window.api.themes`                           |
+| `src/renderer/src/pages/themes/`         | 重写为完整页面：列表 + 详情 + 时间线 + 导入   |
+| `src/renderer/src/pages/weekly-review/`  | 无前端变更（主题提取在后端透明完成）            |
 
 ---
 
