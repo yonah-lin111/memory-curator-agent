@@ -13,64 +13,49 @@
 
 ---
 
-## Phase 1: AI 周度总结
+## Phase 1: AI 周度总结 ✅ (已完成)
 
 ### 目标
 
 替换 WeeklyReviewPage 右下角 `"总结功能筹备中..."` 占位符，实现一键 AI 总结当周数据，流式输出。
 
-### 1.1 数据库 — `weekly_summaries` 表
+### ✅ 1.1 数据库 — `weekly_summaries` 表（实际实现）
 
-在 `src/main/db/schema.ts` 新增：
+在 `src/main/db/schema.ts` 新增，**超越原始计划的关键扩展**：
 
-```typescript
-export const weeklySummaries = sqliteTable("weekly_summaries", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  weekStartDate: text("week_start_date").notNull().unique(), // 'YYYY-MM-DD' (周一)
-  title: text().notNull(),
-  content: text().notNull(), // Markdown 格式
-  modelUsed: text("model_used"),
-  generatedAt: text("generated_at").notNull(), // 'YYYY-MM-DD HH:mm'
-});
+- **添加 `type` 列**：`'summary' | 'interpersonal'`，支持双面板（周度总结 + 人际策展）
+- **联合唯一约束**：`UNIQUE(week_start_date, type)` 替代原单列 `unique`，允许同一周有两条不同类型记录
+- **添加 `is_meaningful` 列**：0/1 标记，前端根据此字段决定是否显示兜底文案（如"本周暂无值得总结的记录"）
+- **完整迁移逻辑**（`src/main/db/index.ts`：旧 `-curator` 后缀 → 新 `type` 列；补加 `is_meaningful` 列；清洗 `'curator'` → `'interpersonal'`）
 
-export type WeeklySummaryItem = typeof weeklySummaries.$inferSelect;
-export type WeeklySummarySaveInput = Pick<
-  typeof weeklySummaries.$inferInsert,
-  "weekStartDate" | "title" | "content" | "modelUsed" | "generatedAt"
->;
+最终 DDL：
+
+```sql
+CREATE TABLE IF NOT EXISTS weekly_summaries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  week_start_date TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'summary',       -- 'summary' | 'interpersonal'
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  model_used TEXT,
+  generated_at TEXT NOT NULL,
+  is_meaningful INTEGER NOT NULL DEFAULT 1,    -- 0=无实质内容, 1=有
+  UNIQUE(week_start_date, type)
+);
 ```
 
-### 1.2 Service — `weeklySummaryService.ts`
+### ✅ 1.2 Service — `weeklySummaryService.ts`
 
-**新文件** `src/main/services/weeklySummaryService.ts`：
+**新文件** `src/main/services/weeklySummaryService.ts`，**基于原始计划扩展**：
 
-```typescript
-// 遵循现有 pattern：定义局部 DatabaseConnection/Statement + 工厂函数
-type DatabaseStatement = {
-  all: (...v) => unknown[];
-  get: (...v) => unknown;
-  run: (...v) => unknown;
-};
-type DatabaseConnection = { prepare: (sql: string) => DatabaseStatement };
+- `getByWeekStart(weekStartDate, type?)` — 新增可选 `type` 过滤
+- `save(input)` — `ON CONFLICT(week_start_date, type)` upsert，包含 `type` 和 `isMeaningful`
+- `delete(weekStartDate, type?)` — 新增可选 `type` 过滤
+- `rowToItem(row)` — 映射 `type` 和 `isMeaningful`
 
-type WeeklySummaryService = {
-  getByWeekStart: (weekStartDate: string) => WeeklySummaryItem | null;
-  save: (input: WeeklySummarySaveInput) => WeeklySummaryItem;
-  delete: (weekStartDate: string) => void;
-};
+### ✅ 1.3 IPC Handler — `weeklyHandlers.ts`
 
-export const createWeeklySummaryService = (
-  database: DatabaseConnection,
-): WeeklySummaryService => {
-  // getByWeekStart — SELECT 按 week_start_date 查唯一行
-  // save — INSERT OR REPLACE (upsert)
-  // delete — DELETE WHERE week_start_date = ?
-};
-```
-
-### 1.3 IPC Handler — `weeklyHandlers.ts`
-
-**新文件** `src/main/ipc/weeklyHandlers.ts`：
+**新文件** `src/main/ipc/weeklyHandlers.ts`，**超越原始计划的关键扩展**：
 
 | IPC Channel               | 用途                    | 实现                                  |
 | ------------------------- | ----------------------- | ------------------------------------- |
@@ -78,51 +63,87 @@ export const createWeeklySummaryService = (
 | `weekly:summary:save`     | 手动保存/编辑           | `weeklySummaryService.save`           |
 | `weekly:summary:delete`   | 删除总结                | `weeklySummaryService.delete`         |
 | `weekly:summary:generate` | AI 流式生成总结（核心） | 见下方详述                            |
+| `weekly:curator:get`      | 获取人际策展            | `weeklySummaryService.getByWeekStart` |
+| `weekly:curator:save`     | 保存人际策展            | `weeklySummaryService.save`           |
+| `weekly:curator:delete`   | 删除人际策展            | `weeklySummaryService.delete`         |
+| `weekly:curator:generate` | AI 流式生成人际策展     | 见下方详述                            |
 
-#### `weekly:summary:generate` 流程
+#### ✅ `weekly:summary:generate` 流程
 
-**不走完整 ReAct Agent Loop**（无工具调用需求），直接用 `provider.streamTurn()` 做 text-in/text-out 流式生成：
+1. 并发拉取周一至周日 7 天 `DayData`，**按模板压缩**（todo/snippet/journal 各有限额，每天 < 500字）
+2. 从 `loadProviderConfig()` 读取 `weeklySummary` 段的 provider/model 配置（**支持多 provider 路由**）
+3. **把关检查（Gatekeeper）**：AI 预判本周是否有实质内容值得总结 → 若无则直接写入 `isMeaningful=0` 的空记录并返回兜底文案
+4. 构造 **结构化 Markdown system prompt**（固定标题层级：本周记录与进展、状态与情绪反思、发现的问题与收获、习惯改进与行动、核心反思问题）
+5. `provider.streamTurn()` 流式输出，每段 `text_delta` 实时推送到前端
+6. 收集全文 → 提取标题（# 首行）→ upsert 到 `weekly_summaries` 表（`type='summary'`）
+7. 发送 `weekly:summary:done` 事件
 
-1. 接收参数：`{ weekStartDate: string, model?: AppModelConfig }`
-2. 通过 `dailyService.listDay()` 并发拉取周一至周日 7 天的 `DayData`
-3. 从 config 获取 provider 配置，调用 `createModelProvider(providerConfig)`
-4. 构造 system prompt（策展指令 + 当周 JSON 数据摘要）和 user message
-5. 调用 `provider.streamTurn({ model, messages, signal })` 流式输出
-6. 每个 `text_delta` → `webContents.send('weekly:summary:delta', { text })`
-7. 收集完整文本 → 提取标题（LLM 输出首行） → 写入 `weekly_summaries` 表
-8. 发送 `weekly:summary:done` 事件（含 id, title, content）
+#### ✅ `weekly:curator:generate` 流程
 
-### 1.4 UI 改造
+1. **额外加载 `peopleService.list()` 人物档案**，用作策展 context
+2. 把关检查：判断本周是否有**人际互动相关**实质内容（gatekeeper prompt 含人物档案）
+3. 构造 **人际策展 system prompt**（本周人际互动、互动感受与反思、人物细节洞察、关系改进与行动）
+4. 其余流程同 summary generate
 
-修改 `WeeklyReviewPage.tsx` 右列面板：
+### ✅ 1.4 UI 改造
 
-**新增 `<WeeklySummaryPanel>` 子组件**，状态机：
+#### `<WeeklySummaryPanel>` 子组件 — 基于原始计划大幅扩展
 
+位于 `src/renderer/src/pages/weekly-review/components/WeeklySummaryPanel.tsx`
+
+**状态机（每个 Tab 独立）：**
 ```
 idle ──→ loading ──→ streaming ──→ done
   │                                    │
   └──────── 重新生成 ─────────────────┘
 ```
 
-- **Idle**：已有总结 → 渲染 Markdown；无总结 → 显示「生成周度总结」按钮
-- **Loading**：按钮变 loading spinner
-- **Streaming**：`useRef` 累积文本 + `requestAnimationFrame` 批量渲染，避免频繁 DOM 更新
-- **Done**：Markdown 渲染 + 「重新生成」「编辑」操作按钮
-- **依赖**：`window.api.weekly.summary.get()` / `.generate()` / `.save()` / `.delete()`
-- 监听 `ipcRenderer.on('weekly:summary:delta')` / `'weekly:summary:done'`
+**双 Tab 设计：**
+- 「总结报告」Tab：调用 `weekly:summary:*` IPC
+- 「人际策展」Tab：调用 `weekly:curator:*` IPC
 
-### 1.5 注册点
+**扩展功能：**
+- **`requestAnimationFrame` 批量渲染**：流式累积 `useRef` + RAF 节流，避免高频 DOM 更新
+- **历史周自动生成**：`isHistoricWeek` 检测 → 数据非空且无总结时静默自动触发
+- **编辑模式**：`MdEditor` Markdown 编辑器 + 保存/取消
+- **有意义检测**：`isMeaningful` 为 0 时显示前端兜底文案
+- **页脚**：显示模型名和生成时间
+- **`isEmpty` 支持**：本周数据为空时禁用生成按钮并显示提示
+- **Tab 切换标签**：使用 `Tag` 组件做切换
+
+#### `WeeklyReviewPage.tsx` — 页面级增强
+
+- 集成 `WeeklySummaryPanel` 替换原占位符
+- **页面初始化静默生成**：首次加载时检查上一周是否需要自动生成总结
+- **`isEmpty` 计算**：基于 7 天数据判断是否有实质内容
+- **响应式布局**：时间溪流 + 总结面板各自独占一行
+
+### ✅ 1.5 Preload 暴露
+
+`window.api.weekly` 命名空间（`src/preload/index.ts`），**分两个子命名空间**：
+
+| 方法                | 说明                          |
+| ------------------- | ----------------------------- |
+| `weekly.summary.*`  | get / save / delete / generate / onDelta / onDone |
+| `weekly.curator.*`  | get / save / delete / generate / onDelta / onDone |
+
+每个 `onDelta` / `onDone` 返回取消监听函数，支持 React 中 clean up。
+
+### ✅ 1.6 注册点
 
 | 文件                                        | 变更                                                |
 | ------------------------------------------- | --------------------------------------------------- |
-| `src/main/db/schema.ts`                     | 新增 `weeklySummaries` 表 + 类型                    |
+| `src/main/db/schema.ts`                     | 新增 `WeeklySummaryRow/Item/SaveInput` 类型         |
+| `src/main/db/index.ts`                      | 新增 `createWeeklySummariesTable()` + 迁移逻辑      |
 | `src/main/services/weeklySummaryService.ts` | **新文件**                                          |
-| `src/main/ipc/weeklyHandlers.ts`            | **新文件**                                          |
-| `src/main/index.ts`                         | `app.whenReady()` 中调用 `registerWeeklyHandlers()` |
-| `src/preload/index.ts`                      | 暴露 `window.api.weekly` 命名空间                   |
-| `src/renderer/src/pages/weekly-review/`     | 新增 `WeeklySummaryPanel.tsx`，修改主页面           |
+| `src/main/ipc/weeklyHandlers.ts`            | **新文件**（含 summary + curator 双 handler）       |
+| `src/main/index.ts`                         | `registerWeeklyHandlers()` 注册                     |
+| `src/preload/index.ts`                      | 暴露 `window.api.weekly.summary` + `.curator`       |
+| `src/renderer/src/pages/weekly-review/`     | 新增 `WeeklySummaryPanel.tsx`，修改 `WeeklyReviewPage.tsx` |
 
 ---
+
+## Phase 2 ~ Phase 4 待实现
 
 ## Phase 2: 长期主题追踪（Themes）
 
