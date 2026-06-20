@@ -1,9 +1,7 @@
 import { ipcMain } from "electron";
 import { getDatabase } from "@/db";
-import {
-  createWeeklySummaryService,
-  type DatabaseConnection,
-} from "@/services/weeklySummaryService";
+import { createWeeklySummaryService, type DatabaseConnection } from '@/services/weeklySummaryService'
+import { createThemesService } from '@/services/themesService'
 import { createDailyService } from "@/services/dailyService";
 import { createPeopleService } from "@/services/peopleService";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
@@ -54,6 +52,13 @@ type GatekeeperResult = {
   defaultContent: string;
 };
 
+/** AI 提取的主题条目 */
+type ThemeExtractionItem = {
+  name: string;
+  confidence: number;
+  evidence: string;
+};
+
 /**
  * 调用 AI 做生成前的把关检查，判断是否值得生成完整内容。
  */
@@ -87,6 +92,135 @@ const gatekeeperCheck = async (
       "本周暂无值得总结的记录。";
 
   return { shouldGenerate, defaultContent };
+};
+
+/**
+ * 调用 AI 从已生成的总结中提取长期主题建议。
+ * 独立 AI 调用，不依赖总结内联输出，可靠性和可控性更高。
+ */
+const extractThemesWithAI = async (
+  provider: ModelProvider,
+  model: string,
+  summaryContent: string,
+): Promise<ThemeExtractionItem[]> => {
+  const systemPrompt = `你是一位专注于个人成长的主题策展助手。你的任务是从周度总结中识别可长期追踪的主题。
+
+输出要求：
+- 仅输出一个 JSON 数组，不要包含任何其他文本或 Markdown 标记。
+- 每个元素包含三个字段：
+  - "name": 主题名（3-8个汉字，简洁精准，如「职业转型」「亲密关系」「健康管理」）
+  - "confidence": 置信度 0-100 的整数
+  - "evidence": 从总结原文中引用一句最能支撑该主题的话（30字以内）
+- 提取 2-5 个主题。如果总结内容不足，输出空数组 []。
+- 主题名应聚焦于长期叙事线索（跨周持续的成长/变化/挑战），而非一次性事件。
+
+正确输出示例：
+[{"name":"技能提升","confidence":85,"evidence":"本周完成了Rust基础教程的三章内容"},{"name":"睡眠改善","confidence":70,"evidence":"连续四天在23:30前入睡"}]`;
+
+  const userMessage = `请从以下周度总结中提取长期主题：\n\n${summaryContent}`;
+
+  const messages: AgentMessage[] = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userMessage },
+  ];
+
+  let fullResponse = "";
+  for await (const event of provider.streamTurn({
+    model,
+    messages,
+    tools: [],
+  })) {
+    if (event.type === "text_delta") {
+      fullResponse += event.delta;
+    }
+  }
+
+  try {
+    // 清洗 Markdown 代码块包裹，再提取 JSON 数组
+    const cleaned = fullResponse
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .trim();
+
+    // 从响应中精准提取 JSON 数组（模型可能在前后添加文字说明）
+    const arrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (!arrayMatch) {
+      console.error('主题提取响应中未找到 JSON 数组:', cleaned.slice(0, 200));
+      return [];
+    }
+
+    const parsed = JSON.parse(arrayMatch[0]);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (item): item is ThemeExtractionItem =>
+          typeof item.name === 'string' &&
+          item.name.trim().length > 0
+      );
+    }
+    return [];
+  } catch {
+    console.error('主题提取 JSON 解析失败，原始响应:', fullResponse.slice(0, 200));
+    return [];
+  }
+};
+
+/**
+ * 将 AI 提取的主题写入数据库。
+ */
+const saveExtractedThemes = (
+  themesService: ReturnType<typeof createThemesService>,
+  extracted: ThemeExtractionItem[],
+  summaryId: number,
+): number => {
+  if (!extracted.length) return 0;
+
+  console.log(`[主题提取] 准备写入 ${extracted.length} 个主题: ${extracted.map((t) => t.name).join(', ')}`);
+
+  let count = 0;
+
+  for (const theme of extracted) {
+    if (!theme.name?.trim()) continue;
+
+    // 模糊匹配已有主题（双向包含匹配）
+    const allThemes = themesService.list();
+    const matched = allThemes.find(
+      (t) => t.name.includes(theme.name.trim()) || theme.name.trim().includes(t.name)
+    );
+
+    let themeExternalId: string;
+    if (matched) {
+      themeExternalId = matched.externalId;
+      // 更新已有主题时间 + 追加新 evidence 到描述
+      themesService.update(themeExternalId, {
+        description: matched.description
+          ? `${matched.description}; ${theme.evidence?.slice(0, 100) ?? ''}`
+          : (theme.evidence?.slice(0, 200) ?? ''),
+      });
+    } else {
+      const created = themesService.create({
+        name: theme.name.trim(),
+        description: theme.evidence?.slice(0, 200) ?? '',
+      });
+      themeExternalId = created.externalId;
+    }
+
+    // 关联到本周总结（ON CONFLICT 自动跳过重复）
+    try {
+      themesService.addItem({
+        themeExternalId,
+        sourceType: 'weekly_summary',
+        sourceId: String(summaryId),
+        relevanceNote: theme.evidence?.slice(0, 200) ?? '',
+        aiExtracted: 1,
+      });
+      count++;
+    } catch (err) {
+      console.error(`主题关联失败 (${theme.name}):`, err);
+    }
+  }
+
+  console.log(`[主题提取] 成功写入 ${count}/${extracted.length} 个主题关联`);
+  return count;
 };
 
 /**
@@ -278,8 +412,35 @@ export const registerWeeklyHandlers = (): void => {
       };
       const savedItem = weeklySummaryService.save(saveInput);
 
+      // 自动提取主题建议（AI 把关）
+      if (savedItem.isMeaningful === 1) {
+        try {
+          const themesService = createThemesService(
+            database as unknown as import('@/services/themesService').DatabaseConnection
+          );
+          // 用独立的 AI 调用从已生成总结中提取主题
+          const extractedThemes = await extractThemesWithAI(
+            provider,
+            modelId,
+            fullText
+          );
+          const extractedCount = saveExtractedThemes(
+            themesService,
+            extractedThemes,
+            savedItem.id
+          );
+          if (extractedCount > 0) {
+            console.log(
+              `从周度总结中 AI 提取了 ${extractedCount} 个主题: ${extractedThemes.map((t) => t.name).join(', ')}`
+            );
+          }
+        } catch (err) {
+          console.error('自动主题提取失败:', err);
+        }
+      }
+
       // 通知前端生成完成。
-      event.sender.send("weekly:summary:done", savedItem);
+      event.sender.send('weekly:summary:done', savedItem);
 
       return savedItem;
     },
@@ -433,8 +594,35 @@ export const registerWeeklyHandlers = (): void => {
       };
       const savedItem = weeklySummaryService.save(saveInput);
 
+      // 自动提取主题建议（AI 把关）
+      if (savedItem.isMeaningful === 1) {
+        try {
+          const themesService = createThemesService(
+            database as unknown as import('@/services/themesService').DatabaseConnection
+          );
+          // 用独立的 AI 调用从已生成总结中提取主题
+          const extractedThemes = await extractThemesWithAI(
+            provider,
+            modelId,
+            fullText
+          );
+          const extractedCount = saveExtractedThemes(
+            themesService,
+            extractedThemes,
+            savedItem.id
+          );
+          if (extractedCount > 0) {
+            console.log(
+              `从人际策展中 AI 提取了 ${extractedCount} 个主题: ${extractedThemes.map((t) => t.name).join(', ')}`
+            );
+          }
+        } catch (err) {
+          console.error('自动主题提取失败:', err);
+        }
+      }
+
       // 通知前端生成完成。
-      event.sender.send("weekly:curator:done", savedItem);
+      event.sender.send('weekly:curator:done', savedItem);
 
       return savedItem;
     },

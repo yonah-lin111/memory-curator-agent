@@ -25,6 +25,10 @@ import {
   type DatabaseConnection as CatDatabaseConnection,
 } from "@/services/noteCategoryService";
 import {
+  createThemesService,
+  type DatabaseConnection as ThemesDatabaseConnection,
+} from "@/services/themesService";
+import {
   createAiChatPersistenceService,
   type DatabaseConnection as AiChatDatabaseConnection,
 } from "@/services/aiChatPersistenceService";
@@ -80,6 +84,9 @@ export const registerAiHandlers = (): void => {
   const noteCategoryService = createNoteCategoryService(
     database as unknown as CatDatabaseConnection,
   );
+  const themesService = createThemesService(
+    database as unknown as ThemesDatabaseConnection,
+  );
   const aiChatService = createAiChatPersistenceService(
     database as unknown as AiChatDatabaseConnection,
   );
@@ -90,6 +97,7 @@ export const registerAiHandlers = (): void => {
     todosService,
     snippetsService,
     noteCategoryService,
+    themesService,
   });
 
   ipcMain.handle("ai:model-options:get", async () =>

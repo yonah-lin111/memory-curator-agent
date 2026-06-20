@@ -815,6 +815,55 @@ export const createWeeklySummariesTable = (database: Database.Database): void =>
 }
 
 /**
+ * 创建 themes 表。
+ */
+export const createThemesTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS themes (
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      color TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_themes_status
+    ON themes(status);
+
+    CREATE INDEX IF NOT EXISTS idx_themes_updated_at
+    ON themes(updated_at DESC);
+  `)
+}
+
+/**
+ * 创建 theme_items 表。
+ */
+export const createThemeItemsTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS theme_items (
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      theme_external_id TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      source_id TEXT NOT NULL,
+      relevance_note TEXT NOT NULL DEFAULT '',
+      ai_extracted INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL,
+      UNIQUE(theme_external_id, source_type, source_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_theme_items_theme
+    ON theme_items(theme_external_id);
+
+    CREATE INDEX IF NOT EXISTS idx_theme_items_source
+    ON theme_items(source_type, source_id);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -833,6 +882,8 @@ export const initDatabase = (): Database.Database => {
   createAssociatedPeopleTable(sqlite)
   createAiChatPersistenceTables(sqlite)
   createWeeklySummariesTable(sqlite)
+  createThemesTable(sqlite)
+  createThemeItemsTable(sqlite)
 
   return sqlite
 }

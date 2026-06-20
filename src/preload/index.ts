@@ -717,6 +717,28 @@ const api = {
         return () => ipcRenderer.removeListener('weekly:curator:done', wrapped)
       }
     }
+  },
+  themes: {
+    list: (status?: string): Promise<ThemeItem[]> =>
+      ipcRenderer.invoke('themes:list', status),
+    get: (externalId: string): Promise<ThemeItem | null> =>
+      ipcRenderer.invoke('themes:get', externalId),
+    create: (input: ThemeCreateInput): Promise<ThemeItem> =>
+      ipcRenderer.invoke('themes:create', input),
+    update: (externalId: string, input: ThemeUpdateInput): Promise<ThemeItem> =>
+      ipcRenderer.invoke('themes:update', externalId, input),
+    delete: (externalId: string): Promise<void> =>
+      ipcRenderer.invoke('themes:delete', externalId),
+    listItems: (themeExternalId: string): Promise<ThemeItemsItem[]> =>
+      ipcRenderer.invoke('themes:items:list', themeExternalId),
+    addItem: (input: ThemeItemsCreateInput): Promise<ThemeItemsItem> =>
+      ipcRenderer.invoke('themes:items:add', input),
+    removeItem: (themeExternalId: string, sourceType: string, sourceId: string): Promise<void> =>
+      ipcRenderer.invoke('themes:items:remove', themeExternalId, sourceType, sourceId),
+    importFromTags: (tags: string[]): Promise<ThemeItem[]> =>
+      ipcRenderer.invoke('themes:import-from-tags', tags),
+    timeline: (themeExternalId: string): Promise<ThemeTimelineItem[]> =>
+      ipcRenderer.invoke('themes:timeline', themeExternalId),
   }
 }
 

@@ -5,6 +5,66 @@ import type { ElectronAPI } from '@electron-toolkit/preload'
 // 待办优先级类型。
 type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
 
+/** 主题项 */
+type ThemeItem = {
+  id: number
+  externalId: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  createdAt: string
+  updatedAt: string
+  itemCount?: number
+}
+
+/** 主题创建输入 */
+type ThemeCreateInput = {
+  name: string
+  description?: string
+  color?: string | null
+  status?: string
+}
+
+/** 主题更新输入 */
+type ThemeUpdateInput = {
+  name?: string
+  description?: string
+  color?: string | null
+  status?: string
+}
+
+/** 主题素材关联项 */
+type ThemeItemsItem = {
+  id: number
+  externalId: string
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote: string
+  aiExtracted: number
+  createdAt: string
+  sourceTitle?: string
+  sourceContent?: string
+  sourceEntryDate?: string
+}
+
+/** 主题素材关联创建输入 */
+type ThemeItemsCreateInput = {
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote?: string
+  aiExtracted?: number
+}
+
+/** 主题时间线节点 */
+type ThemeTimelineItem = {
+  weekStartDate: string
+  itemCount: number
+  mentionedInSummary: boolean
+}
+
 // 日记保存载荷类型。
 type JournalSavePayload = {
   // 日记所属日期。
@@ -842,6 +902,29 @@ type AppAPI = {
       // 监听流式生成完成事件。
       onDone: (listener: (item: WeeklySummaryItem) => void) => () => void
     }
+  }
+  /** 主题追踪 API */
+  themes?: {
+    /** 列出所有主题 */
+    list: (status?: string) => Promise<ThemeItem[]>
+    /** 获取单个主题 */
+    get: (externalId: string) => Promise<ThemeItem | null>
+    /** 创建主题 */
+    create: (input: ThemeCreateInput) => Promise<ThemeItem>
+    /** 更新主题 */
+    update: (externalId: string, input: ThemeUpdateInput) => Promise<ThemeItem>
+    /** 删除主题 */
+    delete: (externalId: string) => Promise<void>
+    /** 获取某主题的所有关联素材 */
+    listItems: (themeExternalId: string) => Promise<ThemeItemsItem[]>
+    /** 添加主题素材关联 */
+    addItem: (input: ThemeItemsCreateInput) => Promise<ThemeItemsItem>
+    /** 移除主题素材关联 */
+    removeItem: (themeExternalId: string, sourceType: string, sourceId: string) => Promise<void>
+    /** 从标签批量导入主题种子 */
+    importFromTags: (tags: string[]) => Promise<ThemeItem[]>
+    /** 获取某主题跨周时间线 */
+    timeline: (themeExternalId: string) => Promise<ThemeTimelineItem[]>
   }
 }
 

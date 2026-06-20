@@ -11,6 +11,7 @@ import { registerAiHandlers } from '@/ipc/aiHandlers'
 import { registerPromptHistoryHandlers } from '@/ipc/promptHistoryHandlers'
 import { registerConfigHandlers } from '@/ipc/configHandlers'
 import { registerWeeklyHandlers } from '@/ipc/weeklyHandlers'
+import { registerThemesHandlers } from '@/ipc/themesHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from '@/protocols/imageProtocol'
 import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
 import { scheduleStartupMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
@@ -63,6 +64,7 @@ app.whenReady().then(() => {
   registerPromptHistoryHandlers()
   registerConfigHandlers()
   registerWeeklyHandlers()
+  registerThemesHandlers()
   registerImageProtocolHandler()
   scheduleStartupMarkdownImageMaintenance(
     createFilesService({ database: database as unknown as FilesDatabaseConnection })

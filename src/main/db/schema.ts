@@ -1,4 +1,4 @@
-import { customType, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { customType, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 
 // SQLite 时间戳字段类型。
 const timestamp = customType<{ data: string; driverData: string }>({
@@ -615,6 +615,129 @@ export type WeeklySummarySaveInput = {
   // 是否为有意义内容（1=有，0=无）。
   isMeaningful?: number
 }
+
+// ==================== Themes Curation (Phase 2) ====================
+
+/** 主题数据库行类型 */
+export type ThemeRow = {
+  id: number
+  external_id: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+/** 主题页面使用类型 */
+export type ThemeItem = {
+  id: number
+  externalId: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  createdAt: string
+  updatedAt: string
+  /** 关联素材数量（JOIN 时填充） */
+  itemCount?: number
+}
+
+/** 主题创建输入 */
+export type ThemeCreateInput = {
+  name: string
+  description?: string
+  color?: string | null
+  status?: string
+}
+
+/** 主题更新输入 */
+export type ThemeUpdateInput = {
+  name?: string
+  description?: string
+  color?: string | null
+  status?: string
+}
+
+/** 主题素材关联数据库行类型 */
+export type ThemeItemRow = {
+  id: number
+  external_id: string
+  theme_external_id: string
+  source_type: string
+  source_id: string
+  relevance_note: string
+  ai_extracted: number
+  created_at: string
+}
+
+/** 主题素材关联页面使用类型 */
+export type ThemeItemsItem = {
+  id: number
+  externalId: string
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote: string
+  aiExtracted: number
+  createdAt: string
+  /** JOIN 来源信息（用于前端展示） */
+  sourceTitle?: string
+  sourceContent?: string
+  sourceEntryDate?: string
+}
+
+/** 主题素材关联创建输入 */
+export type ThemeItemsCreateInput = {
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote?: string
+  aiExtracted?: number
+}
+
+/** 主题时间线节点 (跨周分布) */
+export type ThemeTimelineItem = {
+  /** 自然周起始日期 */
+  weekStartDate: string
+  /** 该周关联素材数 */
+  itemCount: number
+  /** 是否在周度总结中被提及 */
+  mentionedInSummary: boolean
+}
+
+export const themes = sqliteTable('themes', {
+  id: integer('id').primaryKey(),
+  externalId: text('external_id').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  color: text('color'),
+  status: text('status').notNull().default('active'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull()
+})
+
+export const themeItems = sqliteTable(
+  'theme_items',
+  {
+    id: integer('id').primaryKey(),
+    externalId: text('external_id').notNull().unique(),
+    themeExternalId: text('theme_external_id').notNull(),
+    sourceType: text('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    relevanceNote: text('relevance_note').notNull().default(''),
+    aiExtracted: integer('ai_extracted').notNull().default(0),
+    createdAt: text('created_at').notNull()
+  },
+  (table) => ({
+    unqThemeSource: unique('unq_theme_source').on(
+      table.themeExternalId,
+      table.sourceType,
+      table.sourceId
+    )
+  })
+)
 
 export const associatedPeople = sqliteTable('associated_people', {
   id: integer('id').primaryKey(),
