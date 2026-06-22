@@ -143,76 +143,45 @@ idle ──→ loading ──→ streaming ──→ done
 
 ---
 
-## Phase 2 ~ Phase 4 待实现
-
-## Phase 2: 长期主题追踪（Themes）
+## Phase 2: 长期主题追踪（Themes）✅ (已完成)
 
 ### 目标
 
 用户手动定义 + AI 自动建议长期主题（如「职业转型」「亲密关系」等），将笔记/日记/片段关联到主题，追踪叙事演变。**核心增强：打通「周度总结 → 长期主题」闭环，在每次周总结生成时自动提取主题建议，实现无感的主题积累。**
 
-### 2.1 数据库 — `themes` + `theme_items` 表
+### ✅ 2.1 数据库 — `themes` + `theme_items` 表
 
-在 `src/main/db/schema.ts` 新增：
+在 `src/main/db/schema.ts:713-743` 新增，**超越原始计划的扩展**：
 
-```typescript
-// themes 表 — 主题定义
-export const themes = sqliteTable("themes", {
-  id: integer().primaryKey({ autoIncrement: true }),
-  externalId: text("external_id").notNull().unique(), // UUID
-  name: text().notNull(),
-  description: text().notNull().default(""),
-  color: text(), // 可选 hex
-  status: text().notNull().default("active"), // 'active' | 'archived'
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
+- **表结构**：`themes`（id, externalId, name, description, color, status, createdAt, updatedAt）+ `theme_items`（id, externalId, themeExternalId, sourceType, sourceId, relevanceNote, aiExtracted, createdAt）+ 唯一约束 `(themeExternalId, sourceType, sourceId)`
+- **额外迁移**（`src/main/db/index.ts:547-548`）：通过 SQL `ALTER TABLE` 追加了 `ai_generated INTEGER` 列（DDL schema 中省略但通过迁移补充）
+- **类型导出**：`ThemeItem`, `ThemeCreateInput`, `ThemeUpdateInput`, `ThemeRow`, `ThemeItemRow`, `ThemeItemsItem`, `ThemeItemsCreateInput`, `ThemeTimelineItem`（`schema.ts:635-711`）
+- `sourceType` 支持 `'note' | 'journal' | 'snippet' | 'weekly_summary'`，覆盖周度总结映射
 
-// theme_items 表 — 主题 ↔ 素材 多对多
-export const themeItems = sqliteTable(
-  "theme_items",
-  {
-    id: integer().primaryKey({ autoIncrement: true }),
-    externalId: text("external_id").notNull().unique(),
-    themeExternalId: text("theme_external_id").notNull(),
-    sourceType: text("source_type").notNull(), // 'note' | 'journal' | 'snippet'
-    sourceId: text("source_id").notNull(),
-    relevanceNote: text().notNull().default(""),
-    aiExtracted: integer("ai_extracted").notNull().default(0), // 0=手动, 1=AI
-    createdAt: text("created_at").notNull(),
-    // 唯一约束: (theme_external_id, source_type, source_id)
-  },
-  (table) => ({
-    uniqueThemeSource: unique().on(
-      table.themeExternalId,
-      table.sourceType,
-      table.sourceId,
-    ),
-  }),
-);
-```
+### ✅ 2.2 Service — `themesService.ts`
 
-导出类型：`ThemeItem`, `ThemeCreateInput`, `ThemeUpdateInput`, `ThemeItemItem`, `ThemeItemsCreateInput`
-
-### 2.2 Service — `themesService.ts`
-
-**新文件** `src/main/services/themesService.ts`：
+**新文件** `src/main/services/themesService.ts`（394 行），**超越原始计划的扩展**：
 
 | 方法                                                | 用途                                      |
 | --------------------------------------------------- | ----------------------------------------- |
-| `list()`                                            | 获取所有主题                              |
+| `list(status?)`                                     | 获取所有主题（可选按状态过滤，含关联数） |
 | `getByExternalId(id)`                               | 单个主题                                  |
-| `create(input)`                                     | 新建（生成 externalId）                   |
-| `update(id, input)`                                 | 更新名称/描述/状态                        |
+| `create(input)`                                     | 新建（生成 externalId，含 aiGenerated）   |
+| `update(id, input)`                                 | 更新名称/描述/状态/颜色                   |
 | `delete(id)`                                        | 删除（级联删除 items）                    |
-| `addItem(themeExternalId, input)`                   | 添加关联条目                              |
+| `addItem(input)`                                    | 添加关联条目（ON CONFLICT upsert）        |
 | `removeItem(themeExternalId, sourceType, sourceId)` | 移除关联                                  |
 | `listItems(themeExternalId)`                        | 某主题的所有关联条目（join 源表获取摘要） |
+| `getItemCount(themeExternalId)`                     | 关联计数（用于列表展示）                   |
+| `batchCreateFromTags(tags)`                         | 从标签批量创建主题种子                    |
+| `extractThemesFromSummary(content, summaryId)`      | 从总结全文解析 JSON 并 upsert 主题建议    |
+| `getTimeline(themeExternalId)`                      | 跨周分布时间线                            |
+| `cleanupOrphanedAiThemes()`                         | 清理无关联的 AI 自动生成主题              |
 | `querySql(sql)`                                     | 供 AI Agent 原始查询                      |
 
-### 2.3 Agent Tool — `themeTool.ts`
+### ✅ 2.3 Agent Tool — `themeTool.ts`
 
-**新文件** `src/main/agent/tools/themeTool.ts`：
+**新文件** `src/main/agent/tools/themeTool.ts`（275 行），6 个工具，分组导出 `createThemeTools(themesService): AgentTool[]`：
 
 | 工具                     | 类型           | 说明                    |
 | ------------------------ | -------------- | ----------------------- |
@@ -223,162 +192,94 @@ export const themeItems = sqliteTable(
 | `theme_tool_item_add`    | 写入（带确认） | 关联素材到主题          |
 | `theme_tool_item_remove` | 写入（带确认） | 移除关联                |
 
-分组导出：`createThemeTools(themesService): AgentTool[]`
+### ✅ 2.4 IPC — `themesHandlers.ts`
 
-### 2.4 IPC — `themesHandlers.ts`
-
-**新文件** `src/main/ipc/themesHandlers.ts`：
+**新文件** `src/main/ipc/themesHandlers.ts`（66 行），**超越原始计划的扩展**：
 
 ```
-themes:list / themes:create / themes:update / themes:delete
+themes:list / themes:get / themes:create / themes:update / themes:delete
 themes:items:list / themes:items:add / themes:items:remove
+themes:import-from-tags / themes:timeline / themes:update-description
 ```
 
-### 2.5 UI — ThemesPage 重写
+- `themes:update-description` 调用 `themeDescriptionUpdater.ts`，AI 自动生成主题描述
 
-当前 `ThemesPage.tsx`（15 行占位符）→ 完整页面：
+### ✅ 2.5 UI — ThemesPage 完整页面
 
-- **左列（主题列表，~w-80）**：卡片式主题列表，含名称/描述/状态标签/关联数，支持新建/编辑/归档
-- **右列（主题详情）**：选中主题后展开，显示：
-  - 主题基本信息（名称、描述、时间范围）
-  - 关联素材时间线（按时间排序，来源类型图标区分 note/journal/snippet）
-  - 每条素材的可展开预览 + 关联说明 + AI/手动标记
-- **交互**：AI Chat 中 `@curation 帮我分析本周日记的主要主题` → Agent 用 tool 读取日记 → 建议新主题或关联
+**新文件** `src/renderer/src/pages/themes/ThemesPage.tsx`（650 行），替换原占位符：
 
-### 2.6 注册点
+- **左列（主题列表，~w-72）**：卡片式列表（活跃/已归档分组），名称/描述/关联数/状态标签，hover 显示编辑/删除操作
+- **右列（主题详情）**：选中主题后展开：
+  - 基本信息卡片（名称、描述、创建/更新时间、关联数）
+  - 关联素材列表（来源类型标签 `note/journal/snippet/weekly_summary` + 标题 + AI 标记 + 可预览内容 + 解除关联）
+  - 时间线简化版（柱状图，高亮周度总结提及的节点）
+- **弹窗**：新建/编辑主题弹窗 + 从标签导入弹窗
+- **空态**：引导文案 + 「从标签导入」按钮
 
-| 文件                                   | 变更                       |
-| -------------------------------------- | -------------------------- |
-| `src/main/db/schema.ts`                | 新增 2 表 + 类型           |
-| `src/main/services/themesService.ts`   | **新文件**                 |
-| `src/main/agent/tools/themeTool.ts`    | **新文件**                 |
-| `src/main/agent/tools/toolRegistry.ts` | 注册 themeTools            |
-| `src/main/ipc/themesHandlers.ts`       | **新文件**                 |
-| `src/main/index.ts`                    | `registerThemesHandlers()` |
-| `src/preload/index.ts`                 | `window.api.themes`        |
-| `src/renderer/src/pages/themes/`       | 重写为完整页面             |
+### ✅ 2.6 注册点
 
-### 2.7 周度总结联动 — 自动主题提取（核心增强）
+| 文件                                     | 变更                                              |
+| ---------------------------------------- | ------------------------------------------------- |
+| `src/main/db/schema.ts:713-743`          | 新增 `themes` + `theme_items` 2 表 + 9 个类型     |
+| `src/main/db/index.ts:547-548`           | 迁移：`ALTER TABLE themes ADD COLUMN ai_generated` |
+| `src/main/services/themesService.ts`     | **新文件**（394 行）                               |
+| `src/main/agent/tools/themeTool.ts`      | **新文件**（275 行，6 个 Agent tool）              |
+| `src/main/agent/tools/toolRegistry.ts:9` | 注册 `createThemeTools`                            |
+| `src/main/ipc/themesHandlers.ts`         | **新文件**（66 行，10 个 IPC）                     |
+| `src/main/ipc/themeDescriptionUpdater.ts` | **新文件**：AI 自动生成主题描述                    |
+| `src/main/index.ts:67`                   | `registerThemesHandlers()`                         |
+| `src/preload/index.ts:697-719`           | `window.api.themes`（12 个方法）                   |
+| `src/renderer/src/pages/themes/`         | 重写为完整页面（ThemesPage.tsx，650 行）            |
+| `test/main/services/themesService.test.ts` | **新测试文件**                                   |
 
-#### 背景与机会
+### ✅ 2.7 周度总结联动 — 自动主题提取（核心增强）
 
-当前周度总结流程（`weeklyHandlers.ts` `weekly:summary:generate`）：
-1. 拉取 7 天数据 → 压缩（各 500 字）
-2. 把关检查（gatekeeperCheck）
-3. LLM 生成结构化 Markdown 总结 → 保存
-
-**问题**：总结存入 `weekly_summaries` 表后即结束，不产生任何主题数据。
-**机会**：LLM 在生成总结时已深度理解本周内容，在同一轮生成中追加主题建议几乎零额外 token 成本。
+**实际实现采用路径 B（独立 AI 调用）**，路径 A（内联 prompt 追加）未采用。
 
 #### 方案
 
-**推荐路径 A：在总结 prompt 中追加「主题建议」结构化输出段落。**
+`weeklyHandlers.ts:111-183` 新增 `extractThemesWithAI()`：
 
-在 `weeklyHandlers.ts` 的 system prompt（`weekly:summary:generate` 和 `weekly:curator:generate`）末尾追加：
-
-```markdown
----
-## 主题建议
-根据上述分析，提取 2-5 个可追踪的长期主题建议。每个主题一行，JSON 格式：
-{"name": "主题名", "confidence": 0-100, "evidence": "引用分析中的关键句", "relatedSection": "关联的总结章节"}
-
-如果本周内容不足以提取新主题，输出空数组 []。
-```
-
-**解析与存储**：`weekly:summary:done` / `weekly:curator:done` 发送完成后，主进程在 handler 内解析 `fullText` 末尾的主题 JSON → 调用 `themesService`：
-- 若主题名已存在（模糊匹配）→ 更新 `updatedAt`，递增关联计数
-- 若为新主题 → `themesService.create(name, description=evidence, status=active)`
-- 同时 `themeItems.add(themeExternalId, sourceType='weekly_summary', sourceId=总结id, aiExtracted=1)`
-
-**后端解析逻辑**（`src/main/services/themesService.ts` 新增方法）：
-
-```typescript
-// 从总结全文解析并批量 upsert 主题建议
-extractThemesFromSummary(summaryContent: string, summaryId: number): Promise<number>
-```
-
-解析步骤：
-1. 正则匹配 `## 主题建议` 之后的代码块/JSON 段落
-2. `JSON.parse` 得到主题数组
-3. 对每个主题：查询已有主题名（SQL LIKE 模糊匹配）→ upsert + 创建 theme_items 关联
-
-**后备路径 B（fallback）**：若路径 A 的 prompt 追加影响总结质量，降级为在 `weekly:summary:done` 后触发独立的后台异步提取 —— 用一个轻量 prompt（~200 tokens）从 summary content 中提取主题关键词，不影响主流程。
-
-#### 双类型主题区分
-
-周度总结（`type='summary'`）和人际策展（`type='interpersonal'`）产生的主题应有不同处理：
-
-- **总结主题**：工作、学习、习惯、情绪等维度 → 主题 `sourceType='weekly_summary'`
-- **人际主题**：特定人物的关系演变 → 主题 `sourceType='interpersonal'`，且主题名可绑定人物名
-
-在 theme 表增加 `source_type` 字段已通过 `theme_items.source_type` 覆盖，主题本身不区分类型。但前端展示时可按来源类型分组。
+1. 在 `weekly:summary:generate` 完成总结生成并保存后（`:491-518`），启动独立 AI 调用
+2. **语义对齐优先**：prompt 要求优先匹配已有主题候选池（`existingThemes`），仅当语义无重叠时才创建新主题
+3. 响应为 JSON 数组：`{name, confidence, evidence}` → 调用 `saveExtractedThemes()` 落地
+4. 每个成功提取的主题异步触发 `updateThemeDescription()` 自动补全描述
+5. 异常不影响主流程（try-catch 包裹）
 
 #### 注册点变更
-
-| 文件                                     | 变更                                  |
-| ---------------------------------------- | ------------------------------------- |
-| `src/main/ipc/weeklyHandlers.ts`         | prompt 追加主题 JSON 输出要求         |
-| `src/main/services/themesService.ts`     | 新增 `extractThemesFromSummary()`      |
-| `src/main/ipc/weeklyHandlers.ts`         | `done` 后调用 themesService 提取存储  |
-
-### 2.8 标签预热 — 从现有片段标签引导主题种子
-
-#### 背景
-
-`WeeklyReviewPage.tsx` 的 `stats.topTags`（第240行）已计算本周高频标签 `[tag, count][]`，但仅用于前端环形图展示后即丢弃。这些标签是天然的主题种子数据。
-
-#### 方案
-
-在 ThemesPage 首次加载或 themes 表为空时，提供「从标签导入」一键操作：
-
-```
-themes:import-from-tags
-```
-
-前端调用 `window.api.daily.listDay(...)` 循环所有有数据的日期 → 聚合所有 `snippet.tags` → 去重 → 写入为初始 `themes` 记录（`aiExtracted=0`，标记为手动种子）。
-
-**重要性**：这是 Phase 2 上线后用户看到「已有主题」的最快路径，避免面对空白的 ThemesPage。
-
-#### 注册点变更
-
-| 文件                                   | 变更                            |
-| -------------------------------------- | ------------------------------- |
-| `src/main/services/themesService.ts`   | 新增 `batchCreateFromTags()`    |
-| `src/main/ipc/themesHandlers.ts`       | 新增 `themes:import-from-tags`  |
-| `src/renderer/src/pages/themes/`       | 空态 + 一键导入按钮            |
-
-### 2.9 跨周主题追踪与演化视图
-
-#### 背景
-
-Phase 2 基础设计已支持主题 ↔ 素材关联（`theme_items`），但缺失跨时间维度的叙事能力。
-
-#### 方案
-
-在 ThemesPage 选中主题后的详情面板中增加「时间线视图」：
-
-- **横轴**：自然周（从主题首次出现到最近一次，中间所有周）
-- **纵轴**：该周该主题关联的素材数量（柱状图或热力图）
-- **标记点**：周度总结中该主题被提及的证据高亮
-
-实现：`themesService.getTimeline(themeExternalId)` 查询 `theme_items` 表，join `weekly_summaries` 获取时间分布。
-
-前端可用 ECharts 柱状图（复用 WeeklyReviewPage 已有的 ECharts 封装模式）。
-
-### 2.10 完整注册点汇总（Phase 2 增强后）
 
 | 文件                                     | 变更                                          |
 | ---------------------------------------- | --------------------------------------------- |
-| `src/main/db/schema.ts`                  | 新增 `themes` + `theme_items` 2 表 + 类型     |
-| `src/main/services/themesService.ts`     | **新文件**：CRUD + `extractThemesFromSummary` + `batchCreateFromTags` + `getTimeline` |
-| `src/main/agent/tools/themeTool.ts`      | **新文件**：6 个 Agent tool                   |
-| `src/main/agent/tools/toolRegistry.ts`   | 注册 themeTools                               |
-| `src/main/ipc/themesHandlers.ts`         | **新文件**：CRUD + `import-from-tags`         |
-| `src/main/ipc/weeklyHandlers.ts`         | prompt 追加主题 JSON 输出 + done 后提取存储    |
-| `src/main/index.ts`                      | `registerThemesHandlers()`                    |
-| `src/preload/index.ts`                   | `window.api.themes`                           |
-| `src/renderer/src/pages/themes/`         | 重写为完整页面：列表 + 详情 + 时间线 + 导入   |
-| `src/renderer/src/pages/weekly-review/`  | 无前端变更（主题提取在后端透明完成）            |
+| `src/main/ipc/weeklyHandlers.ts:111-183` | `extractThemesWithAI()` 函数                   |
+| `src/main/ipc/weeklyHandlers.ts:491-518` | 总结完成后的主题提取集成                        |
+| `src/main/services/themesService.ts:270` | `extractThemesFromSummary()`（备用解析方法）     |
+
+### ✅ 2.8 标签预热 — 从标签引导主题种子
+
+- `themesService.batchCreateFromTags(tags)` — 已实现（`:245-268`）
+- `themes:import-from-tags` IPC — 已注册
+- ThemesPage 空态/按钮 → 弹窗输入逗号分隔标签 → 跳过已有名称 → 批量创建（`aiGenerated=0`）
+- **差异**：实际 UI 是手动输入标签而非自动扫描全量数据，更可控
+
+### ✅ 2.9 跨周主题追踪与演化视图
+
+- `themesService.getTimeline(themeExternalId)` — 已实现（`:357-378`）：`strftime` 按自然周聚合，标记 `mentionedInSummary`
+- `themes:timeline` IPC — 已注册
+- ThemesPage 详情底部柱状图 — 已实现（`:521-549`），简洁高度图 + 总结提及高亮
+
+### 实际实现与原始计划的差异总结
+
+| 计划项                       | 实际差异                                                       |
+| ---------------------------- | -------------------------------------------------------------- |
+| `ai_generated` 列            | 通过 SQL 迁移追加，不在 Drizzle schema 定义中                  |
+| 主题提取方式                 | 采用路径 B（独立 AI 调用），而非路径 A（内联 prompt 追加）     |
+| `extractThemesFromSummary()` | 作为备用方法存在，但实际流程使用 `extractThemesWithAI()`       |
+| `themeDescriptionUpdater`    | **新文件**（未在原始计划中），AI 自动补全主题描述               |
+| `cleanupOrphanedAiThemes`    | **新方法**（未在原始计划中），清理孤立 AI 主题                  |
+| `getItemCount`               | **新方法**（未在原始计划中），列表关联数计数                    |
+| `batchCreateFromTags` UI     | 手动输入标签而非自动扫描全量数据                                |
+| 时间线 UI                    | 纯 CSS 柱状图而非 ECharts，更轻量                               |
+| 测试                         | `test/main/services/themesService.test.ts` 已存在               |
 
 ---
 
@@ -578,11 +479,11 @@ intent (review, reflection, pattern discovery, "what's going on with..."):
 | 阶段        | 新文件                                                       | 修改文件 | 关键风险                                |
 | ----------- | ------------------------------------------------------------ | -------- | --------------------------------------- |
 | **Phase 1** | 2 (`weeklySummaryService`, `weeklyHandlers`)                 | 5        | 低 — 独立功能，不影响现有逻辑           |
-| **Phase 2** | 3 (`themesService`, `themesHandlers`, `themeTool`)           | 6        | 中 — 新增 2 张表，需要处理数据迁移      |
+| **Phase 2** | 5 (`themesService`, `themesHandlers`, `themeTool`, `themeDescriptionUpdater`, `ThemesPage`) | 7        | ✅ 已完成 — 含测试 `themesService.test.ts` |
 | **Phase 3** | 3 (`memoryLinksService`, `memoryHandlers`, `memoryLinkTool`) | 6        | 中高 — `suggest` 工具的搜索算法需要调优 |
 | **Phase 4** | 0                                                            | 4        | 低 — 在已有 Agent 系统上扩展            |
 
-**总计**：8 个新文件，约 15 个修改文件。
+**Phase 1-2 总计**：7 个新文件，约 12 个修改文件，2 个测试文件。
 
 ---
 
@@ -612,6 +513,6 @@ Phase 1 (独立，无依赖)
         └──→ Phase 4
 ```
 
-Phase 2 和 Phase 3 互不依赖，可在 Phase 1 完成后并行推进。
+Phase 2 ✅ 已完成。Phase 3 可独立推进。
 
 ---
