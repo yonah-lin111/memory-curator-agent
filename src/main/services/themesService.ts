@@ -40,6 +40,8 @@ export type ThemesService = {
   extractThemesFromSummary: (summaryContent: string, summaryId: number) => number
   /** 获取某主题的跨周分布时间线 */
   getTimeline: (themeExternalId: string) => ThemeTimelineItem[]
+  /** 清理无关联的 AI 自动生成主题 */
+  cleanupOrphanedAiThemes: () => void
 
   querySql: (sql: string) => unknown[]
 }
@@ -60,7 +62,8 @@ const mapThemeRow = (row: ThemeRow): ThemeItem => ({
   color: row.color,
   status: row.status,
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
+  aiGenerated: row.ai_generated ?? 0
 })
 
 /** 数据库行 -> 页面关联项 */
@@ -83,16 +86,6 @@ const mapThemeItemRow = (
   sourceContent: row.source_content,
   sourceEntryDate: row.source_entry_date
 })
-
-/** 提取 SQLite 自增主键 */
-const readLastInsertId = (result: unknown): number =>
-  Number(
-    result &&
-      typeof result === 'object' &&
-      'lastInsertRowid' in result
-      ? (result as { lastInsertRowid: number | bigint }).lastInsertRowid
-      : 0
-  )
 
 /**
  * 创建 Themes 服务。
@@ -125,8 +118,8 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
     const externalId = createCompactUuid()
     database
       .prepare(
-        `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at, ai_generated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         externalId,
@@ -135,7 +128,8 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
         input.color ?? null,
         input.status ?? 'active',
         timestamp,
-        timestamp
+        timestamp,
+        input.aiGenerated ?? 0
       )
     const row = database
       .prepare('SELECT * FROM themes WHERE external_id = ?')
@@ -261,10 +255,10 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
       const externalId = createCompactUuid()
       database
         .prepare(
-          `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at, ai_generated)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(externalId, trimmed, `从 #${trimmed} 标签导入`, null, 'active', timestamp, timestamp)
+        .run(externalId, trimmed, `从 #${trimmed} 标签导入`, null, 'active', timestamp, timestamp, 0)
       const row = database
         .prepare('SELECT * FROM themes WHERE external_id = ?')
         .get(externalId) as ThemeRow
@@ -323,8 +317,8 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
         themeExternalId = createCompactUuid()
         database
           .prepare(
-            `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO themes (external_id, name, description, color, status, created_at, updated_at, ai_generated)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
           )
           .run(
             themeExternalId,
@@ -333,7 +327,8 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
             null,
             'active',
             timestamp,
-            timestamp
+            timestamp,
+            1
           )
       }
 
@@ -380,6 +375,18 @@ export const createThemesService = (database: DatabaseConnection): ThemesService
       itemCount: r.item_count,
       mentionedInSummary: r.mentioned_in_summary === 1
     }))
+  },
+
+  cleanupOrphanedAiThemes: () => {
+    database
+      .prepare(
+        `DELETE FROM themes
+         WHERE ai_generated = 1
+           AND NOT EXISTS (
+             SELECT 1 FROM theme_items WHERE theme_external_id = themes.external_id
+           )`
+      )
+      .run()
   },
 
   querySql: (sql) => database.prepare(sql).all()

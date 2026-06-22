@@ -543,6 +543,11 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
     database.exec('ALTER TABLE weekly_summaries ADD COLUMN is_meaningful INTEGER NOT NULL DEFAULT 1;')
   }
 
+  // 为已存在的 themes 表补加 AI 生成来源标记。
+  if (tableExists(database, 'themes') && !columnExists(database, 'themes', 'ai_generated')) {
+    database.exec('ALTER TABLE themes ADD COLUMN ai_generated INTEGER NOT NULL DEFAULT 0;')
+  }
+
   database.exec(`
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date;
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date_completed_sort_order;
@@ -827,7 +832,8 @@ export const createThemesTable = (database: Database.Database): void => {
       color TEXT,
       status TEXT NOT NULL DEFAULT 'active',
       created_at TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP NOT NULL
+      updated_at TIMESTAMP NOT NULL,
+      ai_generated INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE INDEX IF NOT EXISTS idx_themes_status

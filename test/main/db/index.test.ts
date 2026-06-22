@@ -5,6 +5,7 @@ import {
   createJournalsTable,
   createNotesTable,
   createSnippetsTable,
+  createThemesTable,
   createTodosTable,
   migrateLegacySchema
 } from '@/db/index'
@@ -156,7 +157,7 @@ class MemoryMigrationDatabase {
         }
 
         if (statement.startsWith('ALTER TABLE')) {
-          this.renameTable(statement)
+          this.alterTable(statement)
           return
         }
 
@@ -280,7 +281,26 @@ class MemoryMigrationDatabase {
   /**
    * 重命名内存表。
    */
-  private renameTable = (statement: string): void => {
+  private alterTable = (statement: string): void => {
+    const addColumnMatched = statement.match(/^ALTER TABLE (\w+) ADD COLUMN (\w+) ([\w\s]+)$/)
+
+    if (addColumnMatched) {
+      const [, tableName, columnName, columnDefinition] = addColumnMatched
+      const table = this.tables.get(tableName)
+
+      if (!table) {
+        throw new Error(`表不存在: ${tableName}`)
+      }
+
+      const [columnType] = columnDefinition.split(/\s+/)
+      table.columns[columnName] = {
+        type: columnType.toUpperCase(),
+        primaryKey: /\bPRIMARY\s+KEY\b/i.test(columnDefinition)
+      }
+      table.rows = table.rows.map((row) => ({ ...row, [columnName]: 0 }))
+      return
+    }
+
     const matched = statement.match(/^ALTER TABLE (\w+) RENAME TO (\w+)$/)
 
     if (!matched) {
@@ -431,6 +451,7 @@ const createAllTables = (database: MemoryMigrationDatabase): void => {
   createJournalsTable(database as never)
   createAssociatedPeopleTable(database as never)
   createAiChatPersistenceTables(database as never)
+  createThemesTable(database as never)
 }
 
 /**
@@ -473,7 +494,8 @@ describe('db schema migration', () => {
       'ai_chat_messages',
       'ai_agent_runs',
       'ai_agent_tool_calls',
-      'ai_agent_context_snapshots'
+      'ai_agent_context_snapshots',
+      'themes'
     ].forEach((tableName) => expectIntegerPrimaryKeyId(database, tableName))
 
     ;[
@@ -495,10 +517,50 @@ describe('db schema migration', () => {
       ['ai_agent_runs', 'started_at'],
       ['ai_agent_runs', 'finished_at'],
       ['ai_agent_tool_calls', 'created_at'],
-      ['ai_agent_tool_calls', 'updated_at']
+      ['ai_agent_tool_calls', 'updated_at'],
+      ['themes', 'created_at'],
+      ['themes', 'updated_at']
     ].forEach(([tableName, columnName]) =>
       expectTimestampColumn(database, tableName, columnName)
     )
+
+    expect(database.getColumn('themes', 'ai_generated')).toMatchObject({ type: 'INTEGER' })
+  })
+
+  it('迁移旧版 themes 表时补加 AI 生成来源标记字段', () => {
+    const database = new MemoryMigrationDatabase()
+
+    database.exec(`
+      CREATE TABLE themes (
+        id INTEGER PRIMARY KEY,
+        external_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        color TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP NOT NULL
+      );
+    `)
+    database.insertRow('themes', {
+      id: 1,
+      external_id: 'theme-1',
+      name: '旧主题',
+      description: '',
+      color: null,
+      status: 'active',
+      created_at: '2026-06-22 09:00',
+      updated_at: '2026-06-22 09:00'
+    })
+
+    migrateLegacySchema(database as never)
+
+    expect(database.getColumn('themes', 'ai_generated')).toMatchObject({ type: 'INTEGER' })
+    expect(database.prepare('SELECT id, name, ai_generated FROM themes').get()).toMatchObject({
+      id: 1,
+      name: '旧主题',
+      ai_generated: 0
+    })
   })
 
   it('迁移旧版文本主键表为整型 id 主键并保留业务数据', () => {

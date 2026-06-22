@@ -628,6 +628,7 @@ export type ThemeRow = {
   status: string
   created_at: string
   updated_at: string
+  ai_generated?: number
 }
 
 /** 主题页面使用类型 */
@@ -640,6 +641,7 @@ export type ThemeItem = {
   status: string
   createdAt: string
   updatedAt: string
+  aiGenerated?: number
   /** 关联素材数量（JOIN 时填充） */
   itemCount?: number
 }
@@ -650,6 +652,7 @@ export type ThemeCreateInput = {
   description?: string
   color?: string | null
   status?: string
+  aiGenerated?: number
 }
 
 /** 主题更新输入 */

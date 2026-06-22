@@ -6,7 +6,7 @@ import { createDailyService } from "@/services/dailyService";
 import { createPeopleService } from "@/services/peopleService";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
-import type { WeeklySummarySaveInput } from "@/db/schema";
+import type { ThemeItem, WeeklySummarySaveInput } from "@/db/schema";
 import type {
   AgentMessage,
   ModelProvider,
@@ -102,20 +102,26 @@ const extractThemesWithAI = async (
   provider: ModelProvider,
   model: string,
   summaryContent: string,
+  existingThemes: ThemeItem[],
 ): Promise<ThemeExtractionItem[]> => {
+  const existingThemesText = existingThemes.length > 0
+    ? existingThemes.map((theme) => `- ${theme.name}`).join('\n')
+    : '（目前无已有主题）';
   const systemPrompt = `你是一位专注于个人成长的主题策展助手。你的任务是从周度总结中识别可长期追踪的主题。
+你的首要准则是【语义重用与对齐】。系统里已存在以下主题候选池：
+${existingThemesText}
 
 输出要求：
-- 仅输出一个 JSON 数组，不要包含任何其他文本或 Markdown 标记。
-- 每个元素包含三个字段：
-  - "name": 主题名（3-8个汉字，简洁精准，如「职业转型」「亲密关系」「健康管理」）
-  - "confidence": 置信度 0-100 的整数
-  - "evidence": 从总结原文中引用一句最能支撑该主题的话（30字以内）
-- 提取 2-5 个主题。如果总结内容不足，输出空数组 []。
-- 主题名应聚焦于长期叙事线索（跨周持续的成长/变化/挑战），而非一次性事件。
+1. 提取 2-5 个主题。如果总结内容不足，输出空数组 []。
+2. 每个提取的主题，你必须优先并尽可能在上面的【已有主题候选池】中寻找最契合的一项进行映射对齐复用（即使语义高度吻合而字面上有些微差异，也必须强制选用候选词，不可私自创造表达相似的新词）。
+3. 只有当周总结中的行为或关键成长轨迹，确实与所有【已有主题】没有任何语义交集时，才允许定义和返回一个全新的主题名称（3-8个汉字，简洁精准，如「职业转型」「亲密关系」「健康管理」）。
+4. 仅输出一个 JSON 数组，每个元素包含三个字段，不要包含任何其他文本或 Markdown 标记：
+   - "name": 主题名（已有主题名或全新的具有长期叙事意义的名称）
+   - "confidence": 置信度 0-100 的整数
+   - "evidence": 从总结原文中引用一句最能支撑该主题的话（30字以内）
 
 正确输出示例：
-[{"name":"技能提升","confidence":85,"evidence":"本周完成了Rust基础教程的三章内容"},{"name":"睡眠改善","confidence":70,"evidence":"连续四天在23:30前入睡"}]`;
+[{"name":"技能提升","confidence":85,"evidence":"本周完成了Rust基础教程的三章内容"},{"name":"健康管理","confidence":70,"evidence":"连续四天在23:30前入睡"}]`;
 
   const userMessage = `请从以下周度总结中提取长期主题：\n\n${summaryContent}`;
 
@@ -172,9 +178,22 @@ const saveExtractedThemes = (
   extracted: ThemeExtractionItem[],
   summaryId: number,
 ): number => {
-  if (!extracted.length) return 0;
+  try {
+    const database = getDatabase();
+    database
+      .prepare('DELETE FROM theme_items WHERE source_type = ? AND source_id = ? AND ai_extracted = 1')
+      .run('weekly_summary', String(summaryId));
+    console.log(`[主题提取] 已解绑周总结(ID: ${summaryId})旧 AI 主题关联`);
+  } catch (err) {
+    console.error('[主题提取] 清理旧主题关联失败:', err);
+  }
 
-  console.log(`[主题提取] 准备写入 ${extracted.length} 个主题: ${extracted.map((t) => t.name).join(', ')}`);
+  if (!extracted.length) {
+    themesService.cleanupOrphanedAiThemes();
+    return 0;
+  }
+
+  console.log(`[主题提取] 准备写入 ${extracted.length} 个新提取主题: ${extracted.map((t) => t.name).join(', ')}`);
 
   let count = 0;
 
@@ -200,6 +219,7 @@ const saveExtractedThemes = (
       const created = themesService.create({
         name: theme.name.trim(),
         description: theme.evidence?.slice(0, 200) ?? '',
+        aiGenerated: 1,
       });
       themeExternalId = created.externalId;
     }
@@ -217,6 +237,13 @@ const saveExtractedThemes = (
     } catch (err) {
       console.error(`主题关联失败 (${theme.name}):`, err);
     }
+  }
+
+  try {
+    themesService.cleanupOrphanedAiThemes();
+    console.log('[主题提取] 孤立 AI 主题静默清理完成');
+  } catch (err) {
+    console.error('[主题提取] 静默清理孤立 AI 主题失败:', err);
   }
 
   console.log(`[主题提取] 成功写入 ${count}/${extracted.length} 个主题关联`);
@@ -418,11 +445,13 @@ export const registerWeeklyHandlers = (): void => {
           const themesService = createThemesService(
             database as unknown as import('@/services/themesService').DatabaseConnection
           );
-          // 用独立的 AI 调用从已生成总结中提取主题
+          const existingThemes = themesService.list('active');
+          // 用独立的 AI 调用从已生成总结中提取主题，并优先归入已有主题候选池。
           const extractedThemes = await extractThemesWithAI(
             provider,
             modelId,
-            fullText
+            fullText,
+            existingThemes
           );
           const extractedCount = saveExtractedThemes(
             themesService,
@@ -600,11 +629,13 @@ export const registerWeeklyHandlers = (): void => {
           const themesService = createThemesService(
             database as unknown as import('@/services/themesService').DatabaseConnection
           );
-          // 用独立的 AI 调用从已生成总结中提取主题
+          const existingThemes = themesService.list('active');
+          // 用独立的 AI 调用从已生成总结中提取主题，并优先归入已有主题候选池。
           const extractedThemes = await extractThemesWithAI(
             provider,
             modelId,
-            fullText
+            fullText,
+            existingThemes
           );
           const extractedCount = saveExtractedThemes(
             themesService,
