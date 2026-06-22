@@ -17,6 +17,7 @@ import type { TodoItem } from "@/pages/todo/components/todoShared";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { getEntryMonth } from "@/lib/dailyShared";
+import { BillSummaryCard } from "@/pages/bills/components/BillSummaryCard";
 
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {
@@ -660,36 +661,41 @@ export const TodayPage = (): React.JSX.Element => {
       className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar px-1 lg:px-2 [scrollbar-gutter:stable]"
     >
       <div className="flex-1 flex flex-col gap-3 pr-1">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
-          {TODAY_STATS.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.id}
-                className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium text-white/40">
-                    {stat.label}
-                  </span>
-                  <span className="text-lg font-bold font-mono text-white">
-                    {stat.id === "todo"
-                      ? todos.length
-                      : stat.id === "notes"
-                        ? notes.length
-                        : stat.id === "journal"
-                          ? journalContent.length
-                          : stat.id === "clues"
-                            ? predictedMood
-                            : stat.value}
-                  </span>
+        <div className="flex gap-3 flex-shrink-0">
+          <div className="grid grid-cols-2 gap-3 flex-1">
+            {TODAY_STATS.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.id}
+                  className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-white/40">
+                      {stat.label}
+                    </span>
+                    <span className="text-lg font-bold font-mono text-white">
+                      {stat.id === "todo"
+                        ? todos.length
+                        : stat.id === "notes"
+                          ? notes.length
+                          : stat.id === "journal"
+                            ? journalContent.length
+                            : stat.id === "clues"
+                              ? predictedMood
+                              : stat.value}
+                    </span>
+                  </div>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
+                    <Icon className="h-4 w-4" />
+                  </div>
                 </div>
-                <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
-                  <Icon className="h-4 w-4" />
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <div className="w-[220px] flex-shrink-0">
+            <BillSummaryCard />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
