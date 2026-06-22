@@ -97,6 +97,52 @@ type AssociatedPersonPayload = {
   details: string
 }
 
+// 账单分类类型。
+type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+
+// 收支类型。
+type BillType = 'expense' | 'income'
+
+// 账单列表筛选。
+type BillListFilters = {
+  billDate?: string
+  category?: BillCategory
+  billType?: BillType
+}
+
+// 账单创建载荷。
+type BillCreatePayload = {
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
+
+// 账单更新载荷。
+type BillUpdatePayload = Partial<BillCreatePayload>
+
+// 账单页面项。
+type BillItem = {
+  id: number
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+// 今日账单摘要。
+type BillTodaySummary = {
+  expenseTotal: number
+  incomeTotal: number
+  recentItems: BillItem[]
+}
+
 // AI 对话 agent hint 类型。
 type AiChatAgentHint = {
   // Agent 唯一标识。
@@ -717,6 +763,18 @@ const api = {
       ipcRenderer.invoke('themes:timeline', themeExternalId),
     updateDescription: (themeExternalId: string): Promise<void> =>
       ipcRenderer.invoke('themes:update-description', themeExternalId)
+  },
+  bill: {
+    list: (filters?: BillListFilters): Promise<BillItem[]> =>
+      ipcRenderer.invoke('bills:list', filters),
+    create: (input: BillCreatePayload): Promise<BillItem> =>
+      ipcRenderer.invoke('bills:create', input),
+    update: (id: number, input: BillUpdatePayload): Promise<BillItem> =>
+      ipcRenderer.invoke('bills:update', id, input),
+    delete: (id: number): Promise<void> =>
+      ipcRenderer.invoke('bills:delete', id),
+    todaySummary: (): Promise<BillTodaySummary> =>
+      ipcRenderer.invoke('bills:today-summary')
   }
 }
 

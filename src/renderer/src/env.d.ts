@@ -34,6 +34,52 @@ type ThemeUpdateInput = {
   status?: string
 }
 
+// 账单分类类型。
+type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+
+// 收支类型。
+type BillType = 'expense' | 'income'
+
+// 账单列表筛选。
+type BillListFilters = {
+  billDate?: string
+  category?: BillCategory
+  billType?: BillType
+}
+
+// 账单创建载荷。
+type BillCreatePayload = {
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
+
+// 账单更新载荷。
+type BillUpdatePayload = Partial<BillCreatePayload>
+
+// 账单页面项。
+type BillItem = {
+  id: number
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+// 今日账单摘要。
+type BillTodaySummary = {
+  expenseTotal: number
+  incomeTotal: number
+  recentItems: BillItem[]
+}
+
 /** 主题素材关联项 */
 type ThemeItemsItem = {
   id: number
@@ -912,6 +958,19 @@ type AppAPI = {
     timeline: (themeExternalId: string) => Promise<ThemeTimelineItem[]>
     /** 用 AI 更新主题描述 */
     updateDescription: (themeExternalId: string) => Promise<void>
+  }
+  /** 账单 API */
+  bill?: {
+    /** 列出账单 */
+    list: (filters?: BillListFilters) => Promise<BillItem[]>
+    /** 创建账单 */
+    create: (input: BillCreatePayload) => Promise<BillItem>
+    /** 更新账单 */
+    update: (id: number, input: BillUpdatePayload) => Promise<BillItem>
+    /** 删除账单 */
+    delete: (id: number) => Promise<void>
+    /** 今日账单摘要 */
+    todaySummary: () => Promise<BillTodaySummary>
   }
 }
 
