@@ -2,16 +2,9 @@ import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Layers,
-  Plus,
-  Pencil,
-  Trash2,
   Archive,
   RotateCcw,
   FileText,
-  Bookmark,
-  Calendar,
-  Hash,
-  ChevronRight,
   Clock,
   Download
 } from 'lucide-react'
@@ -253,6 +246,7 @@ export const ThemesPage = (): React.JSX.Element => {
       await window.api.themes.removeItem(selectedThemeId, item.sourceType, item.sourceId)
       setItems((prev) => prev.filter((i) => i.id !== item.id))
       toast.success('已解除关联')
+      void window.api.themes.updateDescription(selectedThemeId)
     } catch {
       toast.error('操作失败')
     }

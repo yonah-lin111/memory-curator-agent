@@ -6,7 +6,6 @@ import "md-editor-rt/lib/style.css";
 import { RefreshCw, Edit2, FileText } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { Tag } from "@/components/ui/Tag";
 
 // 组件 Props。
 interface WeeklySummaryPanelProps {
@@ -31,49 +30,33 @@ type WeeklySummaryItem = {
 // 面板状态类型。
 type PanelState = "idle" | "loading" | "streaming" | "done";
 
-// 切换页签类型。
-type TabType = "summary" | "interpersonal";
-
 /**
- * 周度总结面板。
+ * 统一周度报告面板（个人成长 + 人际关系）。
  * 状态机：idle -> loading -> streaming -> done，支持重新生成与编辑。
  */
 export const WeeklySummaryPanel = ({
   weekStartDate,
   isEmpty = false,
 }: WeeklySummaryPanelProps) => {
-  // 当前 Tab
-  const [activeTab, setActiveTab] = useState<TabType>("summary");
-
-  // 各 Tab 的状态
-  const [summaryState, setSummaryState] = useState<PanelState>("loading");
-  const [curatorState, setCuratorState] = useState<PanelState>("loading");
-
-  // 各 Tab 存储的数据
+  const [panelState, setPanelState] = useState<PanelState>("loading");
   const [summary, setSummary] = useState<WeeklySummaryItem | null>(null);
-  const [curator, setCurator] = useState<WeeklySummaryItem | null>(null);
 
   // 流式文本缓存
-  const summaryStreamTextRef = useRef("");
-  const curatorStreamTextRef = useRef("");
+  const streamTextRef = useRef("");
+  const [streamTick, setStreamTick] = useState(0);
 
-  // 触发渲染计数器
-  const [summaryStreamTick, setSummaryStreamTick] = useState(0);
-  const [curatorStreamTick, setCuratorStreamTick] = useState(0);
+  // 编辑状态与内容
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
 
-  // 各 Tab 的编辑状态与内容
-  const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [isEditingCurator, setIsEditingCurator] = useState(false);
-
-  const [editSummaryContent, setEditSummaryContent] = useState("");
-  const [editCuratorContent, setEditCuratorContent] = useState("");
-
-  const rafSummaryRef = useRef<number | null>(null);
-  const rafCuratorRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   /** 防止自动生成失败后重复触发的守卫 */
-  const summaryAutoGenAttemptedRef = useRef(false);
-  const curatorAutoGenAttemptedRef = useRef(false);
+  const autoGenAttemptedRef = useRef(false);
+  /** 防止并发生成 */
+  const generatingRef = useRef(false);
+  /** 触发生成的计数器，每次递增触发一轮新的生成 useEffect */
+  const [generationTrigger, setGenerationTrigger] = useState(0);
 
   // 判断当前选中周是否已经是历史周（即该周的周日已在今天之前）。
   const isHistoricWeek =
@@ -83,51 +66,40 @@ export const WeeklySummaryPanel = ({
   useEffect(() => {
     if (!weekStartDate) return;
 
-    setSummaryState("loading");
-    setCuratorState("loading");
+    setPanelState("loading");
     setSummary(null);
-    setCurator(null);
-    setIsEditingSummary(false);
-    setIsEditingCurator(false);
-    summaryAutoGenAttemptedRef.current = false;
-    curatorAutoGenAttemptedRef.current = false;
+    setIsEditing(false);
+    autoGenAttemptedRef.current = false;
 
-    // 获取总结
     window.api.weekly!.summary.get(weekStartDate).then((item) => {
       if (item) {
         setSummary(item);
-        setSummaryState("done");
+        setPanelState("done");
       } else {
-        setSummaryState("idle");
-      }
-    });
-
-    // 获取人际策展
-    window.api.weekly!.curator.get(weekStartDate).then((item) => {
-      if (item) {
-        setCurator(item);
-        setCuratorState("done");
-      } else {
-        setCuratorState("idle");
+        setPanelState("idle");
       }
     });
   }, [weekStartDate]);
 
   /**
-   * 触发周度总结 AI 生成。
+   * 实际执行生成的 effect，带 IPC 监听器自动清理。
    */
-  const handleGenerateSummary = useCallback(async () => {
-    setSummaryState("loading");
-    summaryStreamTextRef.current = "";
-    setSummaryStreamTick(0);
+  useEffect(() => {
+    if (generationTrigger === 0) return;
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+
+    setPanelState("loading");
+    streamTextRef.current = "";
+    setStreamTick(0);
 
     const unsubDelta = window.api.weekly!.summary.onDelta(({ text }) => {
-      summaryStreamTextRef.current += text;
-      setSummaryState("streaming");
-      if (rafSummaryRef.current === null) {
-        rafSummaryRef.current = requestAnimationFrame(() => {
-          rafSummaryRef.current = null;
-          setSummaryStreamTick((t) => t + 1);
+      streamTextRef.current += text;
+      setPanelState("streaming");
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          setStreamTick((t) => t + 1);
         });
       }
     });
@@ -135,196 +107,90 @@ export const WeeklySummaryPanel = ({
     const unsubDone = window.api.weekly!.summary.onDone((item) => {
       unsubDelta();
       unsubDone();
+      generatingRef.current = false;
       setSummary(item);
-      setSummaryState("done");
+      setPanelState("done");
     });
 
-    try {
-      await window.api.weekly!.summary.generate({ weekStartDate });
-    } catch (err) {
-      unsubDelta();
-      unsubDone();
-      setSummaryState(summary ? "done" : "idle");
-      console.error("周度总结生成失败", err);
-    }
-  }, [weekStartDate, summary]);
+    const abortController = new AbortController();
 
-  /**
-   * 触发人际策展 AI 生成。
-   */
-  const handleGenerateCurator = useCallback(async () => {
-    setCuratorState("loading");
-    curatorStreamTextRef.current = "";
-    setCuratorStreamTick(0);
-
-    const unsubDelta = window.api.weekly!.curator.onDelta(({ text }) => {
-      curatorStreamTextRef.current += text;
-      setCuratorState("streaming");
-      if (rafCuratorRef.current === null) {
-        rafCuratorRef.current = requestAnimationFrame(() => {
-          rafCuratorRef.current = null;
-          setCuratorStreamTick((t) => t + 1);
-        });
+    window.api.weekly!.summary.generate({ weekStartDate }).catch((err) => {
+      console.error("周度报告生成失败", err);
+    }).finally(() => {
+      // onDone 负责正常路径的清理，这里兜底异步异常后仍释放锁
+      if (generatingRef.current) {
+        unsubDelta();
+        unsubDone();
+        generatingRef.current = false;
+        setPanelState((prev) => prev === "streaming" ? "idle" : prev);
       }
     });
 
-    const unsubDone = window.api.weekly!.curator.onDone((item) => {
+    return () => {
       unsubDelta();
       unsubDone();
-      setCurator(item);
-      setCuratorState("done");
-    });
+      generatingRef.current = false;
+      abortController.abort();
+    };
+  }, [generationTrigger]);
 
-    try {
-      await window.api.weekly!.curator.generate({ weekStartDate });
-    } catch (err) {
-      unsubDelta();
-      unsubDone();
-      setCuratorState(curator ? "done" : "idle");
-      console.error("人际策展生成失败", err);
-    }
-  }, [weekStartDate, curator]);
+  /**
+   * 触发生成（供手动按钮和自动生成共用）。
+   */
+  const handleGenerate = useCallback(() => {
+    if (generatingRef.current) return;
+    setGenerationTrigger((t) => t + 1);
+  }, []);
 
   // 历史周无总结且数据非空时，自动静默触发生成。
   useEffect(() => {
-    if (summaryState === "idle" && isHistoricWeek && !isEmpty && !summary && !summaryAutoGenAttemptedRef.current) {
-      summaryAutoGenAttemptedRef.current = true;
-      void handleGenerateSummary();
+    if (panelState === "idle" && isHistoricWeek && !isEmpty && !summary && !autoGenAttemptedRef.current) {
+      autoGenAttemptedRef.current = true;
+      handleGenerate();
     }
-  }, [summaryState, isHistoricWeek, isEmpty, summary, handleGenerateSummary]);
-
-  // 历史周无策展且数据非空时，自动静默触发生成。
-  useEffect(() => {
-    if (curatorState === "idle" && isHistoricWeek && !isEmpty && !curator && !curatorAutoGenAttemptedRef.current) {
-      curatorAutoGenAttemptedRef.current = true;
-      void handleGenerateCurator();
-    }
-  }, [curatorState, isHistoricWeek, isEmpty, curator, handleGenerateCurator]);
+  }, [panelState, isHistoricWeek, isEmpty, summary, handleGenerate]);
 
   /**
-   * 保存周度总结编辑。
+   * 保存编辑。
    */
-  const handleSaveSummaryEdit = async () => {
+  const handleSaveEdit = async () => {
     if (!summary) return;
 
-    const firstLine = editSummaryContent.split("\n")[0] ?? "";
+    const firstLine = editContent.split("\n")[0] ?? "";
     const title = firstLine.replace(/^#+\s*/, "").trim() || summary.title;
     const updated = await window.api.weekly!.summary.save({
       weekStartDate,
       title,
-      content: editSummaryContent,
+      content: editContent,
       modelUsed: summary.modelUsed,
       generatedAt: summary.generatedAt,
     });
     setSummary(updated);
-    setIsEditingSummary(false);
+    setIsEditing(false);
   };
-
-  /**
-   * 保存人际策展编辑。
-   */
-  const handleSaveCuratorEdit = async () => {
-    if (!curator) return;
-
-    const firstLine = editCuratorContent.split("\n")[0] ?? "";
-    const title = firstLine.replace(/^#+\s*/, "").trim() || curator.title;
-    const updated = await window.api.weekly!.curator.save({
-      weekStartDate,
-      title,
-      content: editCuratorContent,
-      modelUsed: curator.modelUsed,
-      generatedAt: curator.generatedAt,
-    });
-    setCurator(updated);
-    setIsEditingCurator(false);
-  };
-
-  // 计算当前 Tab 使用的映射状态
-  const currentTabState = activeTab === "summary" ? summaryState : curatorState;
-  const currentTabSummary = activeTab === "summary" ? summary : curator;
-  const currentTabIsEditing =
-    activeTab === "summary" ? isEditingSummary : isEditingCurator;
-  const currentTabEditContent =
-    activeTab === "summary" ? editSummaryContent : editCuratorContent;
-  const currentTabSetEditContent =
-    activeTab === "summary" ? setEditSummaryContent : setEditCuratorContent;
-  const currentTabStreamRenderTick =
-    activeTab === "summary" ? summaryStreamTick : curatorStreamTick;
-  const currentTabDisplayText =
-    activeTab === "summary"
-      ? summaryState === "streaming"
-        ? summaryStreamTextRef.current
-        : (summary?.content ?? "")
-      : curatorState === "streaming"
-        ? curatorStreamTextRef.current
-        : (curator?.content ?? "");
 
   // 无意义内容时使用前端兜底文案
-  const fallbackText =
-    activeTab === "summary"
-      ? "本周暂无值得总结的记录。"
-      : "本周暂无涉及人际关系的记录。";
-  const isMeaningful = currentTabSummary?.isMeaningful !== 0;
-
-  const currentTabHandleSaveEdit =
-    activeTab === "summary" ? handleSaveSummaryEdit : handleSaveCuratorEdit;
-  const currentTabHandleCancelEdit = () =>
-    activeTab === "summary"
-      ? setIsEditingSummary(false)
-      : setIsEditingCurator(false);
-  const currentTabHandleGenerate =
-    activeTab === "summary" ? handleGenerateSummary : handleGenerateCurator;
-  const currentTabHandleStartEdit = () => {
-    if (activeTab === "summary") {
-      setEditSummaryContent(summary?.content ?? "");
-      setIsEditingSummary(true);
-    } else {
-      setEditCuratorContent(curator?.content ?? "");
-      setIsEditingCurator(true);
-    }
-  };
+  const isMeaningful = summary?.isMeaningful !== 0;
 
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* 标题栏 */}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-white/5 pb-2">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-white/60" />
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-              周度总结
-            </h3>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Tag
-              size="default"
-              highlighted={activeTab === "summary"}
-              onClick={() => setActiveTab("summary")}
-            >
-              总结报告
-            </Tag>
-            <Tag
-              size="default"
-              highlighted={activeTab === "interpersonal"}
-              onClick={() => setActiveTab("interpersonal")}
-            >
-              人际策展
-            </Tag>
-          </div>
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-white/60" />
+          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+            周度报告
+          </h3>
         </div>
 
-        {currentTabState === "done" && !currentTabIsEditing && (
+        {panelState === "done" && !isEditing && (
           <div className="flex items-center gap-2">
-            <IconButton onClick={currentTabHandleStartEdit} title="编辑">
+            <IconButton onClick={() => { setEditContent(summary?.content ?? ""); setIsEditing(true); }} title="编辑">
               <Edit2 className="h-3.5 w-3.5" />
             </IconButton>
             <Tooltip
-              title={
-                activeTab === "summary"
-                  ? "确认重新生成周度总结？"
-                  : "确认重新分析人际关系？"
-              }
-              onConfirm={currentTabHandleGenerate}
+              title="确认重新生成周度报告？"
+              onConfirm={handleGenerate}
               placement="bottom"
             >
               <IconButton
@@ -340,17 +206,15 @@ export const WeeklySummaryPanel = ({
 
       {/* 内容区 */}
       <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow overflow-hidden">
-        {currentTabState === "idle" && (
+        {panelState === "idle" && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <p className="text-xs text-white/25">
               {isEmpty
                 ? "本周无任何行动、片段或日记记录"
-                : activeTab === "summary"
-                  ? "本周尚无总结"
-                  : "本周尚无人际策展"}
+                : "本周尚无报告"}
             </p>
             <button
-              onClick={currentTabHandleGenerate}
+              onClick={handleGenerate}
               disabled={isEmpty}
               className={`px-4 py-2 text-xs rounded-[6px] border transition-colors ${
                 isEmpty
@@ -359,47 +223,47 @@ export const WeeklySummaryPanel = ({
               }`}
               title={isEmpty ? "本周无任何记录，无法生成" : undefined}
             >
-              {activeTab === "summary" ? "生成周度总结" : "分析人际策展"}
+              生成周度报告
             </button>
           </div>
         )}
 
-        {currentTabState === "loading" && (
+        {panelState === "loading" && (
           <div className="flex-1 flex items-center justify-center">
             <div className="w-4 h-4 border border-white/20 border-t-white/60 rounded-full animate-spin" />
           </div>
         )}
 
-        {(currentTabState === "streaming" || currentTabState === "done") &&
-          !currentTabIsEditing && (
+        {(panelState === "streaming" || panelState === "done") &&
+          !isEditing && (
             <div
               className="flex-1 overflow-y-auto markdown-preview-container ai-chat-markdown-preview select-text max-w-full"
-              data-render-tick={currentTabStreamRenderTick}
+              data-render-tick={streamTick}
             >
-              {currentTabState === "done" && !isMeaningful ? (
+              {panelState === "done" && !isMeaningful ? (
                 <p className="text-xs text-white/25 py-8 text-center">
-                  {fallbackText}
+                  本周暂无值得总结的记录。
                 </p>
               ) : (
                 <MdPreview
                   theme="dark"
-                  modelValue={currentTabDisplayText}
+                  modelValue={panelState === "streaming" ? streamTextRef.current : (summary?.content ?? "")}
                   previewTheme="default"
                   codeTheme="atom"
                   style={{ backgroundColor: "transparent" }}
                   autoFoldThreshold={
-                    currentTabState === "streaming" ? Infinity : 0
+                    panelState === "streaming" ? Infinity : 0
                   }
                   showCodeRowNumber={false}
                 />
               )}
-              {currentTabState === "streaming" && (
+              {panelState === "streaming" && (
                 <span className="inline-block w-2 h-3 bg-white/40 animate-pulse ml-0.5" />
               )}
             </div>
           )}
 
-        {currentTabIsEditing && (
+        {isEditing && (
           <div className="flex flex-col gap-2 flex-1">
             <MdEditor
               codeTheme="atom"
@@ -408,19 +272,19 @@ export const WeeklySummaryPanel = ({
               previewTheme="default"
               showCodeRowNumber
               theme="dark"
-              value={currentTabEditContent}
-              onChange={currentTabSetEditContent}
+              value={editContent}
+              onChange={setEditContent}
               style={{ height: "100%" }}
             />
             <div className="flex justify-end gap-2 pt-1">
               <button
-                onClick={currentTabHandleCancelEdit}
+                onClick={() => setIsEditing(false)}
                 className="px-3 py-1.5 text-xs text-white/40 hover:text-white/60 transition-colors"
               >
                 取消
               </button>
               <button
-                onClick={currentTabHandleSaveEdit}
+                onClick={handleSaveEdit}
                 className="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/15 text-white/70 rounded-[6px] border border-white/10 transition-colors"
               >
                 保存
@@ -430,10 +294,10 @@ export const WeeklySummaryPanel = ({
         )}
       </div>
 
-      {currentTabState === "done" && currentTabSummary && (
+      {panelState === "done" && summary && (
         <p className="text-xs text-white/20 text-right">
-          {currentTabSummary.generatedAt} ·{" "}
-          {currentTabSummary.modelUsed ?? "未知模型"}
+          {summary.generatedAt} ·{" "}
+          {summary.modelUsed ?? "未知模型"}
         </p>
       )}
     </div>

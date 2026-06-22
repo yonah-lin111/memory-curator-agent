@@ -548,6 +548,11 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
     database.exec('ALTER TABLE themes ADD COLUMN ai_generated INTEGER NOT NULL DEFAULT 0;')
   }
 
+  // 若 theme_items 表中存在已废弃的 source_quote 字段，则进行清理删除。
+  if (tableExists(database, 'theme_items') && columnExists(database, 'theme_items', 'source_quote')) {
+    database.exec('ALTER TABLE theme_items DROP COLUMN source_quote;')
+  }
+
   database.exec(`
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date;
     DROP INDEX IF EXISTS idx_workspace_todos_entry_date_completed_sort_order;

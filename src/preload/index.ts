@@ -692,30 +692,6 @@ const api = {
         ipcRenderer.on('weekly:summary:done', wrapped)
         return () => ipcRenderer.removeListener('weekly:summary:done', wrapped)
       }
-    },
-    curator: {
-      get: (weekStartDate: string): Promise<WeeklySummaryItem | null> =>
-        ipcRenderer.invoke('weekly:curator:get', weekStartDate),
-      save: (payload: WeeklySummarySavePayload): Promise<WeeklySummaryItem> =>
-        ipcRenderer.invoke('weekly:curator:save', payload),
-      delete: (weekStartDate: string): Promise<void> =>
-        ipcRenderer.invoke('weekly:curator:delete', weekStartDate),
-      generate: (payload: WeeklySummaryGeneratePayload): Promise<WeeklySummaryItem> =>
-        ipcRenderer.invoke('weekly:curator:generate', payload),
-      onDelta: (listener: (event: WeeklySummaryDeltaEvent) => void): (() => void) => {
-        const wrapped = (_: Electron.IpcRendererEvent, event: WeeklySummaryDeltaEvent): void => {
-          listener(event)
-        }
-        ipcRenderer.on('weekly:curator:delta', wrapped)
-        return () => ipcRenderer.removeListener('weekly:curator:delta', wrapped)
-      },
-      onDone: (listener: (item: WeeklySummaryItem) => void): (() => void) => {
-        const wrapped = (_: Electron.IpcRendererEvent, item: WeeklySummaryItem): void => {
-          listener(item)
-        }
-        ipcRenderer.on('weekly:curator:done', wrapped)
-        return () => ipcRenderer.removeListener('weekly:curator:done', wrapped)
-      }
     }
   },
   themes: {
@@ -739,6 +715,8 @@ const api = {
       ipcRenderer.invoke('themes:import-from-tags', tags),
     timeline: (themeExternalId: string): Promise<ThemeTimelineItem[]> =>
       ipcRenderer.invoke('themes:timeline', themeExternalId),
+    updateDescription: (themeExternalId: string): Promise<void> =>
+      ipcRenderer.invoke('themes:update-description', themeExternalId)
   }
 }
 

@@ -3,6 +3,7 @@ import { getDatabase } from '@/db'
 import type { DatabaseConnection } from '@/services/themesService'
 import { createThemesService } from '@/services/themesService'
 import type { ThemeCreateInput, ThemeItemsCreateInput, ThemeUpdateInput } from '@/db/schema'
+import { updateThemeDescription } from '@/ipc/themeDescriptionUpdater'
 
 /**
  * 注册主题 IPC 处理器。
@@ -10,6 +11,9 @@ import type { ThemeCreateInput, ThemeItemsCreateInput, ThemeUpdateInput } from '
 export const registerThemesHandlers = (): void => {
   const database = getDatabase()
   const themesService = createThemesService(database as unknown as DatabaseConnection)
+  const updateDescriptionAsync = (themeExternalId: string): void => {
+    void updateThemeDescription(themesService, themeExternalId)
+  }
 
   ipcMain.handle('themes:list', (_, status?: string) => themesService.list(status))
 
@@ -33,14 +37,17 @@ export const registerThemesHandlers = (): void => {
     themesService.listItems(themeExternalId)
   )
 
-  ipcMain.handle('themes:items:add', (_, input: ThemeItemsCreateInput) =>
-    themesService.addItem(input)
-  )
+  ipcMain.handle('themes:items:add', (_, input: ThemeItemsCreateInput) => {
+    const result = themesService.addItem(input)
+    updateDescriptionAsync(input.themeExternalId)
+    return result
+  })
 
   ipcMain.handle(
     'themes:items:remove',
     (_, themeExternalId: string, sourceType: string, sourceId: string) => {
       themesService.removeItem(themeExternalId, sourceType, sourceId)
+      updateDescriptionAsync(themeExternalId)
     }
   )
 
@@ -51,4 +58,8 @@ export const registerThemesHandlers = (): void => {
   ipcMain.handle('themes:timeline', (_, themeExternalId: string) =>
     themesService.getTimeline(themeExternalId)
   )
+
+  ipcMain.handle('themes:update-description', async (_, themeExternalId: string) => {
+    await updateThemeDescription(themesService, themeExternalId)
+  })
 }

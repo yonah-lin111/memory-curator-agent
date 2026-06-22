@@ -887,21 +887,6 @@ type AppAPI = {
       // 监听流式生成完成事件。
       onDone: (listener: (item: WeeklySummaryItem) => void) => () => void
     }
-    // 人物关系与事件策展服务。
-    curator: {
-      // 按周起始日期查询策展。
-      get: (weekStartDate: string) => Promise<WeeklySummaryItem | null>
-      // 保存（upsert）策展。
-      save: (payload: WeeklySummarySavePayload) => Promise<WeeklySummaryItem>
-      // 删除策展。
-      delete: (weekStartDate: string) => Promise<void>
-      // AI 流式生成人际策展。
-      generate: (payload: WeeklySummaryGeneratePayload) => Promise<WeeklySummaryItem>
-      // 监听流式生成 delta 事件。
-      onDelta: (listener: (event: WeeklySummaryDeltaEvent) => void) => () => void
-      // 监听流式生成完成事件。
-      onDone: (listener: (item: WeeklySummaryItem) => void) => () => void
-    }
   }
   /** 主题追踪 API */
   themes?: {
@@ -925,6 +910,8 @@ type AppAPI = {
     importFromTags: (tags: string[]) => Promise<ThemeItem[]>
     /** 获取某主题跨周时间线 */
     timeline: (themeExternalId: string) => Promise<ThemeTimelineItem[]>
+    /** 用 AI 更新主题描述 */
+    updateDescription: (themeExternalId: string) => Promise<void>
   }
 }
 
