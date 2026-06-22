@@ -8,6 +8,7 @@ import {
   Home,
   Layers,
   LayoutGrid,
+  Receipt,
   Settings,
   Sparkles,
   StickyNote,
@@ -79,6 +80,12 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         label: "Snippets",
         description: "随手闪念随记",
         icon: StickyNote,
+      },
+      {
+        id: "bills",
+        label: "Bills",
+        description: "账单收支记录",
+        icon: Receipt,
       },
       {
         id: "people",

@@ -18,6 +18,7 @@ export type SidebarPageId =
   | "memories"
   | "todo"
   | "snippets"
+  | "bills"
   | "people"
   | "showcase"
   | "settings";
