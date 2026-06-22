@@ -693,7 +693,7 @@ export const TodayPage = (): React.JSX.Element => {
               );
             })}
           </div>
-          <div className="w-[220px] flex-shrink-0">
+          <div className="flex-1">
             <BillSummaryCard />
           </div>
         </div>
