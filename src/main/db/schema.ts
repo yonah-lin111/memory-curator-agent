@@ -757,3 +757,67 @@ export const associatedPeople = sqliteTable('associated_people', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull()
 })
+
+// ==================== Bills ====================
+
+/** 账单分类 */
+export type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+
+/** 收支类型 */
+export type BillType = 'expense' | 'income'
+
+/** 合法账单分类集合 */
+export const BILL_CATEGORIES: BillCategory[] = ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他']
+
+/** 账单数据库行 */
+export type BillRow = {
+  id: number
+  amount: number
+  category: string
+  bill_type: string
+  bill_date: string
+  note: string
+  tags: string
+  created_at: string
+  updated_at: string
+}
+
+/** 账单页面项 */
+export type BillItem = {
+  id: number
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** 账单创建输入 */
+export type BillCreateInput = {
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
+
+/** 账单更新输入 */
+export type BillUpdateInput = Partial<BillCreateInput>
+
+/** 账单列表筛选 */
+export type BillListFilters = {
+  billDate?: string
+  category?: BillCategory
+  billType?: BillType
+}
+
+/** 今日账单摘要 */
+export type BillTodaySummary = {
+  expenseTotal: number
+  incomeTotal: number
+  recentItems: BillItem[]
+}

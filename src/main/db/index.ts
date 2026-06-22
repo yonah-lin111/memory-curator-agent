@@ -875,6 +875,34 @@ export const createThemeItemsTable = (database: Database.Database): void => {
 }
 
 /**
+ * 创建账单表与索引。
+ */
+export const createBillsTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS bills (
+      id INTEGER PRIMARY KEY,
+      amount INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      bill_type TEXT NOT NULL,
+      bill_date TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      tags TEXT NOT NULL DEFAULT '[]',
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bills_bill_date
+    ON bills(bill_date);
+
+    CREATE INDEX IF NOT EXISTS idx_bills_bill_type
+    ON bills(bill_type);
+
+    CREATE INDEX IF NOT EXISTS idx_bills_category
+    ON bills(category);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -895,6 +923,7 @@ export const initDatabase = (): Database.Database => {
   createWeeklySummariesTable(sqlite)
   createThemesTable(sqlite)
   createThemeItemsTable(sqlite)
+  createBillsTable(sqlite)
 
   return sqlite
 }
