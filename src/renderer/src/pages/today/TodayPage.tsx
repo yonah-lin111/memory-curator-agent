@@ -17,7 +17,7 @@ import type { TodoItem } from "@/pages/todo/components/todoShared";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { getEntryMonth } from "@/lib/dailyShared";
-import { BillSummaryCard } from "@/pages/bills/components/BillSummaryCard";
+import { TodayBillPanel } from "@/pages/today/components/TodayBillPanel";
 
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {
@@ -694,7 +694,7 @@ export const TodayPage = (): React.JSX.Element => {
             })}
           </div>
           <div className="flex-1">
-            <BillSummaryCard />
+            <TodayBillPanel />
           </div>
         </div>
 
