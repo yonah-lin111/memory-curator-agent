@@ -53,12 +53,14 @@ const calculateBottomSpacerHeight = (
     0,
   );
 
-  return Math.max(
-    0,
-    targetScrollTop +
-      viewportHeight -
-      container.scrollHeight +
-      currentSpacerHeight,
+  return Math.round(
+    Math.max(
+      0,
+      targetScrollTop +
+        viewportHeight -
+        container.scrollHeight +
+        currentSpacerHeight,
+    ),
   );
 };
 
@@ -494,7 +496,7 @@ export const AiChatWorkspace = ({
           prev,
         );
 
-        if (Math.abs(prev - requiredSpacer) > 1) {
+        if (Math.abs(prev - requiredSpacer) > 3) {
           return requiredSpacer;
         }
 
@@ -537,12 +539,33 @@ export const AiChatWorkspace = ({
       return undefined;
     }
 
+    let pendingRafId: number | null = null;
+
     const resizeObserver = new ResizeObserver(() => {
       if (isSpacerLockedRef.current) {
         return;
       }
-      setBottomSpacerHeight((prev) => {
-        return calculateBottomSpacerHeight(container, userMessage, prev);
+
+      // 同一帧内多次 resize 仅执行最后一次重算，避免与浏览器 scroll anchoring 余震形成振荡。
+      if (pendingRafId !== null) {
+        return;
+      }
+
+      pendingRafId = requestAnimationFrame(() => {
+        pendingRafId = null;
+        setBottomSpacerHeight((prev) => {
+          const requiredSpacer = calculateBottomSpacerHeight(
+            container,
+            userMessage,
+            prev,
+          );
+
+          if (Math.abs(prev - requiredSpacer) > 3) {
+            return requiredSpacer;
+          }
+
+          return prev;
+        });
       });
     });
 
@@ -557,6 +580,10 @@ export const AiChatWorkspace = ({
 
     return () => {
       resizeObserver.disconnect();
+      if (pendingRafId !== null) {
+        cancelAnimationFrame(pendingRafId);
+        pendingRafId = null;
+      }
     };
   }, [topPinnedUserId, session.messages.length]);
 
@@ -861,7 +888,7 @@ export const AiChatWorkspace = ({
               paddingLeft: "1rem",
               paddingRight: "1rem",
             }}
-            className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
+            className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
           >
             <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
               {session.messages.length === 0 ? (

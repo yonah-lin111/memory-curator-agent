@@ -1100,6 +1100,9 @@ export const SettingsPage = (): React.JSX.Element => {
               }))
             }
           />
+          <span className="text-[10px] text-white/25">
+            单条工具结果超过此长度将被截断
+          </span>
         </label>
         <label className="grid gap-1.5 text-xs text-white/45">
           Recent tool result limit
