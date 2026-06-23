@@ -461,6 +461,7 @@ export const TodayTodoPanel = ({
               <IconButton
                 aria-label={`Delete todo ${todo.text}`}
                 preset="delete"
+                className="opacity-0 group-hover:opacity-100"
                 onClick={() => handleDeleteTodo(todo.id)}
               />
             </div>

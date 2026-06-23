@@ -773,8 +773,8 @@ const api = {
       ipcRenderer.invoke('bills:update', id, input),
     delete: (id: number): Promise<void> =>
       ipcRenderer.invoke('bills:delete', id),
-    todaySummary: (): Promise<BillTodaySummary> =>
-      ipcRenderer.invoke('bills:today-summary')
+    todaySummary: (date?: string): Promise<BillTodaySummary> =>
+      ipcRenderer.invoke('bills:today-summary', date)
   }
 }
 

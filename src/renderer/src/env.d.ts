@@ -969,8 +969,8 @@ type AppAPI = {
     update: (id: number, input: BillUpdatePayload) => Promise<BillItem>
     /** 删除账单 */
     delete: (id: number) => Promise<void>
-    /** 今日账单摘要 */
-    todaySummary: () => Promise<BillTodaySummary>
+    /** 指定日期账单摘要，不传则取今日 */
+    todaySummary: (date?: string) => Promise<BillTodaySummary>
   }
 }
 

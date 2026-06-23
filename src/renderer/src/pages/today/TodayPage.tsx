@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, CheckSquare, Smile, StickyNote } from "lucide-react";
+import { BookOpen, CheckSquare, Smile, StickyNote, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { TodaySnippetsPanel } from "@/pages/today/components/TodaySnippetsPanel";
 import {
@@ -17,7 +17,8 @@ import type { TodoItem } from "@/pages/todo/components/todoShared";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { getEntryMonth } from "@/lib/dailyShared";
-import { TodayBillPanel } from "@/pages/today/components/TodayBillPanel";
+import { TodayBillPanel, type TodaySummary } from "@/pages/today/components/TodayBillPanel";
+import { formatAmount } from "@/pages/bills/components/billShared";
 
 // 今日统计数据项类型，描述顶层关键指标。
 type StatItem = {
@@ -59,6 +60,8 @@ const TODAY_STATS: StatItem[] = [
   { id: "notes", label: "自由随记", value: 0, icon: StickyNote },
   { id: "journal", label: "日记字数", value: 0, icon: BookOpen },
   { id: "clues", label: "心情预测", value: "平静", icon: Smile },
+  { id: "expense", label: "今日支出", value: "¥0.00", icon: ArrowDownRight },
+  { id: "income", label: "今日收入", value: "¥0.00", icon: ArrowUpRight },
 ];
 
 // 无 preload bridge 时使用的待办回退数据。
@@ -205,6 +208,8 @@ export const TodayPage = (): React.JSX.Element => {
   const [todos, setTodos] = useState<TodayTodoItem[]>([]);
   // 页面是否正在读取。
   const [isTodayLoading, setIsTodayLoading] = useState(true);
+  // 账单统计数据状态。
+  const [billSummary, setBillSummary] = useState<TodaySummary | null>(null);
   // 页面错误文案。
   const [todayError, setTodayError] = useState<string | null>(null);
   // 今日日记正文状态。
@@ -283,6 +288,28 @@ export const TodayPage = (): React.JSX.Element => {
   };
 
   /**
+   * 加载今日账单摘要。
+   */
+  const loadBillSummary = async (): Promise<void> => {
+    if (!window.api?.bill) {
+      if (!billSummary) {
+        setBillSummary({
+          expenseTotal: 0,
+          incomeTotal: 0,
+          recentItems: [],
+        });
+      }
+      return;
+    }
+    try {
+      const result = await window.api.bill.todaySummary(entryDate);
+      setBillSummary(result);
+    } catch {
+      // Ignore
+    }
+  };
+
+  /**
    * 从 SQLite 读取当天数据。
    */
   const loadToday = async (): Promise<void> => {
@@ -297,6 +324,7 @@ export const TodayPage = (): React.JSX.Element => {
         setSavedJournalContent("");
         setLastSavedAt(null);
         setJournalError(null);
+        void loadBillSummary();
         return;
       }
 
@@ -307,6 +335,7 @@ export const TodayPage = (): React.JSX.Element => {
       setSavedJournalContent(todayData.journal?.content ?? "");
       setLastSavedAt(todayData.journal?.updatedAt ?? null);
       setJournalError(null);
+      void loadBillSummary();
     } catch {
       setTodayError("无法读取今日数据");
     } finally {
@@ -662,41 +691,50 @@ export const TodayPage = (): React.JSX.Element => {
     >
       <div className="flex-1 flex flex-col gap-3 pr-1">
         <div className="flex gap-3 flex-shrink-0">
-          <div className="grid grid-cols-2 gap-3 flex-1">
+          <div className="grid grid-cols-2 gap-3 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar">
             {TODAY_STATS.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.id}
-                  className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium text-white/40">
-                      {stat.label}
-                    </span>
-                    <span className="text-lg font-bold font-mono text-white">
-                      {stat.id === "todo"
-                        ? todos.length
-                        : stat.id === "notes"
-                          ? notes.length
-                          : stat.id === "journal"
-                            ? journalContent.length
-                            : stat.id === "clues"
-                              ? predictedMood
-                              : stat.value}
-                    </span>
-                  </div>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex-1">
-            <TodayBillPanel />
-          </div>
-        </div>
+               const Icon = stat.icon;
+               return (
+                 <div
+                   key={stat.id}
+                   className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
+                 >
+                   <div className="flex flex-col gap-0.5">
+                     <span className="text-sm font-medium text-white/40">
+                       {stat.label}
+                     </span>
+                     <span className="text-lg font-bold font-mono text-white">
+                       {stat.id === "todo"
+                         ? todos.length
+                         : stat.id === "notes"
+                           ? notes.length
+                           : stat.id === "journal"
+                             ? journalContent.length
+                             : stat.id === "clues"
+                               ? predictedMood
+                               : stat.id === "expense"
+                                 ? `¥${formatAmount(billSummary?.expenseTotal ?? 0)}`
+                                 : stat.id === "income"
+                                   ? `¥${formatAmount(billSummary?.incomeTotal ?? 0)}`
+                                   : stat.value}
+                     </span>
+                   </div>
+                   <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
+                     <Icon className="h-4 w-4" />
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+           <div className="flex-1 max-h-[360px]">
+              <TodayBillPanel
+                summary={billSummary}
+                entryDate={entryDate}
+                onRefresh={loadBillSummary}
+                setSummary={setBillSummary}
+              />
+           </div>
+         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
           <TodayTodoPanel

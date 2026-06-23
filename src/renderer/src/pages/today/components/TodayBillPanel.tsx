@@ -14,7 +14,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { Input } from "@/components/ui/Input";
 
 /** 今日账单摘要（来自 preload todaySummary） */
-type TodaySummary = {
+export type TodaySummary = {
   expenseTotal: number
   incomeTotal: number
   recentItems: Array<{
@@ -38,21 +38,32 @@ type BillDraft = {
   tags: string[]
 }
 
+export interface TodayBillPanelProps {
+  summary: TodaySummary | null
+  entryDate: string
+  onRefresh: () => void
+  setSummary: React.Dispatch<React.SetStateAction<TodaySummary | null>>
+}
+
 /**
  * TodayBillPanel - Today 页今日账单面板。
  * 包含今日账单收支统计、最新账单明细、右上角轻量气泡录入，以及列表项快捷气泡编辑。
  * 本组件已彻底重构，实现 100% 气泡录入与原地修改，不再依赖任何遮罩弹窗。
  */
-export const TodayBillPanel = (): React.JSX.Element => {
+export const TodayBillPanel = ({
+  summary,
+  entryDate,
+  onRefresh,
+  setSummary
+}: TodayBillPanelProps): React.JSX.Element => {
   const hasBillApi = Boolean(window.api?.bill)
-  const [summary, setSummary] = useState<TodaySummary | null>(null)
 
   // 新增记录的气泡草稿状态。
   const [draft, setDraft] = useState<BillDraft>({
     amount: "",
     category: "餐饮",
     billType: "expense",
-    billDate: new Date().toISOString().slice(0, 10),
+    billDate: entryDate,
     note: "",
     tags: []
   })
@@ -62,20 +73,15 @@ export const TodayBillPanel = (): React.JSX.Element => {
     amount: "",
     category: "餐饮",
     billType: "expense",
-    billDate: new Date().toISOString().slice(0, 10),
+    billDate: entryDate,
     note: "",
     tags: []
   })
 
-  const loadSummary = async (): Promise<void> => {
-    if (!hasBillApi) return
-    const result = await window.api.bill!.todaySummary()
-    setSummary(result)
-  }
-
+  // entryDate 切换时同步 draft 默认日期（表单未填写时）。
   useEffect(() => {
-    void loadSummary()
-  }, [])
+    setDraft((prev) => (prev.amount === "" ? { ...prev, billDate: entryDate } : prev))
+  }, [entryDate])
 
   const handleSave = async (billDraft: BillDraft): Promise<boolean> => {
     if (!hasBillApi) {
@@ -96,7 +102,7 @@ export const TodayBillPanel = (): React.JSX.Element => {
             tags: billDraft.tags
           },
           ...(prev?.recentItems ?? [])
-        ].slice(0, 5)
+        ]
       }))
       return true
     }
@@ -109,7 +115,7 @@ export const TodayBillPanel = (): React.JSX.Element => {
         note: billDraft.note,
         tags: billDraft.tags
       })
-      await loadSummary()
+      await onRefresh()
       return true
     } catch {
       return false
@@ -159,10 +165,40 @@ export const TodayBillPanel = (): React.JSX.Element => {
         note: billDraft.note,
         tags: billDraft.tags
       })
-      await loadSummary()
+      await onRefresh()
       return true
     } catch {
       return false
+    }
+  }
+
+  const handleDelete = async (event: React.MouseEvent, id: number): Promise<void> => {
+    event.stopPropagation()
+    if (!hasBillApi) {
+      setSummary((prev) => {
+        if (!prev) return prev
+        const updatedItems = prev.recentItems.filter((item) => item.id !== id)
+        const expenseTotal = updatedItems
+          .filter((item) => item.billType === "expense")
+          .reduce((sum, item) => sum + item.amount, 0)
+        const incomeTotal = updatedItems
+          .filter((item) => item.billType === "income")
+          .reduce((sum, item) => sum + item.amount, 0)
+
+        return {
+          expenseTotal,
+          incomeTotal,
+          recentItems: updatedItems
+        }
+      })
+      return
+    }
+
+    try {
+      await window.api.bill!.delete(id)
+      await onRefresh()
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -184,7 +220,7 @@ export const TodayBillPanel = (): React.JSX.Element => {
         amount: "",
         category: "餐饮",
         billType: "expense",
-        billDate: new Date().toISOString().slice(0, 10),
+        billDate: entryDate,
         note: "",
         tags: []
       })
@@ -196,7 +232,7 @@ export const TodayBillPanel = (): React.JSX.Element => {
       amount: "",
       category: "餐饮",
       billType: "expense",
-      billDate: new Date().toISOString().slice(0, 10),
+      billDate: entryDate,
       note: "",
       tags: []
     })
@@ -446,35 +482,47 @@ export const TodayBillPanel = (): React.JSX.Element => {
         <>
           <div className="border-t border-white/5 my-2" />
           <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-            {summary.recentItems.slice(0, 5).map((item) => (
-              <Tooltip
+            {summary.recentItems.map((item) => (
+              <div
                 key={item.id}
-                placement="top"
-                trigger="click"
-                contentClassName="!w-[280px] !p-3.5 !whitespace-normal flex flex-col"
-                onConfirm={() => handleEditConfirm(item.id)}
-                form={renderEditForm()}
+                className="group/item flex w-full items-center gap-2 hover:bg-white/[0.04] rounded-[4px] px-1 py-0.5 transition-colors"
               >
-                <button
-                  type="button"
-                  onClick={() => handleStartEdit(item)}
-                  className="flex w-full items-center gap-2 text-left hover:bg-white/[0.04] rounded-[4px] px-1 py-0.5 transition-colors"
+                <Tooltip
+                  placement="top"
+                  trigger="click"
+                  contentClassName="!w-[280px] !p-3.5 !whitespace-normal flex flex-col"
+                  onConfirm={() => handleEditConfirm(item.id)}
+                  form={renderEditForm()}
                 >
-                  <span className="text-[10px] text-white/30 w-10 flex-shrink-0 truncate">
-                    {item.category}
-                  </span>
-                  <span className="text-xs text-white/50 flex-1 truncate">
-                    {item.note || "无备注"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdit(item)}
+                    className="flex items-center gap-2 text-left min-w-0"
+                  >
+                    <span className="text-[10px] text-white/30 w-10 flex-shrink-0 truncate">
+                      {item.category}
+                    </span>
+                    <span className="text-xs text-white/50 truncate max-w-[100px]">
+                      {item.note || "无备注"}
+                    </span>
+                  </button>
+                </Tooltip>
+                <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
                   <span
-                    className={`text-xs font-mono font-bold flex-shrink-0 ${
+                    className={`text-xs font-mono font-bold ${
                       item.billType === "expense" ? "text-red-400" : "text-green-400"
                     }`}
                   >
                     {item.billType === "expense" ? "-" : "+"}¥{formatAmount(item.amount)}
                   </span>
-                </button>
-              </Tooltip>
+                  <IconButton
+                    aria-label={`Delete bill ${item.note || item.category}`}
+                    preset="delete"
+                    className="opacity-0 group-hover/item:opacity-100"
+                    onClick={(e) => void handleDelete(e, item.id)}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </>

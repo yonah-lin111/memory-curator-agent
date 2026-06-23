@@ -19,7 +19,7 @@ export type BillsService = {
   create: (input: BillCreateInput) => BillItem
   update: (id: number, input: BillUpdateInput) => BillItem
   delete: (id: number) => void
-  todaySummary: () => BillTodaySummary
+  todaySummary: (date?: string) => BillTodaySummary
 }
 
 /** 提取 SQLite 自增主键 */
@@ -165,19 +165,19 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
   delete: (id) => {
     database.prepare('DELETE FROM bills WHERE id = ?').run(id)
   },
-  todaySummary: () => {
-    const today = getTodayDate()
+  todaySummary: (date) => {
+    const billDate = date ?? getTodayDate()
 
     const expenseRow = database
       .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'expense'")
-      .get(today) as { total: number }
+      .get(billDate) as { total: number }
     const incomeRow = database
       .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'income'")
-      .get(today) as { total: number }
+      .get(billDate) as { total: number }
 
     const recentRows = database
       .prepare("SELECT * FROM bills WHERE bill_date = ? ORDER BY id DESC LIMIT 5")
-      .all(today) as BillRow[]
+      .all(billDate) as BillRow[]
 
     return {
       expenseTotal: expenseRow.total,

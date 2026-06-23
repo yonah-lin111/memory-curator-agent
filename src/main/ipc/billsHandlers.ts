@@ -26,7 +26,7 @@ export const registerBillsHandlers = (): void => {
     billsService.delete(id)
   })
 
-  ipcMain.handle('bills:today-summary', () =>
-    billsService.todaySummary()
+  ipcMain.handle('bills:today-summary', (_, date?: string) =>
+    billsService.todaySummary(date)
   )
 }
