@@ -369,7 +369,10 @@ export const registerWeeklyHandlers = (): void => {
           isMeaningful: 0,
         };
         const savedItem = weeklySummaryService.save(saveInput);
-        event.sender.send("weekly:summary:delta", { text: defaultContent });
+        event.sender.send("weekly:summary:delta", {
+          weekStartDate,
+          text: defaultContent,
+        });
         event.sender.send("weekly:summary:done", savedItem);
         return savedItem;
       }
@@ -468,6 +471,7 @@ mindmap
         if (streamEvent.type === "text_delta") {
           fullText += streamEvent.delta;
           event.sender.send("weekly:summary:delta", {
+            weekStartDate,
             text: streamEvent.delta,
           });
         }

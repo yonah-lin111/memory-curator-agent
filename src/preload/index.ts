@@ -614,7 +614,68 @@ type WeeklySummaryGeneratePayload = {
 
 // 周度总结 delta 事件。
 type WeeklySummaryDeltaEvent = {
+  weekStartDate: string
   text: string
+}
+
+// 主题项类型（preload 本地声明，与 main 对齐）。
+type ThemeItem = {
+  id: number
+  externalId: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+// 主题创建载荷。
+type ThemeCreateInput = {
+  name: string
+  description?: string
+  color?: string | null
+  status?: string
+  aiGenerated?: number
+}
+
+// 主题更新载荷。
+type ThemeUpdateInput = {
+  name?: string
+  description?: string
+  color?: string | null
+  status?: string
+}
+
+// 主题关联项类型。
+type ThemeItemsItem = {
+  id: number
+  externalId: string
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote: string
+  aiExtracted: number
+  createdAt: string
+  sourceTitle?: string
+  sourceContent?: string
+  sourceEntryDate?: string
+}
+
+// 主题关联项创建载荷。
+type ThemeItemsCreateInput = {
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote?: string
+  aiExtracted?: number
+}
+
+// 主题时间线节点。
+type ThemeTimelineItem = {
+  weekStartDate: string
+  itemCount: number
+  mentionedInSummary: boolean
 }
 
 // 渲染进程安全 API。

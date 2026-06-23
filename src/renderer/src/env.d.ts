@@ -796,6 +796,8 @@ type WeeklySummaryGeneratePayload = {
 
 // 周度总结 delta 事件。
 type WeeklySummaryDeltaEvent = {
+  // 周起始日期，格式 'YYYY-MM-DD'（周一）。
+  weekStartDate: string
   // delta 文本。
   text: string
 }

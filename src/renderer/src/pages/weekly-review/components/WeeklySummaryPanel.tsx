@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createTodayEntryDate, shiftEntryDate } from "@/lib/dailyShared";
+import { useEffect, useState } from "react";
 import { MdEditor, MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 import "md-editor-rt/lib/style.css";
-import { RefreshCw, FileText, Trash2 } from "lucide-react";
+import { RefreshCw, FileText } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useWeeklySummaryGeneration } from "@/pages/weekly-review/hooks/useWeeklySummaryGeneration";
 
 // 组件 Props。
 interface WeeklySummaryPanelProps {
@@ -15,159 +15,57 @@ interface WeeklySummaryPanelProps {
   isEmpty?: boolean;
 }
 
-// 周度总结项类型（与 preload 对齐）。
-type WeeklySummaryItem = {
-  id: number;
-  weekStartDate: string;
-  type: string;
-  title: string;
-  content: string;
-  modelUsed: string | null;
-  generatedAt: string;
-  isMeaningful: number;
-};
-
-// 面板状态类型。
-type PanelState = "idle" | "loading" | "streaming" | "done";
-
 /**
  * 统一周度报告面板（个人成长 + 人际关系）。
- * 状态机：idle -> loading -> streaming -> done，支持重新生成与编辑。
+ * 状态机由按周隔离的生成 store 驱动，支持切周后继续接收原周输出。
  */
 export const WeeklySummaryPanel = ({
   weekStartDate,
   isEmpty = false,
 }: WeeklySummaryPanelProps) => {
-  const [panelState, setPanelState] = useState<PanelState>("loading");
-  const [summary, setSummary] = useState<WeeklySummaryItem | null>(null);
-
-  // 流式文本缓存
-  const streamTextRef = useRef("");
-  const [streamTick, setStreamTick] = useState(0);
+  const {
+    panelState,
+    summary,
+    streamText,
+    streamTick,
+    generate,
+    hydrate,
+    reset,
+  } = useWeeklySummaryGeneration(weekStartDate);
 
   // 编辑状态与内容
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
 
-  const rafRef = useRef<number | null>(null);
-
-  /** 跟踪当前周 ID，用于拦截异步回调中的过期结果 */
-  const currentWeekRef = useRef(weekStartDate);
-  currentWeekRef.current = weekStartDate;
-
-  /** 防止自动生成失败后重复触发的守卫 */
-  const autoGenAttemptedRef = useRef(false);
-  /** 防止并发生成 */
-  const generatingRef = useRef(false);
-  /** 触发生成的计数器，每次递增触发一轮新的生成 useEffect */
-  const [generationTrigger, setGenerationTrigger] = useState(0);
-
-  // 判断当前选中周是否已经是历史周（即该周的周日已在今天之前）。
-  const isHistoricWeek =
-    shiftEntryDate(weekStartDate, 6) < createTodayEntryDate();
-
   // 初始化时加载已有数据
   useEffect(() => {
     if (!weekStartDate) return;
 
-    setPanelState("loading");
-    setSummary(null);
     setIsEditing(false);
-    autoGenAttemptedRef.current = false;
+    let isActive = true;
 
-    const requestedWeek = weekStartDate;
-
-    window.api.weekly!.summary.get(weekStartDate).then((item) => {
-      if (currentWeekRef.current !== requestedWeek) return;
-      if (item) {
-        setSummary(item);
-        setPanelState("done");
-      } else {
-        setPanelState("idle");
-      }
-    });
-  }, [weekStartDate]);
-
-  /**
-   * 实际执行生成的 effect，带 IPC 监听器自动清理。
-   */
-  useEffect(() => {
-    if (generationTrigger === 0) return;
-    if (generatingRef.current) return;
-    generatingRef.current = true;
-
-    setPanelState("loading");
-    streamTextRef.current = "";
-    setStreamTick(0);
-
-    const genWeek = weekStartDate;
-
-    const unsubDelta = window.api.weekly!.summary.onDelta(({ text }) => {
-      if (currentWeekRef.current !== genWeek) return;
-      streamTextRef.current += text;
-      setPanelState("streaming");
-      if (rafRef.current === null) {
-        rafRef.current = requestAnimationFrame(() => {
-          rafRef.current = null;
-          setStreamTick((t) => t + 1);
-        });
-      }
-    });
-
-    const unsubDone = window.api.weekly!.summary.onDone((item) => {
-      if (currentWeekRef.current !== genWeek) return;
-      unsubDelta();
-      unsubDone();
-      generatingRef.current = false;
-      setSummary(item);
-      setPanelState("done");
-    });
-
-    const abortController = new AbortController();
-
-    window.api
-      .weekly!.summary.generate({ weekStartDate: genWeek })
-      .catch((err) => {
-        console.error("周度报告生成失败", err);
+    window.api.weekly!.summary
+      .get(weekStartDate)
+      .then((item) => {
+        if (!isActive) return;
+        hydrate(item);
       })
-      .finally(() => {
-        if (generatingRef.current && currentWeekRef.current === genWeek) {
-          unsubDelta();
-          unsubDone();
-          generatingRef.current = false;
-          setPanelState((prev) => (prev === "streaming" ? "idle" : prev));
-        }
+      .catch((err) => {
+        console.error("获取周度总结失败", err);
+        if (isActive) hydrate(null);
       });
 
     return () => {
-      unsubDelta();
-      unsubDone();
-      generatingRef.current = false;
-      abortController.abort();
+      isActive = false;
     };
-  }, [generationTrigger]);
+  }, [weekStartDate, hydrate]);
 
   /**
-   * 触发生成（供手动按钮和自动生成共用）。
+   * 手动触发当前周总结生成。
    */
-  const handleGenerate = useCallback(() => {
-    if (generatingRef.current) return;
-    setGenerationTrigger((t) => t + 1);
-  }, []);
-
-  // 历史周无总结且数据非空时，自动静默触发生成。
-  useEffect(() => {
-    if (
-      panelState === "idle" &&
-      isHistoricWeek &&
-      !isEmpty &&
-      !summary &&
-      !autoGenAttemptedRef.current
-    ) {
-      autoGenAttemptedRef.current = true;
-      handleGenerate();
-    }
-  }, [panelState, isHistoricWeek, isEmpty, summary, handleGenerate]);
+  const handleGenerate = (): void => {
+    generate();
+  };
 
   /**
    * 保存编辑。
@@ -184,7 +82,7 @@ export const WeeklySummaryPanel = ({
       modelUsed: summary.modelUsed,
       generatedAt: summary.generatedAt,
     });
-    setSummary(updated);
+    hydrate(updated);
     setIsEditing(false);
   };
 
@@ -192,14 +90,12 @@ export const WeeklySummaryPanel = ({
    * 删除周度总结及关联主题内容。
    */
   const handleDelete = async () => {
-    if (generatingRef.current) return;
     try {
       await window.api.weekly!.summary.delete(weekStartDate);
     } catch {
       // 静默忽略，前端兜底重置状态
     }
-    setSummary(null);
-    setPanelState("idle");
+    reset();
     setIsEditing(false);
   };
 
@@ -295,7 +191,7 @@ export const WeeklySummaryPanel = ({
                   theme="dark"
                   modelValue={
                     panelState === "streaming"
-                      ? streamTextRef.current
+                      ? streamText
                       : (summary?.content ?? "")
                   }
                   previewTheme="default"
