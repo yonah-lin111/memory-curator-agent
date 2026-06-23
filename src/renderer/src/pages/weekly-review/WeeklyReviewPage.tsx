@@ -479,25 +479,15 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     >
       <div className="flex-1 flex flex-col gap-6 pr-1">
         {/* 1. 上部面板：数据透视 (Dashboard) */}
-        <div className="w-full flex flex-col bg-[#000000]">
-          <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-white/60" />
-              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                数据透视
-              </h3>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            {/* 卡片 1: 周数据透视 (独占一行，高度自适应，内部卡片水平排列) */}
-            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-auto relative overflow-hidden">
-              <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col gap-3 w-full">
+          {/* 卡片 1: 周数据透视 (独占一行，高度自适应，内部卡片水平排列) */}
+          <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-auto relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+              <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-white/60" />
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                  周数据透视
-                </h3>
+                <span className="text-sm font-bold tracking-wide text-white/80">周数据透视</span>
               </div>
+            </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
                 <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
                   <span className="text-xs text-white/30 font-mono leading-none">
@@ -541,43 +531,40 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               </div>
             </div>
 
-            {/* echart 图表展示网格 (同一行) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
-              {/* 卡片 2: 片段标签占比 */}
-              <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Bookmark className="h-3.5 w-3.5 text-white/40" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                    片段标签占比
-                  </span>
+          {/* echart 图表展示网格 (同一行) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
+            {/* 卡片 2: 片段标签占比 */}
+            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[400px]">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Bookmark className="h-4 w-4 text-white/60" />
+                  <span className="text-sm font-bold tracking-wide text-white/80">片段标签占比</span>
                 </div>
+              </div>
                 <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
               </div>
 
-              {/* 卡片 3: 每日行动与片段趋势 */}
-              <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <TrendingUp className="h-3.5 w-3.5 text-white/40" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                    每日行动与片段趋势
-                  </span>
+            {/* 卡片 3: 每日行动与片段趋势 */}
+            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[400px]">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-white/60" />
+                  <span className="text-sm font-bold tracking-wide text-white/80">每日行动与片段趋势</span>
                 </div>
-                <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
               </div>
+                <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
             </div>
           </div>
         </div>
 
         {/* 2. 下部面板：时间溪流与周度总结各自独占一行 */}
         <div className="flex flex-col gap-6 w-full">
-          {/* 左列：时间溪流 */}
-          <div className="w-full flex flex-col bg-[#000000]">
-            <div className="flex-shrink-0 mb-3 flex items-center justify-between border-b border-white/5 pb-2">
+          {/* 时间溪流 */}
+          <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-white/60" />
-                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                  时间溪流
-                </h3>
+                <span className="text-sm font-bold tracking-wide text-white/80">时间溪流</span>
               </div>
             </div>
 
@@ -751,9 +738,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             </div>
           </div>
 
-          {/* 右列：周度总结 */}
-          <div className="w-full flex flex-col bg-[#000000]">
-            <WeeklySummaryPanel
+          {/* 周度总结 */}
+          <WeeklySummaryPanel
               weekStartDate={getMonday(entryDate)}
               isEmpty={
                 stats.totalTodos === 0 &&
@@ -761,7 +747,6 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 stats.journalsCount === 0
               }
             />
-          </div>
         </div>
       </div>
     </div>

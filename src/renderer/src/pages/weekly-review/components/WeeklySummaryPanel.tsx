@@ -3,7 +3,7 @@ import { createTodayEntryDate, shiftEntryDate } from "@/lib/dailyShared";
 import { MdEditor, MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 import "md-editor-rt/lib/style.css";
-import { RefreshCw, Edit2, FileText } from "lucide-react";
+import { RefreshCw, FileText, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 
@@ -17,15 +17,15 @@ interface WeeklySummaryPanelProps {
 
 // 周度总结项类型（与 preload 对齐）。
 type WeeklySummaryItem = {
-  id: number
-  weekStartDate: string
-  type: string
-  title: string
-  content: string
-  modelUsed: string | null
-  generatedAt: string
-  isMeaningful: number
-}
+  id: number;
+  weekStartDate: string;
+  type: string;
+  title: string;
+  content: string;
+  modelUsed: string | null;
+  generatedAt: string;
+  isMeaningful: number;
+};
 
 // 面板状态类型。
 type PanelState = "idle" | "loading" | "streaming" | "done";
@@ -125,16 +125,19 @@ export const WeeklySummaryPanel = ({
 
     const abortController = new AbortController();
 
-    window.api.weekly!.summary.generate({ weekStartDate: genWeek }).catch((err) => {
-      console.error("周度报告生成失败", err);
-    }).finally(() => {
-      if (generatingRef.current && currentWeekRef.current === genWeek) {
-        unsubDelta();
-        unsubDone();
-        generatingRef.current = false;
-        setPanelState((prev) => prev === "streaming" ? "idle" : prev);
-      }
-    });
+    window.api
+      .weekly!.summary.generate({ weekStartDate: genWeek })
+      .catch((err) => {
+        console.error("周度报告生成失败", err);
+      })
+      .finally(() => {
+        if (generatingRef.current && currentWeekRef.current === genWeek) {
+          unsubDelta();
+          unsubDone();
+          generatingRef.current = false;
+          setPanelState((prev) => (prev === "streaming" ? "idle" : prev));
+        }
+      });
 
     return () => {
       unsubDelta();
@@ -154,7 +157,13 @@ export const WeeklySummaryPanel = ({
 
   // 历史周无总结且数据非空时，自动静默触发生成。
   useEffect(() => {
-    if (panelState === "idle" && isHistoricWeek && !isEmpty && !summary && !autoGenAttemptedRef.current) {
+    if (
+      panelState === "idle" &&
+      isHistoricWeek &&
+      !isEmpty &&
+      !summary &&
+      !autoGenAttemptedRef.current
+    ) {
       autoGenAttemptedRef.current = true;
       handleGenerate();
     }
@@ -179,25 +188,45 @@ export const WeeklySummaryPanel = ({
     setIsEditing(false);
   };
 
+  /**
+   * 删除周度总结及关联主题内容。
+   */
+  const handleDelete = async () => {
+    if (generatingRef.current) return;
+    try {
+      await window.api.weekly!.summary.delete(weekStartDate);
+    } catch {
+      // 静默忽略，前端兜底重置状态
+    }
+    setSummary(null);
+    setPanelState("idle");
+    setIsEditing(false);
+  };
+
   // 无意义内容时使用前端兜底文案
   const isMeaningful = summary?.isMeaningful !== 0;
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col">
       {/* 标题栏 */}
-      <div className="flex-shrink-0 flex items-center justify-between border-b border-white/5 pb-2">
+      <div className="flex-shrink-0 flex items-center justify-between border-b border-white/5 pb-2 mb-3">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-white/60" />
-          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
+          <span className="text-sm font-bold tracking-wide text-white/80">
             周度报告
-          </h3>
+          </span>
         </div>
 
         {panelState === "done" && !isEditing && (
           <div className="flex items-center gap-2">
-            <IconButton onClick={() => { setEditContent(summary?.content ?? ""); setIsEditing(true); }} title="编辑">
-              <Edit2 className="h-3.5 w-3.5" />
-            </IconButton>
+            <IconButton
+              onClick={() => {
+                setEditContent(summary?.content ?? "");
+                setIsEditing(true);
+              }}
+              title="编辑"
+              preset="edit"
+            ></IconButton>
             <Tooltip
               title="确认重新生成周度报告？"
               onConfirm={handleGenerate}
@@ -210,18 +239,25 @@ export const WeeklySummaryPanel = ({
                 <RefreshCw className="h-3.5 w-3.5" />
               </IconButton>
             </Tooltip>
+            <Tooltip
+              title="确认删除本周报告？"
+              description="将同时清空报告正文及关联的主题内容"
+              onConfirm={handleDelete}
+              placement="bottom"
+              variant="danger"
+            >
+              <IconButton title="删除报告" preset="delete"></IconButton>
+            </Tooltip>
           </div>
         )}
       </div>
 
       {/* 内容区 */}
-      <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[300px] flex-grow overflow-hidden">
+      <div className="flex flex-col min-h-[300px] flex-1">
         {panelState === "idle" && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <p className="text-xs text-white/25">
-              {isEmpty
-                ? "本周无任何行动、片段或日记记录"
-                : "本周尚无报告"}
+              {isEmpty ? "本周无任何行动、片段或日记记录" : "本周尚无报告"}
             </p>
             <button
               onClick={handleGenerate}
@@ -257,13 +293,15 @@ export const WeeklySummaryPanel = ({
               ) : (
                 <MdPreview
                   theme="dark"
-                  modelValue={panelState === "streaming" ? streamTextRef.current : (summary?.content ?? "")}
+                  modelValue={
+                    panelState === "streaming"
+                      ? streamTextRef.current
+                      : (summary?.content ?? "")
+                  }
                   previewTheme="default"
                   codeTheme="atom"
                   style={{ backgroundColor: "transparent" }}
-                  autoFoldThreshold={
-                    panelState === "streaming" ? Infinity : 0
-                  }
+                  autoFoldThreshold={panelState === "streaming" ? Infinity : 0}
                   showCodeRowNumber={false}
                 />
               )}
@@ -306,8 +344,7 @@ export const WeeklySummaryPanel = ({
 
       {panelState === "done" && summary && (
         <p className="text-xs text-white/20 text-right">
-          {summary.generatedAt} ·{" "}
-          {summary.modelUsed ?? "未知模型"}
+          {summary.generatedAt} · {summary.modelUsed ?? "未知模型"}
         </p>
       )}
     </div>
