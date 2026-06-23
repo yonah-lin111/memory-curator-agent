@@ -7,15 +7,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SnippetsPage } from "@/pages/snippets/SnippetsPage";
+import { Header } from "@/components/layout/Header";
 
 // Today 单日数据类型，直接从 bridge 签名反推。
 type DailyDayDataShape =
   Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
 
-// 渲染页面时补齐 Toast 上下文。
+// 渲染页面时补齐 Toast 与 Header 上下文。
 const renderSnippetsPage = (): void => {
   render(
     <ToastProvider>
+      <Header category="DAILY" activePage="snippets" />
       <SnippetsPage />
     </ToastProvider>,
   );

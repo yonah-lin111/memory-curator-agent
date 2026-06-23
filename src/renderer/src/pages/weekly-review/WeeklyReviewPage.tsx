@@ -4,10 +4,9 @@ import * as echarts from "echarts";
 import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
 import {
-  PageWeekNavigator,
-  getMonday,
-} from "@/components/ui/PageWeekNavigator";
-import { createTodayEntryDate, shiftEntryDate } from "@/lib/dailyShared";
+  PageDateNavigator,
+} from "@/components/ui/PageDateNavigator";
+import { createTodayEntryDate, shiftEntryDate, getMonday } from "@/lib/dailyShared";
 import {
   CheckCircle2,
   Circle,
@@ -90,11 +89,12 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
   const lineBarInstance = useRef<echarts.ECharts | null>(null);
 
   /**
-   * 将周度导航器 PageWeekNavigator 挂载发布到全局 Header 栏
+   * 将周度导航器 PageDateNavigator 挂载发布到全局 Header 栏
    */
   useEffect(() => {
     setDateNavigator(
-      <PageWeekNavigator
+      <PageDateNavigator
+        mode="week"
         entryDate={entryDate}
         onChange={(nextDate) => {
           setEntryDate(nextDate);

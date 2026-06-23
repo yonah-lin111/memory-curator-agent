@@ -35,6 +35,38 @@ export const formatEntryDateLabel = (entryDate: string): string => {
 };
 
 /**
+ * 获取日期所在的周一的日期。
+ */
+export const getMonday = (dateStr: string): string => {
+  const date = new Date(`${dateStr}T00:00:00`);
+  const day = (date.getDay() + 6) % 7; // 0 for Monday, ..., 6 for Sunday
+  date.setDate(date.getDate() - day);
+  return formatDateAsEntryDate(date);
+};
+
+/**
+ * 计算指定日期在当年属于第几周。
+ */
+export const getWeekNumber = (entryDate: string): number => {
+  const d = new Date(`${entryDate}T00:00:00`);
+  d.setHours(0, 0, 0, 0);
+  // 设置为最近的周四：当前日期 + 4 - 当前星期数（0 转换为 7）
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return weekNo;
+};
+
+/**
+ * 格式化周标签（2026.06.22 - 2026.06.28）。
+ */
+export const formatWeekLabel = (dateStr: string): string => {
+  const monday = getMonday(dateStr);
+  const sunday = shiftEntryDate(monday, 6);
+  return `${formatEntryDateLabel(monday)} - ${formatEntryDateLabel(sunday)}`;
+};
+
+/**
  * 从日期提取所属月份键。
  */
 export const getEntryMonth = (entryDate: string): string => entryDate.slice(0, 7);

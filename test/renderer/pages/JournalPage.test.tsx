@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { JournalPage } from "@/pages/journal/JournalPage";
+import { Header } from "@/components/layout/Header";
 
 // Daily 单日数据类型，直接从 bridge 签名反推。
 type DailyDayDataShape =
@@ -34,10 +35,11 @@ vi.mock("md-editor-rt", () => ({
   ),
 }));
 
-// 渲染页面时复用 ToastProvider，避免 Hook 缺失。
+// 渲染页面时复用 ToastProvider 与 Header，避免 Hook 缺失。
 const renderJournalPage = (): void => {
   render(
     <ToastProvider>
+      <Header category="DAILY" activePage="journal" />
       <JournalPage />
     </ToastProvider>,
   );

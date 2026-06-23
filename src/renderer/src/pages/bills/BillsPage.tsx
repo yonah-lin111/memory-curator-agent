@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/Input";
 import { IconButton } from "@/components/ui/IconButton";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { DatePickerButton } from "@/components/ui/DatePickerButton";
+import { getMonday } from "@/lib/dailyShared";
 
 /** 本地账单项类型 */
 type BillItem = {
@@ -64,6 +65,8 @@ export const BillsPage = (): React.JSX.Element => {
     "all",
   );
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [timeFilterMode, setTimeFilterMode] = useState<"all" | "date" | "week" | "month">("all");
+  const [selectedTime, setSelectedTime] = useState<string>("");
 
   // 新增记录的气泡草稿状态
   const [draft, setDraft] = useState<BillDraft>({
@@ -117,10 +120,26 @@ export const BillsPage = (): React.JSX.Element => {
   // 提取当前筛选条件下的所有唯一标签
   const allTags = Array.from(new Set(bills.flatMap((b) => b.tags || [])));
 
-  // 客户端二次筛选标签，获取最终在页面展示的账单列表
-  const visibleBills = bills.filter(
-    (bill) => !activeTag || bill.tags.includes(activeTag),
-  );
+  // 客户端二次筛选标签及时间，获取最终在页面展示的账单列表
+  const visibleBills = bills.filter((bill) => {
+    // 标签过滤
+    if (activeTag && !bill.tags.includes(activeTag)) {
+      return false;
+    }
+
+    // 时间区间/日期过滤
+    if (timeFilterMode === "date" && selectedTime) {
+      return bill.billDate === selectedTime;
+    }
+    if (timeFilterMode === "week" && selectedTime) {
+      return getMonday(bill.billDate) === getMonday(selectedTime);
+    }
+    if (timeFilterMode === "month" && selectedTime) {
+      return bill.billDate.startsWith(selectedTime);
+    }
+
+    return true;
+  });
 
   // 根据当前可视列表统计数据
   const monthStats: MonthStats = visibleBills.reduce(
@@ -699,6 +718,60 @@ export const BillsPage = (): React.JSX.Element => {
                 </Tag>
               ))}
             </div>
+          </div>
+
+          {/* 时间筛选 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <span className="text-xs font-bold text-white/80">时间筛选</span>
+            </div>
+            <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px] h-[28px] items-center border border-white/5">
+              {[
+                { value: "all", label: "全部" },
+                { value: "date", label: "按日" },
+                { value: "week", label: "按周" },
+                { value: "month", label: "按月" },
+              ].map((mode) => (
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => {
+                    setTimeFilterMode(mode.value as any);
+                    if (mode.value === "all") {
+                      setSelectedTime("");
+                    } else if (mode.value === "month") {
+                      setSelectedTime(new Date().toISOString().slice(0, 7));
+                    } else {
+                      setSelectedTime(new Date().toISOString().slice(0, 10));
+                    }
+                  }}
+                  className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
+                    timeFilterMode === mode.value
+                      ? "bg-[#303030] text-white"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+
+            {timeFilterMode !== "all" && (
+              <div className="mt-1">
+                <DatePicker
+                  mode={timeFilterMode as "date" | "week" | "month"}
+                  value={selectedTime}
+                  onChange={(date) => setSelectedTime(date)}
+                  className="w-full"
+                >
+                  <DatePickerButton
+                    mode={timeFilterMode as "date" | "week" | "month"}
+                    value={selectedTime}
+                    className="w-full"
+                  />
+                </DatePicker>
+              </div>
+            )}
           </div>
 
           {/* 标签筛选 */}
