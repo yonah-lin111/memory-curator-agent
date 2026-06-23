@@ -331,7 +331,7 @@ export const DatePicker = ({
           <div
             ref={tooltipRef}
             aria-label="Date picker"
-            className="absolute z-[999999] w-[296px] rounded-[6px] border border-white/10 bg-[#303030] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.62)] animate-card-modal-in"
+            className="absolute z-[999999] w-[296px] rounded-[6px] border border-white/10 bg-[#212121] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.62)] animate-card-modal-in"
             style={{
               position: "absolute",
               top: `${coords?.top ?? 0}px`,

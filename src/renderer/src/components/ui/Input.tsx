@@ -12,7 +12,7 @@ export interface BaseInputProps {
   size?: "sm" | "xs";
   /**
    * 背景色 Class
-   * @default "bg-[#303030]"
+   * @default "bg-[#212121]"
    */
   bgClass?: string;
 }
@@ -97,7 +97,7 @@ export type InputProps = StandardInputProps | TagInputProps | NumberInputProps;
  */
 export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputProps>(
   (props, ref) => {
-    const { as = "input", size = "sm", bgClass = "bg-[#303030]", className = "", ...rest } = props;
+    const { as = "input", size = "sm", bgClass = "bg-[#212121]", className = "", ...rest } = props;
 
     if (as === "tags") {
       const { tags, onChangeTags, maxTags = 6, placeholder, disabled, ...tagProps } = rest as TagInputProps;
@@ -173,7 +173,7 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
       };
 
       if (prefix || suffix) {
-        const containerClass = `flex items-center gap-2 w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 transition-colors duration-150 hover:border-white/20 focus-within:border-white/25 px-2 py-1.5 ${className}`.trim();
+        const containerClass = `flex items-center gap-1.5 w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 transition-colors duration-150 hover:border-white/20 focus-within:border-white/25 px-2.5 py-1.5 ${className}`.trim();
         return (
           <div className={containerClass}>
             {prefix}
@@ -181,7 +181,7 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
               <input
                 ref={ref as React.ForwardedRef<HTMLInputElement>}
                 type="number"
-                className="w-full bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-transparent px-0 py-0 text-sm text-white placeholder:text-white/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 value={value}
                 onChange={handleChange}
                 disabled={disabled}
@@ -212,7 +212,7 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
 
     // 如果提供了前缀、后缀或者自适应高度
     if (prefix || suffix || autosize) {
-      const containerClass = `flex items-center gap-2 w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 transition-colors duration-150 hover:border-white/20 focus-within:border-white/25 px-2 py-1.5 ${className}`.trim();
+      const containerClass = `flex items-center gap-1.5 w-full rounded-[6px] border border-white/10 ${bgClass} text-white/80 transition-colors duration-150 hover:border-white/20 focus-within:border-white/25 px-2.5 py-1.5 ${className}`.trim();
 
       return (
         <div className={containerClass}>
@@ -221,7 +221,7 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
             {autosize ? (
               <>
                 <div
-                  className="invisible px-1.5 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
+                  className="invisible px-0 py-0 border border-transparent break-words whitespace-pre-wrap pointer-events-none min-h-[19.5px]"
                   aria-hidden="true"
                   style={{
                     fontSize: "13px",
@@ -233,7 +233,7 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
                 </div>
                 <textarea
                   ref={ref as React.ForwardedRef<HTMLTextAreaElement>}
-                  className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
+                  className="absolute inset-0 w-full h-full min-w-0 bg-transparent px-0 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none overflow-y-auto custom-scrollbar min-h-0"
                   style={{
                     fontSize: "13px",
                     lineHeight: "19.5px",
@@ -245,13 +245,13 @@ export const Input = forwardRef<HTMLInputElement | HTMLTextAreaElement, InputPro
             ) : as === "textarea" ? (
               <textarea
                 ref={ref as React.ForwardedRef<HTMLTextAreaElement>}
-                className="w-full bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none min-h-24"
+                className="w-full bg-transparent px-0 py-0 text-sm text-white placeholder:text-white/20 outline-none resize-none min-h-24"
                 {...(standardProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
               />
             ) : (
               <input
                 ref={ref as React.ForwardedRef<HTMLInputElement>}
-                className="w-full bg-transparent px-1.5 py-0 text-sm text-white placeholder:text-white/20 outline-none"
+                className="w-full bg-transparent px-0 py-0 text-sm text-white placeholder:text-white/20 outline-none"
                 {...(standardProps as React.InputHTMLAttributes<HTMLInputElement>)}
               />
             )}

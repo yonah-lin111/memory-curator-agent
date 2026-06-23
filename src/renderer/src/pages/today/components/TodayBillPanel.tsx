@@ -295,30 +295,29 @@ export const TodayBillPanel = ({
         {/* 金额输入 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs">
-            <span className="text-white/40 mr-1 font-mono">¥</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={draft.amount}
-              onChange={(e) => setDraft((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder="0.00"
-              className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
+          <Input
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            value={draft.amount}
+            onChange={(e) => setDraft((prev) => ({ ...prev, amount: e.target.value }))}
+            placeholder="0.00"
+            prefix={<span className="text-white/40 mr-1 font-mono text-xs">¥</span>}
+            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
+          />
         </div>
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">备注</span>
-          <input
+          <Input
             type="text"
             value={draft.note}
             onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none placeholder:text-white/20"
+            size="xs"
+            className="!h-[28px]"
           />
         </div>
 
@@ -389,30 +388,29 @@ export const TodayBillPanel = ({
         {/* 金额输入 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs">
-            <span className="text-white/40 mr-1 font-mono">¥</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              value={editDraft.amount}
-              onChange={(e) => setEditDraft((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder="0.00"
-              className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-          </div>
+          <Input
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            value={editDraft.amount}
+            onChange={(e) => setEditDraft((prev) => ({ ...prev, amount: e.target.value }))}
+            placeholder="0.00"
+            prefix={<span className="text-white/40 mr-1 font-mono text-xs">¥</span>}
+            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
+          />
         </div>
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">备注</span>
-          <input
+          <Input
             type="text"
             value={editDraft.note}
             onChange={(e) => setEditDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none placeholder:text-white/20"
+            size="xs"
+            className="!h-[28px]"
           />
         </div>
 

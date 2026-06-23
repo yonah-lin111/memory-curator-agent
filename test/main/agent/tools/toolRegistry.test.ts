@@ -7,6 +7,7 @@ import type { PeopleService } from '@/services/peopleService'
 import type { TodosService } from '@/services/todosService'
 import type { SnippetsService } from '@/services/snippetsService'
 import type { NoteCategoryService } from '@/services/noteCategoryService'
+import type { BillsService } from '@/services/billsService'
 
 // Notes 服务桩。
 const notesService: Pick<NotesService, 'querySql' | 'create' | 'update' | 'delete'> = {
@@ -122,6 +123,16 @@ const noteCategoryService: Pick<NoteCategoryService, 'querySql' | 'create' | 'up
   delete: () => undefined
 }
 
+// Bills 服务桩。
+const billsService: Pick<BillsService, 'list' | 'todaySummary'> = {
+  list: () => [],
+  todaySummary: () => ({
+    expenseTotal: 0,
+    incomeTotal: 0,
+    recentItems: []
+  })
+}
+
 // 创建测试工具。
 const createTestTool = (name: string): AgentTool => ({
   name,
@@ -144,7 +155,8 @@ describe('toolRegistry', () => {
       peopleService,
       todosService,
       snippetsService,
-      noteCategoryService
+      noteCategoryService,
+      billsService
     })
 
     expect(registry.ids()).toEqual([
@@ -188,6 +200,8 @@ describe('toolRegistry', () => {
       'note_categories_add',
       'note_categories_update',
       'note_categories_delete',
+      'bills_tool_list',
+      'bills_tool_summary',
       'common_tool_time_now',
       'common_tool_date_offset'
     ])
@@ -205,9 +219,11 @@ describe('toolRegistry', () => {
     expect(registry.get('people_tool_add')?.description).toContain('Create a people profile')
     expect(registry.get('people_tool_update')?.description).toContain('Update an existing people profile')
     expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
+    expect(registry.get('bills_tool_list')?.description).toContain('Bills table')
+    expect(registry.get('bills_tool_summary')?.description).toContain('daily summary')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(42)
+    expect(registry.all()).toHaveLength(44)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {

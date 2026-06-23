@@ -10,6 +10,7 @@ describe('agentHints', () => {
     expect(
       normalizeAiChatAgentHints([
         { id: 'todo', priority: 2 },
+        { id: 'bills', priority: 1.5 },
         { id: 'people', priority: 1 },
         { id: 'people', priority: 3 },
         { id: 'unknown', priority: 4 },
@@ -17,7 +18,8 @@ describe('agentHints', () => {
       ])
     ).toEqual([
       { id: 'people', priority: 1 },
-      { id: 'todo', priority: 2 }
+      { id: 'bills', priority: 2 },
+      { id: 'todo', priority: 3 }
     ])
   })
 
@@ -34,6 +36,16 @@ describe('agentHints', () => {
     expect(directive).toContain('2. todo_agent')
     expect(directive.indexOf('1. people_agent')).toBeLessThan(directive.indexOf('2. todo_agent'))
     expect(directive).toContain('Do not force unrelated tools')
+  })
+
+  it('渲染包含 Bills 工具优先级的可信 system directive', () => {
+    const directive = renderAiChatAgentDirective([
+      { id: 'bills', priority: 1 }
+    ])
+
+    expect(directive).toContain('1. bills_agent')
+    expect(directive).toContain('bills_tool_list')
+    expect(directive).toContain('bills_tool_summary')
   })
 
   it('没有 agent hint 时不修改 system message', () => {

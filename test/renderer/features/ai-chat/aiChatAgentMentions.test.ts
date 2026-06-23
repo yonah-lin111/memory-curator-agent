@@ -8,7 +8,7 @@ import {
 } from '@/features/ai-chat/aiChatAgentMentions'
 
 describe('aiChatAgentMentions', () => {
-  it('声明 7 个内置 agent mention 选项', () => {
+  it('声明 8 个内置 agent mention 选项', () => {
     expect(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => option.id)).toEqual([
       'people',
       'todo',
@@ -16,6 +16,7 @@ describe('aiChatAgentMentions', () => {
       'journal',
       'notes',
       'today',
+      'bills',
       'common'
     ])
     expect(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => option.token)).toEqual([
@@ -25,6 +26,7 @@ describe('aiChatAgentMentions', () => {
       '@journal_agent',
       '@notes_agent',
       '@today_agent',
+      '@bills_agent',
       '@common_agent'
     ])
   })
@@ -64,7 +66,7 @@ describe('aiChatAgentMentions', () => {
   })
 
   it('支持 agent 面板模糊匹配', () => {
-    expect(getMatchedAiChatAgentMentions('').map((option) => option.id)).toHaveLength(7)
+    expect(getMatchedAiChatAgentMentions('').map((option) => option.id)).toHaveLength(8)
     expect(getMatchedAiChatAgentMentions('pe').map((option) => option.id)).toEqual(['people', 'snippets'])
     expect(getMatchedAiChatAgentMentions('peo').map((option) => option.id)).toEqual(['people'])
     expect(getMatchedAiChatAgentMentions('peo_').map((option) => option.id)).toEqual(['people'])
@@ -73,6 +75,7 @@ describe('aiChatAgentMentions', () => {
     expect(getMatchedAiChatAgentMentions('eo').map((option) => option.id)).toEqual(['people'])
     expect(getMatchedAiChatAgentMentions('ty').map((option) => option.id)).toEqual(['today'])
     expect(getMatchedAiChatAgentMentions('todo').map((option) => option.id)).toEqual(['todo'])
+    expect(getMatchedAiChatAgentMentions('bi').map((option) => option.id)).toEqual(['bills'])
     expect(getMatchedAiChatAgentMentions('co').map((option) => option.id)).toEqual(['common'])
   })
 

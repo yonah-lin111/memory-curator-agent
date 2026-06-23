@@ -1,7 +1,7 @@
 import type { AiChatMessagePart } from "@/features/ai-chat/types";
 
 // AI 输入框可选择的 agent 标识。
-export type AiChatAgentId = "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common";
+export type AiChatAgentId = "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
 
 // AI 输入框 agent mention 选项。
 export type AiChatAgentMentionOption = {
@@ -112,6 +112,12 @@ export const AI_CHAT_AGENT_MENTION_OPTIONS: AiChatAgentMentionOption[] = [
     description: "聚焦当下，快速关联今天的即时记录与活动线索",
   },
   {
+    id: "bills",
+    token: "@bills_agent",
+    label: "bills",
+    description: "检索账单记录，查询收支明细与今日消费摘要",
+  },
+  {
     id: "common",
     token: "@common_agent",
     label: "common",
@@ -120,7 +126,7 @@ export const AI_CHAT_AGENT_MENTION_OPTIONS: AiChatAgentMentionOption[] = [
 ];
 
 // Agent token 匹配表达式，只接受空白边界包围的完整 token。
-const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|todo|snippets|journal|notes|today|common)_agent)(?=$|\s)/g;
+const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|todo|snippets|journal|notes|today|common|bills)_agent)(?=$|\s)/g;
 
 // Agent 选项索引。
 const AGENT_OPTIONS_BY_ID = new Map(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => [option.id, option]));

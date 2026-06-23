@@ -1,4 +1,4 @@
-import { AssociatedPersonItem, JournalItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart } from '@/db/schema'
+import { AssociatedPersonItem, JournalItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart, BillItem, BillCategory, BillType } from '@/db/schema'
 import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
 import type {
   ToolConfirmationAnswerData,
@@ -559,4 +559,41 @@ export type JournalQueryToolResult = AgentToolResult & {
   // SQL 查询返回的原始行。
   rows?: unknown[]
 }
+
+// Bill 查询工具入参。
+export type BillQueryToolInput = {
+  // 起始日期 YYYY-MM-DD。
+  startDate?: string
+  // 结束日期 YYYY-MM-DD。
+  endDate?: string
+  // 账单分类类型。
+  category?: BillCategory
+  // 收支类型。
+  billType?: BillType
+  // 返回数量上限。
+  limit?: number
+}
+
+// Bill 查询工具返回项。
+export type BillQueryToolItem = Pick<
+  BillItem,
+  'id' | 'amount' | 'category' | 'billType' | 'billDate' | 'note' | 'tags' | 'createdAt' | 'updatedAt'
+>
+
+// Bill 查询工具返回结果。
+export type BillQueryToolResult = AgentToolResult & {
+  // 命中的账单条目。
+  items: BillQueryToolItem[]
+}
+
+// Bill 账单摘要返回结果。
+export type BillSummaryToolResult = AgentToolResult & {
+  // 支出总额。
+  expenseTotal: number
+  // 收入总额。
+  incomeTotal: number
+  // 账单条目列表。
+  items: BillQueryToolItem[]
+}
+
 
