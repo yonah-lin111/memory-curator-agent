@@ -131,11 +131,102 @@ describe('billsTool summary', () => {
   })
 })
 
+describe('billsTool write', () => {
+  it('bills_tool_add should create a bill item with correct parameters', async () => {
+    const mockCreate = vi.fn().mockReturnValue({
+      id: 10,
+      amount: 1500,
+      category: '餐饮',
+      billType: 'expense',
+      billDate: '2026-06-23',
+      note: 'Lunch',
+      tags: [],
+      createdAt: '2026-06-23 12:00',
+      updatedAt: '2026-06-23 12:00'
+    })
+
+    const service = { create: mockCreate } as unknown as BillsService
+    const { createBillAddTool } = await import('@/agent/tools/billsTool')
+    const tool = createBillAddTool(service)
+
+    const result = await tool.execute({
+      amount: 1500,
+      category: '餐饮',
+      billType: 'expense',
+      billDate: '2026-06-23',
+      note: 'Lunch',
+      tags: []
+    })
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      amount: 1500,
+      category: '餐饮',
+      billType: 'expense',
+      billDate: '2026-06-23',
+      note: 'Lunch',
+      tags: []
+    })
+    expect(result.observation).toContain('15.00 元')
+    expect(result.observation).toContain('餐饮')
+  })
+
+  it('bills_tool_update should update an existing bill item by id', async () => {
+    const mockUpdate = vi.fn().mockReturnValue({
+      id: 5,
+      amount: 2500,
+      category: '餐饮',
+      billType: 'expense',
+      billDate: '2026-06-23',
+      note: 'Updated Note',
+      tags: [],
+      createdAt: '2026-06-23 12:00',
+      updatedAt: '2026-06-23 13:00'
+    })
+
+    const service = { update: mockUpdate } as unknown as BillsService
+    const { createBillUpdateTool } = await import('@/agent/tools/billsTool')
+    const tool = createBillUpdateTool(service)
+
+    const result = await tool.execute({
+      id: 5,
+      amount: 2500,
+      note: 'Updated Note'
+    })
+
+    expect(mockUpdate).toHaveBeenCalledWith(5, {
+      amount: 2500,
+      note: 'Updated Note'
+    })
+    expect(result.observation).toContain('25.00 元')
+    expect(result.observation).toContain('#5')
+  })
+
+  it('bills_tool_delete should delete an existing bill item by id', async () => {
+    const mockDelete = vi.fn()
+    const service = { delete: mockDelete } as unknown as BillsService
+    const { createBillDeleteTool } = await import('@/agent/tools/billsTool')
+    const tool = createBillDeleteTool(service)
+
+    const result = await tool.execute({
+      id: 5
+    })
+
+    expect(mockDelete).toHaveBeenCalledWith(5)
+    expect(result.observation).toContain('#5')
+  })
+})
+
 describe('createBillsTools factory', () => {
-  it('should return list and summary tools', () => {
+  it('should return 5 list, summary, add, update, and delete tools', () => {
     const service = {} as unknown as BillsService
     const tools = createBillsTools(service)
 
-    expect(tools.map(t => t.name)).toEqual(['bills_tool_list', 'bills_tool_summary'])
+    expect(tools.map(t => t.name)).toEqual([
+      'bills_tool_list',
+      'bills_tool_summary',
+      'bills_tool_add',
+      'bills_tool_update',
+      'bills_tool_delete'
+    ])
   })
 })

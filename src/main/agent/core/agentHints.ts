@@ -60,7 +60,7 @@ const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
     id: 'bills',
     token: 'bills_agent',
     description: 'Prefer Bills-related expense tracking, income records, and daily summary context.',
-    tools: ['bills_tool_list', 'bills_tool_summary']
+    tools: ['bills_tool_list', 'bills_tool_summary', 'bills_tool_add', 'bills_tool_update', 'bills_tool_delete']
   },
   {
     id: 'common',

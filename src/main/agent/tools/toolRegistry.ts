@@ -35,7 +35,7 @@ export type AgentToolRegistryContext = {
   // Themes 服务。
   themesService?: ThemesService
   // Bills 服务。
-  billsService?: Pick<BillsService, 'list' | 'todaySummary'>
+  billsService?: Pick<BillsService, 'list' | 'todaySummary' | 'create' | 'update' | 'delete'>
 }
 
 // Agent 工具工厂。

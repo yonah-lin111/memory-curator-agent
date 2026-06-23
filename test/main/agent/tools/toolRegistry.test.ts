@@ -124,13 +124,36 @@ const noteCategoryService: Pick<NoteCategoryService, 'querySql' | 'create' | 'up
 }
 
 // Bills 服务桩。
-const billsService: Pick<BillsService, 'list' | 'todaySummary'> = {
+const billsService: Pick<BillsService, 'list' | 'todaySummary' | 'create' | 'update' | 'delete'> = {
   list: () => [],
   todaySummary: () => ({
     expenseTotal: 0,
     incomeTotal: 0,
     recentItems: []
-  })
+  }),
+  create: (input) => ({
+    id: 1,
+    amount: input.amount,
+    category: input.category,
+    billType: input.billType,
+    billDate: input.billDate,
+    note: input.note,
+    tags: input.tags,
+    createdAt: '2026-06-23 12:00',
+    updatedAt: '2026-06-23 12:00'
+  }),
+  update: (id, input) => ({
+    id,
+    amount: input.amount ?? 100,
+    category: input.category ?? '其他',
+    billType: input.billType ?? 'expense',
+    billDate: input.billDate ?? '2026-06-23',
+    note: input.note ?? '',
+    tags: input.tags ?? [],
+    createdAt: '2026-06-23 12:00',
+    updatedAt: '2026-06-23 12:00'
+  }),
+  delete: () => {}
 }
 
 // 创建测试工具。
@@ -202,6 +225,9 @@ describe('toolRegistry', () => {
       'note_categories_delete',
       'bills_tool_list',
       'bills_tool_summary',
+      'bills_tool_add',
+      'bills_tool_update',
+      'bills_tool_delete',
       'common_tool_time_now',
       'common_tool_date_offset'
     ])
@@ -221,9 +247,12 @@ describe('toolRegistry', () => {
     expect(registry.get('people_tool_delete')?.description).toContain('Delete an existing people profile')
     expect(registry.get('bills_tool_list')?.description).toContain('Bills table')
     expect(registry.get('bills_tool_summary')?.description).toContain('daily summary')
+    expect(registry.get('bills_tool_add')?.description).toContain('Create a bill record')
+    expect(registry.get('bills_tool_update')?.description).toContain('Update an existing bill record')
+    expect(registry.get('bills_tool_delete')?.description).toContain('Delete an existing bill record')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(44)
+    expect(registry.all()).toHaveLength(47)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {
