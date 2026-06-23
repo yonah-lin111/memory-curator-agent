@@ -111,12 +111,12 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         description: "长期主题追踪",
         icon: Layers,
       },
-      {
-        id: "memories",
-        label: "Memories",
-        description: "记忆片段关联",
-        icon: Sparkles,
-      },
+      // {
+      //   id: "memories",
+      //   label: "Memories",
+      //   description: "记忆片段关联",
+      //   icon: Sparkles,
+      // },
     ],
   },
   {

@@ -209,6 +209,8 @@ export const appendTextPart = (
 
 /**
  * 追加助手思考片段并合并同一 reasoning ID 的连续增量。
+ * 若同 ID 的 reasoning 片段已存在（可能被非 reasoning 片段隔开），
+ * 则合入已有片段而非新建，防止创建 id 重复的 part。
  */
 export const appendReasoningPart = (
   parts: AiChatMessagePart[],
@@ -220,6 +222,21 @@ export const appendReasoningPart = (
   if (lastPart?.kind === "reasoning" && lastPart.id === reasoningId) {
     return parts.map((part) =>
       part.id === reasoningId && part.kind === "reasoning"
+        ? {
+            ...part,
+            content: `${part.content}${chunk}`,
+          }
+        : part,
+    );
+  }
+
+  const existingIndex = parts.findIndex(
+    (part) => part.kind === "reasoning" && part.id === reasoningId,
+  );
+
+  if (existingIndex >= 0) {
+    return parts.map((part, idx) =>
+      idx === existingIndex && part.kind === "reasoning"
         ? {
             ...part,
             content: `${part.content}${chunk}`,

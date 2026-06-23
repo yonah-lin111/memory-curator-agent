@@ -509,11 +509,11 @@ export const AiChatContextTimeline = ({
                             fullMessage?.parts &&
                             fullMessage.parts.length > 0
                           ) {
-                            fullMessage.parts.forEach((part) => {
+                            fullMessage.parts.forEach((part, partIndex) => {
                               if (part.kind === "reasoning") {
                                 nodes.push(
                                   <div
-                                    key={`${turn.id}-${part.id}`}
+                                    key={`${turn.id}-reasoning-${partIndex}`}
                                     className="relative pl-3 select-text"
                                   >
                                     <div className="absolute left-[-16px] top-1.5 flex h-1.5 w-1.5 items-center justify-center rounded-full bg-zinc-500/50 ring-[3px] ring-[#161616]" />

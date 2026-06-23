@@ -945,7 +945,7 @@ export const AiChatMessageBubble = ({
                     flushToolSteps();
                     groupedElements.push(
                       <AiMarkdownPreview
-                        key={`${message.id}-${part.id}`}
+                        key={`${message.id}-text-${partIndex}`}
                         content={displayText}
                         isGenerating={isGenerating}
                       />,
@@ -961,7 +961,7 @@ export const AiChatMessageBubble = ({
                     flushToolSteps();
                     groupedElements.push(
                       <AiChatThinkingBlock
-                        key={`${message.id}-${part.id}`}
+                        key={`${message.id}-reasoning-${partIndex}`}
                         content={displayReasoning}
                         isGenerating={isReasoningPartGenerating(
                           messageParts,
