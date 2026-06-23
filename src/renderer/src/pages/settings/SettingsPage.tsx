@@ -1106,7 +1106,8 @@ export const SettingsPage = (): React.JSX.Element => {
           <Input
             aria-label="Recent tool result limit"
             as="number"
-            value={settings.agent.context.recentToolResultLimit}
+            value={settings.agent.context.recentToolResultLimit || 0}
+            placeholder="无限制"
             onChangeValue={(numVal) =>
               updateSettings((current) => ({
                 ...current,
@@ -1114,12 +1115,16 @@ export const SettingsPage = (): React.JSX.Element => {
                   ...current.agent,
                   context: {
                     ...current.agent.context,
+                    // 0 表示保留全部工具结果不压缩。
                     recentToolResultLimit: numVal,
                   },
                 },
               }))
             }
           />
+          <span className="text-[10px] text-white/25">
+            0 或留空表示不限制，保留全部工具结果
+          </span>
         </label>
         <label className="grid gap-1.5 text-xs text-white/45">
           Max tool turns

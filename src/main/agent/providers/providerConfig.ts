@@ -153,10 +153,13 @@ const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig =>
       agent?.context?.toolOutputMaxChars,
       DEFAULT_AGENT_CONFIG.context.toolOutputMaxChars
     ),
-    recentToolResultLimit: normalizePositiveInteger(
-      agent?.context?.recentToolResultLimit,
-      DEFAULT_AGENT_CONFIG.context.recentToolResultLimit
-    ),
+    recentToolResultLimit:
+      agent?.context?.recentToolResultLimit !== undefined &&
+      typeof agent.context.recentToolResultLimit === 'number' &&
+      Number.isInteger(agent.context.recentToolResultLimit) &&
+      agent.context.recentToolResultLimit >= 0
+        ? agent.context.recentToolResultLimit
+        : DEFAULT_AGENT_CONFIG.context.recentToolResultLimit,
     maxTurns:
       agent?.context?.maxTurns !== undefined &&
       typeof agent.context.maxTurns === 'number' &&

@@ -252,7 +252,11 @@ export const startAiChat = async (
           contextLimit: modelConfig.limit?.context,
           outputLimit: modelConfig.limit?.output,
           toolOutputMaxChars: config.agent.context.toolOutputMaxChars,
-          recentToolResultLimit: config.agent.context.recentToolResultLimit,
+          // 0 表示不限制，转换为 Infinity 以保留全部工具结果。
+          recentToolResultLimit:
+            config.agent.context.recentToolResultLimit === 0
+              ? Infinity
+              : config.agent.context.recentToolResultLimit,
         }),
         tools,
         signal: controller.signal,
