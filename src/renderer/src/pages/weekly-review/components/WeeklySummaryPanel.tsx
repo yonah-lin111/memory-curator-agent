@@ -51,6 +51,10 @@ export const WeeklySummaryPanel = ({
 
   const rafRef = useRef<number | null>(null);
 
+  /** 跟踪当前周 ID，用于拦截异步回调中的过期结果 */
+  const currentWeekRef = useRef(weekStartDate);
+  currentWeekRef.current = weekStartDate;
+
   /** 防止自动生成失败后重复触发的守卫 */
   const autoGenAttemptedRef = useRef(false);
   /** 防止并发生成 */
@@ -71,7 +75,10 @@ export const WeeklySummaryPanel = ({
     setIsEditing(false);
     autoGenAttemptedRef.current = false;
 
+    const requestedWeek = weekStartDate;
+
     window.api.weekly!.summary.get(weekStartDate).then((item) => {
+      if (currentWeekRef.current !== requestedWeek) return;
       if (item) {
         setSummary(item);
         setPanelState("done");
@@ -93,7 +100,10 @@ export const WeeklySummaryPanel = ({
     streamTextRef.current = "";
     setStreamTick(0);
 
+    const genWeek = weekStartDate;
+
     const unsubDelta = window.api.weekly!.summary.onDelta(({ text }) => {
+      if (currentWeekRef.current !== genWeek) return;
       streamTextRef.current += text;
       setPanelState("streaming");
       if (rafRef.current === null) {
@@ -105,6 +115,7 @@ export const WeeklySummaryPanel = ({
     });
 
     const unsubDone = window.api.weekly!.summary.onDone((item) => {
+      if (currentWeekRef.current !== genWeek) return;
       unsubDelta();
       unsubDone();
       generatingRef.current = false;
@@ -114,11 +125,10 @@ export const WeeklySummaryPanel = ({
 
     const abortController = new AbortController();
 
-    window.api.weekly!.summary.generate({ weekStartDate }).catch((err) => {
+    window.api.weekly!.summary.generate({ weekStartDate: genWeek }).catch((err) => {
       console.error("周度报告生成失败", err);
     }).finally(() => {
-      // onDone 负责正常路径的清理，这里兜底异步异常后仍释放锁
-      if (generatingRef.current) {
+      if (generatingRef.current && currentWeekRef.current === genWeek) {
         unsubDelta();
         unsubDone();
         generatingRef.current = false;
