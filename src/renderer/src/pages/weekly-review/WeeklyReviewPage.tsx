@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import * as echarts from "echarts";
 import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import {
-  PageDateNavigator,
-} from "@/components/ui/PageDateNavigator";
-import { createTodayEntryDate, shiftEntryDate, getMonday } from "@/lib/dailyShared";
+  createTodayEntryDate,
+  shiftEntryDate,
+  getMonday,
+} from "@/lib/dailyShared";
 import {
   CheckCircle2,
   Circle,
@@ -118,7 +120,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
         // 1. 检查上一周是否已经有总结
         if (window.api?.weekly?.summary) {
-          const lastWeekSummary = await window.api.weekly.summary.get(lastWeekStartDate);
+          const lastWeekSummary =
+            await window.api.weekly.summary.get(lastWeekStartDate);
           if (lastWeekSummary) return; // 已有总结，静默跳过
 
           // 2. 检查上一周是否有数据（非空）
@@ -142,7 +145,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
           // 3. 如果上一周尚未生成总结且内容非空，则在后台静默发起生成
           if (!lastWeekIsEmpty) {
-            await window.api.weekly.summary.generate({ weekStartDate: lastWeekStartDate });
+            await window.api.weekly.summary.generate({
+              weekStartDate: lastWeekStartDate,
+            });
           }
         }
       } catch (err) {
@@ -538,12 +543,12 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
             {/* echart 图表展示网格 (同一行) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
-              {/* 卡片 2: 记忆标签占比 */}
+              {/* 卡片 2: 片段标签占比 */}
               <div className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col h-[400px]">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Bookmark className="h-3.5 w-3.5 text-white/40" />
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                    记忆标签占比
+                    片段标签占比
                   </span>
                 </div>
                 <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
@@ -620,16 +625,16 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                           {!isExpanded && (
                             <div className="hidden sm:flex items-center gap-2 ml-3 text-xs text-white/40 font-mono">
                               <span>
-                                {day.journal ? "📝 已写日记" : "📝 无日记"}
+                                {day.journal ? "Journal" : "No Journal"}
                               </span>
                               <span className="text-white/10">|</span>
                               <span>
-                                ✅ 待办{" "}
+                                Todos{" "}
                                 {day.todos.filter((t) => t.completed).length}/
                                 {day.todos.length}
                               </span>
                               <span className="text-white/10">|</span>
-                              <span>🔖 片段 {day.snippets.length}</span>
+                              <span>Snippets {day.snippets.length}</span>
                             </div>
                           )}
                         </div>
@@ -750,7 +755,11 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
           <div className="w-full flex flex-col bg-[#000000]">
             <WeeklySummaryPanel
               weekStartDate={getMonday(entryDate)}
-              isEmpty={stats.totalTodos === 0 && stats.totalSnippets === 0 && stats.journalsCount === 0}
+              isEmpty={
+                stats.totalTodos === 0 &&
+                stats.totalSnippets === 0 &&
+                stats.journalsCount === 0
+              }
             />
           </div>
         </div>
