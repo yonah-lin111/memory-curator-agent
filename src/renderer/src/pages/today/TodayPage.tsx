@@ -1,6 +1,13 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, CheckSquare, Smile, StickyNote, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import {
+  BookOpen,
+  CheckSquare,
+  Smile,
+  StickyNote,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { TodaySnippetsPanel } from "@/pages/today/components/TodaySnippetsPanel";
 import {
@@ -17,7 +24,10 @@ import type { TodoItem } from "@/pages/todo/components/todoShared";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { getEntryMonth } from "@/lib/dailyShared";
-import { TodayBillPanel, type TodaySummary } from "@/pages/today/components/TodayBillPanel";
+import {
+  TodayBillPanel,
+  type TodaySummary,
+} from "@/pages/today/components/TodayBillPanel";
 import { formatAmount } from "@/pages/bills/components/billShared";
 
 // 今日统计数据项类型，描述顶层关键指标。
@@ -189,13 +199,20 @@ export const TodayPage = (): React.JSX.Element => {
   // 当前运行环境是否存在 daily bridge。
   const hasDailyApi = Boolean(window.api?.daily);
   // 当前日期。
-  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  const [entryDate, setEntryDate] = useState<string>(() =>
+    createTodayEntryDate(),
+  );
   // 当前月历可见月份。
-  const [visibleMonth, setVisibleMonth] = useState<string>(() => getEntryMonth(entryDate));
+  const [visibleMonth, setVisibleMonth] = useState<string>(() =>
+    getEntryMonth(entryDate),
+  );
   // 每一天是否有内容的数量字典。
-  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>({});
+  const [monthEntryCounts, setMonthEntryCounts] = useState<
+    Record<string, number>
+  >({});
   // 月历加载状态。
-  const [isMonthOverviewLoading, setIsMonthOverviewLoading] = useState<boolean>(false);
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
+    useState<boolean>(false);
   // 头部导航器 setter。
   const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
   // 随记卡片列表状态。
@@ -377,7 +394,9 @@ export const TodayPage = (): React.JSX.Element => {
             overview.entries
               .map((item) => [
                 item.entryDate,
-                item.todoCount + item.snippetCount + (item.journalCount > 0 ? 1 : 0),
+                item.todoCount +
+                  item.snippetCount +
+                  (item.journalCount > 0 ? 1 : 0),
               ])
               .filter(([_, count]) => (count as number) > 0),
           ),
@@ -539,7 +558,9 @@ export const TodayPage = (): React.JSX.Element => {
 
     try {
       if (!hasDailyApi) {
-        setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+        setTodos((currentTodos) =>
+          currentTodos.filter((todo) => todo.id !== id),
+        );
         return true;
       }
 
@@ -670,7 +691,9 @@ export const TodayPage = (): React.JSX.Element => {
 
     try {
       if (!hasDailyApi) {
-        setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+        setNotes((currentNotes) =>
+          currentNotes.filter((note) => note.id !== id),
+        );
         return true;
       }
 
@@ -693,48 +716,48 @@ export const TodayPage = (): React.JSX.Element => {
         <div className="flex gap-3 flex-shrink-0">
           <div className="grid grid-cols-2 gap-3 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar">
             {TODAY_STATS.map((stat) => {
-               const Icon = stat.icon;
-               return (
-                 <div
-                   key={stat.id}
-                   className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
-                 >
-                   <div className="flex flex-col gap-0.5">
-                     <span className="text-sm font-medium text-white/40">
-                       {stat.label}
-                     </span>
-                     <span className="text-lg font-bold font-mono text-white">
-                       {stat.id === "todo"
-                         ? todos.length
-                         : stat.id === "notes"
-                           ? notes.length
-                           : stat.id === "journal"
-                             ? journalContent.length
-                             : stat.id === "clues"
-                               ? predictedMood
-                               : stat.id === "expense"
-                                 ? `¥${formatAmount(billSummary?.expenseTotal ?? 0)}`
-                                 : stat.id === "income"
-                                   ? `¥${formatAmount(billSummary?.incomeTotal ?? 0)}`
-                                   : stat.value}
-                     </span>
-                   </div>
-                   <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
-                     <Icon className="h-4 w-4" />
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-           <div className="flex-1 max-h-[360px]">
-              <TodayBillPanel
-                summary={billSummary}
-                entryDate={entryDate}
-                onRefresh={loadBillSummary}
-                setSummary={setBillSummary}
-              />
-           </div>
-         </div>
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.id}
+                  className="rounded-[6px] border border-white/5 bg-[#212121] p-3 flex items-center justify-between"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-white/40">
+                      {stat.label}
+                    </span>
+                    <span className="text-lg font-bold font-mono text-white">
+                      {stat.id === "todo"
+                        ? todos.length
+                        : stat.id === "notes"
+                          ? notes.length
+                          : stat.id === "journal"
+                            ? journalContent.length
+                            : stat.id === "clues"
+                              ? predictedMood
+                              : stat.id === "expense"
+                                ? `¥${formatAmount(billSummary?.expenseTotal ?? 0)}`
+                                : stat.id === "income"
+                                  ? `¥${formatAmount(billSummary?.incomeTotal ?? 0)}`
+                                  : stat.value}
+                    </span>
+                  </div>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-white/5 text-white/60">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex-1 h-[300px]">
+            <TodayBillPanel
+              summary={billSummary}
+              entryDate={entryDate}
+              onRefresh={loadBillSummary}
+              setSummary={setBillSummary}
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
           <TodayTodoPanel

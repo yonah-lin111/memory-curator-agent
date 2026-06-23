@@ -172,8 +172,7 @@ export const TodayBillPanel = ({
     }
   }
 
-  const handleDelete = async (event: React.MouseEvent, id: number): Promise<void> => {
-    event.stopPropagation()
+  const handleDelete = async (id: number): Promise<void> => {
     if (!hasBillApi) {
       setSummary((prev) => {
         if (!prev) return prev
@@ -265,29 +264,32 @@ export const TodayBillPanel = ({
 
   const renderAddForm = (): React.JSX.Element => {
     return (
-      <div className="flex flex-col gap-3">
-        {/* 收支类型选择 */}
-        <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px]">
-          {BILL_TYPES.map((type) => (
-            <button
-              key={type.value}
-              type="button"
-              onClick={() => setDraft((prev) => ({ ...prev, billType: type.value }))}
-              className={`flex-1 rounded-[4px] py-1 text-xs font-medium transition-colors ${
-                draft.billType === type.value
-                  ? "bg-[#303030] text-white"
-                  : "text-white/40 hover:text-white/60"
-              }`}
-            >
-              {type.label}
-            </button>
-          ))}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        {/* 类型选择 */}
+        <div className="flex flex-col gap-1 text-left">
+          <span className="text-[11px] font-semibold text-white/40">类型</span>
+          <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px] h-[28px] items-center">
+            {BILL_TYPES.map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => setDraft((prev) => ({ ...prev, billType: type.value }))}
+                className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
+                  draft.billType === type.value
+                    ? "bg-[#303030] text-white"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 金额输入 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1 text-xs">
+          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs">
             <span className="text-white/40 mr-1 font-mono">¥</span>
             <input
               type="number"
@@ -302,10 +304,22 @@ export const TodayBillPanel = ({
           </div>
         </div>
 
-        {/* 分类选择 */}
-        <div className="flex flex-col gap-1 text-left">
+        {/* 备注输入 */}
+        <div className="flex flex-col gap-1 text-left col-span-2">
+          <span className="text-[11px] font-semibold text-white/40">备注</span>
+          <input
+            type="text"
+            value={draft.note}
+            onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))}
+            placeholder="备注说明（可选）"
+            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none placeholder:text-white/20"
+          />
+        </div>
+
+        {/* 分类选择 - 单行并排 */}
+        <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-8 gap-1.5">
             {BILL_CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -323,20 +337,8 @@ export const TodayBillPanel = ({
           </div>
         </div>
 
-        {/* 备注输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">备注</span>
-          <input
-            type="text"
-            value={draft.note}
-            onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))}
-            placeholder="账单备注（可选）"
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1 text-xs text-white outline-none placeholder:text-white/20"
-          />
-        </div>
-
         {/* 标签输入 */}
-        <div className="flex flex-col gap-1 text-left">
+        <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">标签</span>
           <Input
             as="tags"
@@ -352,29 +354,32 @@ export const TodayBillPanel = ({
 
   const renderEditForm = (): React.JSX.Element => {
     return (
-      <div className="flex flex-col gap-3">
-        {/* 收支类型选择 */}
-        <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px]">
-          {BILL_TYPES.map((type) => (
-            <button
-              key={type.value}
-              type="button"
-              onClick={() => setEditDraft((prev) => ({ ...prev, billType: type.value }))}
-              className={`flex-1 rounded-[4px] py-1 text-xs font-medium transition-colors ${
-                editDraft.billType === type.value
-                  ? "bg-[#303030] text-white"
-                  : "text-white/40 hover:text-white/60"
-              }`}
-            >
-              {type.label}
-            </button>
-          ))}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        {/* 类型选择 */}
+        <div className="flex flex-col gap-1 text-left">
+          <span className="text-[11px] font-semibold text-white/40">类型</span>
+          <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px] h-[28px] items-center">
+            {BILL_TYPES.map((type) => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => setEditDraft((prev) => ({ ...prev, billType: type.value }))}
+                className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
+                  editDraft.billType === type.value
+                    ? "bg-[#303030] text-white"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                {type.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 金额输入 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1 text-xs">
+          <div className="flex items-center rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs">
             <span className="text-white/40 mr-1 font-mono">¥</span>
             <input
               type="number"
@@ -389,10 +394,22 @@ export const TodayBillPanel = ({
           </div>
         </div>
 
-        {/* 分类选择 */}
-        <div className="flex flex-col gap-1 text-left">
+        {/* 备注输入 */}
+        <div className="flex flex-col gap-1 text-left col-span-2">
+          <span className="text-[11px] font-semibold text-white/40">备注</span>
+          <input
+            type="text"
+            value={editDraft.note}
+            onChange={(e) => setEditDraft((prev) => ({ ...prev, note: e.target.value }))}
+            placeholder="备注说明（可选）"
+            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none placeholder:text-white/20"
+          />
+        </div>
+
+        {/* 分类选择 - 单行并排 */}
+        <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-8 gap-1.5">
             {BILL_CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -410,20 +427,8 @@ export const TodayBillPanel = ({
           </div>
         </div>
 
-        {/* 备注输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">备注</span>
-          <input
-            type="text"
-            value={editDraft.note}
-            onChange={(e) => setEditDraft((prev) => ({ ...prev, note: e.target.value }))}
-            placeholder="账单备注（可选）"
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 py-1 text-xs text-white outline-none placeholder:text-white/20"
-          />
-        </div>
-
         {/* 标签输入 */}
-        <div className="flex flex-col gap-1 text-left">
+        <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">标签</span>
           <Input
             as="tags"
@@ -449,7 +454,7 @@ export const TodayBillPanel = ({
           <Tooltip
             placement="bottom"
             trigger="click"
-            contentClassName="!w-[280px] !p-3.5 !whitespace-normal flex flex-col"
+            contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
             onConfirm={handleAddConfirm}
             onCancel={handleCancel}
             form={renderAddForm()}
@@ -487,27 +492,15 @@ export const TodayBillPanel = ({
                 key={item.id}
                 className="group/item flex w-full items-center gap-2 hover:bg-white/[0.04] rounded-[4px] px-1 py-0.5 transition-colors"
               >
-                <Tooltip
-                  placement="top"
-                  trigger="click"
-                  contentClassName="!w-[280px] !p-3.5 !whitespace-normal flex flex-col"
-                  onConfirm={() => handleEditConfirm(item.id)}
-                  form={renderEditForm()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleStartEdit(item)}
-                    className="flex items-center gap-2 text-left min-w-0"
-                  >
-                    <span className="text-[10px] text-white/30 w-10 flex-shrink-0 truncate">
-                      {item.category}
-                    </span>
-                    <span className="text-xs text-white/50 truncate max-w-[100px]">
-                      {item.note || "无备注"}
-                    </span>
-                  </button>
-                </Tooltip>
-                <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-2 text-left min-w-0 flex-1">
+                  <span className="text-[10px] text-white/30 w-10 flex-shrink-0 truncate">
+                    {item.category}
+                  </span>
+                  <span className="text-xs text-white/50 truncate max-w-[100px] flex-1">
+                    {item.note || "无备注"}
+                  </span>
+                </div>
+                <div className="ml-auto flex items-center flex-shrink-0">
                   <span
                     className={`text-xs font-mono font-bold ${
                       item.billType === "expense" ? "text-red-400" : "text-green-400"
@@ -515,12 +508,36 @@ export const TodayBillPanel = ({
                   >
                     {item.billType === "expense" ? "-" : "+"}¥{formatAmount(item.amount)}
                   </span>
-                  <IconButton
-                    aria-label={`Delete bill ${item.note || item.category}`}
-                    preset="delete"
-                    className="opacity-0 group-hover/item:opacity-100"
-                    onClick={(e) => void handleDelete(e, item.id)}
-                  />
+
+                  <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
+                    <div className="flex items-center gap-1.5 w-[54px] flex-shrink-0">
+                      <Tooltip
+                        placement="top"
+                        trigger="click"
+                        contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
+                        onConfirm={() => handleEditConfirm(item.id)}
+                        form={renderEditForm()}
+                      >
+                        <IconButton
+                          aria-label={`Edit bill ${item.note || item.category}`}
+                          preset="edit"
+                          onClick={() => handleStartEdit(item)}
+                        />
+                      </Tooltip>
+
+                      <Tooltip
+                        placement="top"
+                        title="确认删除该账单吗？"
+                        onConfirm={() => handleDelete(item.id)}
+                        variant="danger"
+                      >
+                        <IconButton
+                          aria-label={`Delete bill ${item.note || item.category}`}
+                          preset="delete"
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Trash2, Receipt, Tag as TagIcon, X, RotateCcw } from "lucide-react";
+import { Receipt, Tag as TagIcon, X } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import {
   BILL_CATEGORIES,
@@ -14,6 +14,8 @@ import { Tag } from "@/components/ui/Tag";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Input } from "@/components/ui/Input";
 import { IconButton } from "@/components/ui/IconButton";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { DatePickerButton } from "@/components/ui/DatePickerButton";
 
 /** 本地账单项类型 */
 type BillItem = {
@@ -62,8 +64,6 @@ export const BillsPage = (): React.JSX.Element => {
     "all",
   );
   const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   // 新增记录的气泡草稿状态
   const [draft, setDraft] = useState<BillDraft>({
@@ -178,7 +178,6 @@ export const BillsPage = (): React.JSX.Element => {
     try {
       await window.api.bill!.delete(id);
       await loadBills();
-      setDeleteConfirmId(null);
     } catch {
       toast.error("删除账单失败");
     }
@@ -300,15 +299,14 @@ export const BillsPage = (): React.JSX.Element => {
         {/* 日期选择 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">日期</span>
-          <input
-            type="date"
-            required
+          <DatePicker
             value={draft.billDate}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, billDate: e.target.value }))
+            onChange={(date) =>
+              setDraft((prev) => ({ ...prev, billDate: date }))
             }
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none [color-scheme:dark]"
-          />
+          >
+            <DatePickerButton value={draft.billDate} className="w-full" />
+          </DatePicker>
         </div>
 
         {/* 备注输入 */}
@@ -410,15 +408,14 @@ export const BillsPage = (): React.JSX.Element => {
         {/* 日期选择 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">日期</span>
-          <input
-            type="date"
-            required
+          <DatePicker
             value={editDraft.billDate}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, billDate: e.target.value }))
+            onChange={(date) =>
+              setEditDraft((prev) => ({ ...prev, billDate: date }))
             }
-            className="w-full rounded-[6px] border border-white/10 bg-[#212121] px-2.5 h-[28px] text-xs text-white outline-none [color-scheme:dark]"
-          />
+          >
+            <DatePickerButton value={editDraft.billDate} className="w-full" />
+          </DatePicker>
         </div>
 
         {/* 备注输入 */}
@@ -563,96 +560,83 @@ export const BillsPage = (): React.JSX.Element => {
                 {visibleBills.map((bill) => (
                   <div
                     key={bill.id}
-                    className="flex items-center justify-between border-b border-white/[0.03] hover:bg-white/[0.02] rounded-[4px] pr-2 group"
+                    className="flex items-center justify-between border-b border-white/[0.03] hover:bg-white/[0.02] rounded-[4px] pr-2 group/item"
                   >
-                    {/* 点击行主体启动 Tooltip 原地修改 */}
-                    <Tooltip
-                      placement="top"
-                      trigger="click"
-                      contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
-                      onConfirm={() => handleEditConfirm(bill.id)}
-                      form={renderEditForm()}
-                      className="flex-1"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleStartEdit(bill)}
-                        className="flex w-full items-center gap-3 text-left py-2 px-2 transition-colors cursor-pointer"
+                    <div className="flex w-full items-center gap-3 py-2 px-2 text-left">
+                      {/* 日期 */}
+                      <span className="text-xs text-white/40 font-mono w-20 flex-shrink-0">
+                        {bill.billDate}
+                      </span>
+
+                      {/* 分类 */}
+                      <span className="rounded-[4px] border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/70 flex-shrink-0">
+                        {bill.category}
+                      </span>
+
+                      {/* 备注 */}
+                      <span className="text-xs text-white/50 flex-1 truncate">
+                        {bill.note || "-"}
+                      </span>
+
+                      {/* 标签列表 */}
+                      <div className="flex flex-wrap gap-1 max-w-[120px] overflow-hidden flex-shrink-0">
+                        {bill.tags.slice(0, 2).map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-[4px] bg-white/5 px-1.5 py-0.5 text-[10px] text-white/40"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {bill.tags.length > 2 && (
+                          <span className="text-[10px] text-white/30">
+                            +{bill.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 金额 */}
+                      <span
+                        className={`text-xs font-mono font-bold w-20 text-right flex-shrink-0 ${
+                          bill.billType === "expense"
+                            ? "text-red-400"
+                            : "text-green-400"
+                        }`}
                       >
-                        {/* 日期 */}
-                        <span className="text-xs text-white/40 font-mono w-20 flex-shrink-0">
-                          {bill.billDate}
-                        </span>
+                        {bill.billType === "expense" ? "-" : "+"}¥
+                        {formatAmount(bill.amount)}
+                      </span>
+                    </div>
 
-                        {/* 分类 */}
-                        <span className="rounded-[4px] border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/70 flex-shrink-0">
-                          {bill.category}
-                        </span>
-
-                        {/* 备注 */}
-                        <span className="text-xs text-white/50 flex-1 truncate">
-                          {bill.note || "-"}
-                        </span>
-
-                        {/* 标签列表 */}
-                        <div className="flex flex-wrap gap-1 max-w-[120px] overflow-hidden flex-shrink-0">
-                          {bill.tags.slice(0, 2).map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-[4px] bg-white/5 px-1.5 py-0.5 text-[10px] text-white/40"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {bill.tags.length > 2 && (
-                            <span className="text-[10px] text-white/30">
-                              +{bill.tags.length - 2}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 金额 */}
-                        <span
-                          className={`text-xs font-mono font-bold w-20 text-right flex-shrink-0 ${
-                            bill.billType === "expense"
-                              ? "text-red-400"
-                              : "text-green-400"
-                          }`}
+                    {/* 操作区域 */}
+                    <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
+                      <div className="flex items-center gap-1.5 w-[54px] flex-shrink-0">
+                        <Tooltip
+                          placement="top"
+                          trigger="click"
+                          contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
+                          onConfirm={() => handleEditConfirm(bill.id)}
+                          form={renderEditForm()}
                         >
-                          {bill.billType === "expense" ? "-" : "+"}¥
-                          {formatAmount(bill.amount)}
-                        </span>
-                      </button>
-                    </Tooltip>
+                          <IconButton
+                            aria-label={`Edit bill ${bill.note || bill.category}`}
+                            preset="edit"
+                            onClick={() => handleStartEdit(bill)}
+                          />
+                        </Tooltip>
 
-                    {/* 删除操作 */}
-                    <div
-                      className="flex-shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {deleteConfirmId === bill.id ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setDeleteConfirmId(null)}
-                            className="text-[10px] text-white/40 hover:text-white/70"
-                          >
-                            取消
-                          </button>
-                          <button
-                            onClick={() => handleDelete(bill.id)}
-                            className="text-[10px] text-red-400 hover:text-red-300 font-bold"
-                          >
-                            确认
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setDeleteConfirmId(bill.id)}
-                          className="p-1 hover:bg-white/5 rounded-[4px] opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                        <Tooltip
+                          placement="top"
+                          title="确认删除该账单吗？"
+                          onConfirm={() => handleDelete(bill.id)}
+                          variant="danger"
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-white/30 hover:text-red-400" />
-                        </button>
-                      )}
+                          <IconButton
+                            aria-label={`Delete bill ${bill.note || bill.category}`}
+                            preset="delete"
+                          />
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -695,16 +679,6 @@ export const BillsPage = (): React.JSX.Element => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <span className="text-xs font-bold text-white/80">分类筛选</span>
-              {categoryFilter !== "all" && (
-                <IconButton
-                  preset="default"
-                  size="small"
-                  onClick={() => setCategoryFilter("all")}
-                  title="重置分类"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                </IconButton>
-              )}
             </div>
             <div className="flex flex-wrap gap-1.5">
               <Tag
@@ -731,16 +705,6 @@ export const BillsPage = (): React.JSX.Element => {
           <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <span className="text-xs font-bold text-white/80">标签筛选</span>
-              {activeTag && (
-                <IconButton
-                  preset="default"
-                  size="small"
-                  onClick={() => setActiveTag(null)}
-                  title="重置标签"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                </IconButton>
-              )}
             </div>
             <div className="flex flex-wrap gap-1.5 overflow-y-auto custom-scrollbar max-h-[300px] pr-0.5">
               {allTags.length === 0 ? (

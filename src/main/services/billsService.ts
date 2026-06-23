@@ -176,7 +176,7 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
       .get(billDate) as { total: number }
 
     const recentRows = database
-      .prepare("SELECT * FROM bills WHERE bill_date = ? ORDER BY id DESC LIMIT 5")
+      .prepare("SELECT * FROM bills WHERE bill_date = ? ORDER BY id DESC")
       .all(billDate) as BillRow[]
 
     return {
