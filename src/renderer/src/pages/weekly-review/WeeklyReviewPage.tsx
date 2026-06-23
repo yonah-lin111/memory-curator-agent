@@ -470,7 +470,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
   return (
     <div
       aria-label="Weekly Review Page"
-      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 px-1 lg:px-2 [scrollbar-gutter:stable] flex flex-col text-sm"
+      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 [scrollbar-gutter:stable] flex flex-col text-sm"
     >
       <div className="flex-1 flex flex-col gap-6 pr-1">
         {/* 1. 上部面板：数据透视 (Dashboard) */}

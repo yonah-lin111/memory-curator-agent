@@ -710,7 +710,7 @@ export const TodayPage = (): React.JSX.Element => {
   return (
     <section
       aria-label="Main content container"
-      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar px-1 lg:px-2 [scrollbar-gutter:stable]"
+      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar [scrollbar-gutter:stable]"
     >
       <div className="flex-1 flex flex-col gap-3 pr-1">
         <div className="flex gap-3 flex-shrink-0">

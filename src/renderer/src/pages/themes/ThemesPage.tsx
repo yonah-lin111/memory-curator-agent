@@ -255,7 +255,7 @@ export const ThemesPage = (): React.JSX.Element => {
   return (
     <div
       aria-label="Themes Page"
-      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 px-1 lg:px-2 [scrollbar-gutter:stable] flex flex-col text-sm"
+      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 [scrollbar-gutter:stable] flex flex-col text-sm"
     >
       {/* 页面标题 */}
       <div className="flex-shrink-0 mb-4 flex items-center justify-between border-b border-white/5 pb-2">
