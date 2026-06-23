@@ -98,7 +98,9 @@ type AssociatedPersonPayload = {
 }
 
 // 账单分类类型。
-type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+type BillCategory = 
+  | '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+  | '工资' | '兼职' | '理财' | '礼金' | '报销' | '奖金' | '退款'
 
 // 收支类型。
 type BillType = 'expense' | 'income'

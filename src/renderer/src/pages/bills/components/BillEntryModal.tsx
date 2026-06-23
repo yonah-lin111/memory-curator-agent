@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { BILL_CATEGORIES, BILL_TYPES, parseAmountToCents, type BillCategory, type BillType } from "./billShared";
+import { BILL_CATEGORIES, BILL_TYPES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, parseAmountToCents, type BillCategory, type BillType } from "./billShared";
 
 /** 账单草稿 */
 export type BillDraft = {
@@ -99,7 +99,10 @@ export const BillEntryModal = ({ bill, onClose, onSave }: BillEntryModalProps): 
               <button
                 key={type.value}
                 type="button"
-                onClick={() => setBillType(type.value)}
+                onClick={() => {
+                  setBillType(type.value)
+                  setCategory(type.value === "expense" ? "餐饮" : "工资")
+                }}
                 className={`flex-1 rounded-[6px] border px-3 py-2 text-sm font-medium transition-colors ${
                   billType === type.value
                     ? "border-white/20 bg-white text-black"
@@ -131,7 +134,7 @@ export const BillEntryModal = ({ bill, onClose, onSave }: BillEntryModalProps): 
           <div>
             <label className="block text-xs text-white/40 mb-1">分类</label>
             <div className="grid grid-cols-4 gap-2">
-              {BILL_CATEGORIES.map((cat) => (
+              {(billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
                 <button
                   key={cat}
                   type="button"

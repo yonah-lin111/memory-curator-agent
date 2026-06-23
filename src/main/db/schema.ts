@@ -761,13 +761,18 @@ export const associatedPeople = sqliteTable('associated_people', {
 // ==================== Bills ====================
 
 /** 账单分类 */
-export type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+export type BillCategory = 
+  | '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+  | '工资' | '兼职' | '理财' | '礼金' | '报销' | '奖金' | '退款'
 
 /** 收支类型 */
 export type BillType = 'expense' | 'income'
 
 /** 合法账单分类集合 */
-export const BILL_CATEGORIES: BillCategory[] = ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他']
+export const BILL_CATEGORIES: BillCategory[] = [
+  '餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他',
+  '工资', '兼职', '理财', '礼金', '报销', '奖金', '退款'
+]
 
 /** 账单数据库行 */
 export type BillRow = {

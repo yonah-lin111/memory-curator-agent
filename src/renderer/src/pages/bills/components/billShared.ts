@@ -1,11 +1,19 @@
+/** 支出分类列表 */
+export const EXPENSE_CATEGORIES = ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他'] as const
+
+/** 收入分类列表 */
+export const INCOME_CATEGORIES = ['工资', '兼职', '理财', '礼金', '报销', '奖金', '退款', '其他'] as const
+
 /** 账单分类枚举 */
-export type BillCategory = '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
+export type BillCategory = typeof EXPENSE_CATEGORIES[number] | typeof INCOME_CATEGORIES[number]
 
 /** 收支类型 */
 export type BillType = 'expense' | 'income'
 
 /** 账单分类列表 */
-export const BILL_CATEGORIES: BillCategory[] = ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他']
+export const BILL_CATEGORIES: BillCategory[] = Array.from(
+  new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES])
+)
 
 /** 收支类型列表 */
 export const BILL_TYPES: { value: BillType; label: string }[] = [
@@ -22,7 +30,14 @@ export const BILL_CATEGORY_ICONS: Record<BillCategory, string> = {
   '居住': 'Home',
   '医疗': 'HeartPulse',
   '教育': 'GraduationCap',
-  '其他': 'Ellipsis'
+  '其他': 'Ellipsis',
+  '工资': 'Coins',
+  '兼职': 'Briefcase',
+  '理财': 'TrendingUp',
+  '礼金': 'Gift',
+  '报销': 'Receipt',
+  '奖金': 'Trophy',
+  '退款': 'Undo2'
 }
 
 /**

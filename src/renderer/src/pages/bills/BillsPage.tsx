@@ -5,6 +5,8 @@ import { useToast } from "@/components/ui/Toast";
 import {
   BILL_CATEGORIES,
   BILL_TYPES,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
   formatAmount,
   parseAmountToCents,
   type BillCategory,
@@ -283,7 +285,11 @@ export const BillsPage = (): React.JSX.Element => {
                 key={type.value}
                 type="button"
                 onClick={() =>
-                  setDraft((prev) => ({ ...prev, billType: type.value }))
+                  setDraft((prev) => ({
+                    ...prev,
+                    billType: type.value,
+                    category: type.value === "expense" ? "餐饮" : "工资",
+                  }))
                 }
                 className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
                   draft.billType === type.value
@@ -348,7 +354,7 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {BILL_CATEGORIES.map((cat) => (
+            {(draft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -392,7 +398,11 @@ export const BillsPage = (): React.JSX.Element => {
                 key={type.value}
                 type="button"
                 onClick={() =>
-                  setEditDraft((prev) => ({ ...prev, billType: type.value }))
+                  setEditDraft((prev) => ({
+                    ...prev,
+                    billType: type.value,
+                    category: type.value === "expense" ? "餐饮" : "工资",
+                  }))
                 }
                 className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
                   editDraft.billType === type.value
@@ -457,7 +467,7 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {BILL_CATEGORIES.map((cat) => (
+            {(editDraft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
               <button
                 key={cat}
                 type="button"
