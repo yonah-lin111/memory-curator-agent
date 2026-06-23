@@ -203,7 +203,9 @@ export const SidebarNavigationList = ({
                       key={item.id}
                       type="button"
                       aria-current={isActive ? "page" : undefined}
-                      aria-label={shouldUseCollapsedLayout ? item.label : undefined}
+                      aria-label={
+                        shouldUseCollapsedLayout ? item.label : undefined
+                      }
                       onClick={() => onPageChange(item.id)}
                       className={`flex w-full items-center rounded-[6px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                         shouldUseCollapsedLayout
@@ -227,7 +229,9 @@ export const SidebarNavigationList = ({
                           </span>
                           <span
                             className={`mt-1 text-xs leading-none whitespace-nowrap ${
-                              isActive ? "text-black/60 font-medium" : "text-white/30"
+                              isActive
+                                ? "text-black/60 font-medium"
+                                : "text-white/30"
                             }`}
                           >
                             {item.description}
@@ -238,7 +242,12 @@ export const SidebarNavigationList = ({
                   );
 
                   return shouldUseCollapsedLayout ? (
-                    <Tooltip key={item.id} content={item.label} placement="right" className="w-full">
+                    <Tooltip
+                      key={item.id}
+                      content={item.label}
+                      placement="right"
+                      className="w-full"
+                    >
                       {buttonContent}
                     </Tooltip>
                   ) : (
@@ -254,7 +263,7 @@ export const SidebarNavigationList = ({
       {/* 底部设置 */}
       <div
         className={`mt-auto flex flex-col gap-2.5 pt-4 border-t border-white/5 w-full ${
-          shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
+          shouldUseCollapsedLayout ? "" : "lg:w-[160px] lg:flex-shrink-0"
         }`}
       >
         {shouldUseCollapsedLayout ? (

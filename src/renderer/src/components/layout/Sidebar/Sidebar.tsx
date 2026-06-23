@@ -90,7 +90,7 @@ export const Sidebar = ({
   const shouldUseCollapsedLayout = isCollapsed;
 
   return (
-    <div className="relative flex h-auto min-h-0 lg:h-full flex-shrink-0">
+    <div className="relative flex h-auto min-h-0 lg:h-full flex-shrink-0 lg:mr-1">
       <aside
         className={`relative w-full h-auto min-h-0 lg:h-full flex flex-col justify-between rounded-[6px] border border-white/5 bg-[#212121] select-none flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
           shouldUseCollapsedLayout ? "lg:w-16 p-3 items-center" : "lg:w-56 p-4"
