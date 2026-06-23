@@ -560,86 +560,92 @@ export const BillsPage = (): React.JSX.Element => {
                 <p className="text-xs">暂无匹配账单记录</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5 mb-1">
+              <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-1">
                 {visibleBills.map((bill) => (
                   <div
                     key={bill.id}
-                    className="flex items-center justify-between border-b border-white/[0.03] hover:bg-white/[0.02] rounded-[4px] pr-2 group/item"
+                    className="group/card relative flex flex-col justify-between rounded-[6px] border border-white/[0.05] bg-[#1a1a1a]/40 p-3 hover:bg-[#252525]/30 hover:border-white/[0.12] transition-all duration-200 text-left min-h-[135px] overflow-hidden"
                   >
-                    <div className="flex w-full items-center gap-3 py-2 px-2 text-left">
-                      {/* 日期 */}
-                      <span className="text-xs text-white/40 font-mono w-20 flex-shrink-0">
-                        {bill.billDate}
-                      </span>
+                    {/* 左侧类型状态指示条 */}
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-[4px] ${
+                        bill.billType === "expense" ? "bg-red-500/70" : "bg-green-500/70"
+                      }`}
+                    />
 
-                      {/* 分类 */}
-                      <span className="rounded-[4px] border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/70 flex-shrink-0">
-                        {bill.category}
-                      </span>
-
-                      {/* 备注 */}
-                      <span className="text-xs text-white/50 flex-1 truncate">
-                        {bill.note || "-"}
-                      </span>
-
-                      {/* 标签列表 */}
-                      <div className="flex flex-wrap gap-1 max-w-[120px] overflow-hidden flex-shrink-0">
-                        {bill.tags.slice(0, 2).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-[4px] bg-white/5 px-1.5 py-0.5 text-[10px] text-white/40"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {bill.tags.length > 2 && (
-                          <span className="text-[10px] text-white/30">
-                            +{bill.tags.length - 2}
-                          </span>
-                        )}
+                    <div className="pl-3 flex flex-col justify-between h-full gap-2">
+                      {/* 头部：分类与金额 */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="rounded-[4px] border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/70 font-medium">
+                          {bill.category}
+                        </span>
+                        <span
+                          className={`text-sm font-mono font-bold ${
+                            bill.billType === "expense"
+                              ? "text-red-400"
+                              : "text-green-400"
+                          }`}
+                        >
+                          {bill.billType === "expense" ? "-" : "+"}¥
+                          {formatAmount(bill.amount)}
+                        </span>
                       </div>
 
-                      {/* 金额 */}
-                      <span
-                        className={`text-xs font-mono font-bold w-20 text-right flex-shrink-0 ${
-                          bill.billType === "expense"
-                            ? "text-red-400"
-                            : "text-green-400"
-                        }`}
-                      >
-                        {bill.billType === "expense" ? "-" : "+"}¥
-                        {formatAmount(bill.amount)}
-                      </span>
-                    </div>
+                      {/* 备注：限制为两行，保持排版工整 */}
+                      <p className="text-xs text-white/50 line-clamp-2 min-h-[32px] break-all leading-normal">
+                        {bill.note || (
+                          <span className="text-white/20 italic">无备注</span>
+                        )}
+                      </p>
 
-                    {/* 操作区域 */}
-                    <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
-                      <div className="flex items-center gap-1.5 w-[54px] flex-shrink-0">
-                        <Tooltip
-                          placement="top"
-                          trigger="click"
-                          contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
-                          onConfirm={() => handleEditConfirm(bill.id)}
-                          form={renderEditForm()}
-                        >
-                          <IconButton
-                            aria-label={`Edit bill ${bill.note || bill.category}`}
-                            preset="edit"
-                            onClick={() => handleStartEdit(bill)}
-                          />
-                        </Tooltip>
+                      {/* 底部：日期/标签 与 操作按钮 */}
+                      <div className="flex items-end justify-between border-t border-white/[0.03] pt-2 mt-1">
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="text-[10px] text-white/30 font-mono">
+                            {bill.billDate}
+                          </span>
+                          {bill.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {bill.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-[4px] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[80px]"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
 
-                        <Tooltip
-                          placement="top"
-                          title="确认删除该账单吗？"
-                          onConfirm={() => handleDelete(bill.id)}
-                          variant="danger"
-                        >
-                          <IconButton
-                            aria-label={`Delete bill ${bill.note || bill.category}`}
-                            preset="delete"
-                          />
-                        </Tooltip>
+                        {/* 操作区域：悬浮时显示，动作自然 */}
+                        <div className="opacity-0 group-hover/card:opacity-100 flex items-center gap-1.5 transition-opacity duration-200 flex-shrink-0 ml-2">
+                          <Tooltip
+                            placement="top"
+                            trigger="click"
+                            contentClassName="!w-[420px] !p-4 !whitespace-normal flex flex-col"
+                            onConfirm={() => handleEditConfirm(bill.id)}
+                            form={renderEditForm()}
+                          >
+                            <IconButton
+                              aria-label={`Edit bill ${bill.note || bill.category}`}
+                              preset="edit"
+                              onClick={() => handleStartEdit(bill)}
+                            />
+                          </Tooltip>
+
+                          <Tooltip
+                            placement="top"
+                            title="确认删除该账单吗？"
+                            onConfirm={() => handleDelete(bill.id)}
+                            variant="danger"
+                          >
+                            <IconButton
+                              aria-label={`Delete bill ${bill.note || bill.category}`}
+                              preset="delete"
+                            />
+                          </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </div>
