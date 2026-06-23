@@ -39,7 +39,7 @@ export const DatePickerButton = ({
   return (
     <button
       type="button"
-      className={`group relative flex h-7 items-center gap-1.5 rounded-[6px] border border-white/5 bg-[#303030] px-2.5 text-left text-xs font-semibold text-white/80 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.04] focus:outline-none focus:border-white/20 ${className}`}
+      className={`group relative flex h-7 items-center gap-1.5 rounded-[6px] border border-white/5 bg-[#303030] px-2.5 text-left text-xs font-semibold text-white/80 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.04] focus:outline-none focus:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
       {...props}
     >
       <CalendarDays className="h-3 w-3 flex-shrink-0 text-white/40" />

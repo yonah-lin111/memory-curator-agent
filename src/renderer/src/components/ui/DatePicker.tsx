@@ -44,6 +44,8 @@ export interface DatePickerProps {
   onVisibleMonthChange?: (nextMonth: string) => void;
   // 自定义触发子元素。
   children?: React.ReactNode;
+  // 是否禁用。
+  disabled?: boolean;
 }
 
 // 角标数字上限。
@@ -81,6 +83,7 @@ export const DatePicker = ({
   isMonthOverviewLoading = false,
   onVisibleMonthChange,
   children,
+  disabled = false,
 }: DatePickerProps): React.JSX.Element => {
   // 控制弹层显示状态。
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -215,6 +218,13 @@ export const DatePicker = ({
     }
   }, [value, mode]);
 
+  // 当禁用状态开启时，确保关闭弹窗。
+  useEffect(() => {
+    if (disabled && isOpen) {
+      setIsOpen(false);
+    }
+  }, [disabled, isOpen]);
+
   // 触发可见月份回调。
   useEffect(() => {
     if (isOpen && onVisibleMonthChange && mode !== "month") {
@@ -264,6 +274,7 @@ export const DatePicker = ({
     const child = children as React.ReactElement<any>;
     const childProps: Record<string, any> = {
       onClick: (e: React.MouseEvent) => {
+        if (disabled) return;
         setIsOpen((prev) => !prev);
         if (typeof child.props.onClick === "function") {
           child.props.onClick(e);
@@ -276,6 +287,7 @@ export const DatePicker = ({
       "data-open": isOpen ? "true" : "false",
       "aria-expanded": isOpen,
       mode: child.props.mode || mode,
+      disabled: child.props.disabled !== undefined ? child.props.disabled : disabled,
     });
   } else if (!children) {
     const getDisplayValue = (): string => {
@@ -292,8 +304,12 @@ export const DatePicker = ({
     triggerElement = (
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`relative flex w-full h-[28px] items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 text-left text-xs text-white outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25 ${triggerClassName}`}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen(!isOpen);
+        }}
+        className={`relative flex w-full h-[28px] items-center gap-1.5 rounded-[6px] border border-white/10 bg-[#212121] px-2.5 text-left text-xs text-white outline-none transition-colors duration-150 hover:border-white/20 focus:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed ${triggerClassName}`}
       >
         <CalendarDays className="h-3 w-3 flex-shrink-0 text-white/40" />
         <span className="font-mono flex-1">{getDisplayValue()}</span>
@@ -305,9 +321,6 @@ export const DatePicker = ({
       </button>
     );
   }
-
-  // 弹出框对齐位置样式名
-  const alignClass = align === "right" ? "right-0" : "left-0";
 
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>

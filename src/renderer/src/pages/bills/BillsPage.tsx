@@ -65,7 +65,9 @@ export const BillsPage = (): React.JSX.Element => {
     "all",
   );
   const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [timeFilterMode, setTimeFilterMode] = useState<"all" | "date" | "week" | "month">("all");
+  const [timeFilterMode, setTimeFilterMode] = useState<
+    "all" | "date" | "week" | "month"
+  >("all");
   const [selectedTime, setSelectedTime] = useState<string>("");
 
   // 新增记录的气泡草稿状态
@@ -506,33 +508,6 @@ export const BillsPage = (): React.JSX.Element => {
                 </span>
               </div>
 
-              {/* 分割线 */}
-              <div className="h-3 w-px bg-white/10" />
-
-              {BILL_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setTypeFilter(type.value as BillType)}
-                  className={`rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    typeFilter === type.value
-                      ? "border-white/20 bg-white text-black"
-                      : "border-white/10 bg-[#212121] text-white/60 hover:bg-white/5"
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-              <button
-                onClick={() => setTypeFilter("all")}
-                className={`rounded-[6px] border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  typeFilter === "all"
-                    ? "border-white/20 bg-white text-black"
-                    : "border-white/10 bg-[#212121] text-white/60 hover:bg-white/5"
-                }`}
-              >
-                全部收支
-              </button>
-
               {activeTag && (
                 <div className="flex items-center gap-1 rounded-[6px] border border-white/5 bg-white/5 px-2 py-1 text-xs text-white/60">
                   <TagIcon className="h-2.5 w-2.5" />
@@ -694,28 +669,29 @@ export const BillsPage = (): React.JSX.Element => {
 
         {/* 右侧：分类与标签 */}
         <aside className="flex min-h-0 w-full lg:w-[300px] flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
-          {/* 分类筛选 */}
+          {/* 收支类型 */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
-              <span className="text-xs font-bold text-white/80">分类筛选</span>
+              <span className="text-xs font-bold text-white/80">收支类型</span>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Tag
-                highlighted={categoryFilter === "all"}
-                onClick={() => setCategoryFilter("all")}
-                className="font-medium cursor-pointer"
-              >
-                全部分类
-              </Tag>
-              {BILL_CATEGORIES.map((cat) => (
-                <Tag
-                  key={cat}
-                  highlighted={categoryFilter === cat}
-                  onClick={() => setCategoryFilter(cat)}
-                  className="font-medium cursor-pointer"
+            <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px] h-[28px] items-center border border-white/5">
+              {[
+                { value: "all", label: "全部收支" },
+                { value: "income", label: "收入" },
+                { value: "expense", label: "支出" },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setTypeFilter(type.value as BillType | "all")}
+                  className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
+                    typeFilter === type.value
+                      ? "bg-[#303030] text-white"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
                 >
-                  {cat}
-                </Tag>
+                  {type.label}
+                </button>
               ))}
             </div>
           </div>
@@ -756,22 +732,56 @@ export const BillsPage = (): React.JSX.Element => {
               ))}
             </div>
 
-            {timeFilterMode !== "all" && (
-              <div className="mt-1">
-                <DatePicker
-                  mode={timeFilterMode as "date" | "week" | "month"}
+            <div className="mt-1">
+              <DatePicker
+                mode={
+                  timeFilterMode === "all"
+                    ? "date"
+                    : (timeFilterMode as "date" | "week" | "month")
+                }
+                value={selectedTime}
+                onChange={(date) => setSelectedTime(date)}
+                className="w-full"
+                disabled={timeFilterMode === "all"}
+              >
+                <DatePickerButton
+                  mode={
+                    timeFilterMode === "all"
+                      ? "date"
+                      : (timeFilterMode as "date" | "week" | "month")
+                  }
                   value={selectedTime}
-                  onChange={(date) => setSelectedTime(date)}
                   className="w-full"
+                  placeholder="全部时间"
+                />
+              </DatePicker>
+            </div>
+          </div>
+
+          {/* 分类筛选 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <span className="text-xs font-bold text-white/80">分类筛选</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Tag
+                highlighted={categoryFilter === "all"}
+                onClick={() => setCategoryFilter("all")}
+                className="font-medium cursor-pointer"
+              >
+                全部分类
+              </Tag>
+              {BILL_CATEGORIES.map((cat) => (
+                <Tag
+                  key={cat}
+                  highlighted={categoryFilter === cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className="font-medium cursor-pointer"
                 >
-                  <DatePickerButton
-                    mode={timeFilterMode as "date" | "week" | "month"}
-                    value={selectedTime}
-                    className="w-full"
-                  />
-                </DatePicker>
-              </div>
-            )}
+                  {cat}
+                </Tag>
+              ))}
+            </div>
           </div>
 
           {/* 标签筛选 */}
@@ -788,7 +798,6 @@ export const BillsPage = (): React.JSX.Element => {
                 allTags.map((tag) => (
                   <Tag
                     key={tag}
-                    size="small"
                     highlighted={activeTag === tag}
                     onClick={() => setActiveTag(activeTag === tag ? null : tag)}
                     className="font-medium cursor-pointer"
