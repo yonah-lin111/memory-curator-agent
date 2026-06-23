@@ -555,9 +555,14 @@ export const BillsPage = (): React.JSX.Element => {
                 加载中...
               </p>
             ) : visibleBills.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-16 gap-3 text-white/30">
-                <Receipt className="h-8 w-8" />
-                <p className="text-xs">暂无匹配账单记录</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <Receipt className="h-7 w-7 text-white/30" />
+                <h2 className="mt-3 text-sm font-bold text-white/80">
+                  暂无匹配账单记录
+                </h2>
+                <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+                  没有找到符合当前筛选条件的账单，可尝试调整过滤条件或点击右上角加号录入新账单。
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-1">

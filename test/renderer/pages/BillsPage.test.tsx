@@ -82,4 +82,17 @@ describe("BillsPage", () => {
     expect(screen.getByText("#美食")).toBeInTheDocument();
     expect(screen.getByText("#兼职")).toBeInTheDocument();
   });
+
+  it("当无账单记录时正确展示空状态", async () => {
+    window.api!.bill!.list = vi.fn().mockResolvedValue([]);
+    renderBillsPage();
+
+    // 验证展示空状态标题和描述
+    expect(await screen.findByText("暂无匹配账单记录")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "没有找到符合当前筛选条件的账单，可尝试调整过滤条件或点击右上角加号录入新账单。",
+      ),
+    ).toBeInTheDocument();
+  });
 });

@@ -493,7 +493,7 @@ export const TodayBillPanel = ({
       </div>
 
       {/* 账单历史列表 */}
-      {summary && summary.recentItems.length > 0 && (
+      {summary && summary.recentItems.length > 0 ? (
         <>
           <div className="border-t border-white/5 my-2" />
           <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
@@ -553,6 +553,16 @@ export const TodayBillPanel = ({
             ))}
           </div>
         </>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <Receipt className="h-7 w-7 text-white/30" />
+          <h2 className="mt-3 text-sm font-bold text-white/80">
+            暂无今日账单
+          </h2>
+          <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
+            今日还没有账单，点击右上角加号，记录第一笔收支。
+          </p>
+        </div>
       )}
     </div>
   );
