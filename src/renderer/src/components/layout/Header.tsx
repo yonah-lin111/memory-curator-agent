@@ -1,5 +1,11 @@
 import type React from "react";
-import { MessageSquare, RotateCcw } from "lucide-react";
+import {
+  MessageSquare,
+  RotateCcw,
+  BookOpen,
+  BookLock,
+  Book,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
@@ -32,7 +38,13 @@ export const Header = ({
   chatLeadingAction,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
-  const { customTitle, dateNavigator, extraActions, hideChatButton, settingsState } = useHeaderStore();
+  const {
+    customTitle,
+    dateNavigator,
+    extraActions,
+    hideChatButton,
+    settingsState,
+  } = useHeaderStore();
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
@@ -43,9 +55,13 @@ export const Header = ({
         </span>
         <span className="text-white/20">/</span>
         <span className="text-white font-bold">{activePage}</span>
-        {["today", "todo", "snippets", "journal", "weekly"].includes(activePage) && !isChatOpen && dateNavigator && (
-          <span className="flex items-center ml-2">{dateNavigator}</span>
-        )}
+        {["today", "todo", "snippets", "journal", "weekly"].includes(
+          activePage,
+        ) &&
+          !isChatOpen &&
+          dateNavigator && (
+            <span className="flex items-center ml-2">{dateNavigator}</span>
+          )}
         {!isChatOpen && customTitle && (
           <>
             <span className="text-white/20">/</span>
@@ -55,7 +71,9 @@ export const Header = ({
         {isChatOpen && chatTitle && (
           <>
             <span className="text-white/30 font-bold">·</span>
-            <span className="text-white font-bold max-w-[240px] truncate select-text">{chatTitle}</span>
+            <span className="text-white font-bold max-w-[240px] truncate select-text">
+              {chatTitle}
+            </span>
           </>
         )}
       </div>
@@ -105,6 +123,9 @@ export const Header = ({
         )}
         {!isChatOpen && extraActions}
         {chatLeadingAction}
+        <IconButton aria-label="提示词" title="提示词">
+          <Book className="h-3.5 w-3.5" />
+        </IconButton>
         {!hideChatButton && (
           <IconButton
             aria-label={isChatOpen ? "Close chat" : "Open chat"}
