@@ -235,6 +235,12 @@ export const startAiChat = async (
         compactionProvider,
         compactionModel,
         contextLimit: modelConfig.limit?.context,
+        // 从 Agent 配置读取 maxTurns，未设置则默认 Infinity（无限制）。
+        maxTurns:
+          config.agent.context.maxTurns &&
+          config.agent.context.maxTurns > 0
+            ? config.agent.context.maxTurns
+            : undefined,
         messages: buildContextAgentMessages({
           systemMessage: appendAiChatAgentDirectiveToSystemMessage(
             createSystemPrompt(),

@@ -17,8 +17,8 @@ import {
   type ToolConfirmationAnswerData
 } from '@/agent/tools/toolConfirmation'
 
-// 默认最大 Agent 循环轮数。
-const DEFAULT_MAX_TURNS = 5
+// 默认最大 Agent 循环轮数（无限制）。
+const DEFAULT_MAX_TURNS = Infinity
 
 // 到达最大轮数时回灌模型的提示。
 const MAX_TURNS_REACHED_MESSAGE = [

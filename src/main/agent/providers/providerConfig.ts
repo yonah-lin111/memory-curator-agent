@@ -49,6 +49,8 @@ type RawAgentConfig = {
     toolOutputMaxChars?: number
     // 最近保留完整工具结果的数量。
     recentToolResultLimit?: number
+    // 最大工具调用轮数，0 或不设置表示无限制。
+    maxTurns?: number
   }
 }
 
@@ -154,7 +156,14 @@ const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig =>
     recentToolResultLimit: normalizePositiveInteger(
       agent?.context?.recentToolResultLimit,
       DEFAULT_AGENT_CONFIG.context.recentToolResultLimit
-    )
+    ),
+    maxTurns:
+      agent?.context?.maxTurns !== undefined &&
+      typeof agent.context.maxTurns === 'number' &&
+      Number.isInteger(agent.context.maxTurns) &&
+      agent.context.maxTurns > 0
+        ? agent.context.maxTurns
+        : undefined
   }
 })
 

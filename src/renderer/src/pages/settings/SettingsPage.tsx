@@ -1121,6 +1121,31 @@ export const SettingsPage = (): React.JSX.Element => {
             }
           />
         </label>
+        <label className="grid gap-1.5 text-xs text-white/45">
+          Max tool turns
+          <Input
+            aria-label="Max tool turns"
+            as="number"
+            value={settings.agent.context.maxTurns ?? 0}
+            placeholder="无限制"
+            onChangeValue={(numVal) =>
+              updateSettings((current) => ({
+                ...current,
+                agent: {
+                  ...current.agent,
+                  context: {
+                    ...current.agent.context,
+                    // 0 或非正整数视为无限制（undefined）。
+                    maxTurns: numVal > 0 ? numVal : undefined,
+                  },
+                },
+              }))
+            }
+          />
+          <span className="text-[10px] text-white/25">
+            0 或留空表示不限制工具调用轮数
+          </span>
+        </label>
       </div>
     </section>
   );

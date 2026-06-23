@@ -41,6 +41,8 @@ export type AgentContextPolicyConfig = {
   toolOutputMaxChars: number
   // 最近保留完整工具结果的数量。
   recentToolResultLimit: number
+  // 最大工具调用轮数，未设置或 0 表示无限制。
+  maxTurns?: number
 }
 
 // Agent 配置。

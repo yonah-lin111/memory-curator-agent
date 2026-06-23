@@ -295,7 +295,13 @@ const normalizeAgent = (agent: Partial<AgentConfig> | undefined): AgentConfig =>
     recentToolResultLimit:
       typeof agent?.context?.recentToolResultLimit === 'number'
         ? agent.context.recentToolResultLimit
-        : DEFAULT_AGENT_CONFIG.context.recentToolResultLimit
+        : DEFAULT_AGENT_CONFIG.context.recentToolResultLimit,
+    maxTurns:
+      typeof agent?.context?.maxTurns === 'number' &&
+      Number.isInteger(agent.context.maxTurns) &&
+      agent.context.maxTurns > 0
+        ? agent.context.maxTurns
+        : undefined
   }
 })
 
@@ -425,6 +431,12 @@ const validateSettings = (settings: AiSettingsConfig): void => {
   }
   if (!isPositiveInteger(settings.agent.context.recentToolResultLimit)) {
     throw new Error('recentToolResultLimit 必须为正整数')
+  }
+  if (
+    settings.agent.context.maxTurns !== undefined &&
+    !isPositiveInteger(settings.agent.context.maxTurns)
+  ) {
+    throw new Error('maxTurns 必须为正整数或留空（表示无限制）')
   }
 }
 
