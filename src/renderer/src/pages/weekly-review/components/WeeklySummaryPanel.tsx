@@ -44,8 +44,8 @@ export const WeeklySummaryPanel = ({
     setIsEditing(false);
     let isActive = true;
 
-    window.api.weekly!.summary
-      .get(weekStartDate)
+    window.api
+      .weekly!.summary.get(weekStartDate)
       .then((item) => {
         if (!isActive) return;
         hydrate(item);
@@ -103,7 +103,7 @@ export const WeeklySummaryPanel = ({
   const isMeaningful = summary?.isMeaningful !== 0;
 
   return (
-    <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col">
+    <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col min-h-[85vh]">
       {/* 标题栏 */}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-white/5 pb-2 mb-3">
         <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export const WeeklySummaryPanel = ({
       </div>
 
       {/* 内容区 */}
-      <div className="flex flex-col min-h-[300px] flex-1">
+      <div className="flex flex-col min-h-[300px] flex-1 min-h-0">
         {panelState === "idle" && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <p className="text-xs text-white/25">
@@ -208,7 +208,7 @@ export const WeeklySummaryPanel = ({
           )}
 
         {isEditing && (
-          <div className="flex flex-col gap-2 flex-1">
+          <div className="flex flex-col gap-2 flex-1 min-h-0">
             <MdEditor
               codeTheme="atom"
               language="zh-CN"
