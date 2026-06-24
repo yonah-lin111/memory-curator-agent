@@ -10,16 +10,16 @@ import {
   getMonday,
 } from "@/lib/dailyShared";
 import {
+  Bookmark,
   CheckCircle2,
   Circle,
-  FileText,
-  Bookmark,
+  StickyNote,
+  BookOpen,
   Calendar,
   TrendingUp,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   Receipt,
+  CheckSquare,
 } from "lucide-react";
 import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel";
 
@@ -856,140 +856,194 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
         {/* 2. 下部面板：时间溪流与周度总结各自独占一行 */}
         <div className="flex flex-col gap-6 w-full">
-          {/* 时间溪流 */}
+          {/* 时间溪流 - Origami 律动风琴 */}
           <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-4">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-white/60" />
                 <span className="text-sm font-bold tracking-wide text-white/80">
-                  时间溪流
+                  时间溪流 (Time Stream)
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              {isLoading ? (
-                <div className="flex items-center justify-center font-mono text-white/40 text-xs py-12">
-                  正在追溯时光碎片...
-                </div>
-              ) : (
-                weeklyData.map((day) => {
-                  const isExpanded = expandedDates.includes(day.entryDate);
+            {isLoading ? (
+              <div className="flex items-center justify-center font-mono text-white/40 text-xs py-12">
+                正在追溯时光碎片...
+              </div>
+            ) : (
+              <div className="flex w-full gap-2 h-[500px]">
+                {weeklyData.map((day) => {
+                  const isActive = expandedDates[0] === day.entryDate;
+
+                  const completedTodos = day.todos.filter(
+                    (t: any) => t.completed,
+                  ).length;
+                  const totalTodos = day.todos.length;
+                  const snippetsCount = day.snippets.length;
+                  const billsCount = day.bills.length;
+                  const hasJournal = !!day.journal;
+
                   return (
                     <div
                       key={day.entryDate}
-                      className={`group bg-[#212121] rounded-[6px] border transition-all duration-300 p-4 flex flex-col cursor-default ${
-                        isExpanded
-                          ? "border-white/15 bg-[#1a1a1a]"
-                          : "border-white/5 hover:border-white/10"
+                      onClick={() => {
+                        if (!isActive) {
+                          setExpandedDates([day.entryDate]);
+                        }
+                      }}
+                      className={`relative flex flex-col rounded-[8px] border transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] overflow-hidden ${
+                        isActive
+                          ? "flex-[8] border-white/20 bg-[#1a1a1a] shadow-lg cursor-default"
+                          : "flex-[1] border-white/5 bg-[#212121] hover:bg-[#2a2a2a] hover:border-white/10 cursor-pointer"
                       }`}
                     >
+                      {/* UNEXPANDED */}
                       <div
-                        onClick={() => {
-                          setExpandedDates((prev) =>
-                            prev.includes(day.entryDate)
-                              ? prev.filter((d) => d !== day.entryDate)
-                              : [...prev, day.entryDate],
-                          );
-                        }}
-                        className="flex items-center justify-between cursor-pointer"
+                        className={`absolute inset-0 flex flex-col items-center py-4 transition-opacity duration-300 ${
+                          isActive
+                            ? "opacity-0 pointer-events-none"
+                            : "opacity-100"
+                        }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-sm font-bold font-mono transition-colors ${
-                              isExpanded
-                                ? "text-white"
-                                : "text-white/80 group-hover:text-white"
-                            }`}
-                          >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-sm font-bold text-white/60 whitespace-nowrap">
                             {day.weekdayName}
                           </span>
-                          <span className="text-xs font-mono text-white/30 bg-black/40 px-1.5 py-0.5 rounded-[6px] border border-white/5">
-                            {day.entryDate}
+                          <span className="text-[10px] font-mono text-white/30">
+                            {day.entryDate.substring(5)}
                           </span>
-                          {/* 折叠时显示简单的徽章总结 */}
-                          {!isExpanded && (
-                            <div className="hidden sm:flex items-center gap-2 ml-3 text-xs text-white/40 font-mono">
-                              <span>
-                                {day.journal ? "Journal" : "No Journal"}
-                              </span>
-                              <span className="text-white/10">|</span>
-                              <span>
-                                Todos{" "}
-                                {day.todos.filter((t) => t.completed).length}/
-                                {day.todos.length}
-                              </span>
-                              <span className="text-white/10">|</span>
-                              <span>Snippets {day.snippets.length}</span>
-                              <span className="text-white/10">|</span>
-                              <span>Bills {day.bills.length}</span>
-                            </div>
-                          )}
                         </div>
-
-                        <div className="flex items-center gap-1">
-                          {isExpanded ? (
-                            <ChevronUp className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-white/40 group-hover:text-white/70 transition-colors" />
+                        <div className="flex-1 flex flex-col justify-end items-center gap-2 pb-2">
+                          {hasJournal && (
+                            <div
+                              className="w-1.5 h-1.5 rounded-full bg-[#c084fc] shadow-[0_0_5px_#c084fc]"
+                              title="已写日记"
+                            />
+                          )}
+                          {totalTodos > 0 && (
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${completedTodos === totalTodos ? "bg-[#fb923c] shadow-[0_0_5px_#fb923c]" : "bg-[#fb923c]/30"}`}
+                              title={`待办 ${completedTodos}/${totalTodos}`}
+                            />
+                          )}
+                          {snippetsCount > 0 && (
+                            <div
+                              className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] shadow-[0_0_5px_#60a5fa]"
+                              title={`碎片 ${snippetsCount}`}
+                            />
+                          )}
+                          {billsCount > 0 && (
+                            <div
+                              className="w-1.5 h-1.5 rounded-full bg-[#4ade80]"
+                              title={`账单 ${billsCount}`}
+                            />
                           )}
                         </div>
                       </div>
 
-                      {isExpanded && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 animate-todo-item-enter pt-3 border-t border-white/[0.03]">
-                          {/* A栏：日记正文策展高光 */}
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <FileText className="h-3.5 w-3.5 text-white/40" />
-                              <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                时光高光 / Journal
+                      {/* EXPANDED */}
+                      <div
+                        className={`absolute inset-0 p-5 flex flex-col transition-all duration-700 delay-100 ${
+                          isActive
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-4 pointer-events-none"
+                        }`}
+                      >
+                        <div className="w-full h-full flex flex-col min-w-0">
+                          {/* Header */}
+                          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5 flex-shrink-0">
+                            <div className="flex flex-col gap-0.5 overflow-hidden">
+                              <span className="text-sm font-bold text-white/90 tracking-wide flex-shrink-0">
+                                {day.weekdayName}
+                              </span>
+                              <span className="text-xs font-mono text-white/40 flex-shrink-0">
+                                {day.entryDate}
                               </span>
                             </div>
-                            {day.journal ? (
-                              <p className="text-xs text-white/70 leading-relaxed font-normal bg-black/30 p-2.5 rounded-[6px] border border-white/[0.03] break-all select-text max-h-[140px] overflow-y-auto custom-scrollbar">
-                                {day.journal.content}
-                              </p>
-                            ) : (
-                              <div className="text-xs text-white/20 font-mono py-4 bg-black/10 rounded-[6px] text-center border border-dashed border-white/5">
-                                此日未执笔写日记
-                              </div>
-                            )}
-                          </div>
-
-                          {/* B栏：高内聚的待办列表与捕获的片段 */}
-                          <div className="flex flex-col gap-3">
-                            {/* 行动待办 */}
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-white/40" />
-                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                  每日行动 / Todo (
-                                  {
-                                    day.todos.filter((t: any) => t.completed)
-                                      .length
-                                  }
-                                  /{day.todos.length})
+                            <div className="flex gap-4 pr-6 flex-shrink-0">
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] text-[#c084fc]/70 font-mono uppercase">
+                                  Journal
+                                </span>
+                                <span className="text-xs font-bold text-white/80">
+                                  {hasJournal ? "✓" : "-"}
                                 </span>
                               </div>
-                              {day.todos.length === 0 ? (
-                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] text-[#4ade80]/70 font-mono uppercase">
+                                  Bills
+                                </span>
+                                <span className="text-xs font-bold text-white/80">
+                                  {billsCount}
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] text-[#fb923c]/70 font-mono uppercase">
+                                  Todos
+                                </span>
+                                <span className="text-xs font-bold text-white/80">
+                                  {completedTodos}/{totalTodos}
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] text-[#60a5fa]/70 font-mono uppercase">
+                                  Snippets
+                                </span>
+                                <span className="text-xs font-bold text-white/80">
+                                  {snippetsCount}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content Stream */}
+                          <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar overscroll-contain [scrollbar-gutter:stable] pr-2 pb-2">
+                            {/* Journal */}
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <BookOpen className="h-3.5 w-3.5 text-[#c084fc]/70" />
+                                <span className="text-xs font-mono uppercase tracking-wider text-white/40">
+                                  Journal
+                                </span>
+                              </div>
+                              {hasJournal ? (
+                                <div className="text-sm text-white/80 leading-relaxed font-normal bg-black/40 p-3.5 rounded-[6px] border border-white/5 whitespace-pre-wrap">
+                                  {day.journal.content}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-white/20 font-mono py-6 bg-black/20 rounded-[6px] text-center border border-dashed border-white/5">
+                                  此日未留墨迹
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Todos */}
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <CheckSquare className="h-3.5 w-3.5 text-[#fb923c]/70" />
+                                <span className="text-xs font-mono uppercase tracking-wider text-white/40">
+                                  Todo
+                                </span>
+                              </div>
+                              {totalTodos === 0 ? (
+                                <div className="text-xs text-white/20 font-mono py-4 bg-black/20 rounded-[6px] text-center border border-white/5">
                                   无行动待办
                                 </div>
                               ) : (
-                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-col gap-1.5">
                                   {day.todos.map((todo: any) => (
                                     <div
                                       key={todo.id}
-                                      className="flex items-center gap-2 text-xs text-white/65"
+                                      className="group/todo flex items-start gap-2.5 bg-black/20 p-2.5 rounded-[6px] border border-white/5 hover:border-white/10 transition-colors"
                                     >
                                       {todo.completed ? (
-                                        <CheckCircle2 className="h-3 w-3 text-white/40 flex-shrink-0" />
+                                        <CheckCircle2 className="h-4 w-4 text-white/40 flex-shrink-0 mt-0.5" />
                                       ) : (
-                                        <Circle className="h-3 w-3 text-white/20 flex-shrink-0" />
+                                        <Circle className="h-4 w-4 text-white/40 flex-shrink-0 mt-0.5" />
                                       )}
                                       <span
-                                        className={`truncate ${todo.completed ? "line-through text-white/30" : ""}`}
+                                        className={`text-sm leading-snug ${todo.completed ? "line-through text-white/30" : "text-white/70 group-hover/todo:text-white/90"}`}
                                       >
                                         {todo.text}
                                       </span>
@@ -999,85 +1053,82 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                               )}
                             </div>
 
-                            {/* 记忆碎片 */}
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <Bookmark className="h-3.5 w-3.5 text-white/40" />
-                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                  记忆碎片 / Snippets ({day.snippets.length})
-                                </span>
-                              </div>
-                              {day.snippets.length === 0 ? (
-                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
-                                  无捕获片段
+                            {/* Snippets */}
+                            {snippetsCount > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <StickyNote className="h-3.5 w-3.5 text-[#60a5fa]/70" />
+                                  <span className="text-xs font-mono uppercase tracking-wider text-white/40">
+                                    Snippets ({snippetsCount})
+                                  </span>
                                 </div>
-                              ) : (
-                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-wrap gap-2">
                                   {day.snippets.map((snip: any) => (
                                     <div
                                       key={snip.id}
-                                      className="text-xs text-white/65 flex items-center gap-1.5 truncate"
+                                      className="flex flex-col gap-1 bg-black/30 px-3 py-2 rounded-[6px] border border-white/5 hover:border-white/10 max-w-full"
                                     >
-                                      <span className="text-xs font-mono text-white/30 select-none">
-                                        [{snip.time || "碎片"}]
+                                      <span className="text-xs font-mono text-white/30">
+                                        {snip.time || "碎片"}
                                       </span>
-                                      <span className="truncate font-semibold">
+                                      <span className="text-sm text-white/70 truncate">
                                         {snip.title || snip.content}
                                       </span>
                                     </div>
                                   ))}
                                 </div>
-                              )}
-                            </div>
-
-                            {/* 账单 */}
-                            <div className="flex flex-col gap-1.5">
-                              <div className="flex items-center gap-1.5">
-                                <Receipt className="h-3.5 w-3.5 text-white/40" />
-                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
-                                  每日账单 / Bills ({day.bills.length})
-                                </span>
                               </div>
-                              {day.bills.length === 0 ? (
-                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
-                                  无账单记录
+                            )}
+
+                            {/* Bills */}
+                            {billsCount > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Receipt className="h-3.5 w-3.5 text-[#4ade80]/70" />
+                                  <span className="text-xs font-mono uppercase tracking-wider text-white/40">
+                                    Bills ({billsCount})
+                                  </span>
                                 </div>
-                              ) : (
-                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-col gap-1.5 bg-black/20 p-2 rounded-[6px] border border-white/5">
                                   {day.bills.map((bill: any) => (
                                     <div
                                       key={bill.id}
-                                      className="text-xs text-white/65 flex items-center gap-1.5 truncate"
+                                      className="flex justify-between items-center text-xs p-1.5 rounded hover:bg-white/5 transition-colors"
                                     >
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className={`w-1.5 h-1.5 rounded-full ${bill.billType === "expense" ? "bg-[#f87171]" : "bg-[#4ade80]"}`}
+                                        />
+                                        <span className="text-white/60">
+                                          {bill.category}
+                                        </span>
+                                        {bill.note && (
+                                          <span className="text-white/30 truncate max-w-[80px]">
+                                            - {bill.note}
+                                          </span>
+                                        )}
+                                      </div>
                                       <span
-                                        className={`text-xs font-mono select-none ${bill.billType === "expense" ? "text-red-400/80" : "text-green-400/80"}`}
+                                        className={`font-mono font-bold ${bill.billType === "expense" ? "text-red-400/80" : "text-green-400/80"}`}
                                       >
-                                        [
                                         {bill.billType === "expense"
-                                          ? "支出"
-                                          : "收入"}
-                                        ]
-                                      </span>
-                                      <span className="truncate font-semibold text-white/80">
+                                          ? "-"
+                                          : "+"}
                                         ¥{(bill.amount / 100).toFixed(2)}
-                                      </span>
-                                      <span className="truncate text-white/40">
-                                        {bill.category}{" "}
-                                        {bill.note ? `- ${bill.note}` : ""}
                                       </span>
                                     </div>
                                   ))}
                                 </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </div>
 
           {/* 周度总结 */}
