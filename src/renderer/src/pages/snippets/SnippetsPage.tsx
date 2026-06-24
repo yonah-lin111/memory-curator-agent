@@ -5,12 +5,10 @@ import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
 import { IconButton } from "@/components/ui/IconButton";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { Input } from "@/components/ui/Input";
 import { Tag } from "@/components/ui/Tag";
 import { SnippetsTagMap } from "@/pages/snippets/components/SnippetsTagMap";
-import {
-  TodayNoteEntryModal,
-  type NoteItem,
-} from "@/pages/today/components/TodayNoteEntryModal";
 import {
   createTodayEntryDate,
   getEntryMonth,
@@ -56,12 +54,20 @@ export const SnippetsPage = (): React.JSX.Element => {
   // 头部导航器 setter。
   const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
 
-  // 随记弹窗状态。
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState<boolean>(false);
-  // 当前编辑的随记。
-  const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
   // 正在执行删除动画的随记 ID 列表。
   const [deletingIds, setDeletingIds] = useState<number[]>([]);
+  // 新建草稿
+  const [addDraft, setAddDraft] = useState({
+    title: "",
+    content: "",
+    tags: [] as string[],
+  });
+  // 内联编辑草稿
+  const [editDraft, setEditDraft] = useState({
+    title: "",
+    content: "",
+    tags: [] as string[],
+  });
 
   useEffect(() => {
     /**
@@ -344,6 +350,103 @@ export const SnippetsPage = (): React.JSX.Element => {
     }
   };
 
+  /**
+   * 将随记填入编辑草稿。
+   */
+  const handleStartEdit = (snippet: DailySnippetRecord): void => {
+    setEditDraft({
+      title: snippet.title,
+      content: snippet.content,
+      tags: snippet.tags,
+    });
+  };
+
+  /**
+   * 提交新建。
+   */
+  const handleAddConfirm = async (): Promise<void> => {
+    if (!addDraft.title.trim() && !addDraft.content.trim()) return;
+    const success = await handleSaveNote({
+      title: addDraft.title.trim(),
+      content: addDraft.content.trim(),
+      tags: addDraft.tags,
+    });
+    if (success) {
+      setAddDraft({ title: "", content: "", tags: [] });
+    }
+  };
+
+  /**
+   * 重置新建草稿。
+   */
+  const handleAddCancel = (): void => {
+    setAddDraft({ title: "", content: "", tags: [] });
+  };
+
+  /**
+   * 提交内联编辑。
+   */
+  const handleEditConfirm = async (id: number): Promise<void> => {
+    if (!editDraft.title.trim() && !editDraft.content.trim()) return;
+    await handleSaveNote({
+      id,
+      title: editDraft.title.trim(),
+      content: editDraft.content.trim(),
+      tags: editDraft.tags,
+    });
+  };
+
+  /**
+   * 渲染笔记表单。
+   */
+  const renderNoteForm = (
+    draft: typeof addDraft,
+    setDraft: typeof setAddDraft,
+  ): React.JSX.Element => {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-1 text-left">
+          <span className="text-[11px] font-semibold text-white/40">标题</span>
+          <Input
+            type="text"
+            value={draft.title}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, title: e.target.value }))
+            }
+            placeholder="片段标题"
+            size="xs"
+            className="!h-[28px]"
+          />
+        </div>
+        <div className="flex flex-col gap-1 text-left">
+          <span className="text-[11px] font-semibold text-white/40">内容</span>
+          <Input
+            as="textarea"
+            value={draft.content}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, content: e.target.value }))
+            }
+            placeholder="片段内容"
+            size="xs"
+          />
+        </div>
+        <div className="flex flex-col gap-1 text-left">
+          <span className="text-[11px] font-semibold text-white/40">标签</span>
+          <Input
+            as="tags"
+            tags={draft.tags}
+            maxTags={3}
+            onChangeTags={(tags) =>
+              setDraft((prev) => ({ ...prev, tags }))
+            }
+            size="xs"
+            placeholder="按回车确认标签"
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section
       aria-label="Snippets Page"
@@ -353,14 +456,16 @@ export const SnippetsPage = (): React.JSX.Element => {
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <h3 className="text-sm font-bold text-white/80">片段列表</h3>
-            <IconButton
-              aria-label="Add snippet"
-              preset="add"
-              onClick={() => {
-                setEditingNote(null);
-                setIsNoteModalOpen(true);
-              }}
-            />
+            <Tooltip
+              placement="bottom"
+              trigger="click"
+              contentClassName="!w-[320px] !p-3 !whitespace-normal flex flex-col"
+              onConfirm={handleAddConfirm}
+              onCancel={handleAddCancel}
+              form={renderNoteForm(addDraft, setAddDraft)}
+            >
+              <IconButton aria-label="Add snippet" preset="add" />
+            </Tooltip>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col">
@@ -386,17 +491,7 @@ export const SnippetsPage = (): React.JSX.Element => {
                   return (
                     <div
                       key={snippet.id}
-                      onClick={() => {
-                        setEditingNote({
-                          id: snippet.id,
-                          title: snippet.title,
-                          content: snippet.content,
-                          tags: snippet.tags,
-                          time: snippet.time,
-                        });
-                        setIsNoteModalOpen(true);
-                      }}
-                      className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 cursor-pointer hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
+                      className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
                         isDeleting
                           ? "animate-todo-item-exit"
                           : "animate-todo-item-enter"
@@ -406,10 +501,23 @@ export const SnippetsPage = (): React.JSX.Element => {
                         <h4 className="text-sm font-bold text-white/80 truncate pr-2">
                           {snippet.title || "无标题片段"}
                         </h4>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="text-xs font-mono text-white/30">
-                            {snippet.time}
-                          </span>
+                        <div className="flex items-center gap-1.5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-150 flex-shrink-0">
+                          <Tooltip
+                            placement="top"
+                            trigger="click"
+                            contentClassName="!w-[320px] !p-3 !whitespace-normal flex flex-col"
+                            onConfirm={() => handleEditConfirm(snippet.id)}
+                            form={renderNoteForm(editDraft, setEditDraft)}
+                          >
+                            <IconButton
+                              aria-label={`Edit snippet ${snippet.title || "Untitled snippet"}`}
+                              preset="edit"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(snippet);
+                              }}
+                            />
+                          </Tooltip>
                           <IconButton
                             aria-label={`Delete snippet ${snippet.title || "Untitled snippet"}`}
                             preset="delete"
@@ -420,20 +528,25 @@ export const SnippetsPage = (): React.JSX.Element => {
                       <p className="text-xs text-white/50 leading-relaxed whitespace-pre-wrap">
                         {snippet.content}
                       </p>
-                      {snippet.tags && snippet.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {snippet.tags.map((tag) => (
-                            <Tag
-                              key={tag}
-                              size="small"
-                              prefix={<TagIcon className="h-2.5 w-2.5" />}
-                              bgClass="border-white/5 bg-white/[0.02] text-white/40"
-                            >
-                              {tag}
-                            </Tag>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        {snippet.tags && snippet.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 min-w-0">
+                            {snippet.tags.map((tag) => (
+                              <Tag
+                                key={tag}
+                                size="small"
+                                prefix={<TagIcon className="h-2.5 w-2.5" />}
+                                bgClass="border-white/5 bg-white/[0.02] text-white/40"
+                              >
+                                {tag}
+                              </Tag>
+                            ))}
+                          </div>
+                        )}
+                        <span className="text-xs font-mono text-white/30 ml-auto">
+                          {snippet.time}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -451,17 +564,6 @@ export const SnippetsPage = (): React.JSX.Element => {
           onChange={setActiveTag}
         />
       </div>
-
-      {isNoteModalOpen && (
-        <TodayNoteEntryModal
-          note={editingNote}
-          onClose={() => {
-            setIsNoteModalOpen(false);
-            setEditingNote(null);
-          }}
-          onSave={handleSaveNote}
-        />
-      )}
     </section>
   );
 };

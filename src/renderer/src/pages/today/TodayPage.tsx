@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { TodaySnippetsPanel } from "@/pages/today/components/TodaySnippetsPanel";
-import {
-  TodayNoteEntryModal,
-  type NoteItem,
-} from "@/pages/today/components/TodayNoteEntryModal";
+import { type NoteItem } from "@/pages/today/components/TodayNoteEntryModal";
 import { TodayTodoPanel } from "@/pages/today/components/TodayTodoPanel";
 import {
   sortTodoItems,
@@ -217,10 +214,6 @@ export const TodayPage = (): React.JSX.Element => {
   const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
   // 随记卡片列表状态。
   const [notes, setNotes] = useState<TodayNoteItem[]>([]);
-  // 随记编辑弹窗是否打开。
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-  // 当前正在编辑的随记。
-  const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
   // 待办事项状态列表。
   const [todos, setTodos] = useState<TodayTodoItem[]>([]);
   // 页面是否正在读取。
@@ -774,15 +767,9 @@ export const TodayPage = (): React.JSX.Element => {
             errorMessage={todayError}
             isLoading={isTodayLoading}
             notes={notes}
-            onAddNote={() => {
-              setEditingNote(null);
-              setIsNoteModalOpen(true);
-            }}
+            onCreateNote={handleSaveNote}
             onDeleteNote={handleDeleteNote}
-            onEditNote={(note) => {
-              setEditingNote(note);
-              setIsNoteModalOpen(true);
-            }}
+            onUpdateNote={handleSaveNote}
           />
         </div>
 
@@ -795,16 +782,6 @@ export const TodayPage = (): React.JSX.Element => {
           onJournalContentChange={setJournalContent}
         />
       </div>
-      {isNoteModalOpen ? (
-        <TodayNoteEntryModal
-          note={editingNote}
-          onClose={() => {
-            setIsNoteModalOpen(false);
-            setEditingNote(null);
-          }}
-          onSave={handleSaveNote}
-        />
-      ) : null}
     </section>
   );
 };
