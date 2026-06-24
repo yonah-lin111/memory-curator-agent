@@ -1,9 +1,8 @@
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Receipt, Tag as TagIcon, X } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import {
-  BILL_CATEGORIES,
   BILL_TYPES,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -66,11 +65,26 @@ export const BillsPage = (): React.JSX.Element => {
   const [categoryFilter, setCategoryFilter] = useState<BillCategory | "all">(
     "all",
   );
+  const [categoryGroup, setCategoryGroup] = useState<"expense" | "income">(
+    "expense",
+  );
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [timeFilterMode, setTimeFilterMode] = useState<
     "all" | "date" | "week" | "month"
   >("all");
   const [selectedTime, setSelectedTime] = useState<string>("");
+
+  // 当全局类型筛选变化时，同步分类的 Tab
+  useEffect(() => {
+    if (typeFilter === "expense" || typeFilter === "income") {
+      setCategoryGroup(typeFilter);
+    }
+  }, [typeFilter]);
+
+  // 当切换大分类时，重置子分类选择以避免无匹配数据
+  useEffect(() => {
+    setCategoryFilter("all");
+  }, [categoryGroup]);
 
   // 新增记录的气泡草稿状态
   const [draft, setDraft] = useState<BillDraft>({
@@ -91,6 +105,16 @@ export const BillsPage = (): React.JSX.Element => {
     note: "",
     tags: [],
   });
+
+  // 重置所有筛选条件
+  const handleResetFilters = (): void => {
+    setTypeFilter("all");
+    setCategoryFilter("all");
+    setCategoryGroup("expense");
+    setActiveTag(null);
+    setTimeFilterMode("all");
+    setSelectedTime("");
+  };
 
   const loadBills = async (): Promise<void> => {
     setIsLoading(true);
@@ -381,6 +405,7 @@ export const BillsPage = (): React.JSX.Element => {
           <Input
             as="tags"
             tags={draft.tags}
+            maxTags={3}
             onChangeTags={(tags) => setDraft((prev) => ({ ...prev, tags }))}
             size="xs"
             placeholder="按回车确认标签"
@@ -500,6 +525,7 @@ export const BillsPage = (): React.JSX.Element => {
           <Input
             as="tags"
             tags={editDraft.tags}
+            maxTags={3}
             onChangeTags={(tags) => setEditDraft((prev) => ({ ...prev, tags }))}
             size="xs"
             placeholder="按回车确认标签"
@@ -525,20 +551,6 @@ export const BillsPage = (): React.JSX.Element => {
                   ({visibleBills.length})
                 </span>
               </div>
-
-              {activeTag && (
-                <div className="flex items-center gap-1 rounded-[6px] border border-white/5 bg-white/5 px-2 py-1 text-xs text-white/60">
-                  <TagIcon className="h-2.5 w-2.5" />
-                  <span>{activeTag}</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTag(null)}
-                    className="ml-1 text-white/40 hover:text-white"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-              )}
             </div>
 
             <Tooltip
@@ -564,8 +576,10 @@ export const BillsPage = (): React.JSX.Element => {
               </p>
             ) : visibleBills.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                <Receipt className="h-7 w-7 text-white/30" />
-                <h2 className="mt-3 text-sm font-bold text-white/80">
+                <div className="h-7 w-7 text-white/30 flex items-center justify-center mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
+                </div>
+                <h2 className="text-sm font-bold text-white/80">
                   暂无匹配账单记录
                 </h2>
                 <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
@@ -590,18 +604,21 @@ export const BillsPage = (): React.JSX.Element => {
                           {bill.category}
                         </span>
                       </div>
-                      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
-                        <span className="text-xs text-white/50 truncate">
+                      
+                      <div className="flex items-center flex-1 min-w-0 gap-8">
+                        <span className="text-xs text-white/50 truncate max-w-[150px]">
                           {bill.note || (
                             <span className="italic text-white/20">无备注</span>
                           )}
                         </span>
+                        
                         {bill.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-0.5">
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
                             {bill.tags.map((tag) => (
                               <span
                                 key={tag}
-                                className="rounded-[4px] bg-white/[0.03] px-1 py-[1px] text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[80px]"
+                                className="rounded-[4px] bg-white/[0.03] px-1 py-[1px] text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[60px]"
+                                title={tag}
                               >
                                 #{tag}
                               </span>
@@ -690,6 +707,20 @@ export const BillsPage = (): React.JSX.Element => {
 
         {/* 右侧：分类与标签 */}
         <aside className="flex min-h-0 w-full lg:w-[300px] flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
+          {/* 右侧标题区 */}
+          <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0 mb-[-8px]">
+            <span className="text-sm font-bold text-white/80">条件筛选</span>
+            <Tooltip placement="bottom" title="重置全部筛选条件">
+              <IconButton
+                size="medium"
+                onClick={handleResetFilters}
+                className="text-white/40 hover:text-white"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </IconButton>
+            </Tooltip>
+          </div>
+
           {/* 收支类型 */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -784,6 +815,30 @@ export const BillsPage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <span className="text-xs font-bold text-white/80">分类筛选</span>
             </div>
+
+            {/* 大分类切换 */}
+            <div className="flex gap-1 bg-[#212121] p-0.5 rounded-[6px] h-[26px] items-center border border-white/5 mb-0.5">
+              {[
+                { value: "expense", label: "支出" },
+                { value: "income", label: "收入" },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() =>
+                    setCategoryGroup(type.value as "expense" | "income")
+                  }
+                  className={`flex-1 rounded-[4px] py-0.5 text-[11px] font-medium transition-colors ${
+                    categoryGroup === type.value
+                      ? "bg-[#303030] text-white"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
             <div className="flex flex-wrap gap-1.5">
               <Tag
                 highlighted={categoryFilter === "all"}
@@ -792,7 +847,10 @@ export const BillsPage = (): React.JSX.Element => {
               >
                 全部分类
               </Tag>
-              {BILL_CATEGORIES.map((cat) => (
+              {(categoryGroup === "expense"
+                ? EXPENSE_CATEGORIES
+                : INCOME_CATEGORIES
+              ).map((cat) => (
                 <Tag
                   key={cat}
                   highlighted={categoryFilter === cat}

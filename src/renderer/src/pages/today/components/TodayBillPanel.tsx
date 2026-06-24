@@ -365,6 +365,7 @@ export const TodayBillPanel = ({
           <Input
             as="tags"
             tags={draft.tags}
+            maxTags={3}
             onChangeTags={(tags) => setDraft((prev) => ({ ...prev, tags }))}
             size="xs"
             placeholder="按回车确认标签"
@@ -471,6 +472,7 @@ export const TodayBillPanel = ({
           <Input
             as="tags"
             tags={editDraft.tags}
+            maxTags={3}
             onChangeTags={(tags) => setEditDraft((prev) => ({ ...prev, tags }))}
             size="xs"
             placeholder="按回车确认标签"
@@ -537,12 +539,31 @@ export const TodayBillPanel = ({
                 className="group/item flex w-full items-center gap-2 hover:bg-white/[0.04] rounded-[4px] px-1 py-0.5 transition-colors"
               >
                 <div className="flex items-center gap-2 text-left min-w-0 flex-1">
-                  <span className="text-sm text-white/30 w-12 flex-shrink-0 truncate">
-                    {item.category}
-                  </span>
-                  <span className="text-sm text-white/50 truncate max-w-[100px] flex-1">
-                    {item.note || "无备注"}
-                  </span>
+                  <div className="w-12 flex-shrink-0">
+                    <span className="text-sm text-white/30 truncate block w-full">
+                      {item.category}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center flex-1 min-w-0 gap-6">
+                    <span className="text-sm text-white/50 truncate max-w-[140px]">
+                      {item.note || "无备注"}
+                    </span>
+                    
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-[4px] bg-white/[0.03] px-1 py-[1px] text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[40px]"
+                            title={tag}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="ml-auto flex items-center flex-shrink-0">
                   <span
