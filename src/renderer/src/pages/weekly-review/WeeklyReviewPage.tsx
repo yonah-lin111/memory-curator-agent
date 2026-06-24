@@ -19,6 +19,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Receipt,
 } from "lucide-react";
 import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel";
 
@@ -34,6 +35,8 @@ interface DayDataAggregated {
   snippets: any[];
   // 当日日记数据
   journal: any | null;
+  // 当日账单数据
+  bills: any[];
 }
 
 // 星期在中文环境下的名称常量
@@ -131,12 +134,17 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             if (window.api?.daily) {
               data = await window.api.daily.listDay(d);
             }
+            let bills: any[] = [];
+            if (window.api?.bill) {
+              bills = await window.api.bill.list({ billDate: d });
+            }
             return {
               entryDate: d,
               weekdayName: WEEKDAYS_ZH[index],
               todos: data.todos || [],
               snippets: data.snippets || [],
               journal: data.journal || null,
+              bills,
             };
           }),
         );
@@ -165,6 +173,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     let totalSnippets = 0;
     // 写日记的总天数
     let journalsCount = 0;
+    // 账单总数
+    let totalBills = 0;
     // 临时记录标签频次的 map 映射
     const tagsMap: Record<string, number> = {};
 
@@ -175,6 +185,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
         (t) => t.priority === "high" || t.priority === 3,
       ).length;
       totalSnippets += day.snippets.length;
+      totalBills += day.bills.length;
       if (day.journal) {
         journalsCount++;
       }
@@ -195,6 +206,19 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     const topTags = Object.entries(tagsMap)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
+      
+    // 计算本周总收入与支出
+    let totalExpense = 0;
+    let totalIncome = 0;
+    weeklyData.forEach((day) => {
+      day.bills.forEach((bill) => {
+        if (bill.billType === "expense") {
+          totalExpense += bill.amount;
+        } else if (bill.billType === "income") {
+          totalIncome += bill.amount;
+        }
+      });
+    });
 
     return {
       totalTodos,
@@ -203,7 +227,10 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
       highPriorityCount,
       totalSnippets,
       journalsCount,
+      totalBills,
       topTags,
+      totalExpense,
+      totalIncome,
     };
   }, [weeklyData]);
 
@@ -438,7 +465,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 <span className="text-sm font-bold tracking-wide text-white/80">周数据透视</span>
               </div>
             </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
                 <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
                   <span className="text-xs text-white/30 font-mono leading-none">
                     待办完成率
@@ -476,6 +503,25 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                     <span className="text-xs text-white/30 font-mono leading-none">
                       天写作记录
                     </span>
+                  </div>
+                </div>
+                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    收支总览
+                  </span>
+                  <div className="flex flex-col gap-1 mt-1 justify-end h-full">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-white/30 font-mono leading-none">支</span>
+                      <span className="text-sm font-bold text-red-400/80 leading-none">
+                        ¥{(stats.totalExpense / 100).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-white/30 font-mono leading-none">收</span>
+                      <span className="text-sm font-bold text-green-400/80 leading-none">
+                        ¥{(stats.totalIncome / 100).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -572,6 +618,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                               </span>
                               <span className="text-white/10">|</span>
                               <span>Snippets {day.snippets.length}</span>
+                              <span className="text-white/10">|</span>
+                              <span>Bills {day.bills.length}</span>
                             </div>
                           )}
                         </div>
@@ -678,6 +726,40 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                                 </div>
                               )}
                             </div>
+
+                            {/* 账单 */}
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <Receipt className="h-3.5 w-3.5 text-white/40" />
+                                <span className="text-xs font-mono uppercase tracking-wider text-white/30">
+                                  每日账单 / Bills ({day.bills.length})
+                                </span>
+                              </div>
+                              {day.bills.length === 0 ? (
+                                <div className="text-xs text-white/20 font-mono py-1.5 bg-black/10 rounded-[6px] text-center">
+                                  无账单记录
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1 max-h-[85px] overflow-y-auto custom-scrollbar">
+                                  {day.bills.map((bill: any) => (
+                                    <div
+                                      key={bill.id}
+                                      className="text-xs text-white/65 flex items-center gap-1.5 truncate"
+                                    >
+                                      <span className={`text-xs font-mono select-none ${bill.billType === 'expense' ? 'text-red-400/80' : 'text-green-400/80'}`}>
+                                        [{bill.billType === 'expense' ? '支出' : '收入'}]
+                                      </span>
+                                      <span className="truncate font-semibold text-white/80">
+                                        ¥{(bill.amount / 100).toFixed(2)}
+                                      </span>
+                                      <span className="truncate text-white/40">
+                                        {bill.category} {bill.note ? `- ${bill.note}` : ''}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -695,7 +777,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 isLoading ||
                 (stats.totalTodos === 0 &&
                   stats.totalSnippets === 0 &&
-                  stats.journalsCount === 0)
+                  stats.journalsCount === 0 &&
+                  stats.totalBills === 0)
               }
             />
         </div>

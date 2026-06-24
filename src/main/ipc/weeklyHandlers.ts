@@ -7,6 +7,7 @@ import {
 import { createThemesService } from "@/services/themesService";
 import { createDailyService } from "@/services/dailyService";
 import { createPeopleService } from "@/services/peopleService";
+import { createBillsService } from "@/services/billsService";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
 import { updateThemeDescription } from "@/ipc/themeDescriptionUpdater";
@@ -277,6 +278,9 @@ export const registerWeeklyHandlers = (): void => {
   const peopleService = createPeopleService(
     database as unknown as import("@/services/peopleService").DatabaseConnection,
   );
+  const billsService = createBillsService(
+    database as unknown as import("@/services/billsService").DatabaseConnection,
+  );
 
   // 获取某周总结。
   ipcMain.handle("weekly:summary:get", (_, weekStartDate: string) =>
@@ -306,7 +310,11 @@ export const registerWeeklyHandlers = (): void => {
       // 并发拉取 7 天数据。
       const dates = getWeekDates(weekStartDate);
       const dayDataList = await Promise.all(
-        dates.map((d) => dailyService.listDay(d)),
+        dates.map(async (d) => {
+          const dayData = await dailyService.listDay(d);
+          const billsData = billsService.list({ billDate: d });
+          return { ...dayData, bills: billsData };
+        }),
       );
 
       // 构造数据摘要（限制 token 消耗，每天各 500 字以内）。
@@ -319,10 +327,13 @@ export const registerWeeklyHandlers = (): void => {
           const snippets = day.snippets
             .map((s) => `${s.title}: ${s.content.slice(0, 200)}`)
             .join("\n");
+          const bills = day.bills
+            .map((b) => `[${b.billType === "expense" ? "支出" : "收入"}] ¥${(b.amount / 100).toFixed(2)} ${b.category} ${b.note ? `- ${b.note}` : ""}`)
+            .join("\n");
           const journal = day.journal
             ? day.journal.content.slice(0, 500)
             : "（无日记）";
-          return `## ${date}\n### 待办\n${todos || "无"}\n### 片段\n${snippets || "无"}\n### 日记\n${journal}`;
+          return `## ${date}\n### 待办\n${todos || "无"}\n### 片段\n${snippets || "无"}\n### 账单\n${bills || "无"}\n### 日记\n${journal}`;
         })
         .join("\n\n");
 
@@ -348,7 +359,7 @@ export const registerWeeklyHandlers = (): void => {
       const summaryGateResult = await gatekeeperCheck(
         provider,
         modelId,
-        `你是周度总结的内容把关助手。请分析以下一周数据，判断是否有值得总结的实质内容（如待办记录、工作进展、个人反思、情绪状态等）。
+        `你是周度总结的内容把关助手。请分析以下一周数据，判断是否有值得总结的实质内容（如待办记录、工作进展、个人反思、情绪状态、账单消费等）。
 
 如果数据中存在任何值得总结的实质内容，仅回复单词：YES
 
@@ -408,6 +419,14 @@ pie
 
 ## 本周记录与进展
 - 围绕待办完成情况、核心工作进展、关键片段串联等，用无序列表展开。
+
+## 本周账单速览
+
+| 日期 | 分类 | 收支明细 | 金额 |
+| --- | --- | --- | --- |
+| ... | ... | ... | ... |
+
+（用表格展示本周重要的账单记录，并在表格后简短总结本周消费情况）
 
 ## 状态与情绪反思
 - 围绕专注与高效时刻、焦虑与拖延时刻等，用无序列表展开。
