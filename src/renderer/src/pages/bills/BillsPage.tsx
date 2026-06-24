@@ -316,7 +316,9 @@ export const BillsPage = (): React.JSX.Element => {
               setDraft((prev) => ({ ...prev, amount: e.target.value }))
             }
             placeholder="0.00"
-            prefix={<span className="text-white/40 mr-1 font-mono text-xs">¥</span>}
+            prefix={
+              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
+            }
             className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
@@ -353,7 +355,10 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(draft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+            {(draft.billType === "expense"
+              ? EXPENSE_CATEGORIES
+              : INCOME_CATEGORIES
+            ).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -428,7 +433,9 @@ export const BillsPage = (): React.JSX.Element => {
               setEditDraft((prev) => ({ ...prev, amount: e.target.value }))
             }
             placeholder="0.00"
-            prefix={<span className="text-white/40 mr-1 font-mono text-xs">¥</span>}
+            prefix={
+              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
+            }
             className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
@@ -465,7 +472,10 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(editDraft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
+            {(editDraft.billType === "expense"
+              ? EXPENSE_CATEGORIES
+              : INCOME_CATEGORIES
+            ).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -547,7 +557,7 @@ export const BillsPage = (): React.JSX.Element => {
             <p className="text-xs text-red-400 flex-shrink-0">{error}</p>
           )}
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5 flex flex-col gap-2">
+          <div className="flex-1 overflow-y-scroll custom-scrollbar pr-0.5 flex flex-col gap-2">
             {isLoading ? (
               <p className="text-xs text-white/30 py-8 text-center">
                 加载中...
@@ -563,66 +573,58 @@ export const BillsPage = (): React.JSX.Element => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-1">
+              <div className="flex flex-col gap-1.5 mb-1">
                 {visibleBills.map((bill) => (
                   <div
                     key={bill.id}
-                    className="group/card relative flex flex-col justify-between rounded-[6px] border border-white/[0.05] bg-[#1a1a1a]/40 p-3 hover:bg-[#252525]/30 hover:border-white/[0.12] transition-all duration-200 text-left min-h-[135px] overflow-hidden"
+                    className="group/item flex w-full items-center gap-3 hover:bg-white/[0.04] rounded-[4px] px-2 py-1.5 transition-colors border-b border-white/[0.02] last:border-0"
                   >
-                    {/* 左侧类型状态指示条 */}
-                    <div
-                      className={`absolute left-0 top-0 bottom-0 w-[4px] ${
-                        bill.billType === "expense" ? "bg-red-500/70" : "bg-green-500/70"
-                      }`}
-                    />
-
-                    <div className="pl-3 flex flex-col justify-between h-full gap-2">
-                      {/* 头部：分类与金额 */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="rounded-[4px] border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/70 font-medium">
-                          {bill.category}
-                        </span>
-                        <span
-                          className={`text-sm font-mono font-bold ${
-                            bill.billType === "expense"
-                              ? "text-red-400"
-                              : "text-green-400"
-                          }`}
-                        >
-                          {bill.billType === "expense" ? "-" : "+"}¥
-                          {formatAmount(bill.amount)}
+                    <div className="flex items-center gap-3 text-left min-w-0 flex-1">
+                      <div className="w-[100px] flex-shrink-0">
+                        <span className="text-xs text-white/30 font-mono">
+                          {bill.billDate}
                         </span>
                       </div>
-
-                      {/* 备注：限制为两行，保持排版工整 */}
-                      <p className="text-xs text-white/50 line-clamp-2 min-h-[32px] break-all leading-normal">
-                        {bill.note || (
-                          <span className="text-white/20 italic">无备注</span>
-                        )}
-                      </p>
-
-                      {/* 底部：日期/标签 与 操作按钮 */}
-                      <div className="flex items-end justify-between border-t border-white/[0.03] pt-2 mt-1">
-                        <div className="flex flex-col gap-1 min-w-0 flex-1">
-                          <span className="text-[10px] text-white/30 font-mono">
-                            {bill.billDate}
-                          </span>
-                          {bill.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {bill.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-[4px] bg-white/[0.03] px-1.5 py-0.5 text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[80px]"
-                                >
-                                  #{tag}
-                                </span>
-                              ))}
-                            </div>
+                      <div className="w-[50px] flex-shrink-0">
+                        <span className="text-xs text-white/70 font-medium">
+                          {bill.category}
+                        </span>
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+                        <span className="text-xs text-white/50 truncate">
+                          {bill.note || (
+                            <span className="italic text-white/20">无备注</span>
                           )}
-                        </div>
+                        </span>
+                        {bill.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {bill.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-[4px] bg-white/[0.03] px-1 py-[1px] text-[10px] text-white/40 border border-white/[0.02] truncate max-w-[80px]"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-                        {/* 操作区域：悬浮时显示，动作自然 */}
-                        <div className="opacity-0 group-hover/card:opacity-100 flex items-center gap-1.5 transition-opacity duration-200 flex-shrink-0 ml-2">
+                    <div className="ml-auto flex items-center flex-shrink-0">
+                      <span
+                        className={`text-sm font-mono font-bold ${
+                          bill.billType === "expense"
+                            ? "text-red-400"
+                            : "text-green-400"
+                        }`}
+                      >
+                        {bill.billType === "expense" ? "-" : "+"}¥
+                        {formatAmount(bill.amount)}
+                      </span>
+
+                      <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
+                        <div className="flex items-center gap-1.5 w-[54px] flex-shrink-0">
                           <Tooltip
                             placement="top"
                             trigger="click"
@@ -808,7 +810,7 @@ export const BillsPage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <span className="text-xs font-bold text-white/80">标签筛选</span>
             </div>
-            <div className="flex flex-wrap gap-1.5 overflow-y-auto custom-scrollbar max-h-[300px] pr-0.5">
+            <div className="flex flex-wrap gap-1.5 overflow-y-scroll custom-scrollbar max-h-[300px] pr-0.5">
               {allTags.length === 0 ? (
                 <span className="text-xs text-white/30 py-4 text-center w-full">
                   暂无标签

@@ -1,5 +1,5 @@
 import type React from "react";
-import { BookOpen, HelpCircle } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
 // TodayJournalPanel 组件的 Props 接口定义。
@@ -35,12 +35,6 @@ export const TodayJournalPanel = ({
           <span className="text-sm font-bold tracking-wide text-white/80">
             日记与主观表达
           </span>
-          <div className="relative group inline-flex items-center">
-            <HelpCircle className="h-3.5 w-3.5 text-white/30 hover:text-white/60 cursor-help transition-colors" />
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-[calc(100%+6px)] scale-95 opacity-0 pointer-events-none group-hover:scale-100 group-hover:opacity-100 transition-all duration-150 w-48 rounded-[6px] bg-[#000000] border border-white/10 p-2 text-xs font-normal text-white/70 leading-normal whitespace-normal z-50 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-              写下今日的深度思考与心路历程，保留真实完整的数字记忆。
-            </div>
-          </div>
         </div>
         <div className="flex items-center gap-3 text-xs font-mono text-white/40">
           <span>最近保存: {lastSavedAt ?? "未保存"}</span>
