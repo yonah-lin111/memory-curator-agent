@@ -710,9 +710,9 @@ export const TodayPage = (): React.JSX.Element => {
   return (
     <section
       aria-label="Main content container"
-      className="flex-1 flex flex-col gap-3 h-auto lg:h-full overflow-y-auto custom-scrollbar [scrollbar-gutter:stable]"
+      className="flex h-full min-h-0 flex-col gap-3 text-white text-sm overflow-y-auto custom-scrollbar"
     >
-      <div className="flex-1 flex flex-col gap-3 pr-1">
+      <div className="flex-1 flex flex-col gap-3">
         <div className="flex gap-3 flex-shrink-0">
           <div className="grid grid-cols-2 gap-3 flex-1 max-h-[360px] overflow-y-auto custom-scrollbar">
             {TODAY_STATS.map((stat) => {

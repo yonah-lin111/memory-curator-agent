@@ -1,12 +1,14 @@
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import * as echarts from 'echarts'
 import {
   Layers,
   Archive,
   RotateCcw,
   FileText,
-  Clock,
-  Download
+  Download,
+  Sparkles,
+  Activity
 } from 'lucide-react'
 import { useToast } from '@/components/ui/Toast'
 import { IconButton } from '@/components/ui/IconButton'
@@ -57,7 +59,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 /**
  * ThemesPage - 长期主题追踪页面。
- * 左侧主题列表 + 右侧详情面板，支持新建/编辑/删除/归档/从标签导入。
+ * 运用 Origami 律动网格 (Bento Grid) 进行主题策展。
  */
 export const ThemesPage = (): React.JSX.Element => {
   const toast = useToast()
@@ -83,6 +85,10 @@ export const ThemesPage = (): React.JSX.Element => {
   const [importTagsText, setImportTagsText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
 
+  // ECharts DOM 引用与实例
+  const timelineChartRef = useRef<HTMLDivElement | null>(null)
+  const timelineInstance = useRef<echarts.ECharts | null>(null)
+
   /** 加载主题列表 */
   const loadThemes = async (): Promise<void> => {
     setIsLoading(true)
@@ -92,7 +98,6 @@ export const ThemesPage = (): React.JSX.Element => {
         return
       }
       const list = await window.api.themes.list()
-      console.log(`[ThemesPage] 加载到 ${list.length} 个主题`, list.map((t) => t.name))
       setThemes(list)
     } catch (err) {
       console.error('[ThemesPage] 加载主题失败:', err)
@@ -252,301 +257,404 @@ export const ThemesPage = (): React.JSX.Element => {
     }
   }
 
-  return (
-    <div
-      aria-label="Themes Page"
-      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 [scrollbar-gutter:stable] flex flex-col text-sm"
-    >
-      {/* 页面标题 */}
-      <div className="flex-shrink-0 mb-4 flex items-center justify-between border-b border-white/5 pb-2">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-white/60" />
-          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-            主题策展
-          </h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <IconButton
-            preset="add"
-            iconOnly={false}
-            size="small"
-            onClick={openCreateEditor}
-            className="text-white/45 hover:bg-white/[0.04] hover:text-white"
-          >
-            <span className="text-xs">新建主题</span>
-          </IconButton>
-        </div>
-      </div>
+  /** ECharts 脉搏律动渲染 */
+  useEffect(() => {
+    if (!timelineChartRef.current) return
+    if (!selectedTheme || timeline.length === 0) {
+      // 当没有数据时，清空图表
+      if (timelineInstance.current) {
+        timelineInstance.current.clear()
+      }
+      return
+    }
 
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* 左侧：主题列表 */}
-        <div className="w-72 flex-shrink-0 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
-          {isLoading ? (
-            <div className="text-xs text-white/30 font-mono py-8 text-center">加载中...</div>
-          ) : themes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <Layers className="h-8 w-8 text-white/10" />
-              <p className="text-xs text-white/30 font-mono">暂无主题</p>
-              <p className="text-[11px] text-white/20 text-center max-w-[200px] leading-relaxed">
-                创建你的第一个长期主题，或在 AI 对话中说「@curation 帮我分析主题」
-              </p>
-              <button
-                className="mt-1 rounded-[6px] border border-white/10 px-3 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/20 transition-colors"
-                onClick={openImportDialog}
-              >
-                <Download className="h-3 w-3 inline mr-1" />
-                从标签导入
-              </button>
+    // 单元测试环境拦截
+    const isTestEnv =
+      (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || Boolean(process.env?.VITEST))) ||
+      (typeof window !== 'undefined' && Boolean((window as any).vi || (window as any).__vitest_worker__))
+    if (isTestEnv) return
+
+    if (!timelineInstance.current) {
+      timelineInstance.current = echarts.init(timelineChartRef.current)
+    }
+
+    const xAxisData = timeline.map(t => t.weekStartDate.substring(5))
+    const seriesData = timeline.map(t => ({
+      value: t.itemCount,
+      itemStyle: {
+        color: t.mentionedInSummary ? 'rgba(74, 222, 128, 0.8)' : 'rgba(255, 255, 255, 0.2)'
+      }
+    }))
+
+    timelineInstance.current.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(33, 33, 33, 0.95)',
+        borderColor: 'rgba(255,255,255,0.05)',
+        textStyle: { color: '#ffffff', fontSize: 12, fontFamily: 'monospace' },
+        axisPointer: { type: 'shadow' }
+      },
+      grid: {
+        top: 20,
+        right: 10,
+        bottom: 25,
+        left: 25
+      },
+      xAxis: {
+        type: 'category',
+        data: xAxisData,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: 10,
+          fontFamily: 'monospace',
+          margin: 10
+        }
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: {
+          show: true,
+          lineStyle: { color: 'rgba(255,255,255,0.04)', type: 'dashed' }
+        },
+        axisLabel: {
+          color: 'rgba(255,255,255,0.3)',
+          fontSize: 10,
+          fontFamily: 'monospace'
+        }
+      },
+      series: [
+        {
+          name: '关联数量',
+          type: 'bar',
+          data: seriesData,
+          barMaxWidth: 16,
+          itemStyle: {
+            borderRadius: [2, 2, 0, 0]
+          }
+        }
+      ]
+    })
+
+    const handleResize = () => timelineInstance.current?.resize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [timeline, selectedTheme])
+
+  /** 卸载清理图表 */
+  useEffect(() => {
+    return () => {
+      timelineInstance.current?.dispose()
+      timelineInstance.current = null
+    }
+  }, [])
+
+  return (
+    <section
+      aria-label="Themes Page"
+      className="flex h-full min-h-0 flex-col gap-3 text-white text-sm"
+    >
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {/* 左侧：精美的 Origami 风格列表 */}
+        <div className="min-h-0 flex flex-col gap-3 rounded-[6px] border border-white/5 bg-[#212121] p-4 flex-shrink-0">
+          <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 mr-1">
+                <span className="text-sm font-bold text-white/80">
+                  主题列表
+                </span>
+                <span className="text-[11px] text-white/30">
+                  ({themes.length})
+                </span>
+              </div>
             </div>
-          ) : (
-            <>
-              {/* 活跃主题 */}
-              {activeThemes.map((theme) => (
+            <div className="flex items-center gap-1">
+              <IconButton
+                preset="default"
+                size="small"
+                onClick={openImportDialog}
+                title="从标签导入"
+              >
+                <Download className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                preset="add"
+                size="small"
+                onClick={openCreateEditor}
+                title="新建主题"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-scroll custom-scrollbar pr-0.5 flex flex-col gap-2.5">
+            {isLoading ? (
+              <div className="text-xs text-white/30 font-mono py-8 text-center">加载脉络中...</div>
+            ) : themes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 bg-[#1a1a1a] rounded-[6px] border border-white/5 mt-1">
+                <Layers className="h-8 w-8 text-white/10" />
+                <p className="text-xs text-white/30 font-mono">暂无长期主题</p>
                 <button
-                  key={theme.externalId}
-                  onClick={() => setSelectedThemeId(theme.externalId)}
-                  className={`text-left rounded-[6px] border p-3 transition-all duration-200 group ${
-                    selectedThemeId === theme.externalId
-                      ? 'border-white/15 bg-[#1a1a1a]'
-                      : 'border-white/5 bg-[#212121] hover:border-white/10'
-                  }`}
+                  className="mt-3 rounded-[6px] border border-white/10 px-4 py-2 text-xs text-white/60 hover:text-white hover:border-white/20 transition-all bg-black/20 hover:bg-black/40"
+                  onClick={openImportDialog}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-white/85 truncate">
-                      {theme.name}
-                    </span>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <IconButton
-                        preset="edit"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditEditor(theme)
-                        }}
-                      />
-                      <IconButton
-                        preset="delete"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteTheme(theme)
-                        }}
-                      />
+                  <Download className="h-3 w-3 inline mr-1" />
+                  从标签快速导入
+                </button>
+              </div>
+            ) : (
+              <>
+                {activeThemes.map((theme) => (
+                  <button
+                    key={theme.externalId}
+                    onClick={() => setSelectedThemeId(theme.externalId)}
+                    className={`relative overflow-hidden text-left rounded-[6px] border p-3.5 transition-all duration-300 group ${
+                      selectedThemeId === theme.externalId
+                        ? 'border-white/15 bg-[#1a1a1a]'
+                        : 'border-white/5 bg-[#1a1a1a] hover:border-white/10 hover:-translate-y-0.5'
+                    }`}
+                  >
+                    {/* Active Indicator Line */}
+                    {selectedThemeId === theme.externalId && (
+                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-white/70 shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-white/90 truncate mr-2">
+                        {theme.name}
+                      </span>
+                      {/* Hover Actions */}
+                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#1a1a1a] pl-2">
+                        <IconButton preset="edit" size="small" onClick={(e) => { e.stopPropagation(); openEditEditor(theme); }} />
+                        <IconButton preset="delete" size="small" onClick={(e) => { e.stopPropagation(); handleDeleteTheme(theme); }} />
+                      </div>
+                    </div>
+                    {theme.description && (
+                      <p className="text-xs text-white/40 line-clamp-2 leading-relaxed">
+                        {theme.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 mt-3">
+                      <span className="text-[10px] text-white/30 font-mono flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {(theme.itemCount ?? 0)} 项
+                      </span>
+                    </div>
+                  </button>
+                ))}
+
+                {archivedThemes.length > 0 && (
+                  <div className="mt-4 border-t border-white/5 pt-4">
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                      <Archive className="h-3.5 w-3.5 text-white/20" />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-white/20">
+                        归档休眠
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {archivedThemes.map((theme) => (
+                        <button
+                          key={theme.externalId}
+                          onClick={() => setSelectedThemeId(theme.externalId)}
+                          className={`w-full text-left rounded-[6px] border p-2.5 transition-all group relative overflow-hidden ${
+                            selectedThemeId === theme.externalId
+                              ? 'border-white/10 bg-[#1a1a1a]'
+                              : 'border-transparent bg-black/20 hover:border-white/5 hover:bg-black/40'
+                          }`}
+                        >
+                          {selectedThemeId === theme.externalId && (
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-white/30" />
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-white/40 truncate">{theme.name}</span>
+                            <IconButton
+                              preset="default"
+                              size="small"
+                              className="opacity-0 group-hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleArchive(theme)
+                              }}
+                              title="唤醒恢复"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </IconButton>
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  {theme.description && (
-                    <p className="text-xs text-white/40 mt-1 line-clamp-2">
-                      {theme.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[10px] text-white/25 font-mono">
-                      {(theme.itemCount ?? 0)}项关联
-                    </span>
-                    <Tag size="small" color="default">
-                      {theme.status}
-                    </Tag>
-                  </div>
-                </button>
-              ))}
-
-              {/* 已归档主题 */}
-              {archivedThemes.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Archive className="h-3 w-3 text-white/20" />
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-white/20">
-                      已归档
-                    </span>
-                  </div>
-                  {archivedThemes.map((theme) => (
-                    <button
-                      key={theme.externalId}
-                      onClick={() => setSelectedThemeId(theme.externalId)}
-                      className={`w-full text-left rounded-[6px] border p-2.5 mb-1.5 transition-all ${
-                        selectedThemeId === theme.externalId
-                          ? 'border-white/10 bg-[#1a1a1a]'
-                          : 'border-white/[0.03] bg-black/30 hover:border-white/8'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/50 truncate">{theme.name}</span>
-                        <IconButton
-                          preset="default"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleToggleArchive(theme)
-                          }}
-                          title="恢复"
-                        >
-                          <RotateCcw className="h-2.5 w-2.5" />
-                        </IconButton>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* 右侧：主题详情 */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {/* 右侧：Bento Grid 数据透视面板 */}
+        <div className="min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar rounded-[6px] border border-white/5 bg-[#212121] p-5">
           {!selectedTheme ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <Layers className="h-10 w-10 text-white/8 mx-auto" />
-                <p className="mt-3 text-xs text-white/25 font-mono">
-                  选择一个主题查看详情
+            <div className="flex-1 flex items-center justify-center border border-white/5 bg-[#1a1a1a]/50 rounded-[6px]">
+              <div className="text-center opacity-60">
+                <Sparkles className="h-10 w-10 text-white/10 mx-auto mb-4" />
+                <p className="text-xs text-white/40 font-mono tracking-widest uppercase">
+                  选择主题 探索脉络
                 </p>
               </div>
             </div>
           ) : (
             <>
-              {/* 基本信息卡片 */}
-              <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-bold text-white/90">
-                      {selectedTheme.name}
-                    </h2>
-                    {selectedTheme.description && (
-                      <p className="text-xs text-white/45 mt-1">
-                        {selectedTheme.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      preset="edit"
-                      size="small"
-                      onClick={() => openEditEditor(selectedTheme)}
-                    />
+              {/* Bento Grid 上半部分: 主题档案与脉搏 */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 min-h-[160px] flex-shrink-0">
+                {/* Theme Profile (Col Span 2) */}
+                <div className="xl:col-span-2 bg-[#1a1a1a] rounded-[6px] border border-white/5 p-6 flex flex-col justify-between relative group overflow-hidden">
+                  {/* Subtle Background Accent */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 blur-3xl rounded-full pointer-events-none" />
+                  
+                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10 bg-[#1a1a1a]/80 backdrop-blur-sm rounded-[6px] p-1 border border-white/5">
+                    <IconButton preset="edit" size="small" onClick={() => openEditEditor(selectedTheme)} />
                     <IconButton
                       preset="default"
                       size="small"
                       onClick={() => handleToggleArchive(selectedTheme)}
-                      title={selectedTheme.status === 'active' ? '归档' : '恢复'}
+                      title={selectedTheme.status === 'active' ? '休眠' : '唤醒'}
                     >
-                      {selectedTheme.status === 'active' ? (
-                        <Archive className="h-3.5 w-3.5" />
-                      ) : (
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      )}
+                      {selectedTheme.status === 'active' ? <Archive className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
                     </IconButton>
-                    <IconButton
-                      preset="delete"
-                      size="small"
-                      onClick={() => handleDeleteTheme(selectedTheme)}
-                    />
+                    <IconButton preset="delete" size="small" onClick={() => handleDeleteTheme(selectedTheme)} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Layers className="w-3.5 h-3.5 text-white/30" />
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/30">
+                        Theme Profile
+                      </span>
+                      <Tag size="small" color={selectedTheme.status === 'active' ? 'emerald' : 'default'} className="ml-2 scale-90">
+                        {selectedTheme.status === 'active' ? '活跃' : '休眠'}
+                      </Tag>
+                    </div>
+                    <h2 className="text-xl font-bold text-white/95 tracking-wide mb-2">
+                      {selectedTheme.name}
+                    </h2>
+                    {selectedTheme.description && (
+                      <p className="text-sm text-white/50 leading-relaxed max-w-2xl">
+                        {selectedTheme.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-5 mt-6 border-t border-white/5 pt-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-white/30 mb-1">RECORDED ITEMS</span>
+                      <span className="text-sm font-bold text-white/80">{(selectedTheme.itemCount ?? 0)}</span>
+                    </div>
+                    <div className="w-px h-6 bg-white/5" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-white/30 mb-1">CREATED AT</span>
+                      <span className="text-xs text-white/60 font-mono mt-0.5">{selectedTheme.createdAt.split(' ')[0]}</span>
+                    </div>
+                    <div className="w-px h-6 bg-white/5" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-mono text-white/30 mb-1">LAST UPDATE</span>
+                      <span className="text-xs text-white/60 font-mono mt-0.5">{selectedTheme.updatedAt.split(' ')[0]}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mt-3 text-[10px] text-white/25 font-mono">
-                  <span>创建: {selectedTheme.createdAt}</span>
-                  <span>更新: {selectedTheme.updatedAt}</span>
-                  <span>{(selectedTheme.itemCount ?? 0)}项关联</span>
+
+                {/* Timeline Pulse (Col Span 1) */}
+                <div className="xl:col-span-1 bg-[#1a1a1a] rounded-[6px] border border-white/5 p-5 flex flex-col relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-2 z-10">
+                    <Activity className="w-3.5 h-3.5 text-white/30" />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/30">
+                      Rhythm Pulse
+                    </span>
+                  </div>
+                  <div className="flex-1 w-full relative min-h-[100px] z-10" ref={timelineChartRef}>
+                    {timeline.length === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[10px] text-white/20 font-mono">暂无脉搏数据</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* 关联素材列表 */}
-              <div className="flex-1 min-h-0 flex flex-col">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <FileText className="h-3.5 w-3.5 text-white/40" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                    关联素材
+              {/* Bento Grid 下半部分: 关联素材墙 (Masonry 风格) */}
+              <div className="bg-[#1a1a1a] rounded-[6px] border border-white/5 p-6 flex flex-col flex-1">
+                <div className="flex items-center gap-2 mb-5">
+                  <FileText className="w-4 h-4 text-white/40" />
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/40">
+                    关联记录碎片
                   </span>
                 </div>
 
                 {itemsLoading ? (
-                  <div className="text-xs text-white/30 font-mono py-8 text-center">
-                    加载中...
+                  <div className="text-xs text-white/30 font-mono py-12 text-center flex-1 flex items-center justify-center">
+                    读取碎片中...
                   </div>
                 ) : items.length === 0 ? (
-                  <div className="text-xs text-white/20 font-mono py-8 text-center bg-[#212121] rounded-[6px] border border-white/5">
-                    尚未关联任何素材
+                  <div className="flex-1 flex flex-col items-center justify-center border border-white/5 border-dashed rounded-[6px] bg-black/20 m-2 min-h-[160px]">
+                    <Sparkles className="w-6 h-6 text-white/10 mb-2" />
+                    <span className="text-[11px] text-white/30 font-mono">该主题下尚无碎片记录</span>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 content-start">
                     {items.map((item) => (
                       <div
                         key={item.externalId}
-                        className="bg-[#212121] rounded-[6px] border border-white/5 p-3 flex flex-col gap-1.5 group"
+                        className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col gap-2 group transition-all hover:border-white/15"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Tag size="small" color="default">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <Tag size="small" color="default" className="opacity-80">
                               {SOURCE_LABELS[item.sourceType] ?? item.sourceType}
                             </Tag>
-                            <span className="text-xs text-white/70 font-semibold truncate max-w-[400px]">
-                              {item.sourceTitle ?? `${item.sourceType} #${item.sourceId}`}
+                            <span className="text-xs text-white/80 font-bold max-w-[200px] truncate" title={item.sourceTitle}>
+                              {item.sourceTitle ?? `#${item.sourceId}`}
                             </span>
                             {item.aiExtracted === 1 && (
-                              <span className="text-[9px] text-white/20 font-mono bg-white/[0.03] px-1 py-0.5 rounded">
+                              <span className="text-[9px] text-white/30 font-mono bg-white/[0.04] px-1.5 py-0.5 rounded-[3px] border border-white/[0.05]">
                                 AI
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             {item.sourceEntryDate && (
-                              <span className="text-[10px] text-white/25 font-mono">
+                              <span className="text-[10px] text-white/20 font-mono mt-0.5">
                                 {item.sourceEntryDate}
                               </span>
                             )}
                             <IconButton
                               preset="close"
                               size="small"
+                              className="opacity-0 group-hover:opacity-100 -mr-1"
                               onClick={() => handleRemoveItem(item)}
-                              title="解除关联"
+                              title="解绑碎片"
                             />
                           </div>
                         </div>
+                        
                         {item.relevanceNote && (
-                          <p className="text-[11px] text-white/35 leading-relaxed">
-                            {item.relevanceNote}
-                          </p>
+                          <div className="mt-1 pl-2.5 border-l-2 border-white/10">
+                            <p className="text-[11px] text-white/40 leading-relaxed italic">
+                              "{item.relevanceNote}"
+                            </p>
+                          </div>
                         )}
+                        
                         {item.sourceContent && (
-                          <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed bg-black/30 p-2 rounded-[4px]">
-                            {item.sourceContent.slice(0, 200)}
-                          </p>
+                          <div className="mt-2 bg-black/40 rounded-[4px] p-2.5 border border-white/5">
+                            <p className="text-[11px] text-white/30 line-clamp-3 leading-relaxed whitespace-pre-wrap">
+                              {item.sourceContent.slice(0, 300)}
+                            </p>
+                          </div>
                         )}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* 时间线（简化版） */}
-              {timeline.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Clock className="h-3.5 w-3.5 text-white/40" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-white/40">
-                      时间线
-                    </span>
-                  </div>
-                  <div className="flex items-end gap-1 h-16 bg-[#212121] rounded-[6px] border border-white/5 p-2">
-                    {timeline.map((point) => (
-                      <div
-                        key={point.weekStartDate}
-                        className="flex-1 flex flex-col items-center justify-end gap-1"
-                        title={`${point.weekStartDate}: ${point.itemCount}项${point.mentionedInSummary ? ' (总结提及)' : ''}`}
-                      >
-                        <div
-                          className="w-full rounded-t-[2px] transition-all"
-                          style={{
-                            height: `${Math.min(point.itemCount * 8, 40)}px`,
-                            backgroundColor: point.mentionedInSummary
-                              ? 'rgba(255,255,255,0.35)'
-                              : 'rgba(255,255,255,0.08)'
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -554,49 +662,49 @@ export const ThemesPage = (): React.JSX.Element => {
 
       {/* 创建/编辑主题弹窗 */}
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#212121] rounded-[6px] border border-white/10 p-5 w-[400px] max-w-[90vw] shadow-2xl">
-            <h3 className="text-sm font-bold text-white/90 mb-4">
-              {editTarget ? '编辑主题' : '新建主题'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a1a] rounded-[6px] border border-white/10 p-6 w-[420px] max-w-[90vw] shadow-2xl">
+            <h3 className="text-sm font-bold text-white/90 mb-5 tracking-wide">
+              {editTarget ? '编辑长期主题' : '构筑新主题'}
             </h3>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <div>
-                <label className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1 block">
-                  名称
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-1.5 block">
+                  主题核心 (Name)
                 </label>
                 <input
-                  className="w-full bg-black/40 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white/85 placeholder:text-white/20 outline-none focus:border-white/20"
-                  placeholder="如：职业转型、亲密关系"
+                  className="w-full bg-[#212121] border border-white/10 rounded-[6px] px-3.5 py-2.5 text-sm text-white/90 placeholder:text-white/20 outline-none focus:border-white/30 transition-colors"
+                  placeholder="如：职业转型、心智成长"
                   value={editorName}
                   onChange={(e) => setEditorName(e.target.value)}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1 block">
-                  描述
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-1.5 block">
+                  意图描述 (Description)
                 </label>
                 <textarea
-                  className="w-full bg-black/40 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white/85 placeholder:text-white/20 outline-none focus:border-white/20 resize-none h-20"
-                  placeholder="为什么追踪这个主题？"
+                  className="w-full bg-[#212121] border border-white/10 rounded-[6px] px-3.5 py-2.5 text-sm text-white/90 placeholder:text-white/20 outline-none focus:border-white/30 transition-colors resize-none h-24 leading-relaxed"
+                  placeholder="为何确立此主题？期待怎样的沉淀？"
                   value={editorDesc}
                   onChange={(e) => setEditorDesc(e.target.value)}
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2.5 mt-6">
               <button
-                className="rounded-[6px] border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/20 transition-colors"
+                className="rounded-[6px] border border-transparent px-4 py-2 text-xs text-white/50 hover:text-white hover:bg-white/5 transition-colors"
                 onClick={() => setIsEditorOpen(false)}
               >
                 取消
               </button>
               <button
-                className="rounded-[6px] bg-white text-black px-4 py-1.5 text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-40"
+                className="rounded-[6px] bg-white text-black px-5 py-2 text-xs font-bold hover:bg-white/90 transition-colors disabled:opacity-40"
                 onClick={handleSaveTheme}
                 disabled={editorSaving || !editorName.trim()}
               >
-                {editorSaving ? '保存中...' : editTarget ? '更新' : '创建'}
+                {editorSaving ? '保存中...' : editTarget ? '确认更新' : '确立主题'}
               </button>
             </div>
           </div>
@@ -605,16 +713,16 @@ export const ThemesPage = (): React.JSX.Element => {
 
       {/* 从标签导入弹窗 */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#212121] rounded-[6px] border border-white/10 p-5 w-[400px] max-w-[90vw] shadow-2xl">
-            <h3 className="text-sm font-bold text-white/90 mb-4">从标签导入主题</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a1a] rounded-[6px] border border-white/10 p-6 w-[420px] max-w-[90vw] shadow-2xl">
+            <h3 className="text-sm font-bold text-white/90 mb-5 tracking-wide">从高频标签提取主题</h3>
             <div>
-              <label className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1 block">
-                标签（逗号分隔）
+              <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 mb-1.5 block">
+                Tags (逗号分隔)
               </label>
               <input
-                className="w-full bg-black/40 border border-white/10 rounded-[6px] px-3 py-2 text-sm text-white/85 placeholder:text-white/20 outline-none focus:border-white/20"
-                placeholder="如：职业转型, 亲密关系, 健康"
+                className="w-full bg-[#212121] border border-white/10 rounded-[6px] px-3.5 py-2.5 text-sm text-white/90 placeholder:text-white/20 outline-none focus:border-white/30 transition-colors"
+                placeholder="如：前端架构, 效率工具, 健身"
                 value={importTagsText}
                 onChange={(e) => setImportTagsText(e.target.value)}
                 autoFocus
@@ -622,28 +730,28 @@ export const ThemesPage = (): React.JSX.Element => {
                   if (e.key === 'Enter') void handleImportFromTags()
                 }}
               />
-              <p className="text-[10px] text-white/20 mt-1.5 leading-relaxed">
-                输入以逗号分隔的标签名，已存在的主题将被跳过。
+              <p className="text-[10px] text-white/30 mt-2.5 leading-relaxed bg-white/5 p-2.5 rounded-[4px]">
+                输入需转化为独立主题的标签。已存在同名主题将自动跳过防重。
               </p>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2.5 mt-6">
               <button
-                className="rounded-[6px] border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/20 transition-colors"
+                className="rounded-[6px] border border-transparent px-4 py-2 text-xs text-white/50 hover:text-white hover:bg-white/5 transition-colors"
                 onClick={() => setIsImportOpen(false)}
               >
                 取消
               </button>
               <button
-                className="rounded-[6px] bg-white text-black px-4 py-1.5 text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-40"
+                className="rounded-[6px] bg-white text-black px-5 py-2 text-xs font-bold hover:bg-white/90 transition-colors disabled:opacity-40"
                 onClick={handleImportFromTags}
                 disabled={importLoading || !importTagsText.trim()}
               >
-                {importLoading ? '导入中...' : '导入'}
+                {importLoading ? '提取中...' : '确认提取'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

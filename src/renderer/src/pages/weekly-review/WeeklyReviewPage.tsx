@@ -728,11 +728,11 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
   }, []);
 
   return (
-    <div
+    <section
       aria-label="Weekly Review Page"
-      className="w-full h-full bg-[#000000] overflow-y-auto custom-scrollbar py-4 [scrollbar-gutter:stable] flex flex-col text-sm"
+      className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto custom-scrollbar text-white text-sm"
     >
-      <div className="flex-1 flex flex-col gap-6 pr-1">
+      <div className="flex-1 flex flex-col gap-4">
         {/* 1. 上部面板：数据透视 (Dashboard) */}
         <div className="flex flex-col gap-3 w-full">
           {/* 卡片 1: 周数据透视 (独占一行，高度自适应，内部卡片水平排列) */}
@@ -1144,6 +1144,6 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
           />
         </div>
       </div>
-    </div>
+    </section>
   );
 };
