@@ -569,7 +569,10 @@ export const AiChatWorkspace = ({
       });
     });
 
-    for (const child of Array.from(container.children)) {
+    const wrapper = container.firstElementChild;
+    const elementsToObserve = wrapper ? Array.from(wrapper.children) : Array.from(container.children);
+
+    for (const child of elementsToObserve) {
       if (
         child instanceof HTMLElement &&
         child.dataset.aiChatBottomSpacer !== "true"
