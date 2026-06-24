@@ -6,7 +6,6 @@ import {
   parseAmountToCents,
   type BillCategory,
   type BillType,
-  BILL_CATEGORIES,
   BILL_TYPES,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,

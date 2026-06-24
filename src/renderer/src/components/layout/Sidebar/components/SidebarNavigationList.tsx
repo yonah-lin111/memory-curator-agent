@@ -10,7 +10,6 @@ import {
   LayoutGrid,
   Receipt,
   Settings,
-  Sparkles,
   StickyNote,
   Users,
 } from "lucide-react";

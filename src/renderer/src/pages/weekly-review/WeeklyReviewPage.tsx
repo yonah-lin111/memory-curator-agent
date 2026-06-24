@@ -87,11 +87,15 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
   const doughnutChartRef = useRef<HTMLDivElement | null>(null);
   // 每日行动与片段趋势双轴图的 DOM 容器引用
   const lineBarChartRef = useRef<HTMLDivElement | null>(null);
+  // 账单费用分类饼图的 DOM 容器引用
+  const billPieChartRef = useRef<HTMLDivElement | null>(null);
 
   // 环形图 ECharts 实例引用
   const doughnutInstance = useRef<echarts.ECharts | null>(null);
   // 折线柱状图 ECharts 实例引用
   const lineBarInstance = useRef<echarts.ECharts | null>(null);
+  // 账单饼图 ECharts 实例引用
+  const billPieInstance = useRef<echarts.ECharts | null>(null);
 
   /**
    * 将周度导航器 PageDateNavigator 挂载发布到全局 Header 栏
@@ -206,19 +210,40 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     const topTags = Object.entries(tagsMap)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
-      
-    // 计算本周总收入与支出
+
+    // 计算本周总收入与支出，以及收支分类数据
     let totalExpense = 0;
     let totalIncome = 0;
+    const expenseCategoryMap: Record<string, number> = {};
+    const incomeCategoryMap: Record<string, number> = {};
+
     weeklyData.forEach((day) => {
       day.bills.forEach((bill) => {
+        const cat = bill.category || "其他";
         if (bill.billType === "expense") {
           totalExpense += bill.amount;
+          expenseCategoryMap[cat] =
+            (expenseCategoryMap[cat] || 0) + bill.amount;
         } else if (bill.billType === "income") {
           totalIncome += bill.amount;
+          incomeCategoryMap[cat] = (incomeCategoryMap[cat] || 0) + bill.amount;
         }
       });
     });
+
+    const expenseCategoryData = Object.entries(expenseCategoryMap)
+      .map(([name, value]) => ({
+        name,
+        value: Number((value / 100).toFixed(2)),
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    const incomeCategoryData = Object.entries(incomeCategoryMap)
+      .map(([name, value]) => ({
+        name,
+        value: Number((value / 100).toFixed(2)),
+      }))
+      .sort((a, b) => b.value - a.value);
 
     return {
       totalTodos,
@@ -231,6 +256,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
       topTags,
       totalExpense,
       totalIncome,
+      expenseCategoryData,
+      incomeCategoryData,
     };
   }, [weeklyData]);
 
@@ -329,16 +356,62 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
       const todoTotalSeries = weeklyData.map((day) => day.todos.length);
       const snippetSeries = weeklyData.map((day) => day.snippets.length);
 
+      const journalSeries = weeklyData.map((day) => (day.journal ? 1 : 0));
+      const expenseSeries = weeklyData.map((day) =>
+        Number(
+          (
+            day.bills
+              .filter((b) => b.billType === "expense")
+              .reduce((sum, b) => sum + b.amount, 0) / 100
+          ).toFixed(2),
+        ),
+      );
+      const incomeSeries = weeklyData.map((day) =>
+        Number(
+          (
+            day.bills
+              .filter((b) => b.billType === "income")
+              .reduce((sum, b) => sum + b.amount, 0) / 100
+          ).toFixed(2),
+        ),
+      );
+
       lineBarInstance.current.setOption({
         backgroundColor: "transparent",
         tooltip: {
           trigger: "axis",
-          backgroundColor: "#212121",
-          borderColor: "rgba(255,255,255,0.1)",
-          textStyle: { color: "#ffffff", fontSize: 12 },
+          backgroundColor: "rgba(26, 26, 26, 0.9)",
+          borderColor: "rgba(255,255,255,0.05)",
+          borderWidth: 1,
+          textStyle: {
+            color: "#ffffff",
+            fontSize: 12,
+            fontFamily: "monospace",
+          },
+          axisPointer: {
+            type: "line",
+            lineStyle: { color: "rgba(255,255,255,0.15)", type: "dashed" },
+          },
+          padding: [12, 16],
+          extraCssText:
+            "box-shadow: 0 8px 32px rgba(0,0,0,0.8); backdrop-filter: blur(8px); border-radius: 8px;",
+        },
+        legend: {
+          data: ["已完成待办", "未完成待办", "片段", "日记", "支出", "收入"],
+          textStyle: {
+            color: "rgba(255,255,255,0.6)",
+            fontSize: 11,
+            fontFamily: "monospace",
+          },
+          top: 0,
+          right: 0,
+          icon: "circle",
+          itemWidth: 8,
+          itemHeight: 8,
+          itemGap: 16,
         },
         grid: {
-          top: 30,
+          top: 50,
           bottom: 25,
           left: 40,
           right: 40,
@@ -349,36 +422,52 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
           axisLine: { show: false },
           axisTick: { show: false },
           axisLabel: {
-            color: "rgba(255,255,255,0.4)",
-            fontSize: 12,
+            color: "rgba(255,255,255,0.3)",
+            fontSize: 11,
+            fontFamily: "monospace",
+            margin: 12,
           },
+          boundaryGap: true,
         },
         yAxis: [
           {
             type: "value",
-            name: "待办行动",
-            nameTextStyle: { color: "rgba(255,255,255,0.3)", fontSize: 12 },
+            name: "RECORD COUNT",
+            nameTextStyle: {
+              color: "rgba(255,255,255,0.2)",
+              fontSize: 10,
+              fontFamily: "monospace",
+              padding: [0, 20, 0, 0],
+            },
             axisLine: { show: false },
             axisTick: { show: false },
             splitLine: {
               show: true,
-              lineStyle: { color: "rgba(255,255,255,0.03)" },
+              lineStyle: { color: "rgba(255,255,255,0.04)", type: "dashed" },
             },
             axisLabel: {
-              color: "rgba(255,255,255,0.4)",
-              fontSize: 12,
+              color: "rgba(255,255,255,0.3)",
+              fontSize: 10,
+              fontFamily: "monospace",
             },
+            minInterval: 1,
           },
           {
             type: "value",
-            name: "片段捕获",
-            nameTextStyle: { color: "rgba(255,255,255,0.3)", fontSize: 12 },
+            name: "AMOUNT (¥)",
+            nameTextStyle: {
+              color: "rgba(255,255,255,0.2)",
+              fontSize: 10,
+              fontFamily: "monospace",
+              padding: [0, 0, 0, 20],
+            },
             axisLine: { show: false },
             axisTick: { show: false },
             splitLine: { show: false },
             axisLabel: {
-              color: "rgba(255,255,255,0.4)",
-              fontSize: 12,
+              color: "rgba(255,255,255,0.3)",
+              fontSize: 10,
+              fontFamily: "monospace",
             },
           },
         ],
@@ -388,9 +477,10 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             type: "bar",
             stack: "todo",
             itemStyle: {
-              color: "rgba(255, 255, 255, 0.75)",
+              color: "#ffffff",
+              borderRadius: [3, 3, 0, 0],
             },
-            barWidth: 16,
+            barWidth: 6,
             data: todoCompletedSeries,
           },
           {
@@ -398,28 +488,213 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             type: "bar",
             stack: "todo",
             itemStyle: {
-              color: "rgba(255, 255, 255, 0.15)",
+              color: "rgba(255, 255, 255, 0.12)",
+              borderRadius: [3, 3, 0, 0],
             },
-            barWidth: 16,
+            barWidth: 6,
             data: todoTotalSeries.map(
               (tot, idx) => tot - todoCompletedSeries[idx],
             ),
           },
           {
-            name: "片段捕获",
+            name: "片段",
             type: "line",
-            yAxisIndex: 1,
+            smooth: 0.4,
+            showSymbol: false,
             symbol: "circle",
             symbolSize: 6,
             itemStyle: {
-              color: "#ffffff",
+              color: "#60a5fa",
             },
             lineStyle: {
-              color: "#ffffff",
-              width: 1.5,
-              type: "dashed",
+              color: "#60a5fa",
+              width: 2,
+              shadowColor: "rgba(96, 165, 250, 0.4)",
+              shadowBlur: 10,
+              shadowOffsetY: 4,
             },
             data: snippetSeries,
+          },
+          {
+            name: "日记",
+            type: "line",
+            smooth: 0.4,
+            showSymbol: false,
+            symbol: "circle",
+            symbolSize: 6,
+            itemStyle: {
+              color: "#c084fc",
+            },
+            lineStyle: {
+              color: "#c084fc",
+              width: 2,
+              type: "dashed",
+              shadowColor: "rgba(192, 132, 252, 0.4)",
+              shadowBlur: 10,
+              shadowOffsetY: 4,
+            },
+            data: journalSeries,
+          },
+          {
+            name: "支出",
+            type: "line",
+            yAxisIndex: 1,
+            smooth: 0.4,
+            showSymbol: false,
+            symbol: "circle",
+            symbolSize: 6,
+            itemStyle: {
+              color: "#f87171",
+            },
+            lineStyle: {
+              color: "#f87171",
+              width: 2,
+              shadowColor: "rgba(248, 113, 113, 0.4)",
+              shadowBlur: 10,
+              shadowOffsetY: 4,
+            },
+            data: expenseSeries,
+          },
+          {
+            name: "收入",
+            type: "line",
+            yAxisIndex: 1,
+            smooth: 0.4,
+            showSymbol: false,
+            symbol: "circle",
+            symbolSize: 6,
+            itemStyle: {
+              color: "#4ade80",
+            },
+            lineStyle: {
+              color: "#4ade80",
+              width: 2,
+              shadowColor: "rgba(74, 222, 128, 0.4)",
+              shadowBlur: 10,
+              shadowOffsetY: 4,
+            },
+            data: incomeSeries,
+          },
+        ],
+      });
+    }
+
+    // 3. 初始化或配置账单双层嵌套环形图 (旭日图效果)
+    if (billPieChartRef.current) {
+      if (!billPieInstance.current) {
+        billPieInstance.current = echarts.init(billPieChartRef.current);
+      }
+
+      const totalIncomeYuan = Number((stats.totalIncome / 100).toFixed(2));
+      const totalExpenseYuan = Number((stats.totalExpense / 100).toFixed(2));
+
+      // 内圈数据：总收支
+      const innerData: Array<{
+        name: string;
+        value: number;
+        itemStyle: { color: string };
+      }> = [];
+      if (totalIncomeYuan > 0) {
+        innerData.push({
+          name: "总收入",
+          value: totalIncomeYuan,
+          itemStyle: { color: "#4ade80" },
+        });
+      }
+      if (totalExpenseYuan > 0) {
+        innerData.push({
+          name: "总支出",
+          value: totalExpenseYuan,
+          itemStyle: { color: "#f87171" },
+        });
+      }
+      if (innerData.length === 0) {
+        innerData.push({
+          name: "无收支",
+          value: 1,
+          itemStyle: { color: "rgba(255,255,255,0.05)" },
+        });
+      }
+
+      // 外圈数据：收支细分
+      const outerData = [
+        ...stats.incomeCategoryData.map((item) => ({
+          ...item,
+          itemStyle: { color: "rgba(74, 222, 128, 0.7)" },
+        })),
+        ...stats.expenseCategoryData.map((item) => ({
+          ...item,
+          itemStyle: { color: "rgba(248, 113, 113, 0.7)" },
+        })),
+      ];
+
+      billPieInstance.current.setOption({
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "#212121",
+          borderColor: "rgba(255,255,255,0.1)",
+          textStyle: { color: "#ffffff", fontSize: 12 },
+          formatter: "{b}: ¥{c} ({d}%)",
+        },
+        legend: {
+          show: false,
+        },
+        series: [
+          {
+            name: "收支大类",
+            type: "pie",
+            radius: ["20%", "40%"],
+            label: {
+              show: false,
+              position: "inner",
+            },
+            labelLine: {
+              show: false,
+            },
+            itemStyle: {
+              borderColor: "#212121",
+              borderWidth: 1.5,
+            },
+            data: innerData,
+          },
+          {
+            name: "细分分类",
+            type: "pie",
+            radius: ["45%", "65%"],
+            avoidLabelOverlap: true,
+            itemStyle: {
+              borderRadius: 3,
+              borderColor: "#212121",
+              borderWidth: 1.5,
+            },
+            label: {
+              show: true,
+              position: "outside",
+              formatter: "{b}",
+              color: "rgba(255, 255, 255, 0.45)",
+              fontSize: 12,
+              fontFamily: "monospace",
+            },
+            labelLine: {
+              show: true,
+              length: 5,
+              length2: 5,
+              lineStyle: {
+                color: "rgba(255, 255, 255, 0.1)",
+              },
+            },
+            data:
+              outerData.length > 0
+                ? outerData
+                : [
+                    {
+                      name: "",
+                      value: 0,
+                      label: { show: false },
+                      labelLine: { show: false },
+                    },
+                  ],
           },
         ],
       });
@@ -429,6 +704,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     const handleResize = (): void => {
       doughnutInstance.current?.resize();
       lineBarInstance.current?.resize();
+      billPieInstance.current?.resize();
     };
     window.addEventListener("resize", handleResize);
 
@@ -444,8 +720,10 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
     return () => {
       doughnutInstance.current?.dispose();
       lineBarInstance.current?.dispose();
+      billPieInstance.current?.dispose();
       doughnutInstance.current = null;
       lineBarInstance.current = null;
+      billPieInstance.current = null;
     };
   }, []);
 
@@ -462,93 +740,116 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold tracking-wide text-white/80">周数据透视</span>
+                <span className="text-sm font-bold tracking-wide text-white/80">
+                  周数据透视
+                </span>
               </div>
             </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
-                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    待办完成率
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
+              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                <span className="text-xs text-white/30 font-mono leading-none">
+                  待办完成率
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-bold text-white/90 leading-none">
+                    {stats.completionRate}%
                   </span>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-2xl font-bold text-white/90 leading-none">
-                      {stats.completionRate}%
-                    </span>
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    {stats.completedTodos} / {stats.totalTodos}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                <span className="text-xs text-white/30 font-mono leading-none">
+                  知识沉淀
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-bold text-white/90 leading-none">
+                    {stats.totalSnippets}
+                  </span>
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    个片段捕获
+                  </span>
+                </div>
+              </div>
+              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                <span className="text-xs text-white/30 font-mono leading-none">
+                  日记连续性
+                </span>
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-2xl font-bold text-white/90 leading-none">
+                    {stats.journalsCount}/7
+                  </span>
+                  <span className="text-xs text-white/30 font-mono leading-none">
+                    天写作记录
+                  </span>
+                </div>
+              </div>
+              <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
+                <span className="text-xs text-white/30 font-mono leading-none">
+                  收支总览
+                </span>
+                <div className="flex flex-col gap-1 mt-1 justify-end h-full">
+                  <div className="flex items-baseline justify-between">
                     <span className="text-xs text-white/30 font-mono leading-none">
-                      {stats.completedTodos} / {stats.totalTodos}
+                      支
+                    </span>
+                    <span className="text-sm font-bold text-red-400/80 leading-none">
+                      ¥{(stats.totalExpense / 100).toFixed(2)}
                     </span>
                   </div>
-                </div>
-                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    知识沉淀
-                  </span>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-2xl font-bold text-white/90 leading-none">
-                      {stats.totalSnippets}
-                    </span>
+                  <div className="flex items-baseline justify-between">
                     <span className="text-xs text-white/30 font-mono leading-none">
-                      个片段捕获
+                      收
                     </span>
-                  </div>
-                </div>
-                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    日记连续性
-                  </span>
-                  <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-2xl font-bold text-white/90 leading-none">
-                      {stats.journalsCount}/7
+                    <span className="text-sm font-bold text-green-400/80 leading-none">
+                      ¥{(stats.totalIncome / 100).toFixed(2)}
                     </span>
-                    <span className="text-xs text-white/30 font-mono leading-none">
-                      天写作记录
-                    </span>
-                  </div>
-                </div>
-                <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    收支总览
-                  </span>
-                  <div className="flex flex-col gap-1 mt-1 justify-end h-full">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xs text-white/30 font-mono leading-none">支</span>
-                      <span className="text-sm font-bold text-red-400/80 leading-none">
-                        ¥{(stats.totalExpense / 100).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xs text-white/30 font-mono leading-none">收</span>
-                      <span className="text-sm font-bold text-green-400/80 leading-none">
-                        ¥{(stats.totalIncome / 100).toFixed(2)}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* echart 图表展示网格 - 第一行：每日行动与片段趋势 (独占一行) */}
+          <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[60vh] mb-3">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-white/60" />
+                <span className="text-sm font-bold tracking-wide text-white/80">
+                  每日各项记录趋势
+                </span>
+              </div>
+            </div>
+            <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
+          </div>
+
+          {/* echart 图表展示网格 - 第二行：账单分类与片段标签占比 (并排) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
+            {/* 卡片: 收支分类占比 */}
+            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[400px]">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-white/60" />
+                  <span className="text-sm font-bold tracking-wide text-white/80">
+                    收支分类占比
+                  </span>
+                </div>
+              </div>
+              <div ref={billPieChartRef} className="flex-1 w-full h-full" />
             </div>
 
-          {/* echart 图表展示网格 (同一行) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pb-2">
-            {/* 卡片 2: 片段标签占比 */}
+            {/* 卡片: 片段标签占比 */}
             <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[400px]">
               <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
                 <div className="flex items-center gap-2">
                   <Bookmark className="h-4 w-4 text-white/60" />
-                  <span className="text-sm font-bold tracking-wide text-white/80">片段标签占比</span>
+                  <span className="text-sm font-bold tracking-wide text-white/80">
+                    片段标签占比
+                  </span>
                 </div>
               </div>
-                <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
-              </div>
-
-            {/* 卡片 3: 每日行动与片段趋势 */}
-            <div className="bg-[#212121] rounded-[6px] border border-white/5 p-4 flex flex-col h-[400px]">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-white/60" />
-                  <span className="text-sm font-bold tracking-wide text-white/80">每日行动与片段趋势</span>
-                </div>
-              </div>
-                <div ref={lineBarChartRef} className="flex-1 w-full h-full" />
+              <div ref={doughnutChartRef} className="flex-1 w-full h-full" />
             </div>
           </div>
         </div>
@@ -560,7 +861,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold tracking-wide text-white/80">时间溪流</span>
+                <span className="text-sm font-bold tracking-wide text-white/80">
+                  时间溪流
+                </span>
               </div>
             </div>
 
@@ -746,14 +1049,21 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                                       key={bill.id}
                                       className="text-xs text-white/65 flex items-center gap-1.5 truncate"
                                     >
-                                      <span className={`text-xs font-mono select-none ${bill.billType === 'expense' ? 'text-red-400/80' : 'text-green-400/80'}`}>
-                                        [{bill.billType === 'expense' ? '支出' : '收入'}]
+                                      <span
+                                        className={`text-xs font-mono select-none ${bill.billType === "expense" ? "text-red-400/80" : "text-green-400/80"}`}
+                                      >
+                                        [
+                                        {bill.billType === "expense"
+                                          ? "支出"
+                                          : "收入"}
+                                        ]
                                       </span>
                                       <span className="truncate font-semibold text-white/80">
                                         ¥{(bill.amount / 100).toFixed(2)}
                                       </span>
                                       <span className="truncate text-white/40">
-                                        {bill.category} {bill.note ? `- ${bill.note}` : ''}
+                                        {bill.category}{" "}
+                                        {bill.note ? `- ${bill.note}` : ""}
                                       </span>
                                     </div>
                                   ))}
@@ -772,15 +1082,15 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
 
           {/* 周度总结 */}
           <WeeklySummaryPanel
-              weekStartDate={getMonday(entryDate)}
-              isEmpty={
-                isLoading ||
-                (stats.totalTodos === 0 &&
-                  stats.totalSnippets === 0 &&
-                  stats.journalsCount === 0 &&
-                  stats.totalBills === 0)
-              }
-            />
+            weekStartDate={getMonday(entryDate)}
+            isEmpty={
+              isLoading ||
+              (stats.totalTodos === 0 &&
+                stats.totalSnippets === 0 &&
+                stats.journalsCount === 0 &&
+                stats.totalBills === 0)
+            }
+          />
         </div>
       </div>
     </div>

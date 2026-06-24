@@ -111,7 +111,7 @@ const BILL_ADD_CONFIRMATION: ToolConfirmationConfig = {
     return `将创建账单记录：[${parseString(input.billDate) || ''}] ${billType} [${parseString(input.category) || ''}]: ${amount}。`
   },
   completion: {
-    renderMessage: (input, result) => {
+    renderMessage: (_input, result) => {
       if (!isRecord(result.data) || !isRecord(result.data.item)) return '已创建账单记录。'
       const item = result.data.item as BillItem
       const amount = typeof item.amount === 'number' ? formatAmount(item.amount) : ''
@@ -138,7 +138,7 @@ const BILL_UPDATE_CONFIRMATION: ToolConfirmationConfig = {
     return `将更新账单记录：#${input.id}。`
   },
   completion: {
-    renderMessage: (input, result) => {
+    renderMessage: (_input, result) => {
       if (!isRecord(result.data) || !isRecord(result.data.item)) return '已更新账单记录。'
       const item = result.data.item as BillItem
       const amount = typeof item.amount === 'number' ? formatAmount(item.amount) : ''

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState } from "react";
-import { BILL_CATEGORIES, BILL_TYPES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, parseAmountToCents, type BillCategory, type BillType } from "./billShared";
+import { BILL_TYPES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, parseAmountToCents, type BillCategory, type BillType } from "./billShared";
 
 /** 账单草稿 */
 export type BillDraft = {

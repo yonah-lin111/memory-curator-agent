@@ -116,8 +116,12 @@ export const createThemeTools = (themesService: ThemesService): AgentTool[] => [
     name: 'theme_tool_add',
     description: '创建一个新的长期主题。创建前会请求用户确认。',
     confirmation: {
-      requireConfirmation: true,
-      autoDenyWhen: '用户明确拒绝创建该主题或主题名称已被使用'
+      header: '确认创建主题',
+      question: '确认创建该主题',
+      confirm: '确认创建',
+      cancel: '取消',
+      renderTarget: (input: any) => input?.name || '新主题',
+      renderSummary: (input: any) => `将创建主题「${input?.name}」`
     },
     parameters: {
       type: 'object',
@@ -145,8 +149,12 @@ export const createThemeTools = (themesService: ThemesService): AgentTool[] => [
     name: 'theme_tool_update',
     description: '更新已有主题的名称、描述、状态或颜色。更新前会请求用户确认。',
     confirmation: {
-      requireConfirmation: true,
-      autoDenyWhen: '用户明确拒绝修改'
+      header: '确认更新主题',
+      question: '确认更新该主题',
+      confirm: '确认更新',
+      cancel: '取消',
+      renderTarget: (input: any) => `主题 ${input?.themeExternalId}`,
+      renderSummary: (input: any) => `将更新主题 ${input?.themeExternalId}（新名称：${input?.name || '未修改'}）`
     },
     parameters: {
       type: 'object',
@@ -180,8 +188,12 @@ export const createThemeTools = (themesService: ThemesService): AgentTool[] => [
     name: 'theme_tool_delete',
     description: '删除一个主题及其所有关联。删除前会请求用户二次确认。',
     confirmation: {
-      requireConfirmation: true,
-      autoDenyWhen: '用户明确拒绝删除'
+      header: '确认删除主题',
+      question: '确认删除该主题及其关联',
+      confirm: '确认删除',
+      cancel: '取消',
+      renderTarget: (input: any) => `主题 ${input?.themeExternalId}`,
+      renderSummary: (input: any) => `将永久删除主题 ${input?.themeExternalId} 及其关联素材`
     },
     parameters: {
       type: 'object',
@@ -202,8 +214,12 @@ export const createThemeTools = (themesService: ThemesService): AgentTool[] => [
     name: 'theme_tool_item_add',
     description: '将一篇素材（笔记、日记、片段）关联到指定主题。关联前会请求用户确认。',
     confirmation: {
-      requireConfirmation: true,
-      autoDenyWhen: '用户明确拒绝关联'
+      header: '确认关联素材',
+      question: '确认将素材关联至该主题',
+      confirm: '确认关联',
+      cancel: '取消',
+      renderTarget: (input: any) => `素材 ${input?.sourceId}`,
+      renderSummary: (input: any) => `将 ${input?.sourceType} ${input?.sourceId} 关联至主题 ${input?.themeExternalId}`
     },
     parameters: {
       type: 'object',
@@ -245,8 +261,12 @@ export const createThemeTools = (themesService: ThemesService): AgentTool[] => [
     name: 'theme_tool_item_remove',
     description: '解除某篇素材与主题的关联。操作前会请求用户确认。',
     confirmation: {
-      requireConfirmation: true,
-      autoDenyWhen: '用户明确拒绝解除关联'
+      header: '确认解除关联',
+      question: '确认解除素材与该主题的关联',
+      confirm: '确认解除',
+      cancel: '取消',
+      renderTarget: (input: any) => `素材 ${input?.sourceId}`,
+      renderSummary: (input: any) => `将 ${input?.sourceType} ${input?.sourceId} 与主题 ${input?.themeExternalId} 解除关联`
     },
     parameters: {
       type: 'object',
