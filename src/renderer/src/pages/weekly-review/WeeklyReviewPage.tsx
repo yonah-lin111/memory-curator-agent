@@ -404,7 +404,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             fontFamily: "monospace",
           },
           top: 0,
-          right: 0,
+          left: "center",
           icon: "circle",
           itemWidth: 8,
           itemHeight: 8,
