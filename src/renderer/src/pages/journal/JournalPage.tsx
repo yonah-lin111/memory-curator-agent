@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
-import { JournalDateRail } from "@/pages/journal/components/JournalDateRail";
 import { JournalEditorSurface } from "@/pages/journal/components/JournalEditorSurface";
 import {
   createTodayEntryDate,
@@ -234,20 +233,17 @@ export const JournalPage = (): React.JSX.Element => {
 
   return (
     <section aria-label="Journal Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         <JournalEditorSurface
+          isDirty={journalContent.trim() !== savedJournalContent.trim()}
+          lastSavedAt={lastSavedAt}
+          moodLabel={moodLabel}
           value={journalContent}
-          headerLeft={<h3 className="text-sm font-bold text-white/80">当日随笔</h3>}
+          wordCount={journalContent.length}
           onBlur={() => {
             void persistRef.current(journalContent);
           }}
           onChange={setJournalContent}
-        />
-        <JournalDateRail
-          isDirty={journalContent.trim() !== savedJournalContent.trim()}
-          lastSavedAt={lastSavedAt}
-          moodLabel={moodLabel}
-          wordCount={journalContent.length}
         />
       </div>
     </section>
