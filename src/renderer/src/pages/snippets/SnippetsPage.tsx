@@ -173,24 +173,8 @@ export const SnippetsPage = (): React.JSX.Element => {
     return [...counts.entries()].map(([value, count]) => ({ value, count }));
   }, [snippets]);
 
-  // 片段总数。
-  const totalCount = useMemo(() => snippets.length, [snippets]);
 
-  // 标签总数。
-  const totalTagsCount = useMemo(() => tagItems.length, [tagItems]);
 
-  // 最近更新时间。
-  const lastUpdatedTime = useMemo(() => {
-    if (snippets.length === 0) {
-      return "--:--";
-    }
-
-    const latest = snippets.reduce((prev, current) => {
-      return current.updatedAt > prev.updatedAt ? current : prev;
-    }, snippets[0]);
-
-    return latest.time || latest.updatedAt.slice(-5);
-  }, [snippets]);
 
   /**
    * 在无 bridge 环境下创建本地片段。
@@ -452,10 +436,10 @@ export const SnippetsPage = (): React.JSX.Element => {
       aria-label="Snippets Page"
       className="flex h-full min-h-0 flex-col gap-3 text-white"
     >
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <h3 className="text-sm font-bold text-white/80">片段列表</h3>
+            <div className="flex items-center gap-2 mr-1"><span className="text-sm font-bold text-white/80">片段列表</span><span className="text-[11px] text-white/30">({visibleSnippets.length})</span></div>
             <Tooltip
               placement="bottom"
               trigger="click"
@@ -558,9 +542,9 @@ export const SnippetsPage = (): React.JSX.Element => {
         <SnippetsTagMap
           activeTag={activeTag}
           tags={tagItems}
-          totalCount={totalCount}
-          totalTagsCount={totalTagsCount}
-          lastUpdatedTime={lastUpdatedTime}
+          
+          
+          
           onChange={setActiveTag}
         />
       </div>

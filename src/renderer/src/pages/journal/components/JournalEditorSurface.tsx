@@ -1,5 +1,5 @@
 import type React from "react";
-import { BookOpen, Clock3, Smile, Sparkles } from "lucide-react";
+import { BookOpen, Clock3, Smile } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
 // 日记编辑器区域属性。

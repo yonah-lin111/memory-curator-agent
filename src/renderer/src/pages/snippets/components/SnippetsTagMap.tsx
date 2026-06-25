@@ -1,5 +1,8 @@
 import type React from "react";
-import { StickyNote, Tag as TagIcon, Clock3 } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { Tag } from "@/components/ui/Tag";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { IconButton } from "@/components/ui/IconButton";
 
 // 标签地图属性。
 interface SnippetsTagMapProps {
@@ -9,40 +12,7 @@ interface SnippetsTagMapProps {
   activeTag: string | null;
   // 标签切换回调。
   onChange: (tag: string | null) => void;
-  // 片段总数。
-  totalCount: number;
-  // 标签总数。
-  totalTagsCount: number;
-  // 最近更新时间。
-  lastUpdatedTime: string;
 }
-
-// 侧栏指标卡属性。
-interface SnippetsMetricCardProps {
-  // 指标图标。
-  icon: React.ReactNode;
-  // 指标标题。
-  label: string;
-  // 指标值。
-  value: string | number;
-}
-
-/**
- * SnippetsMetricCard - 片段侧栏指标卡。
- */
-const SnippetsMetricCard = ({
-  icon,
-  label,
-  value,
-}: SnippetsMetricCardProps): React.JSX.Element => (
-  <div className="rounded-[6px] border border-white/8 bg-black/30 p-3">
-    <div className="flex items-center gap-2 text-white/72">
-      {icon}
-      <span className="text-xs">{label}</span>
-    </div>
-    <p className="mt-2 text-sm font-semibold text-white">{value}</p>
-  </div>
-);
 
 /**
  * SnippetsTagMap - 片段页右侧侧栏。
@@ -51,64 +21,55 @@ export const SnippetsTagMap = ({
   tags,
   activeTag,
   onChange,
-  totalCount,
-  totalTagsCount,
-  lastUpdatedTime,
 }: SnippetsTagMapProps): React.JSX.Element => (
-  <aside className="flex min-h-0 flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-    <div className="grid grid-cols-2 gap-2">
-      <SnippetsMetricCard
-        icon={<StickyNote className="h-3.5 w-3.5" />}
-        label="片段总数"
-        value={totalCount}
-      />
-      <SnippetsMetricCard
-        icon={<TagIcon className="h-3.5 w-3.5" />}
-        label="使用标签"
-        value={totalTagsCount}
-      />
-      <SnippetsMetricCard
-        icon={<Clock3 className="h-3.5 w-3.5" />}
-        label="最近更新"
-        value={lastUpdatedTime}
-      />
-    </div>
-
-    <div className="border-t border-white/5 pt-3">
-      <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-white/28">
-        Tag Map
-      </p>
-      <p className="mt-1 text-xs text-white/46">按标签切片查看当天片段。</p>
-    </div>
-
-    <button
-      className={`rounded-[6px] border px-3 py-2 text-left text-sm transition-colors ${
-        activeTag === null
-          ? "border-white/18 bg-white/12 text-white"
-          : "border-white/8 bg-black/25 text-white/84 hover:border-white/16 hover:bg-black/35"
-      }`}
-      type="button"
-      onClick={() => onChange(null)}
-    >
-      全部片段
-    </button>
-
-    <div className="flex flex-wrap gap-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-0.5">
-      {tags.map((tag) => (
-        <button
-          key={tag.value}
-          aria-label={`Filter tag ${tag.value}`}
-          className={`rounded-[6px] border px-2.5 py-1 text-xs font-semibold transition-colors ${
-            activeTag === tag.value
-              ? "border-white/18 bg-white/12 text-white"
-              : "border-white/8 bg-black/25 text-white/62 hover:border-white/16 hover:text-white"
-          }`}
-          type="button"
-          onClick={() => onChange(tag.value)}
+  <aside className="flex min-h-0 w-full lg:w-[300px] flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
+    <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0 mb-[-8px]">
+      <span className="text-sm font-bold text-white/80">条件筛选</span>
+      <Tooltip placement="bottom" title="重置全部筛选条件">
+        <IconButton
+          size="medium"
+          onClick={() => onChange(null)}
+          className="text-white/40 hover:text-white"
         >
-          #{tag.value} · {tag.count}
-        </button>
-      ))}
+          <RotateCcw className="h-4 w-4" />
+        </IconButton>
+      </Tooltip>
+    </div>
+
+    <div className="flex flex-col gap-2 flex-1 min-h-0">
+      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+        <span className="text-xs font-bold text-white/80">标签筛选</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 overflow-y-scroll custom-scrollbar max-h-[300px] pr-0.5">
+        {tags.length === 0 ? (
+          <span className="text-xs text-white/30 py-4 text-center w-full">
+            暂无标签
+          </span>
+        ) : (
+          <>
+            <Tag
+              highlighted={activeTag === null}
+              onClick={() => onChange(null)}
+              className="font-medium cursor-pointer"
+            >
+              全部
+            </Tag>
+            {tags.map((tag) => (
+              <Tag
+                key={tag.value}
+                highlighted={activeTag === tag.value}
+                onClick={() =>
+                  onChange(activeTag === tag.value ? null : tag.value)
+                }
+                className="font-medium cursor-pointer"
+                prefix="#"
+              >
+                {tag.value}
+              </Tag>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   </aside>
 );
