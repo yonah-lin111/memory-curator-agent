@@ -15,6 +15,7 @@ import {
   type AiToolConfirmationAnswerSubmitPayload,
 } from "@/features/ai-chat/components/AiAskRequestPanel";
 import { AiToolExplainPreview } from "@/features/ai-chat/components/AiToolExplainPreview";
+import { AiToolChangePreview } from "@/features/ai-chat/components/AiToolChangePreview";
 
 // 工具观察文本最大展示长度。
 const TOOL_OBSERVATION_MAX_LENGTH = 96;
@@ -373,6 +374,13 @@ export const AiToolCallBlock = ({
                       />
                     </div>
                   </div>
+                ) : null}
+                {toolConfirmationRequest?.input ? (
+                  <AiToolChangePreview
+                    toolName={step.tool}
+                    input={toolConfirmationRequest.input}
+                    isGenerating={step.status === "running"}
+                  />
                 ) : null}
                 {askAnswerSummary}
                 <AiToolRequestPanelContainer
