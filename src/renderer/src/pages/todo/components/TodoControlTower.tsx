@@ -63,7 +63,7 @@ export const TodoControlTower = ({
       },
       xAxis: {
         type: "category",
-        data: ["已完成", "P0聚焦", "未完成"],
+        data: ["已完成", "P0未完成", "其它未完成"],
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
