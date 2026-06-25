@@ -49,8 +49,8 @@ export const NoteCategoryPanel = ({
 
   return (
     <aside className="flex min-h-0 w-[30vw] flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-white/80">分类管理</p>
+      <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0">
+        <span className="text-sm font-bold text-white/80">分类管理</span>
         <Tooltip
           trigger="click"
           placement="bottom"

@@ -143,15 +143,10 @@ export const TodoControlTower = ({
 
   return (
     <aside className="flex min-h-0 flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
-      {/* 顶部大 Title */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0 mb-[-8px]">
-        <span className="text-sm font-bold text-white/80">看板总览</span>
-      </div>
-
       {/* 图表模块 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between border-b border-white/5 pb-2">
-          <span className="text-xs font-bold text-white/80">待办分布</span>
+          <span className="text-sm font-bold text-white/80">待办分布</span>
         </div>
 
         {totalCount === 0 ? (
