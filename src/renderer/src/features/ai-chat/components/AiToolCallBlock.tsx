@@ -4,8 +4,7 @@ import type {
   AiToolStep,
   AiToolStepStatus,
 } from "@/features/ai-chat/types";
-import {
-  AiAskRequestPanel,
+import { AiAskRequestPanel,
   isAiAskAnswer,
   isAiAskRequest,
   isAiToolConfirmationRequest,
@@ -14,7 +13,6 @@ import {
   type AiAskAnswerSubmitPayload,
   type AiToolConfirmationAnswerSubmitPayload,
 } from "@/features/ai-chat/components/AiAskRequestPanel";
-import { AiToolExplainPreview } from "@/features/ai-chat/components/AiToolExplainPreview";
 import { AiToolChangePreview } from "@/features/ai-chat/components/AiToolChangePreview";
 
 // 工具观察文本最大展示长度。
@@ -287,7 +285,6 @@ export const AiToolCallBlock = ({
           const toolConfirmationRequest = isAiToolConfirmationRequest(step.data)
             ? step.data
             : null;
-          const operationSummary = toolConfirmationRequest?.summary?.trim();
           const askAnswerSummary = renderAskAnswerSummary(step.data);
           const requestPanel = askRequest ?? toolConfirmationRequest;
           const handleSubmitRequest = askRequest
@@ -348,33 +345,6 @@ export const AiToolCallBlock = ({
                   </span>
                   <span className="flex-1">{displayObservation}</span>
                 </div>
-                {operationSummary ? (
-                  <div
-                    className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
-                    data-testid="tool-operation-summary"
-                  >
-                    <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
-                      <svg
-                        className="w-3 h-3 stroke-current"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M3 1v5h7"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <AiToolExplainPreview
-                        content={operationSummary}
-                        isGenerating={step.status === "running"}
-                      />
-                    </div>
-                  </div>
-                ) : null}
                 {toolConfirmationRequest?.input ? (
                   <AiToolChangePreview
                     toolName={step.tool}
