@@ -23,22 +23,18 @@ export const SnippetsTagMap = ({
   onChange,
 }: SnippetsTagMapProps): React.JSX.Element => (
   <aside className="flex min-h-0 w-full lg:w-[300px] flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
-    <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0 mb-[-8px]">
-      <span className="text-sm font-bold text-white/80">条件筛选</span>
-      <Tooltip placement="bottom" title="重置全部筛选条件">
-        <IconButton
-          size="medium"
-          onClick={() => onChange(null)}
-          className="text-white/40 hover:text-white"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </IconButton>
-      </Tooltip>
-    </div>
-
     <div className="flex flex-col gap-2 flex-1 min-h-0">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
-        <span className="text-xs font-bold text-white/80">标签筛选</span>
+        <span className="text-sm font-bold text-white/80">标签筛选</span>
+        <Tooltip placement="bottom" title="重置全部筛选条件">
+          <IconButton
+            size="medium"
+            onClick={() => onChange(null)}
+            className="text-white/40 hover:text-white"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </IconButton>
+        </Tooltip>
       </div>
       <div className="flex flex-wrap gap-1.5 overflow-y-scroll custom-scrollbar max-h-[300px] pr-0.5">
         {tags.length === 0 ? (
