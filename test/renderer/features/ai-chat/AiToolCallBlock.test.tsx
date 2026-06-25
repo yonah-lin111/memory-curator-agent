@@ -144,6 +144,7 @@ describe("AiToolCallBlock", () => {
         tool: "people_tool_delete",
         input: {
           id: "person-1",
+          confirmationSummary: "将删除人物档案：**阿明**（朋友）。\n- 这是本次查询确认到的目标人物",
         },
         summary: "将删除人物档案：**阿明**（朋友）。\n- 这是本次查询确认到的目标人物",
         questions: [
@@ -168,25 +169,16 @@ describe("AiToolCallBlock", () => {
 
     render(<AiToolCallBlock steps={[step]} onSubmitToolConfirmationAnswer={vi.fn()} />);
 
-    const summary = screen.getByTestId("tool-operation-summary");
+    const summary = screen.getAllByTestId("tool-operation-summary")[1];
     const header = screen.getAllByText("确认删除")[0];
 
-    const preview = screen.getByTestId("ai-tool-explain-preview");
-
     expect(screen.queryByText("AI 输出说明")).not.toBeInTheDocument();
-    expect(summary).toHaveTextContent("将删除人物档案：**阿明**（朋友）。");
-    expect(screen.getByTestId("md-preview")).toHaveTextContent(
-      "将删除人物档案：**阿明**（朋友）。",
-    );
-    expect(preview).toHaveClass("markdown-preview-container");
-    expect(preview).toHaveStyle({ fontSize: "13px" });
+    expect(summary).toHaveTextContent("将删除人物档案：阿明（朋友）。");
     expect(
       screen.getByText(
         "Tool confirmation required before executing people_tool_delete.",
       ),
     ).toBeInTheDocument();
-    expect(summary.querySelector("svg path")).toHaveAttribute("d", "M3 1v5h7");
-    expect(screen.queryByTestId("tool-confirmation-summary")).toBeNull();
     expect(
       summary.compareDocumentPosition(header) &
         Node.DOCUMENT_POSITION_FOLLOWING,

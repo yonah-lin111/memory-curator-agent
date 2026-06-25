@@ -35,6 +35,17 @@ const extractDomain = (toolName: string): string => {
   return parts.length > 1 ? parts[0] : "";
 };
 
+const getBriefSummary = (input: unknown): string => {
+  if (!isRecord(input) || typeof input.confirmationSummary !== "string") {
+    return "";
+  }
+  // 取第一行，保持简短
+  let text = input.confirmationSummary.split("\n")[0];
+  // 移除 markdown 格式 (如 **, *, _, ` 等)
+  text = text.replace(/[*_~`]/g, "");
+  return text;
+};
+
 const DOMAIN_FIELD_LABELS: Record<string, Record<string, string>> = {
   common: {
     id: "编号",
@@ -242,6 +253,8 @@ export const AiToolChangePreview = ({ toolName, input, isGenerating = false }: A
     content = <pre className="text-[11px] text-white/45 font-mono overflow-x-auto">{JSON.stringify(input, null, 2)}</pre>;
   }
 
+  const summaryText = getBriefSummary(input);
+
   return (
     <div className="flex flex-col min-w-0">
       {/* Header */}
@@ -259,10 +272,14 @@ export const AiToolChangePreview = ({ toolName, input, isGenerating = false }: A
             />
           </svg>
         </span>
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 mt-[1px]">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 mt-[1px]" data-testid="tool-operation-summary">
           {getOperationBadge(operationType)}
-          {domain && <span className="text-[12px] font-medium text-white/70">{domain}</span>}
-          {operationType.startsWith("batch_") && batchCount > 0 && (
+          {summaryText ? (
+            <span className="text-[12px] font-medium text-white/70 truncate">{summaryText}</span>
+          ) : (
+            domain && <span className="text-[12px] font-medium text-white/70">{domain}</span>
+          )}
+          {operationType.startsWith("batch_") && batchCount > 0 && !summaryText && (
             <span className="text-[11px] text-white/45 bg-white/5 px-1.5 py-0.5 rounded-[4px]">{batchCount} 项</span>
           )}
           {isGenerating && (
