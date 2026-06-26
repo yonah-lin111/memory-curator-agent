@@ -43,6 +43,8 @@ const getBriefSummary = (input: unknown): string => {
   let text = input.confirmationSummary.split("\n")[0];
   // 移除 markdown 格式 (如 **, *, _, ` 等)
   text = text.replace(/[*_~`]/g, "");
+  // 移除结尾的句号
+  text = text.trim().replace(/[。.]*$/, "");
   return text;
 };
 
@@ -273,14 +275,16 @@ export const AiToolChangePreview = ({ toolName, input, isGenerating = false }: A
           </svg>
         </span>
         <div className="flex items-center gap-1.5 flex-1 min-w-0 mt-[1px]" data-testid="tool-operation-summary">
-          {getOperationBadge(operationType)}
           {summaryText ? (
             <span className="text-[12px] font-medium text-white/70 truncate">{summaryText}</span>
           ) : (
-            domain && <span className="text-[12px] font-medium text-white/70">{domain}</span>
-          )}
-          {operationType.startsWith("batch_") && batchCount > 0 && !summaryText && (
-            <span className="text-[11px] text-white/45 bg-white/5 px-1.5 py-0.5 rounded-[4px]">{batchCount} 项</span>
+            <>
+              {getOperationBadge(operationType)}
+              {domain && <span className="text-[12px] font-medium text-white/70">{domain}</span>}
+              {operationType.startsWith("batch_") && batchCount > 0 && (
+                <span className="text-[11px] text-white/45 bg-white/5 px-1.5 py-0.5 rounded-[4px]">{batchCount} 项</span>
+              )}
+            </>
           )}
           {isGenerating && (
             <span className="relative flex h-1.5 w-1.5 ml-1">

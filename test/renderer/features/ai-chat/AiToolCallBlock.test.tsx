@@ -173,7 +173,7 @@ describe("AiToolCallBlock", () => {
     const header = screen.getAllByText("确认删除")[0];
 
     expect(screen.queryByText("AI 输出说明")).not.toBeInTheDocument();
-    expect(summary).toHaveTextContent("将删除人物档案：阿明（朋友）。");
+    expect(summary).toHaveTextContent("将删除人物档案：阿明（朋友）");
     expect(
       screen.getByText(
         "Tool confirmation required before executing people_tool_delete.",
