@@ -16,6 +16,10 @@ import {
   type Node,
   MarkerType,
   type OnConnectEnd,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getSmoothStepPath,
+  type EdgeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PromptCard } from "./PromptCard";
@@ -49,8 +53,123 @@ const CustomPromptNode = ({ data, selected }: { data: PromptNodeData; selected: 
   );
 };
 
+const CustomConditionEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+}: EdgeProps) => {
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [condition, setCondition] = useState((data?.condition as string) || "");
+
+  const { setEdges } = useReactFlow();
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasCondition) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    // 更新 edges data
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.id === id) {
+          return {
+            ...edge,
+            data: {
+              ...edge.data,
+              condition,
+            },
+          };
+        }
+        return edge;
+      })
+    );
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.stopPropagation();
+      handleBlur();
+    }
+  };
+
+  const hasCondition = condition.trim().length > 0;
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: "absolute",
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: "all",
+          }}
+          className={`nodrag nopan z-50 flex items-center justify-center ${!hasCondition && !isEditing ? 'w-16 h-8' : ''}`}
+        >
+          {isEditing ? (
+            <input
+              autoFocus
+              value={condition}
+              onChange={(e) => setCondition(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              className="bg-[#212121] border border-white/20 text-white text-[12px] px-2 py-1 rounded-[6px] outline-none w-24 text-center transition-all backdrop-blur-md focus:border-white/40"
+              placeholder="输入条件..."
+            />
+          ) : hasCondition ? (
+            <div
+              className={`
+                group relative cursor-pointer px-2 py-0.5 rounded-[4px] text-[12px] transition-colors duration-200
+                bg-[#212121] text-white/90 border border-white/20 hover:border-white/40 hover:bg-[#2a2a2a]
+              `}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+            >
+              <div className="flex items-center">
+                {condition}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="absolute inset-0 cursor-pointer"
+              onDoubleClick={handleDoubleClick}
+              title="双击添加条件"
+            />
+          )}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+};
+
 const nodeTypes = {
   promptCard: CustomPromptNode,
+};
+
+const edgeTypes = {
+  condition: CustomConditionEdge,
 };
 
 const initialNodes: Node<PromptNodeData>[] = [
@@ -87,17 +206,58 @@ const Flow = () => {
     setEdges([]);
   }, []);
 
+  const { screenToFlowPosition, getNodes, getEdges } = useReactFlow();
+
   const handleAddCard = useCallback(
     (sourceId?: string) => {
+      const currentNodes = getNodes();
+      const currentEdges = getEdges();
+      
       const newId = `card-${Date.now()}`;
       let newX = 200;
       let newY = 200;
+      let sourceHandle = "right";
+      let targetHandle = "left";
 
       if (typeof sourceId === "string") {
-        const sourceNode = nodes.find((n) => n.id === sourceId);
+        const sourceNode = currentNodes.find((n) => n.id === sourceId);
         if (sourceNode) {
-          newX = sourceNode.position.x + 320;
-          newY = sourceNode.position.y;
+          // 查找该节点已有的连线，以决定新节点的放置位置和连接点
+          const existingEdges = currentEdges.filter(e => e.source === sourceId);
+          
+          // 优先顺序：右 -> 下 -> 上 -> 左
+          const usedSourceHandles = existingEdges.map(e => e.sourceHandle);
+          
+          if (!usedSourceHandles.includes("right")) {
+            newX = sourceNode.position.x + 450;
+            newY = sourceNode.position.y;
+            sourceHandle = "right";
+            targetHandle = "left";
+          } else if (!usedSourceHandles.includes("bottom")) {
+            newX = sourceNode.position.x;
+            newY = sourceNode.position.y + 300;
+            sourceHandle = "bottom";
+            targetHandle = "top";
+          } else if (!usedSourceHandles.includes("top")) {
+            newX = sourceNode.position.x;
+            newY = sourceNode.position.y - 300;
+            sourceHandle = "top";
+            targetHandle = "bottom";
+          } else {
+            // 左边或者默认（继续往右下方偏移）
+            newX = sourceNode.position.x - 450;
+            newY = sourceNode.position.y;
+            sourceHandle = "left";
+            targetHandle = "right";
+            
+            if (usedSourceHandles.includes("left")) {
+               // 都用完了，稍微偏移一下
+               newX = sourceNode.position.x + 450 + (existingEdges.length * 30);
+               newY = sourceNode.position.y + (existingEdges.length * 30);
+               sourceHandle = "right";
+               targetHandle = "left";
+            }
+          }
         }
       }
 
@@ -107,12 +267,12 @@ const Flow = () => {
         position: { x: newX, y: newY },
         data: {
           id: newId,
-          title: `新建节点 ${nodes.length + 1}`,
+          title: `新建节点 ${currentNodes.length + 1}`,
           content: "在这里输入提示词内容...",
           tags: ["新建"],
           updatedAt: Date.now(),
           onDelete: handleDeleteCard,
-          onAddCard: handleAddCard,
+          onAddCard: () => handleAddCard(newId), // 修复闭包问题，确保绑定自己的 id
         },
       };
 
@@ -122,8 +282,10 @@ const Flow = () => {
         const newEdge: Edge = {
           id: `e-${sourceId}-${newId}`,
           source: sourceId,
+          sourceHandle,
           target: newId,
-          type: "smoothstep",
+          targetHandle,
+          type: "condition",
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: "rgba(255, 255, 255, 0.4)",
@@ -132,7 +294,7 @@ const Flow = () => {
         setEdges((eds) => addEdge(newEdge, eds));
       }
     },
-    [nodes, handleDeleteCard]
+    [getNodes, getEdges, handleDeleteCard]
   );
 
   // 绑定上下文给 initialNodes（解决初始节点没绑函数的问题）
@@ -143,7 +305,7 @@ const Flow = () => {
         data: {
           ...n.data,
           onDelete: handleDeleteCard,
-          onAddCard: handleAddCard,
+          onAddCard: () => handleAddCard(n.id),
         },
       }))
     );
@@ -168,7 +330,7 @@ const Flow = () => {
       }
       setEdges((eds) => addEdge({
         ...params,
-        type: "smoothstep",
+        type: "condition",
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: "rgba(255, 255, 255, 0.4)",
@@ -177,8 +339,6 @@ const Flow = () => {
     },
     []
   );
-
-  const { screenToFlowPosition } = useReactFlow();
 
   const onConnectEnd: OnConnectEnd = useCallback(
     (event, connectionState) => {
@@ -252,7 +412,7 @@ const Flow = () => {
                 sourceHandle: sourceHandle,
                 target: targetNode.id,
                 targetHandle: targetHandle,
-                type: "smoothstep",
+                type: "condition",
                 markerEnd: {
                   type: MarkerType.ArrowClosed,
                   color: "rgba(255, 255, 255, 0.4)",
@@ -267,10 +427,10 @@ const Flow = () => {
   );
 
   const onEdgeClick = useCallback(
-    (event: React.MouseEvent, edge: Edge) => {
+    (event: React.MouseEvent, _edge: Edge) => {
       // 阻止事件冒泡到画布
       event.stopPropagation();
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      // 不再删除连线
     },
     []
   );
@@ -313,12 +473,13 @@ const Flow = () => {
         onConnect={onConnect}
         onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         snapToGrid={true}
         snapGrid={[20, 20]}
         defaultEdgeOptions={{
           style: { stroke: "rgba(255, 255, 255, 0.4)", strokeWidth: 2 },
-          type: "smoothstep",
+          type: "condition",
           focusable: true,
           deletable: true,
           markerEnd: {

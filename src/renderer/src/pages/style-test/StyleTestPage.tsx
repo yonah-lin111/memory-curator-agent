@@ -58,7 +58,7 @@ export const StyleTestPage = (): React.JSX.Element => {
                       <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
                         {item.name}
                       </span>
-                      <span className="text-[11px] text-white/40 truncate group-hover:text-white/65">
+                      <span className="text-xs text-white/40 truncate group-hover:text-white/65">
                         {item.status}
                       </span>
                     </div>

@@ -59,17 +59,45 @@ export const PromptCard = ({
           style={{ left: 16 }}
         />
         <Handle
-          type="source"
+          type="target"
           position={Position.Right}
           id="right"
           className="!w-4 !h-4 bg-[#212121] border-2 border-white/40 hover:bg-white/80 transition-colors pointer-events-auto"
           style={{ right: 16 }}
         />
         <Handle
-          type="source"
+          type="target"
           position={Position.Bottom}
           id="bottom"
           className="!w-4 !h-4 bg-[#212121] border-2 border-white/40 hover:bg-white/80 transition-colors pointer-events-auto"
+          style={{ bottom: 16, left: "50%" }}
+        />
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top"
+          className="opacity-0 pointer-events-none"
+          style={{ top: 16, left: "50%" }}
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
+          className="opacity-0 pointer-events-none"
+          style={{ left: 16 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="opacity-0 pointer-events-none"
+          style={{ right: 16 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          className="opacity-0 pointer-events-none"
           style={{ bottom: 16, left: "50%" }}
         />
       </div>
