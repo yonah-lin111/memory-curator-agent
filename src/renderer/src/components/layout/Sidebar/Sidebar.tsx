@@ -25,7 +25,7 @@ export type SidebarPageId =
   | "settings";
 
 // Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
-type SidebarMode = "navigation" | "chat";
+type SidebarMode = "navigation" | "chat" | "prompts";
 
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
