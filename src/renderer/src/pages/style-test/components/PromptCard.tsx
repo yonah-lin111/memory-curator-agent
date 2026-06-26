@@ -20,7 +20,6 @@ interface PromptCardProps {
  * 提示词卡片组件
  */
 export const PromptCard = ({
-  id,
   title,
   content,
   tags = [],
@@ -30,23 +29,27 @@ export const PromptCard = ({
   onAddCard,
 }: PromptCardProps): React.JSX.Element => {
   // 格式化时间为 mm-dd HH:MM 格式
-  const formattedTime = new Date(updatedAt).toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).replace(/\//g, '-');
+  const formattedTime = new Date(updatedAt)
+    .toLocaleString("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(/\//g, "-");
 
   return (
     <div className="relative group w-[280px]">
       {/* 所有的连接点容器 */}
-      <div className={`absolute -inset-[30px] z-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100`}>
+      <div
+        className={`absolute -inset-[30px] z-10 pointer-events-none transition-opacity duration-300 delay-500 opacity-0 group-hover:opacity-100 group-hover:delay-0`}
+      >
         <Handle
           type="target"
           position={Position.Top}
           id="top"
           className="!w-4 !h-4 bg-[#212121] border-2 border-white/40 hover:bg-white/80 transition-colors pointer-events-auto"
-          style={{ top: 16, left: '50%' }}
+          style={{ top: 16, left: "50%" }}
         />
         <Handle
           type="target"
@@ -67,16 +70,17 @@ export const PromptCard = ({
           position={Position.Bottom}
           id="bottom"
           className="!w-4 !h-4 bg-[#212121] border-2 border-white/40 hover:bg-white/80 transition-colors pointer-events-auto"
-          style={{ bottom: 16, left: '50%' }}
+          style={{ bottom: 16, left: "50%" }}
         />
       </div>
 
       <div
         className={`
           relative flex flex-col gap-2 rounded-[6px] p-3 transition-colors duration-200 cursor-grab active:cursor-grabbing z-20
-          ${isSelected 
-            ? "bg-[#212121] border border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.4)]" 
-            : "bg-[#212121] border border-white/5 hover:border-white/10 hover:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+          ${
+            isSelected
+              ? "bg-[#212121] border border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+              : "bg-[#212121] border border-white/5 hover:border-white/10"
           }
         `}
       >
@@ -85,12 +89,12 @@ export const PromptCard = ({
           <span className="text-sm font-bold text-white/90 truncate">
             {title}
           </span>
-          
+
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag, index) => (
-                <span 
-                  key={index} 
+                <span
+                  key={index}
                   className="px-1.5 py-0.5 rounded-[4px] bg-white/5 text-[12px] text-white/60"
                 >
                   {tag}
@@ -107,15 +111,13 @@ export const PromptCard = ({
 
         {/* 底部：时间与操作栏 */}
         <div className="flex items-center justify-between mt-1 pt-2 border-t border-white/5 pointer-events-none">
-          <span className="text-[12px] text-white/30">
-            {formattedTime}
-          </span>
-          
-          <div 
+          <span className="text-[12px] text-white/30">{formattedTime}</span>
+
+          <div
             className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-30 pointer-events-auto"
             onMouseDown={(e) => e.stopPropagation()} // 阻止拖拽冒泡，允许点击按钮
           >
-            <button 
+            <button
               type="button"
               className="p-1 rounded-[4px] hover:bg-white/10 text-white/40 hover:text-white transition-colors"
               title="新建并关联卡片"
@@ -127,7 +129,7 @@ export const PromptCard = ({
               <Plus size={14} />
             </button>
 
-            <button 
+            <button
               type="button"
               className="p-1 rounded-[4px] hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
               title="删除"

@@ -3,7 +3,6 @@ import { useCallback, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
   ReactFlow,
-  Controls,
   Background,
   applyNodeChanges,
   applyEdgeChanges,
@@ -16,6 +15,7 @@ import {
   type Edge,
   type Node,
   MarkerType,
+  type OnConnectEnd,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PromptCard } from "./PromptCard";
@@ -162,6 +162,10 @@ const Flow = () => {
 
   const onConnect = useCallback(
     (params: Connection) => {
+      // 防止自己连接自己
+      if (params.source === params.target) {
+        return;
+      }
       setEdges((eds) => addEdge({
         ...params,
         type: "smoothstep",
@@ -174,6 +178,94 @@ const Flow = () => {
     []
   );
 
+  const { screenToFlowPosition } = useReactFlow();
+
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event, connectionState) => {
+      if (!connectionState.isValid && connectionState.fromNode) {
+        // We only care if we ended up on a valid drop target (the card itself, not a handle)
+        // Since React Flow natively handles connections to actual handles, this is for the "body" of the card
+        
+        let clientX = 0;
+        let clientY = 0;
+        if ("clientX" in event) {
+          clientX = (event as MouseEvent).clientX;
+          clientY = (event as MouseEvent).clientY;
+        } else if ("changedTouches" in event && (event as TouchEvent).changedTouches.length > 0) {
+          clientX = (event as TouchEvent).changedTouches[0].clientX;
+          clientY = (event as TouchEvent).changedTouches[0].clientY;
+        }
+
+        const targetIsPane = (event.target as Element).classList.contains('react-flow__pane');
+        if (targetIsPane) {
+          // You dropped it on the background, maybe we could create a new node here if needed, but not required by prompt
+          return;
+        }
+        
+        // Find if we dropped on a node's DOM element
+        // The PromptCard has w-[280px]
+        const elementBelow = document.elementFromPoint(clientX, clientY);
+        if (!elementBelow) return;
+
+        // Try to find the react-flow__node parent
+        const flowNodeElement = elementBelow.closest('.react-flow__node');
+        
+        if (flowNodeElement) {
+          const targetNodeId = flowNodeElement.getAttribute('data-id');
+          if (targetNodeId && targetNodeId !== connectionState.fromNode.id) {
+            
+            // It dropped on a node, but not on a specific handle (otherwise it would be valid)
+            // We need to calculate which target handle is closest to the drop point
+            const targetNode = nodes.find(n => n.id === targetNodeId);
+            const sourceNode = nodes.find(n => n.id === connectionState.fromNode?.id);
+            
+            if (targetNode && sourceNode) {
+              const flowPosition = screenToFlowPosition({ x: clientX, y: clientY });
+              
+              // Simplistic closest handle logic: 
+              // We compare dx/dy between source and target centers to guess the best handle
+              // A better way is checking the drop point relative to the target node's bounding box
+              
+              const targetX = targetNode.position.x;
+              const targetY = targetNode.position.y;
+              
+              // Node width is ~280, height is ~140 (rough estimation)
+              const centerX = targetX + 140;
+              const centerY = targetY + 70;
+              
+              const dx = flowPosition.x - centerX;
+              const dy = flowPosition.y - centerY;
+              
+              let targetHandle = 'left';
+              if (Math.abs(dx) > Math.abs(dy)) {
+                targetHandle = dx > 0 ? 'right' : 'left';
+              } else {
+                targetHandle = dy > 0 ? 'bottom' : 'top';
+              }
+              
+              // We also need the source handle
+              const sourceHandle = connectionState.fromHandle?.id || 'right';
+
+              setEdges((eds) => addEdge({
+                id: `e-${sourceNode.id}-${sourceHandle}-${targetNode.id}-${targetHandle}`,
+                source: sourceNode.id,
+                sourceHandle: sourceHandle,
+                target: targetNode.id,
+                targetHandle: targetHandle,
+                type: "smoothstep",
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  color: "rgba(255, 255, 255, 0.4)",
+                },
+              }, eds));
+            }
+          }
+        }
+      }
+    },
+    [nodes, screenToFlowPosition]
+  );
+
   const onEdgeClick = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       // 阻止事件冒泡到画布
@@ -184,7 +276,7 @@ const Flow = () => {
   );
 
   const onDoubleClick = useCallback(
-    (event: React.MouseEvent) => {
+    (_event: React.MouseEvent) => {
       // 移除双击空白区域创建新卡片的功能
     },
     []
@@ -237,6 +329,7 @@ const Flow = () => {
         proOptions={{ hideAttribution: true }}
         connectionRadius={40} // 适中的吸附半径
         zoomOnDoubleClick={false}
+        onConnectEnd={onConnectEnd}
       >
         <Background
           color="rgba(255, 255, 255, 0.1)"
