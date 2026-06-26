@@ -2,17 +2,11 @@ import type React from "react";
 import { useState } from "react";
 import { PromptCanvasSimulator } from "./components/PromptCanvasSimulator";
 
-/**
- * StyleTestPage 组件 - 用于测试前端样式的空白页
- * 仅在开发环境可见
- */
+/** StyleTestPage 组件 - 用于测试前端样式的空白页 */
 export const StyleTestPage = (): React.JSX.Element => {
   const [selectedId, setSelectedId] = useState<string>("test-prompt-canvas");
 
   const testItems = [
-    { id: "test-1", name: "Test Item 1", status: "A simple description 1" },
-    { id: "test-2", name: "Test Item 2", status: "A simple description 2" },
-    { id: "test-3", name: "Test Item 3", status: "A simple description 3" },
     { id: "test-prompt-canvas", name: "Prompt Canvas", status: "提示词画布交互测试" },
   ];
 
