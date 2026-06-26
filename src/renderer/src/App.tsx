@@ -25,8 +25,6 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
 import type { AiChatInputCommandId } from "@/features/ai-chat/components/AiChatInput/types";
 
-import { PromptDesignerWorkspace } from "@/features/prompt-designer/components/PromptDesignerWorkspace";
-
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [
   "today",
@@ -132,9 +130,6 @@ const AppContent = (): React.JSX.Element => {
   // 主内容页面切换时的 Loading 状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
 
-  // 提示词面板打开状态。
-  const [isPromptsOpen, setIsPromptsOpen] = useState<boolean>(false);
-
   const {
     isChatOpen,
     chatSessions,
@@ -163,16 +158,6 @@ const AppContent = (): React.JSX.Element => {
     handleAiChatCommand,
     handleCancelGeneration,
   } = useAiChatController();
-
-  const handlePromptsToggle = () => {
-    setIsPromptsOpen(prev => {
-      // 若 chat 已打开，先关闭 chat（这里调用 handler 会切换 chat 的状态，但不能在一次 render 里同时，不过简单实现先互斥即可，这里我们直接调用 handleChatToggle）
-      if (!prev && isChatOpen) {
-        handleChatToggle();
-      }
-      return !prev;
-    });
-  };
 
   // 执行 AI 对话斜杠命令。
   const handleCommandExecute = (
@@ -222,7 +207,7 @@ const AppContent = (): React.JSX.Element => {
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         activePage={activePage}
-        mode={isChatOpen ? "chat" : isPromptsOpen ? "navigation" : "navigation"}
+        mode={isChatOpen ? "chat" : "navigation"}
         chatSessions={chatSessions}
         activeChatId={activeChatId}
         completionNoticeSessionIds={completionNoticeSessionIds}
@@ -256,14 +241,7 @@ const AppContent = (): React.JSX.Element => {
           category={isChatOpen ? "AGENT" : getPageCategory(activePage)}
           activePage={isChatOpen ? "chat" : activePage}
           isChatOpen={isChatOpen}
-          onChatToggle={() => {
-            if (isPromptsOpen) {
-              setIsPromptsOpen(false);
-            }
-            handleChatToggle();
-          }}
-          isPromptsOpen={isPromptsOpen}
-          onPromptsToggle={handlePromptsToggle}
+          onChatToggle={handleChatToggle}
           chatTitle={activeChatSession.title}
           chatLeadingAction={
             isChatOpen ? (
@@ -283,7 +261,7 @@ const AppContent = (): React.JSX.Element => {
         <div className="flex-1 min-h-0 relative overflow-hidden">
           <div
             className={`absolute inset-0 transition-opacity duration-300 ease-out ${
-              isChatOpen || isPromptsOpen
+              isChatOpen
                 ? "pointer-events-none opacity-0"
                 : "pointer-events-auto opacity-100"
             }`}
@@ -298,8 +276,8 @@ const AppContent = (): React.JSX.Element => {
           <div
             className={`absolute inset-0 transition-opacity duration-300 ease-out ${
               isChatOpen
-                ? "pointer-events-auto opacity-100 z-10"
-                : "pointer-events-none opacity-0 z-0"
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0"
             }`}
             aria-hidden={!isChatOpen}
           >
@@ -324,18 +302,6 @@ const AppContent = (): React.JSX.Element => {
                isLoadingMoreChatSessions={isLoadingMoreChatSessions}
                onLoadMoreChatSessions={handleLoadMoreChatSessions}
              />
-          </div>
-
-          {/* Prompt Designer Overlay */}
-          <div
-            className={`absolute inset-0 transition-opacity duration-300 ease-out ${
-              isPromptsOpen
-                ? "pointer-events-auto opacity-100 z-10"
-                : "pointer-events-none opacity-0 z-0"
-            }`}
-            aria-hidden={!isPromptsOpen}
-          >
-            <PromptDesignerWorkspace isOpen={isPromptsOpen} />
           </div>
         </div>
       </div>
