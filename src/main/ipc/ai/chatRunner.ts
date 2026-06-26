@@ -49,6 +49,7 @@ export const startAiChat = async (
   services: {
     aiChatService: ReturnType<typeof createAiChatPersistenceService>;
     toolRegistry: ReturnType<typeof createAgentToolRegistry>;
+    promptToolRegistry: ReturnType<typeof createAgentToolRegistry>;
   },
 ): Promise<{ runId: string }> => {
   const runId = payload.runId ?? createCompactUuid();
@@ -76,7 +77,8 @@ export const startAiChat = async (
     throw new Error(`Provider ${providerId} 未配置模型`);
   }
 
-  let tools = services.toolRegistry.all();
+  const activeToolRegistry = payload.sessionType === 'prompt' ? services.promptToolRegistry : services.toolRegistry;
+  let tools = activeToolRegistry.all();
   const agentHints = normalizeAiChatAgentHints(payload.agents);
 
   // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具，隔离所有业务 Agent 的工具

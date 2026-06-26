@@ -1,3 +1,9 @@
+import { createFileReadTool } from '@/agent/tools/fileReadTool'
+import { createFileWriteTool } from '@/agent/tools/fileWriteTool'
+import { createFileEditTool } from '@/agent/tools/fileEditTool'
+import { createFileGlobTool } from '@/agent/tools/fileGlobTool'
+import { createFileGrepTool } from '@/agent/tools/fileGrepTool'
+import { createTodoWriteTool } from '@/agent/tools/todoWriteTool'
 import { createPeopleTools } from '@/agent/tools/peopleTool'
 import { createTodoTools } from '@/agent/tools/todoTool'
 import { createSnippetTools } from '@/agent/tools/snippetTool'
@@ -74,6 +80,16 @@ const builtinToolFactories: AgentToolFactory[] = [
   ({ billsService }) => billsService ? createBillsTools(billsService) : [],
   () => createTimeNowTool(),
   () => createDateOffsetTool()
+]
+
+// 提示词工具工厂列表。
+export const promptToolFactories: AgentToolFactory[] = [
+  () => createFileReadTool(),
+  () => createFileWriteTool(),
+  () => createFileEditTool(),
+  () => createFileGlobTool(),
+  () => createFileGrepTool(),
+  ({ todosService }) => createTodoWriteTool(todosService)
 ]
 
 // 工具调用公共约束。
@@ -257,8 +273,9 @@ export const prepareToolsForModel = (tools: AgentTool[], messages?: AgentMessage
  */
 export const createAgentToolRegistry = (
   context: AgentToolRegistryContext,
-  factories: AgentToolFactory[] = builtinToolFactories
+  toolSet: 'chat' | 'prompt' = 'chat'
 ): AgentToolRegistry => {
+  const factories = toolSet === 'prompt' ? promptToolFactories : builtinToolFactories
   const tools = factories.flatMap((factory) => factory(context))
 
   assertUniqueToolNames(tools)
