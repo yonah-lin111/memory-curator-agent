@@ -10,6 +10,7 @@ import { SnippetsPage } from "@/pages/snippets/SnippetsPage";
 import { BillsPage } from "@/pages/bills/BillsPage";
 import { PeoplePage } from "@/pages/people/PeoplePage";
 import { ShowcasePage } from "@/pages/showcase/ShowcasePage";
+import { StyleTestPage } from "@/pages/style-test/StyleTestPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ const VALID_PAGES: SidebarPageId[] = [
   "bills",
   "people",
   "showcase",
+  "style-test",
   "settings",
 ];
 
@@ -72,6 +74,7 @@ const getPageCategory = (pageId: SidebarPageId): string => {
     case "memories":
       return "CURATION";
     case "showcase":
+    case "style-test":
       return "DEVELOPER";
     case "settings":
       return "SYSTEM";
@@ -107,6 +110,8 @@ const renderPageById = (pageId: SidebarPageId): React.JSX.Element => {
       return <PeoplePage />;
     case "showcase":
       return <ShowcasePage />;
+    case "style-test":
+      return <StyleTestPage />;
     case "settings":
       return <SettingsPage />;
   }

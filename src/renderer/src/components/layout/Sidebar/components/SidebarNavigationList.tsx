@@ -8,6 +8,7 @@ import {
   Home,
   Layers,
   LayoutGrid,
+  Palette,
   Receipt,
   Settings,
   StickyNote,
@@ -128,6 +129,16 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         description: "公共组件展示与交互",
         icon: LayoutGrid,
       },
+      ...(import.meta.env.DEV
+        ? [
+            {
+              id: "style-test" as SidebarPageId,
+              label: "Style Test",
+              description: "前端样式实验",
+              icon: Palette,
+            },
+          ]
+        : []),
     ],
   },
 ];

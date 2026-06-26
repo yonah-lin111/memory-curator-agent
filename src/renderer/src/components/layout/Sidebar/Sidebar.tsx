@@ -21,6 +21,7 @@ export type SidebarPageId =
   | "bills"
   | "people"
   | "showcase"
+  | "style-test"
   | "settings";
 
 // Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
