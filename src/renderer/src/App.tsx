@@ -21,9 +21,6 @@ import { TodayPage } from "@/pages/today/TodayPage";
 import { ToastProvider } from "@/components/ui/Toast";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
-import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
-import { PromptDesignWorkspace } from "@/features/prompt-design/components/PromptDesignWorkspace";
-import { usePromptDesignController } from "@/features/prompt-design/usePromptDesignController";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
 import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
@@ -167,14 +164,7 @@ const AppContent = (): React.JSX.Element => {
     handleCancelGeneration,
   } = useAiChatController();
 
-  const {
-    isPromptsOpen,
-    togglePrompts
-  } = usePromptDesignController();
-
   // 执行 AI 对话斜杠命令。
-  const activeOverlay = isChatOpen ? "chat" : isPromptsOpen ? "prompts" : "none";
-
   const handleCommandExecute = (
     command: AiChatInputCommandId,
   ): string | void | Promise<string | void> => {
@@ -222,7 +212,7 @@ const AppContent = (): React.JSX.Element => {
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         activePage={activePage}
-        mode={activeOverlay === "chat" ? "chat" : activeOverlay === "prompts" ? "prompts" : "navigation"}
+        mode={isChatOpen ? "chat" : "navigation"}
         chatSessions={chatSessions}
         activeChatId={activeChatId}
         completionNoticeSessionIds={completionNoticeSessionIds}
@@ -253,10 +243,8 @@ const AppContent = (): React.JSX.Element => {
       <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden min-w-0">
         {/* 固定的顶部栏 */}
         <Header
-          isPromptsOpen={isPromptsOpen}
-          onPromptsToggle={() => togglePrompts()}
-          category={isChatOpen ? "AGENT" : isPromptsOpen ? "PROMPT DESIGN" : getPageCategory(activePage)}
-          activePage={isChatOpen ? "chat" : isPromptsOpen ? "style-test" : activePage}
+          category={isChatOpen ? "AGENT" : getPageCategory(activePage)}
+          activePage={isChatOpen ? "chat" : activePage}
           isChatOpen={isChatOpen}
           onChatToggle={handleChatToggle}
           chatTitle={activeChatSession.title}
@@ -275,42 +263,52 @@ const AppContent = (): React.JSX.Element => {
           }
         />
 
-                <OverlayWorkspace
-          activeOverlay={activeOverlay}
-          overlays={{
-            chat: (
-              <AiChatWorkspace
-                isChatOpen={isChatOpen}
-                session={activeChatSession}
-                modelOptions={aiModelOptions}
-                selectedModel={selectedAiModel}
-                isContextTimelineOpen={isContextTimelineOpen}
-                onSendMessage={handleSendMessage}
-                onSubmitAskAnswer={handleSubmitAskAnswer}
-                onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
-                onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
-                onEditAndResendUserMessage={handleEditAndResendUserMessage}
-                onDeleteChatTurn={handleDeleteChatTurn}
-                onCommandExecute={handleCommandExecute}
-                onModelChange={setSelectedAiModel}
-                onCancelGeneration={handleCancelGeneration}
-                chatSessions={chatSessions}
-                onActiveSessionChange={setActiveChatId}
-                hasMoreChatSessions={hasMoreChatSessions}
-                isLoadingMoreChatSessions={isLoadingMoreChatSessions}
-                onLoadMoreChatSessions={handleLoadMoreChatSessions}
-              />
-            ),
-            prompts: (
-              <PromptDesignWorkspace />
-            )
-          }}
-        >
-          <div className="w-full h-full relative">
-            {renderPageById(activePage)}
-            <LoadingOverlay isLoading={isPageLoading} text="Loading..." />
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          <div
+            className={`absolute inset-0 transition-opacity duration-300 ease-out ${
+              isChatOpen
+                ? "pointer-events-none opacity-0"
+                : "pointer-events-auto opacity-100"
+            }`}
+            aria-hidden={isChatOpen}
+          >
+            <div className="w-full h-full relative">
+              {renderPageById(activePage)}
+              <LoadingOverlay isLoading={isPageLoading} text="Loading..." />
+            </div>
           </div>
-        </OverlayWorkspace>
+
+          <div
+            className={`absolute inset-0 transition-opacity duration-300 ease-out ${
+              isChatOpen
+                ? "pointer-events-auto opacity-100"
+                : "pointer-events-none opacity-0"
+            }`}
+            aria-hidden={!isChatOpen}
+          >
+             <AiChatWorkspace
+               isChatOpen={isChatOpen}
+               session={activeChatSession}
+               modelOptions={aiModelOptions}
+               selectedModel={selectedAiModel}
+               isContextTimelineOpen={isContextTimelineOpen}
+               onSendMessage={handleSendMessage}
+               onSubmitAskAnswer={handleSubmitAskAnswer}
+               onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
+               onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
+               onEditAndResendUserMessage={handleEditAndResendUserMessage}
+               onDeleteChatTurn={handleDeleteChatTurn}
+               onCommandExecute={handleCommandExecute}
+               onModelChange={setSelectedAiModel}
+               onCancelGeneration={handleCancelGeneration}
+               chatSessions={chatSessions}
+               onActiveSessionChange={setActiveChatId}
+               hasMoreChatSessions={hasMoreChatSessions}
+               isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+               onLoadMoreChatSessions={handleLoadMoreChatSessions}
+             />
+          </div>
+        </div>
       </div>
     </main>
   );

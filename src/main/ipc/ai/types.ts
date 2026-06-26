@@ -29,8 +29,6 @@ export type AiChatStartPayload = {
   context?: AgentContextPayloadItem[];
   // 本轮优先使用的 agent hints。
   agents?: AiChatAgentHint[];
-  // 会话类型
-  sessionType?: "chat" | "prompt";
 };
 
 /**

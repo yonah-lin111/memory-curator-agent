@@ -97,7 +97,7 @@ export const registerAiHandlers = (): void => {
   const aiChatService = createAiChatPersistenceService(
     database as unknown as AiChatDatabaseConnection,
   );
-  const context = {
+  const toolRegistry = createAgentToolRegistry({
     notesService,
     journalsService,
     peopleService,
@@ -106,9 +106,7 @@ export const registerAiHandlers = (): void => {
     noteCategoryService,
     themesService,
     billsService,
-  }
-  const toolRegistry = createAgentToolRegistry(context, 'chat');
-  const promptToolRegistry = createAgentToolRegistry(context, 'prompt');
+  });
 
   ipcMain.handle("ai:model-options:get", async () =>
     createModelOptionsResponse(),
@@ -228,6 +226,6 @@ export const registerAiHandlers = (): void => {
   });
 
   ipcMain.handle("ai:chat:start", async (event, payload) => {
-    return startAiChat(event, payload, { aiChatService, toolRegistry, promptToolRegistry });
+    return startAiChat(event, payload, { aiChatService, toolRegistry });
   });
 };

@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AiChatHistoryList } from "./components/AiChatHistoryList";
 import type { AiChatSession } from "@/features/ai-chat/types";
 import { SidebarNavigationList } from "./components/SidebarNavigationList";
-import { PromptProjectList } from "./components/PromptProjectList";
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -26,7 +25,7 @@ export type SidebarPageId =
   | "settings";
 
 // Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
-type SidebarMode = "navigation" | "chat" | "prompts";
+type SidebarMode = "navigation" | "chat";
 
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
@@ -141,24 +140,9 @@ export const Sidebar = ({
             onCollapsedChange={onCollapsedChange}
           />
         </div>
-      
-        {/* 提示词设计项目栏 */}
-        <div
-          aria-hidden={mode !== "prompts"}
-          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-opacity duration-300 ease-out flex flex-col ${
-            mode === "prompts"
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          }`}
-        >
-          <PromptProjectList
-            isCollapsed={isCollapsed}
-            onCollapsedChange={onCollapsedChange}
-          />
-        </div>
       </aside>
 
-      {(mode === "navigation" || mode === "prompts") && (
+      {mode === "navigation" && (
         <button
           type="button"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
