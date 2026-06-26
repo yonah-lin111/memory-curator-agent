@@ -1,18 +1,20 @@
 import type React from "react";
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { PromptCanvasSimulator } from "./components/PromptCanvasSimulator";
 
 /**
  * StyleTestPage 组件 - 用于测试前端样式的空白页
  * 仅在开发环境可见
  */
 export const StyleTestPage = (): React.JSX.Element => {
-  const [selectedId, setSelectedId] = useState<string>("test-1");
+  const [selectedId, setSelectedId] = useState<string>("test-prompt-canvas");
 
   const testItems = [
     { id: "test-1", name: "Test Item 1", status: "A simple description 1" },
     { id: "test-2", name: "Test Item 2", status: "A simple description 2" },
     { id: "test-3", name: "Test Item 3", status: "A simple description 3" },
+    { id: "test-prompt-canvas", name: "Prompt Canvas", status: "提示词画布交互测试" },
   ];
 
   return (
@@ -22,7 +24,7 @@ export const StyleTestPage = (): React.JSX.Element => {
     >
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,280px)_1fr]">
         {/* 左侧面板：测试列表 */}
-        <div className="min-h-0 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
+        <div className="min-h-0 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4 z-10 relative">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5 flex-shrink-0">
             <span className="text-sm font-bold text-white/80">
               样式测试列表
@@ -69,14 +71,20 @@ export const StyleTestPage = (): React.JSX.Element => {
         </div>
 
         {/* 右侧面板：主内容区 */}
-        <div className="min-h-0 flex flex-col rounded-[6px] border border-white/6 bg-[#212121] p-5">
-          <div className="flex-1 flex flex-col items-center justify-center bg-black/5 rounded-[6px] border border-dashed border-white/10">
-            <span className="text-sm font-bold text-white/80">
-              右侧内容展示区
-            </span>
-            <span className="mt-2 text-xs text-white/50">
-              当前选中的测试项目 ID: {selectedId}
-            </span>
+        <div className="min-h-0 flex flex-col rounded-[6px] border border-white/6 bg-[#212121] p-5 relative overflow-hidden">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/5 rounded-[6px] border border-dashed border-white/10 overflow-hidden">
+            {selectedId === "test-prompt-canvas" ? (
+              <PromptCanvasSimulator />
+            ) : (
+              <>
+                <span className="text-sm font-bold text-white/80">
+                  右侧内容展示区
+                </span>
+                <span className="mt-2 text-xs text-white/50">
+                  当前选中的测试项目 ID: {selectedId}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
