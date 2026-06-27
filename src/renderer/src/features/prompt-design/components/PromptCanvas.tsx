@@ -1,8 +1,7 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
@@ -15,7 +14,8 @@ import {
 import "@xyflow/react/dist/style.css";
 import { PromptNode, type PromptNodeData, cardTypeMeta, type PromptCardType } from "./PromptNode";
 import { getLayoutedElements } from "../utils/layout";
-import { LayoutControls } from "./LayoutControls";
+import { CanvasControls } from "./CanvasControls";
+import { useFlowHistory } from "../hooks/useFlowHistory";
 
 const nodeTypes: NodeTypes = {
   promptNode: PromptNode,
@@ -212,6 +212,13 @@ export const PromptCanvas = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
 
+  const { undo, redo, canUndo, canRedo, takeSnapshot } = useFlowHistory(
+    nodes,
+    edges,
+    setNodes,
+    setEdges
+  );
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -231,6 +238,8 @@ export const PromptCanvas = () => {
         x: event.clientX,
         y: event.clientY,
       });
+
+      takeSnapshot();
 
       let initialInputs: any[] = [];
       let initialOutputs: any[] = [];
@@ -277,7 +286,8 @@ export const PromptCanvas = () => {
   );
 
   const onConnect = useCallback(
-    (params: Connection | Edge) =>
+    (params: Connection | Edge) => {
+      takeSnapshot();
       setEdges((eds) =>
         addEdge(
           {
@@ -287,9 +297,22 @@ export const PromptCanvas = () => {
           } as Edge,
           eds,
         ),
-      ),
-    [setEdges],
+      );
+    },
+    [setEdges, takeSnapshot],
   );
+
+  const onNodeDragStart = useCallback(() => {
+    takeSnapshot();
+  }, [takeSnapshot]);
+
+  const onNodesDelete = useCallback(() => {
+    takeSnapshot();
+  }, [takeSnapshot]);
+
+  const onEdgesDelete = useCallback(() => {
+    takeSnapshot();
+  }, [takeSnapshot]);
 
   return (
     <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden">
@@ -301,6 +324,9 @@ export const PromptCanvas = () => {
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDragStart={onNodeDragStart}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -310,11 +336,13 @@ export const PromptCanvas = () => {
         proOptions={{ hideAttribution: true }}
       >
         <Background color="#444" gap={20} size={1} />
-        <Controls
-          className="!bg-[#212121] !border-white/10 !fill-white/80"
-          showInteractive={false}
+        <CanvasControls
+          undo={undo}
+          redo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          takeSnapshot={takeSnapshot}
         />
-        <LayoutControls />
         <MiniMap
           nodeColor={(n) => {
             const t = n.data?.nodeType as string;
