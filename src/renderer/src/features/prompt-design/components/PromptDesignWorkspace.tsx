@@ -1,4 +1,5 @@
 import type React from "react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { PromptCanvas } from "./PromptCanvas";
 
 interface PromptDesignWorkspaceProps {
@@ -10,7 +11,9 @@ export const PromptDesignWorkspace = ({ isOpen }: PromptDesignWorkspaceProps): R
 
   return (
     <div className="flex flex-col h-full w-full bg-[#000000] text-white">
-      <PromptCanvas />
+      <ReactFlowProvider>
+        <PromptCanvas />
+      </ReactFlowProvider>
     </div>
   );
 };
