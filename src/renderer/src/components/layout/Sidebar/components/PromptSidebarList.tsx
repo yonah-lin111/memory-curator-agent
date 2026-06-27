@@ -31,6 +31,14 @@ export const PromptSidebarList = ({
   };
 
   if (isCollapsed) {
+    const connectedTypesAll = Object.entries(cardTypeMeta).filter(
+      ([_, meta]) => !meta.isIndependent
+    ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+
+    const independentTypesAll = Object.entries(cardTypeMeta).filter(
+      ([_, meta]) => meta.isIndependent
+    ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+
     return (
       <div
         className="flex h-full w-full flex-col items-center gap-4 py-1"
@@ -45,6 +53,49 @@ export const PromptSidebarList = ({
             <ChevronRight className="h-4 w-4" />
           </IconButton>
         </Tooltip>
+
+        <div 
+          className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-3 pb-4 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {connectedTypesAll.map(([type, meta]) => (
+            <Tooltip key={type} content={meta.label} placement="right">
+              <div
+                className="w-9 h-9 flex-shrink-0 cursor-grab active:cursor-grabbing rounded-[6px] transition-colors hover:bg-white/[0.02]"
+                draggable
+                onDragStart={(e) => onDragStart(e, type)}
+              >
+                <div
+                  className={`w-full h-full ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                >
+                  {iconMap[meta.defaultIcon] || (
+                    <div className="w-4 h-4 bg-white/20 rounded-full" />
+                  )}
+                </div>
+              </div>
+            </Tooltip>
+          ))}
+
+          <div className="w-4 h-[1px] bg-white/10 my-1 flex-shrink-0" />
+
+          {independentTypesAll.map(([type, meta]) => (
+            <Tooltip key={type} content={meta.label} placement="right">
+              <div
+                className="w-9 h-9 flex-shrink-0 cursor-grab active:cursor-grabbing rounded-[6px] transition-colors hover:bg-white/[0.02]"
+                draggable
+                onDragStart={(e) => onDragStart(e, type)}
+              >
+                <div
+                  className={`w-full h-full ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                >
+                  {iconMap[meta.defaultIcon] || (
+                    <div className="w-4 h-4 bg-white/20 rounded-full" />
+                  )}
+                </div>
+              </div>
+            </Tooltip>
+          ))}
+        </div>
       </div>
     );
   }
