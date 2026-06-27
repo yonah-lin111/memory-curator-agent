@@ -6,13 +6,14 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   Connection,
   Edge,
   NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { PromptNode, type PromptNodeData } from "./PromptNode";
+import { PromptNode, type PromptNodeData, cardTypeMeta, type PromptCardType } from "./PromptNode";
 import { getLayoutedElements } from "../utils/layout";
 import { LayoutControls } from "./LayoutControls";
 
@@ -207,8 +208,73 @@ const { nodes: initialNodes, edges: initialEdges } = getLayoutedElements(
 );
 
 export const PromptCanvas = () => {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { screenToFlowPosition } = useReactFlow();
+
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+
+      const type = event.dataTransfer.getData("application/reactflow");
+
+      if (typeof type === "undefined" || !type) {
+        return;
+      }
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      let initialInputs: any[] = [];
+      let initialOutputs: any[] = [];
+
+      const meta = cardTypeMeta[type as PromptCardType];
+      if (meta && !meta.isIndependent) {
+        if (type === "condition") {
+          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+          initialOutputs = [
+            { id: `branch_true_${Date.now()}`, name: "分支 1", type: "branch" },
+            { id: `branch_false_${Date.now()}`, name: "分支 2", type: "branch" },
+          ];
+        } else if (type === "system" || type === "context") {
+          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+        } else if (type === "output") {
+          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+        } else if (type === "assemble") {
+          initialInputs = [
+            { id: `in_1_${Date.now()}`, name: "Input 1", type: "any" },
+            { id: `in_2_${Date.now()}`, name: "Input 2", type: "any" }
+          ];
+          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+        } else {
+          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+        }
+      }
+
+      const newNode = {
+        id: `node_${Date.now()}`,
+        type: "promptNode",
+        position,
+        data: {
+          title: meta?.label || "新卡片",
+          nodeType: type,
+          inputs: initialInputs.length > 0 ? initialInputs : undefined,
+          outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
+        } as PromptNodeData,
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [screenToFlowPosition, setNodes],
+  );
 
   const onConnect = useCallback(
     (params: Connection | Edge) =>
@@ -233,6 +299,8 @@ export const PromptCanvas = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}

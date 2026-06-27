@@ -37,14 +37,14 @@ export type PromptCardType =
   | "group";
 
 /** 卡片类型元数据 */
-type CardTypeMeta = {
+export type CardTypeMeta = {
   label: string;
   defaultIcon: string;
   color: string;
   isIndependent: boolean;
 };
 
-const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
+export const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
   system:       { label: "系统指令",    defaultIcon: "Settings2",        color: "text-rose-400 bg-rose-500/20",       isIndependent: false },
   user:         { label: "用户消息",    defaultIcon: "User",             color: "text-sky-400 bg-sky-500/20",         isIndependent: false },
   assistant:    { label: "助手消息",    defaultIcon: "Bot",              color: "text-emerald-400 bg-emerald-500/20",  isIndependent: false },
@@ -60,7 +60,7 @@ const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
   group:        { label: "卡片分组",    defaultIcon: "FolderOpen",       color: "text-zinc-400 bg-zinc-500/20",        isIndependent: true },
 };
 
-const iconMap: Record<string, React.ReactNode> = {
+export const iconMap: Record<string, React.ReactNode> = {
   Bot:              <Bot className="w-4 h-4" />,
   User:             <User className="w-4 h-4" />,
   MessageSquare:    <MessageSquare className="w-4 h-4" />,
