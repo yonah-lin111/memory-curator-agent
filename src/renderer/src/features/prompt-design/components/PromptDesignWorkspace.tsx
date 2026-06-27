@@ -1,4 +1,5 @@
 import type React from "react";
+import { PromptCanvas } from "./PromptCanvas";
 
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
@@ -8,6 +9,8 @@ export const PromptDesignWorkspace = ({ isOpen }: PromptDesignWorkspaceProps): R
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#000000] text-white" />
+    <div className="flex flex-col h-full w-full bg-[#000000] text-white">
+      <PromptCanvas />
+    </div>
   );
 };

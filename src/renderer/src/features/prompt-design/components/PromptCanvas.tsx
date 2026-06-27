@@ -12,16 +12,16 @@ import {
   NodeTypes
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LangflowNode, type LangflowNodeData } from "./LangflowNode";
+import { PromptNode, type PromptNodeData } from "./PromptNode";
 
 const nodeTypes: NodeTypes = {
-  langflowNode: LangflowNode,
+  promptNode: PromptNode,
 };
 
 const initialNodes = [
   {
     id: "node-1",
-    type: "langflowNode",
+    type: "promptNode",
     position: { x: 50, y: 50 },
     data: {
       title: "Chat OpenAI",
@@ -35,11 +35,11 @@ const initialNodes = [
       outputs: [
         { id: "output-text", name: "Text", type: "string" },
       ],
-    } as LangflowNodeData,
+    } as PromptNodeData,
   },
   {
     id: "node-2",
-    type: "langflowNode",
+    type: "promptNode",
     position: { x: -300, y: 50 },
     data: {
       title: "Prompt Template",
@@ -52,11 +52,11 @@ const initialNodes = [
       outputs: [
         { id: "output-prompt", name: "Prompt", type: "Prompt" },
       ],
-    } as LangflowNodeData,
+    } as PromptNodeData,
   },
   {
     id: "node-3",
-    type: "langflowNode",
+    type: "promptNode",
     position: { x: 450, y: 100 },
     data: {
       title: "Agent Tool",
@@ -67,7 +67,7 @@ const initialNodes = [
         { id: "input-text", name: "Input Text", type: "string" },
       ],
       outputs: [],
-    } as LangflowNodeData,
+    } as PromptNodeData,
   }
 ];
 
@@ -91,7 +91,7 @@ const initialEdges: Edge[] = [
   },
 ];
 
-export const LangflowCanvas = () => {
+export const PromptCanvas = () => {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 

@@ -1,6 +1,7 @@
 import type React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AiChatHistoryList } from "./components/AiChatHistoryList";
+import { PromptSidebarList } from "./components/PromptSidebarList";
 import type { AiChatSession } from "@/features/ai-chat/types";
 import { SidebarNavigationList } from "./components/SidebarNavigationList";
 
@@ -103,7 +104,7 @@ export const Sidebar = ({
           className={`w-full min-h-0 flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
             mode === "navigation"
               ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
+              : "opacity-0 pointer-events-none absolute inset-0"
           }`}
         >
           <SidebarNavigationList
@@ -118,8 +119,8 @@ export const Sidebar = ({
           aria-hidden={mode !== "chat"}
           className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-opacity duration-300 ease-out flex flex-col ${
             mode === "chat"
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
+              ? "opacity-100 pointer-events-auto z-10"
+              : "opacity-0 pointer-events-none -z-10"
           }`}
         >
           <AiChatHistoryList
@@ -138,6 +139,22 @@ export const Sidebar = ({
             aria-hidden={mode !== "chat"}
             isCollapsed={isCollapsed}
             onCollapsedChange={onCollapsedChange}
+          />
+        </div>
+
+        {/* 提示词设计侧边栏（包含节点组件列表） */}
+        <div
+          aria-hidden={mode !== "prompts"}
+          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-opacity duration-300 ease-out flex flex-col ${
+            mode === "prompts"
+              ? "opacity-100 pointer-events-auto z-10"
+              : "opacity-0 pointer-events-none -z-10"
+          }`}
+        >
+          <PromptSidebarList
+            isCollapsed={isCollapsed}
+            onCollapsedChange={onCollapsedChange}
+            aria-hidden={mode !== "prompts"}
           />
         </div>
       </aside>
