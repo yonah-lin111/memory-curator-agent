@@ -1,5 +1,6 @@
 import { memo } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { useToast } from "@/components/ui/Toast";
 import {
   Bot,
   User,
@@ -18,6 +19,7 @@ import {
   StickyNote,
   FolderOpen,
   Layers,
+  X,
 } from "lucide-react";
 
 /** 提示词卡片类型 */
@@ -97,10 +99,18 @@ export const isIndependentType = (t: PromptCardType): boolean =>
 const baseIcon = <Settings className="w-4 h-4" />;
 
 export const PromptNode = memo(
-  ({ data, selected }: { data: PromptNodeData; selected?: boolean }) => {
+  ({ id, data, selected }: { id: string; data: PromptNodeData; selected?: boolean }) => {
+    const { deleteElements } = useReactFlow();
+    const toast = useToast();
     const meta = cardTypeMeta[data.nodeType];
     const iconName = data.icon || meta.defaultIcon;
     const hasOutputs = data.outputs && data.outputs.length > 0;
+
+    const handleDelete = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      deleteElements({ nodes: [{ id }] });
+      toast.info("节点已删除");
+    };
 
     return (
       <div
@@ -112,6 +122,17 @@ export const PromptNode = memo(
               : "border-transparent"
         } ${meta.isIndependent || !hasOutputs ? "pb-4" : ""}`}
       >
+        <button
+          type="button"
+          aria-label="Delete node"
+          onClick={handleDelete}
+          className={`absolute -top-1.5 -right-1.5 z-10 h-4 w-4 items-center justify-center rounded-full bg-white text-[#1C1C1C] shadow-md hover:bg-gray-200 transition-colors ${
+            selected ? "flex" : "hidden group-hover/node:flex"
+          }`}
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+
         {/* 节点头部 */}
         <div className="flex w-full flex-1 items-center gap-2 overflow-hidden px-4 py-3 border-b border-white/5">
           <div className={`mr-2 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md ${meta.color}`}>

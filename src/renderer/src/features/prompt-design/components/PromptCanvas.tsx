@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -9,6 +9,7 @@ import {
   addEdge,
   Connection,
   Edge,
+  Node,
   NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -16,6 +17,8 @@ import { PromptNode, type PromptNodeData, cardTypeMeta, type PromptCardType } fr
 import { getLayoutedElements } from "../utils/layout";
 import { CanvasControls } from "./CanvasControls";
 import { useFlowHistory } from "../hooks/useFlowHistory";
+import { PromptCanvasContextMenu, type ContextMenuState } from "./PromptCanvasContextMenu";
+import { useToast } from "@/components/ui/Toast";
 
 const nodeTypes: NodeTypes = {
   promptNode: PromptNode,
@@ -212,6 +215,10 @@ export const PromptCanvas = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
 
+  const [menuState, setMenuState] = useState<ContextMenuState>({ type: null, x: 0, y: 0 });
+  const [copiedNode, setCopiedNode] = useState<Node | null>(null);
+  const toast = useToast();
+
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useFlowHistory(
     nodes,
     edges,
@@ -222,6 +229,47 @@ export const PromptCanvas = () => {
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const createNewNode = useCallback((type: PromptCardType, position: { x: number; y: number }) => {
+    let initialInputs: any[] = [];
+    let initialOutputs: any[] = [];
+
+    const meta = cardTypeMeta[type as PromptCardType];
+    if (meta && !meta.isIndependent) {
+      if (type === "condition") {
+        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+        initialOutputs = [
+          { id: `branch_true_${Date.now()}`, name: "分支 1", type: "branch" },
+          { id: `branch_false_${Date.now()}`, name: "分支 2", type: "branch" },
+        ];
+      } else if (type === "system" || type === "context") {
+        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+      } else if (type === "output") {
+        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+      } else if (type === "assemble") {
+        initialInputs = [
+          { id: `in_1_${Date.now()}`, name: "Input 1", type: "any" },
+          { id: `in_2_${Date.now()}`, name: "Input 2", type: "any" }
+        ];
+        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+      } else {
+        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
+        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
+      }
+    }
+
+    return {
+      id: `node_${Date.now()}`,
+      type: "promptNode",
+      position,
+      data: {
+        title: meta?.label || "新卡片",
+        nodeType: type,
+        inputs: initialInputs.length > 0 ? initialInputs : undefined,
+        outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
+      } as PromptNodeData,
+    };
   }, []);
 
   const onDrop = useCallback(
@@ -241,48 +289,10 @@ export const PromptCanvas = () => {
 
       takeSnapshot();
 
-      let initialInputs: any[] = [];
-      let initialOutputs: any[] = [];
-
-      const meta = cardTypeMeta[type as PromptCardType];
-      if (meta && !meta.isIndependent) {
-        if (type === "condition") {
-          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-          initialOutputs = [
-            { id: `branch_true_${Date.now()}`, name: "分支 1", type: "branch" },
-            { id: `branch_false_${Date.now()}`, name: "分支 2", type: "branch" },
-          ];
-        } else if (type === "system" || type === "context") {
-          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
-        } else if (type === "output") {
-          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-        } else if (type === "assemble") {
-          initialInputs = [
-            { id: `in_1_${Date.now()}`, name: "Input 1", type: "any" },
-            { id: `in_2_${Date.now()}`, name: "Input 2", type: "any" }
-          ];
-          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
-        } else {
-          initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-          initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
-        }
-      }
-
-      const newNode = {
-        id: `node_${Date.now()}`,
-        type: "promptNode",
-        position,
-        data: {
-          title: meta?.label || "新卡片",
-          nodeType: type,
-          inputs: initialInputs.length > 0 ? initialInputs : undefined,
-          outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
-        } as PromptNodeData,
-      };
-
+      const newNode = createNewNode(type as PromptCardType, position);
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, setNodes],
+    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode],
   );
 
   const onConnect = useCallback(
@@ -314,6 +324,94 @@ export const PromptCanvas = () => {
     takeSnapshot();
   }, [takeSnapshot]);
 
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    setMenuState({
+      type: "node",
+      x: event.clientX,
+      y: event.clientY,
+      id: node.id,
+    });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault();
+    setMenuState({
+      type: "edge",
+      x: event.clientX,
+      y: event.clientY,
+      id: edge.id,
+    });
+  }, []);
+
+  const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+    setMenuState({
+      type: "pane",
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setMenuState({ type: null, x: 0, y: 0 });
+  }, []);
+
+  const handleCopyNode = useCallback((nodeId: string) => {
+    const nodeToCopy = nodes.find((n) => n.id === nodeId);
+    if (nodeToCopy) {
+      setCopiedNode(nodeToCopy);
+      toast.success("节点已复制");
+    }
+  }, [nodes, toast]);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    takeSnapshot();
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    toast.info("节点已删除");
+  }, [setNodes, setEdges, takeSnapshot, toast]);
+
+  const handlePasteNode = useCallback((clientX: number, clientY: number) => {
+    if (!copiedNode) return;
+    takeSnapshot();
+    const position = screenToFlowPosition({ x: clientX, y: clientY });
+    
+    // Copy input and output IDs to be unique
+    const newData = { ...(copiedNode.data as PromptNodeData) };
+    if (newData.inputs) {
+      newData.inputs = newData.inputs.map(i => ({ ...i, id: `in_${Date.now()}_${Math.random().toString(36).substring(7)}` }));
+    }
+    if (newData.outputs) {
+      newData.outputs = newData.outputs.map(o => ({ ...o, id: `out_${Date.now()}_${Math.random().toString(36).substring(7)}` }));
+    }
+
+    const newNode: Node = {
+      ...copiedNode,
+      id: `node_${Date.now()}`,
+      position,
+      selected: false,
+      data: newData,
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+    toast.success("节点已粘贴");
+  }, [copiedNode, screenToFlowPosition, setNodes, takeSnapshot, toast]);
+
+  const handleAddNodeFromMenu = useCallback((type: PromptCardType, clientX: number, clientY: number) => {
+    takeSnapshot();
+    const position = screenToFlowPosition({ x: clientX, y: clientY });
+    const newNode = createNewNode(type, position);
+    setNodes((nds) => nds.concat(newNode));
+    toast.success("卡片已添加");
+  }, [screenToFlowPosition, createNewNode, setNodes, takeSnapshot, toast]);
+
+  const handleDeleteEdge = useCallback((edgeId: string) => {
+    takeSnapshot();
+    setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+    toast.info("连线已删除");
+  }, [setEdges, takeSnapshot, toast]);
+
   return (
     <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden">
       <ReactFlow
@@ -327,6 +425,10 @@ export const PromptCanvas = () => {
         onNodeDragStart={onNodeDragStart}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
+        onPaneClick={closeContextMenu}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -351,6 +453,16 @@ export const PromptCanvas = () => {
           maskColor="rgba(0, 0, 0, 0.7)"
           className="!bg-[#212121] !border-white/10"
           position="top-right"
+        />
+        <PromptCanvasContextMenu
+          menuState={menuState}
+          onClose={closeContextMenu}
+          onCopyNode={handleCopyNode}
+          onDeleteNode={handleDeleteNode}
+          onPasteNode={handlePasteNode}
+          onAddNode={handleAddNodeFromMenu}
+          onDeleteEdge={handleDeleteEdge}
+          canPaste={!!copiedNode}
         />
       </ReactFlow>
     </div>

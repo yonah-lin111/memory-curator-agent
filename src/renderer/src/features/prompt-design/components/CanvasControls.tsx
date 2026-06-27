@@ -3,6 +3,7 @@ import { Panel, useReactFlow } from "@xyflow/react";
 import { ZoomIn, ZoomOut, Maximize, Workflow, Undo2, Redo2 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useToast } from "@/components/ui/Toast";
 import { getLayoutedElements } from "../utils/layout";
 
 export interface CanvasControlsProps {
@@ -20,6 +21,7 @@ export const CanvasControls = ({
   canRedo,
   takeSnapshot,
 }: CanvasControlsProps) => {
+  const toast = useToast();
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, setNodes, setEdges } = useReactFlow();
 
   const onLayout = useCallback(() => {
@@ -35,7 +37,8 @@ export const CanvasControls = ({
 
     setNodes([...layoutedNodes]);
     setEdges([...layoutedEdges]);
-  }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot]);
+    toast.success("排版已完成");
+  }, [getNodes, getEdges, setNodes, setEdges, takeSnapshot, toast]);
 
   return (
     <Panel position="bottom-left" className="flex flex-row items-center gap-1 m-4 bg-[#212121] p-1 border border-white/10 rounded-md shadow-lg">
