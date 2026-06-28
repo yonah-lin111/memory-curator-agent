@@ -1,9 +1,5 @@
 import type React from "react";
-import {
-  Paperclip,
-  RotateCcw,
-  SendHorizontal,
-} from "lucide-react";
+import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import type { AiChatInputProps } from "@/features/ai-chat/components/AiChatInput/types";
@@ -82,7 +78,7 @@ export const AiChatInput = (props: AiChatInputProps): React.JSX.Element => {
   } = useAiChatInput(props);
 
   return (
-    <div className="flex-shrink-0 p-3 bg-black/5">
+    <div className="flex-shrink-0 p-3">
       <div
         data-testid="ai-chat-input-container"
         onClick={handleContainerClick}

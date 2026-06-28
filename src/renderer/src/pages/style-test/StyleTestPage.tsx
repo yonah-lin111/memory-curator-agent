@@ -1,13 +1,14 @@
 import type React from "react";
 import { useState } from "react";
-import { PromptCanvasSimulator } from "./components/PromptCanvasSimulator";
+import { LangflowCanvas } from "./components/LangflowCanvas";
 
 /** StyleTestPage 组件 - 用于测试前端样式的空白页 */
 export const StyleTestPage = (): React.JSX.Element => {
-  const [selectedId, setSelectedId] = useState<string>("test-prompt-canvas");
+  const [selectedId, setSelectedId] = useState<string>("test-langflow-canvas");
 
   const testItems = [
-    { id: "test-prompt-canvas", name: "Prompt Canvas", status: "提示词画布交互测试" },
+    { id: "test-langflow-canvas", name: "无限画布卡片 (Langflow)", status: "Completed" },
+    { id: "temp", name: "其他组件", status: "Pending" }
   ];
 
   return (
@@ -64,21 +65,19 @@ export const StyleTestPage = (): React.JSX.Element => {
         </div>
 
         {/* 右侧面板：主内容区 */}
-        <div className="min-h-0 flex flex-col rounded-[6px] border border-white/6 bg-[#212121] p-5 relative overflow-hidden">
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/5 rounded-[6px] border border-dashed border-white/10 overflow-hidden">
-            {selectedId === "test-prompt-canvas" ? (
-              <PromptCanvasSimulator />
-            ) : (
-              <>
-                <span className="text-sm font-bold text-white/80">
-                  右侧内容展示区
-                </span>
-                <span className="mt-2 text-xs text-white/50">
-                  当前选中的测试项目 ID: {selectedId}
-                </span>
-              </>
-            )}
-          </div>
+        <div className="min-h-0 flex flex-col rounded-[6px] border border-white/6 bg-[#212121] p-1 relative overflow-hidden">
+          {selectedId === "test-langflow-canvas" ? (
+            <LangflowCanvas />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/5 rounded-[6px] border border-dashed border-white/10 overflow-hidden">
+              <span className="text-sm font-bold text-white/80">
+                右侧内容展示区
+              </span>
+              <span className="mt-2 text-xs text-white/50">
+                当前选中的测试项目 ID: {selectedId}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </section>

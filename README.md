@@ -20,6 +20,18 @@
 
 不同于传统笔记工具的"海量堆积"，它强调持续**策展（Curation）**——在日常记录中理清头绪，在周度回顾中发现阶段变化，在长期追踪中洞察行为与情绪模式，最终帮助用户构建**属于自己的人生叙事**。
 
+## 页面概览
+
+应用内页面按侧边栏分组组织：
+
+| 分组 | 页面 | 说明 |
+|------|------|------|
+| DAILY | Today | 今日概览聚合页 |
+| LIBRARY | Notes / Journal / Todo / Snippets / Bills / People | 日常输入与结构化记录 |
+| CURATION | Weekly Review / Themes / Memories | 周度回顾、主题追踪、记忆关联 |
+| DEVELOPER | Showcase / Style Test | UI 组件展板与样式实验（仅开发环境） |
+| SYSTEM | Settings | 应用设置 |
+
 ## 核心功能
 
 ### 📋 日常记录
@@ -27,6 +39,13 @@
 - **随记 (Snippets)**：灵感碎片、情绪记录、生活琐事，标签归类
 - **日记 (Journal)**：每日系统总结与主观感悟，Markdown 书写
 - **今日概览**：待办 + 随记 + 日记的聚合视图，一日尽收眼底
+
+### 🎨 提示词设计 (Prompt Design)
+- **可视化画布**：基于 `@xyflow/react` 的无限画布，13 种节点类型（system/user/assistant/template/condition/loop 等），拖拽创建与连线编排
+- **项目管理**：多项目支持，保存/加载/重命名/删除，Zustand 持久化
+- **AI 助手侧边栏**：右侧 AI 面板辅助提示词优化（骨架就绪）
+- **增强交互**：dagre 自动布局、撤销/重做历史、画布锁定/解锁、右键上下文菜单、缩放与适配视图
+- **组件面板**：可搜索的节点调色板，支持拖拽到画布
 
 ### 📝 长期知识管理
 - **笔记 (Notes)**：结构化知识、深度思考、读书笔记，不限单日
@@ -38,10 +57,12 @@
 
 ### 🤖 AI 对话 Agent
 - ReAct Agent 循环，多轮工具调用，流式输出 + 思考链可视化
-- 7 种内置工具：笔记、日记、人物、待办、随记、账单、主题
+- 8 种内置工具：笔记、日记、人物、待办、随记、账单、主题、通用
+- Agent Mention 系统：`@people` `@todo` `@snippets` `@journal` `@notes` `@today` `@common` `@bills`
 - 支持 OpenAI / Anthropic / Google 多 Provider，可自定义端点
 - Ask 交互、工具操作确认、上下文压缩、Doom Loop 检测
 - `/context` `/fullscreen` `/session` `/model` 等斜杠命令
+- 会话历史管理：数据库搜索、批量删除、行内重命名、生成完成通知
 
 ### 📊 周度回顾
 - AI 自动提炼：计划完成度、情绪波动、重复主题、关键事件
@@ -52,31 +73,47 @@
 - 提炼长期主题（职业、关系、创作等），跨周追踪叙事变化
 - 笔记/日记/随记多源素材关联，时间线可视化
 
+### 🔗 记忆关联 (Memories)
+- 跨日/跨周的记忆片段关联与聚合（即将推出）
+- 与周度回顾、主题追踪共同构成策展闭环
+
 ### 💰 账单追踪
 - 15 种分类（餐饮/交通/购物/娱乐/居住/医疗/教育/工资/兼职/理财等）
 - 今日账单摘要
 
+### 🧩 UI 组件展板 (Showcase)
+- 内置组件 Playground，用于浏览和测试所有基础 UI 组件
+- 交互式展示：Toast、Tag、Select、MarkdownEditor、IconButton、Tooltip、PageDateNavigator
+- 仅供开发参考（侧边栏 DEVELOPER 分组）
+
 ## 技术架构
 
 ```
-┌─────────────────────────────────────────┐
-│              React 前端（渲染进程）        │
-│  Today / Notes / Journal / Todo / Snippets│
-│  People / Themes / Bills / Settings       │
-│         Zustand + React Query             │
-├──────────────────────────────────────────┤
-│         preload (contextBridge)            │
-├──────────────────────────────────────────┤
-│           Electron 主进程                  │
-│  ┌───────────┐  ┌────────────────────┐   │
-│  │ Services   │  │  AI Agent (ReAct)   │   │
-│  │ (CRUD)     │  │  Tools + Providers  │   │
-│  └─────┬─────┘  └────────────────────┘   │
-│        └──────┬────────┘                 │
-│          Drizzle ORM + better-sqlite3      │
-├──────────────────────────────────────────┤
-│             本地 SQLite                    │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│             React 前端（渲染进程）                  │
+│  ┌──────────────────┐  ┌───────────────────────┐ │
+│  │  OverlayWorkspace  │  │  主页面区域            │ │
+│  │  (AI Chat /       │  │  Today / Notes /      │ │
+│  │   Prompt Design)  │  │  Journal / Todo /      │ │
+│  └──────────────────┘  │  Snippets / Bills /    │ │
+│                         │  People / Themes /      │ │
+│  ┌──────────────────┐  │  Memories / Showcase    │ │
+│  │  Sidebar (3 模式)  │  │  Weekly Review         │ │
+│  │  导航/聊天/提示词   │  └───────────────────────┘ │
+│  └──────────────────┘         Zustand + React Query │
+├──────────────────────────────────────────────────┤
+│                  preload (contextBridge)           │
+├──────────────────────────────────────────────────┤
+│                  Electron 主进程                    │
+│  ┌────────────────┐  ┌─────────────────────────┐ │
+│  │  Services (CRUD) │  │  AI Agent (ReAct)       │ │
+│  │                   │  │  Tools + Providers     │ │
+│  └──────┬─────────┘  └─────────────────────────┘ │
+│         └──────────┬─────────────┘               │
+│              Drizzle ORM + better-sqlite3          │
+├──────────────────────────────────────────────────┤
+│                    本地 SQLite                      │
+└──────────────────────────────────────────────────┘
 ```
 
 ## 快速开始
@@ -125,8 +162,11 @@ pnpm dev
 | 数据库 | better-sqlite3 + Drizzle ORM |
 | AI SDK | Vercel AI SDK (OpenAI / Anthropic / Google) |
 | 图表 | ECharts 6.1 |
-| 流程图 | @xyflow/react + dagre |
+| 流程图/画布 | @xyflow/react + dagre |
 | Markdown | md-editor-rt |
+| 图标 | Lucide React |
+| 拖拽 | @dnd-kit |
+| 日期处理 | date-fns |
 | 校验 | Zod 4 |
 | 测试 | Vitest + Testing Library + Playwright |
 | 打包 | electron-builder (macOS DMG) |

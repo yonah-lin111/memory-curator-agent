@@ -1,6 +1,7 @@
 import type React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AiChatHistoryList } from "./components/AiChatHistoryList";
+import { PromptSidebarList } from "./components/PromptSidebarList";
 import type { AiChatSession } from "@/features/ai-chat/types";
 import { SidebarNavigationList } from "./components/SidebarNavigationList";
 
@@ -25,7 +26,7 @@ export type SidebarPageId =
   | "settings";
 
 // Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
-type SidebarMode = "navigation" | "chat";
+type SidebarMode = "navigation" | "chat" | "prompts";
 
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
@@ -100,10 +101,10 @@ export const Sidebar = ({
         {/* 导航与设置面板主体（带覆盖式滑出过渡） */}
         <div
           aria-hidden={mode !== "navigation"}
-          className={`w-full min-h-0 flex-1 flex flex-col justify-between transition-opacity duration-300 ease-out ${
+          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-transform duration-300 ease-out transform flex flex-col ${
             mode === "navigation"
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
+              ? "translate-x-0 pointer-events-auto z-10"
+              : "-translate-x-[150%] pointer-events-none -z-10"
           }`}
         >
           <SidebarNavigationList
@@ -116,10 +117,10 @@ export const Sidebar = ({
         {/* 聊天历史栏（带从左到右滑出的覆盖过渡动画） */}
         <div
           aria-hidden={mode !== "chat"}
-          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-opacity duration-300 ease-out flex flex-col ${
+          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-transform duration-300 ease-out transform flex flex-col ${
             mode === "chat"
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
+              ? "translate-x-0 pointer-events-auto z-10"
+              : "translate-x-[150%] pointer-events-none -z-10"
           }`}
         >
           <AiChatHistoryList
@@ -138,6 +139,22 @@ export const Sidebar = ({
             aria-hidden={mode !== "chat"}
             isCollapsed={isCollapsed}
             onCollapsedChange={onCollapsedChange}
+          />
+        </div>
+
+        {/* 提示词设计侧边栏（包含节点组件列表） */}
+        <div
+          aria-hidden={mode !== "prompts"}
+          className={`absolute ${shouldUseCollapsedLayout ? "inset-y-4 inset-x-3" : "inset-4"} transition-transform duration-300 ease-out transform flex flex-col ${
+            mode === "prompts"
+              ? "translate-x-0 pointer-events-auto z-10"
+              : "translate-x-[150%] pointer-events-none -z-10"
+          }`}
+        >
+          <PromptSidebarList
+            isCollapsed={isCollapsed}
+            onCollapsedChange={onCollapsedChange}
+            aria-hidden={mode !== "prompts"}
           />
         </div>
       </aside>

@@ -21,6 +21,8 @@ import { TodayPage } from "@/pages/today/TodayPage";
 import { ToastProvider } from "@/components/ui/Toast";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
+import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
+import { PromptDesignWorkspace } from "@/features/prompt-design/components/PromptDesignWorkspace";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
 import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
@@ -128,6 +130,12 @@ const AppContent = (): React.JSX.Element => {
   // 上下文时间线展开状态。
   const [isContextTimelineOpen, setIsContextTimelineOpen] = useState<boolean>(false);
 
+  // 提示词 AI 助手边栏展开状态。
+  const [isPromptAiSidebarOpen, setIsPromptAiSidebarOpen] = useState<boolean>(false);
+
+  // 当前激活的 Overlay (chat, prompts, null)
+  const [activeOverlay, setActiveOverlay] = useState<"chat" | "prompts" | null>(null);
+
   // 当前中间主内容页面。
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
@@ -164,6 +172,15 @@ const AppContent = (): React.JSX.Element => {
     handleCancelGeneration,
   } = useAiChatController();
 
+  // 监听 chat 打开状态
+  useEffect(() => {
+    if (isChatOpen && activeOverlay !== "chat") {
+      setActiveOverlay("chat");
+    } else if (!isChatOpen && activeOverlay === "chat") {
+      setActiveOverlay(null);
+    }
+  }, [isChatOpen, activeOverlay]);
+
   // 执行 AI 对话斜杠命令。
   const handleCommandExecute = (
     command: AiChatInputCommandId,
@@ -198,6 +215,16 @@ const AppContent = (): React.JSX.Element => {
     };
   }, []);
 
+  const handlePromptAiToggle = () => {
+    const nextState = !isPromptAiSidebarOpen;
+    setIsPromptAiSidebarOpen(nextState);
+    if (nextState) {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  };
+
   // 首次进入页面时触发 500ms Loading 效果。
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -212,7 +239,7 @@ const AppContent = (): React.JSX.Element => {
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         activePage={activePage}
-        mode={isChatOpen ? "chat" : "navigation"}
+        mode={activeOverlay === "chat" ? "chat" : activeOverlay === "prompts" ? "prompts" : "navigation"}
         chatSessions={chatSessions}
         activeChatId={activeChatId}
         completionNoticeSessionIds={completionNoticeSessionIds}
@@ -243,13 +270,24 @@ const AppContent = (): React.JSX.Element => {
       <div className="flex-1 flex flex-col h-auto lg:h-full overflow-hidden min-w-0">
         {/* 固定的顶部栏 */}
         <Header
-          category={isChatOpen ? "AGENT" : getPageCategory(activePage)}
-          activePage={isChatOpen ? "chat" : activePage}
+          category={activeOverlay ? "AGENT" : getPageCategory(activePage)}
+          activePage={activeOverlay ? activeOverlay : activePage}
           isChatOpen={isChatOpen}
-          onChatToggle={handleChatToggle}
+          onChatToggle={() => {
+            if (activeOverlay === "prompts") {
+              setActiveOverlay("chat");
+              if (!isChatOpen) handleChatToggle();
+            } else {
+              handleChatToggle();
+            }
+          }}
+          isPromptsOpen={activeOverlay === "prompts"}
+          onPromptsToggle={() => setActiveOverlay(prev => prev === "prompts" ? null : "prompts")}
+          isPromptAiOpen={isPromptAiSidebarOpen}
+          onPromptAiToggle={handlePromptAiToggle}
           chatTitle={activeChatSession.title}
           chatLeadingAction={
-            isChatOpen ? (
+            activeOverlay === "chat" ? (
               <IconButton
                 aria-label="Toggle AI context timeline"
                 title="查看 AI 上下文记录"
@@ -264,13 +302,14 @@ const AppContent = (): React.JSX.Element => {
         />
 
         <div className="flex-1 min-h-0 relative overflow-hidden">
+          
           <div
             className={`absolute inset-0 transition-opacity duration-300 ease-out ${
-              isChatOpen
+              activeOverlay
                 ? "pointer-events-none opacity-0"
                 : "pointer-events-auto opacity-100"
             }`}
-            aria-hidden={isChatOpen}
+            aria-hidden={activeOverlay !== null}
           >
             <div className="w-full h-full relative">
               {renderPageById(activePage)}
@@ -278,37 +317,36 @@ const AppContent = (): React.JSX.Element => {
             </div>
           </div>
 
-          <div
-            className={`absolute inset-0 transition-opacity duration-300 ease-out ${
-              isChatOpen
-                ? "pointer-events-auto opacity-100"
-                : "pointer-events-none opacity-0"
-            }`}
-            aria-hidden={!isChatOpen}
-          >
-             <AiChatWorkspace
-               isChatOpen={isChatOpen}
-               session={activeChatSession}
-               modelOptions={aiModelOptions}
-               selectedModel={selectedAiModel}
-               isContextTimelineOpen={isContextTimelineOpen}
-               onSendMessage={handleSendMessage}
-               onSubmitAskAnswer={handleSubmitAskAnswer}
-               onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
-               onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
-               onEditAndResendUserMessage={handleEditAndResendUserMessage}
-               onDeleteChatTurn={handleDeleteChatTurn}
-               onCommandExecute={handleCommandExecute}
-               onModelChange={setSelectedAiModel}
-               onCancelGeneration={handleCancelGeneration}
-               chatSessions={chatSessions}
-               onActiveSessionChange={setActiveChatId}
-               hasMoreChatSessions={hasMoreChatSessions}
-               isLoadingMoreChatSessions={isLoadingMoreChatSessions}
-               onLoadMoreChatSessions={handleLoadMoreChatSessions}
-             />
-          </div>
-        </div>
+          <OverlayWorkspace 
+            activeOverlay={activeOverlay}
+            chatContent={
+              <AiChatWorkspace
+                isChatOpen={activeOverlay === "chat"}
+                session={activeChatSession}
+                modelOptions={aiModelOptions}
+                selectedModel={selectedAiModel}
+                isContextTimelineOpen={isContextTimelineOpen}
+                onSendMessage={handleSendMessage}
+                onSubmitAskAnswer={handleSubmitAskAnswer}
+                onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}
+                onRegenerateLatestAnswer={handleRegenerateLatestAnswer}
+                onEditAndResendUserMessage={handleEditAndResendUserMessage}
+                onDeleteChatTurn={handleDeleteChatTurn}
+                onCommandExecute={handleCommandExecute}
+                onModelChange={setSelectedAiModel}
+                onCancelGeneration={handleCancelGeneration}
+                chatSessions={chatSessions}
+                onActiveSessionChange={setActiveChatId}
+                hasMoreChatSessions={hasMoreChatSessions}
+                isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+                onLoadMoreChatSessions={handleLoadMoreChatSessions}
+              />
+            }
+            promptsContent={
+              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} />
+            }
+          />
+</div>
       </div>
     </main>
   );

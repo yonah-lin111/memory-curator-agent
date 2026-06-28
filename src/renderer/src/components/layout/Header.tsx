@@ -1,5 +1,5 @@
 import type React from "react";
-import { MessageSquare, RotateCcw, Book } from "lucide-react";
+import { MessageSquare, RotateCcw, Book, Bot } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
@@ -22,6 +22,10 @@ export interface HeaderProps {
   isPromptsOpen?: boolean;
   // 提示词面板切换回调
   onPromptsToggle?: () => void;
+  // 提示词 AI 助手是否打开
+  isPromptAiOpen?: boolean;
+  // 提示词 AI 助手切换回调
+  onPromptAiToggle?: () => void;
 }
 
 /**
@@ -36,6 +40,8 @@ export const Header = ({
   chatLeadingAction,
   isPromptsOpen = false,
   onPromptsToggle,
+  isPromptAiOpen = false,
+  onPromptAiToggle,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
   const {
@@ -46,9 +52,18 @@ export const Header = ({
     settingsState,
   } = useHeaderStore();
 
+  const rightZoneKey = isChatOpen 
+    ? "chat" 
+    : isPromptsOpen 
+      ? "prompts" 
+      : `normal-${extraActions ? "extra" : "none"}-${settingsState ? "settings" : "none"}`;
+
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
-      <div className="flex items-center gap-2 text-xs font-mono">
+      <div 
+        key={`left-${activePage}-${isChatOpen ? "chat" : "normal"}`}
+        className="flex items-center gap-2 text-xs font-mono animate-slide-in-from-left"
+      >
         <span className="text-white/30">//</span>
         <span className="text-white/40 font-bold uppercase tracking-wider">
           {category}
@@ -95,55 +110,88 @@ export const Header = ({
             );
           })}
         </div>
-        {!isChatOpen && settingsState && (
-          <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
-            <span
-              className={`text-xs ${
-                settingsState.isDirty ? "text-amber-300" : "text-white/35"
-              }`}
-            >
-              {settingsState.isDirty ? "未保存" : "已同步"}
-            </span>
-            <IconButton
-              disabled={settingsState.isSaving}
-              onClick={settingsState.onReload}
-              title="重置修改"
-              aria-label="重置修改"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-            </IconButton>
-            <IconButton
-              preset="save"
-              disabled={settingsState.isSaving || !settingsState.isDirty}
-              onClick={settingsState.onSave}
-              title={settingsState.isSaving ? "保存中" : "保存设置"}
-              aria-label="保存设置"
-            />
-          </div>
-        )}
-        {!isChatOpen && extraActions}
-        {chatLeadingAction}
-        {!isChatOpen && (
-          <IconButton
-            aria-label={isPromptsOpen ? "关闭提示词" : "打开提示词"}
-            title="提示词"
-            highlighted={isPromptsOpen}
-            preset={isPromptsOpen ? "close" : undefined}
-            onClick={onPromptsToggle}
-          >
-            {isPromptsOpen ? null : <Book className="h-3.5 w-3.5" />}
-          </IconButton>
-        )}
-        {!hideChatButton && !isPromptsOpen && (
-          <IconButton
-            aria-label={isChatOpen ? "Close chat" : "Open chat"}
-            highlighted={isChatOpen}
-            preset={isChatOpen ? "close" : undefined}
-            onClick={onChatToggle}
-          >
-            {isChatOpen ? null : <MessageSquare className="h-3.5 w-3.5" />}
-          </IconButton>
-        )}
+        <div 
+          key={`right-zone-${rightZoneKey}`}
+          className="flex items-center gap-1.5 animate-slide-in-from-right"
+        >
+          {!isChatOpen && settingsState && (
+            <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
+              <span
+                className={`text-xs ${
+                  settingsState.isDirty ? "text-amber-300" : "text-white/35"
+                }`}
+              >
+                {settingsState.isDirty ? "未保存" : "已同步"}
+              </span>
+              <IconButton
+                disabled={settingsState.isSaving}
+                onClick={settingsState.onReload}
+                title="重置修改"
+                aria-label="重置修改"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                preset="save"
+                disabled={settingsState.isSaving || !settingsState.isDirty}
+                onClick={settingsState.onSave}
+                title={settingsState.isSaving ? "保存中" : "保存设置"}
+                aria-label="保存设置"
+              />
+            </div>
+          )}
+          {!isChatOpen && extraActions}
+          {/* 提示词展开后的扩展 icon 组 */}
+          {isPromptsOpen && !hideChatButton && (
+            <>
+              <IconButton
+                aria-label={isPromptAiOpen ? "关闭提示词 AI" : "打开提示词 AI"}
+                title="提示词 AI 助手"
+                highlighted={isPromptAiOpen}
+                onClick={onPromptAiToggle}
+              >
+                <Bot className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                aria-label="关闭提示词"
+                title="关闭提示词"
+                preset="close"
+                onClick={onPromptsToggle}
+              />
+            </>
+          )}
+          {/* 聊天展开后的扩展 icon 组 */}
+          {isChatOpen && !hideChatButton && (
+            <>
+              {chatLeadingAction}
+              <IconButton
+                aria-label="关闭对话"
+                title="关闭对话"
+                preset="close"
+                onClick={onChatToggle}
+              />
+            </>
+          )}
+          {/* 正常状态下的按钮组 */}
+          {!isChatOpen && !isPromptsOpen && !hideChatButton && (
+            <>
+              <IconButton
+                aria-label="打开提示词"
+                title="提示词"
+                onClick={onPromptsToggle}
+              >
+                <Book className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                aria-label="打开对话"
+                title="对话"
+                onClick={onChatToggle}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+              </IconButton>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

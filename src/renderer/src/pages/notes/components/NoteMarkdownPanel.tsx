@@ -145,7 +145,7 @@ export const NoteMarkdownPanel = ({
     const activeCategory = categories.find((c) => c.id === draft.categoryId);
 
     setExtraActions(
-      <div className="flex items-center gap-1.5 animate-card-modal-in">
+      <>
         {/* 设置标签和分类的 Tooltip */}
         <Tooltip
           trigger="click"
@@ -219,7 +219,7 @@ export const NoteMarkdownPanel = ({
           title="取消编辑"
           aria-label="Cancel"
         />
-      </div>,
+      </>,
     );
   }, [draft, initialDraft, onClose, setExtraActions, categories, categorySelectOptions]);
 
