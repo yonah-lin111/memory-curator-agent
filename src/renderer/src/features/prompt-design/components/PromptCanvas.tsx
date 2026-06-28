@@ -49,10 +49,10 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "{{role}}",
-      description: "角色变量：助手 / 专家 / 教练",
+      title: "{{framework}}",
+      description: "前端框架变量",
       nodeType: "variable",
-      variables: ["role"],
+      variables: ["framework"],
     } as PromptNodeData,
   },
   {
@@ -62,7 +62,7 @@ const rawInitialNodes = [
     data: {
       title: "设计备忘",
       nodeType: "comment",
-      content: "条件分支根据用户意图将对话\n路由到不同的提示词模板",
+      content: "这是一个用于生成【登录功能】代码的提示词流程：\n结合了技术栈变量、系统角色定义以及接口文档上下文。",
     } as PromptNodeData,
   },
 
@@ -72,32 +72,13 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "系统角色定义",
-      description: "为整个对话设定 AI 的行为边界与角色",
+      title: "前端专家角色",
+      description: "设定 AI 的前端开发角色",
       nodeType: "system",
-      content: "你是专业的{{role}}，请根据用户意图提供对应服务。",
-      variables: ["role"],
+      content: "你是一个资深的前端开发工程师，精通 {{framework}}，擅长编写安全、优雅且符合现代 UI 规范的登录组件。",
+      variables: ["framework"],
       outputs: [
         { id: "out-sys", name: "System", type: "message/system" },
-      ],
-    } as PromptNodeData,
-  },
-
-  /* ── 条件分支 ── */
-  {
-    id: "cond-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "意图路由",
-      description: "根据用户意图分发到不同模板",
-      nodeType: "condition",
-      inputs: [
-        { id: "in-cond", name: "System", type: "message/system" },
-      ],
-      outputs: [
-        { id: "branch-creative", name: "创作", type: "branch" },
-        { id: "branch-analytic", name: "分析", type: "branch" },
       ],
     } as PromptNodeData,
   },
@@ -108,8 +89,8 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "知识库上下文",
-      description: "RAG 检索结果注入到消息流",
+      title: "API 接口与设计规范",
+      description: "注入后端登录接口文档",
       nodeType: "context",
       outputs: [
         { id: "out-ctx", name: "Context", type: "context" },
@@ -117,40 +98,18 @@ const rawInitialNodes = [
     } as PromptNodeData,
   },
 
-  /* ── 分支 A：创作模板 ── */
+  /* ── 用户任务 ── */
   {
-    id: "tpl-creative",
+    id: "tpl-task",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "创作提示词",
+      title: "登录表单需求",
       nodeType: "template",
-      content: "以{{style}}风格创作关于{{topic}}的内容。\n要求：语言流畅、结构清晰。",
-      variables: ["style", "topic"],
-      inputs: [
-        { id: "in-tpl1", name: "分支", type: "branch" },
-      ],
+      content: "请实现一个登录页面。要求：\n1. 包含邮箱和密码输入框，并支持表单校验；\n2. 包含“记住我”复选框和“忘记密码”链接；\n3. 提交时调用上下文中提供的登录接口，处理 loading 状态与错误提示。\n\n技术栈限定：{{framework}} + {{ui_library}}",
+      variables: ["framework", "ui_library"],
       outputs: [
-        { id: "out-tpl1", name: "Template", type: "message/user" },
-      ],
-    } as PromptNodeData,
-  },
-
-  /* ── 分支 B：分析模板 ── */
-  {
-    id: "tpl-analytic",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "分析提示词",
-      nodeType: "template",
-      content: "分析{{topic}}的关键因素与潜在影响。\n请以结构化方式输出结论。",
-      variables: ["topic"],
-      inputs: [
-        { id: "in-tpl2", name: "分支", type: "branch" },
-      ],
-      outputs: [
-        { id: "out-tpl2", name: "Template", type: "message/user" },
+        { id: "out-task", name: "User Task", type: "message/user" },
       ],
     } as PromptNodeData,
   },
@@ -162,12 +121,12 @@ const rawInitialNodes = [
     position: { x: 0, y: 0 },
     data: {
       title: "消息组装",
-      description: "按序拼接 System + Context + 用户消息",
+      description: "按序拼接登录功能提示词",
       nodeType: "assemble",
       inputs: [
-        { id: "in-asm1", name: "创作分支", type: "message/user" },
-        { id: "in-asm2", name: "分析分支", type: "message/user" },
-        { id: "in-asm3", name: "上下文", type: "context" },
+        { id: "in-asm-sys", name: "角色设定", type: "message/system" },
+        { id: "in-asm-ctx", name: "接口文档", type: "context" },
+        { id: "in-asm-task", name: "具体需求", type: "message/user" },
       ],
       outputs: [
         { id: "out-asm", name: "Messages", type: "messages" },
@@ -191,13 +150,10 @@ const rawInitialNodes = [
 ];
 
 const rawInitialEdges: Edge[] = [
-  { id: "e-sys-cond",  source: "sys-1",         target: "cond-1",        sourceHandle: "out-sys",         targetHandle: "in-cond" },
-  { id: "e-cond-crt",  source: "cond-1",        target: "tpl-creative",  sourceHandle: "branch-creative", targetHandle: "in-tpl1" },
-  { id: "e-cond-anl",  source: "cond-1",        target: "tpl-analytic",  sourceHandle: "branch-analytic", targetHandle: "in-tpl2" },
-  { id: "e-crt-asm",   source: "tpl-creative",  target: "asm-1",         sourceHandle: "out-tpl1",        targetHandle: "in-asm1" },
-  { id: "e-anl-asm",   source: "tpl-analytic",  target: "asm-1",         sourceHandle: "out-tpl2",        targetHandle: "in-asm2" },
-  { id: "e-ctx-asm",   source: "ctx-1",         target: "asm-1",         sourceHandle: "out-ctx",         targetHandle: "in-asm3" },
-  { id: "e-asm-out",   source: "asm-1",         target: "out-1",         sourceHandle: "out-asm",         targetHandle: "in-out" },
+  { id: "e-sys-asm",   source: "sys-1",     target: "asm-1", sourceHandle: "out-sys",   targetHandle: "in-asm-sys" },
+  { id: "e-ctx-asm",   source: "ctx-1",     target: "asm-1", sourceHandle: "out-ctx",   targetHandle: "in-asm-ctx" },
+  { id: "e-task-asm",  source: "tpl-task",  target: "asm-1", sourceHandle: "out-task",  targetHandle: "in-asm-task" },
+  { id: "e-asm-out",   source: "asm-1",     target: "out-1", sourceHandle: "out-asm",   targetHandle: "in-out" },
 ].map((e) => ({
   ...e,
   animated: true,
