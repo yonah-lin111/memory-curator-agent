@@ -1,5 +1,5 @@
 import type React from "react";
-import { MessageSquare, RotateCcw, Book } from "lucide-react";
+import { MessageSquare, RotateCcw, Book, Bot } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
@@ -22,6 +22,10 @@ export interface HeaderProps {
   isPromptsOpen?: boolean;
   // 提示词面板切换回调
   onPromptsToggle?: () => void;
+  // 提示词 AI 助手是否打开
+  isPromptAiOpen?: boolean;
+  // 提示词 AI 助手切换回调
+  onPromptAiToggle?: () => void;
 }
 
 /**
@@ -36,6 +40,8 @@ export const Header = ({
   chatLeadingAction,
   isPromptsOpen = false,
   onPromptsToggle,
+  isPromptAiOpen = false,
+  onPromptAiToggle,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
   const {
@@ -130,6 +136,16 @@ export const Header = ({
           )}
           {!isChatOpen && extraActions}
           {chatLeadingAction}
+          {isPromptsOpen && (
+            <IconButton
+              aria-label={isPromptAiOpen ? "关闭提示词 AI" : "打开提示词 AI"}
+              title="提示词 AI 助手"
+              highlighted={isPromptAiOpen}
+              onClick={onPromptAiToggle}
+            >
+              <Bot className="h-3.5 w-3.5" />
+            </IconButton>
+          )}
           {!isChatOpen && !hideChatButton && (
             <IconButton
               aria-label={isPromptsOpen ? "关闭提示词" : "打开提示词"}

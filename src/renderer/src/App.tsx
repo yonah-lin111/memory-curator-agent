@@ -130,6 +130,9 @@ const AppContent = (): React.JSX.Element => {
   // 上下文时间线展开状态。
   const [isContextTimelineOpen, setIsContextTimelineOpen] = useState<boolean>(false);
 
+  // 提示词 AI 助手边栏展开状态。
+  const [isPromptAiSidebarOpen, setIsPromptAiSidebarOpen] = useState<boolean>(false);
+
   // 当前激活的 Overlay (chat, prompts, null)
   const [activeOverlay, setActiveOverlay] = useState<"chat" | "prompts" | null>(null);
 
@@ -212,6 +215,16 @@ const AppContent = (): React.JSX.Element => {
     };
   }, []);
 
+  const handlePromptAiToggle = () => {
+    const nextState = !isPromptAiSidebarOpen;
+    setIsPromptAiSidebarOpen(nextState);
+    if (nextState) {
+      setIsSidebarCollapsed(true);
+    } else {
+      setIsSidebarCollapsed(false);
+    }
+  };
+
   // 首次进入页面时触发 500ms Loading 效果。
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -270,6 +283,8 @@ const AppContent = (): React.JSX.Element => {
           }}
           isPromptsOpen={activeOverlay === "prompts"}
           onPromptsToggle={() => setActiveOverlay(prev => prev === "prompts" ? null : "prompts")}
+          isPromptAiOpen={isPromptAiSidebarOpen}
+          onPromptAiToggle={handlePromptAiToggle}
           chatTitle={activeChatSession.title}
           chatLeadingAction={
             activeOverlay === "chat" ? (
@@ -328,7 +343,7 @@ const AppContent = (): React.JSX.Element => {
               />
             }
             promptsContent={
-              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} />
+              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} />
             }
           />
 </div>
