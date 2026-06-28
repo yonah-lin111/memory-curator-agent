@@ -1,14 +1,42 @@
 import type React from "react";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Folder,
+  Component,
+  Plus,
+  Import,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Input } from "@/components/ui/Input";
 import {
   cardTypeMeta,
   iconMap,
   type PromptCardType,
 } from "@/features/prompt-design/components/PromptNode";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+
+const mockProjects = [
+  {
+    id: "proj1",
+    name: "项目1",
+    prompts: [
+      { id: "p1-1", name: "提示词设计1" },
+      { id: "p1-2", name: "提示词设计2" },
+    ],
+  },
+  {
+    id: "proj2",
+    name: "项目2",
+    prompts: [
+      { id: "p2-1", name: "提示词设计1" },
+      { id: "p2-2", name: "提示词设计2" },
+    ],
+  },
+];
 
 type PromptSidebarProps = {
   isCollapsed?: boolean;
@@ -22,8 +50,22 @@ export const PromptSidebarList = ({
   "aria-hidden": ariaHidden,
 }: PromptSidebarProps): React.JSX.Element => {
   const [searchKeyword, setSearchKeyword] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"components" | "projects">(
+    "components",
+  );
+  const [collapsedProjects, setCollapsedProjects] = useState<
+    Record<string, boolean>
+  >({});
+  const [newProjectName, setNewProjectName] = useState<string>("");
 
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
+
+  const toggleProject = (projectId: string) => {
+    setCollapsedProjects((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -36,11 +78,11 @@ export const PromptSidebarList = ({
 
   if (isCollapsed) {
     const connectedTypesAll = Object.entries(cardTypeMeta).filter(
-      ([_, meta]) => !meta.isIndependent
+      ([_, meta]) => !meta.isIndependent,
     ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
 
     const independentTypesAll = Object.entries(cardTypeMeta).filter(
-      ([_, meta]) => meta.isIndependent
+      ([_, meta]) => meta.isIndependent,
     ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
 
     return (
@@ -58,7 +100,7 @@ export const PromptSidebarList = ({
           </IconButton>
         </Tooltip>
 
-        <div 
+        <div
           className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-3 pb-4 [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
@@ -129,6 +171,50 @@ export const PromptSidebarList = ({
         _.toLowerCase().includes(keyword)),
   ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
 
+  const filteredProjects = mockProjects
+    .map((proj) => {
+      if (proj.name.toLowerCase().includes(keyword)) {
+        return proj;
+      }
+      const filteredPrompts = proj.prompts.filter((p) =>
+        p.name.toLowerCase().includes(keyword),
+      );
+      if (filteredPrompts.length > 0) {
+        return { ...proj, prompts: filteredPrompts };
+      }
+      return null;
+    })
+    .filter(Boolean) as typeof mockProjects;
+
+  const handleAddProjectConfirm = async () => {
+    if (!newProjectName.trim()) return;
+    // TODO: 实现添加项目逻辑
+    console.log("Add project:", newProjectName);
+    setNewProjectName("");
+  };
+
+  const handleAddProjectCancel = () => {
+    setNewProjectName("");
+  };
+
+  const renderAddProjectForm = () => (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1 text-left">
+        <span className="text-[11px] font-semibold text-white/40">
+          项目名称
+        </span>
+        <Input
+          type="text"
+          value={newProjectName}
+          onChange={(e) => setNewProjectName(e.target.value)}
+          placeholder="请输入项目名称"
+          size="xs"
+          className="!h-[28px]"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -136,7 +222,7 @@ export const PromptSidebarList = ({
       aria-hidden={ariaHidden}
     >
       {/* 顶部标题与折叠按钮 */}
-      <div className="flex items-center justify-between px-1 shrink-0">
+      <div className="flex items-center justify-between px-1 shrink-0 h-7">
         <Tooltip content="收起" placement="right">
           <IconButton
             aria-label="Collapse sidebar"
@@ -145,6 +231,54 @@ export const PromptSidebarList = ({
             <ChevronLeft className="h-4 w-4" />
           </IconButton>
         </Tooltip>
+
+        <div className="flex items-center gap-0.5">
+          {activeTab === "projects" && (
+            <>
+              <Tooltip content="导入项目" placement="bottom">
+                <IconButton aria-label="Import project">
+                  <Import className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip content="新建项目" placement="bottom">
+                <Tooltip
+                  contentClassName="!w-[240px] !p-3 !whitespace-normal flex flex-col"
+                  placement="bottom"
+                  trigger="click"
+                  form={renderAddProjectForm()}
+                  onConfirm={handleAddProjectConfirm}
+                  onCancel={handleAddProjectCancel}
+                >
+                  <IconButton aria-label="New project">
+                    <Plus className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+              </Tooltip>
+              <div className="w-[1px] h-3.5 bg-white/10 mx-0.5" />
+            </>
+          )}
+          <Tooltip
+            content={
+              activeTab === "components" ? "切换到项目列表" : "切换到组件列表"
+            }
+            placement="bottom"
+          >
+            <IconButton
+              aria-label="Toggle view"
+              onClick={() =>
+                setActiveTab(
+                  activeTab === "components" ? "projects" : "components",
+                )
+              }
+            >
+              {activeTab === "components" ? (
+                <Folder className="h-4 w-4" />
+              ) : (
+                <Component className="h-4 w-4" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </div>
       </div>
 
       {/* 搜索框 */}
@@ -152,7 +286,9 @@ export const PromptSidebarList = ({
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/20" />
         <input
           type="text"
-          placeholder="搜索组件..."
+          placeholder={
+            activeTab === "components" ? "搜索组件..." : "搜索项目..."
+          }
           value={searchKeyword}
           onChange={(event) => setSearchKeyword(event.target.value)}
           className="w-full rounded-[6px] border border-white/5 bg-white/[0.02] py-1.5 pl-8 pr-3 text-xs text-white placeholder:text-white/20 outline-none focus:border-white/15"
@@ -160,93 +296,139 @@ export const PromptSidebarList = ({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4 flex flex-col gap-6 px-1">
-        {/* 连线组件 */}
-        {connectedTypes.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
-              流程卡片
-            </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {connectedTypes.map(([type, meta]) => (
-                <div
-                  key={type}
-                  className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
-                    isLocked
-                      ? "opacity-50 cursor-not-allowed grayscale"
-                      : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
-                  }`}
-                  draggable={!isLocked}
-                  onDragStart={(e) => onDragStart(e, type)}
-                >
-                  <div className="relative flex-shrink-0">
-                    <div
-                      className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
-                    >
-                      {iconMap[meta.defaultIcon] || (
-                        <div className="w-4 h-4 bg-white/20 rounded-full" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
-                      {meta.label}
-                    </span>
-                    <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
-                      {type}
-                    </span>
-                  </div>
+        {activeTab === "components" ? (
+          <>
+            {/* 连线组件 */}
+            {connectedTypes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
+                  流程卡片
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 独立组件 */}
-        {independentTypes.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
-              独立卡片
-            </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {independentTypes.map(([type, meta]) => (
-                <div
-                  key={type}
-                  className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
-                    isLocked
-                      ? "opacity-50 cursor-not-allowed grayscale"
-                      : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
-                  }`}
-                  draggable={!isLocked}
-                  onDragStart={(e) => onDragStart(e, type)}
-                >
-                  <div className="relative flex-shrink-0">
+                <div className="grid grid-cols-1 gap-1.5">
+                  {connectedTypes.map(([type, meta]) => (
                     <div
-                      className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                      key={type}
+                      className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
+                        isLocked
+                          ? "opacity-50 cursor-not-allowed grayscale"
+                          : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
+                      }`}
+                      draggable={!isLocked}
+                      onDragStart={(e) => onDragStart(e, type)}
                     >
-                      {iconMap[meta.defaultIcon] || (
-                        <div className="w-4 h-4 bg-white/20 rounded-full" />
-                      )}
+                      <div className="relative flex-shrink-0">
+                        <div
+                          className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                        >
+                          {iconMap[meta.defaultIcon] || (
+                            <div className="w-4 h-4 bg-white/20 rounded-full" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                        <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
+                          {meta.label}
+                        </span>
+                        <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
+                          {type}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
-                      {meta.label}
-                    </span>
-                    <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
-                      {type}
-                    </span>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {connectedTypes.length === 0 && independentTypes.length === 0 && (
-          <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35 mx-1">
-            没有匹配的组件
+            {/* 独立组件 */}
+            {independentTypes.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
+                  独立卡片
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {independentTypes.map(([type, meta]) => (
+                    <div
+                      key={type}
+                      className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
+                        isLocked
+                          ? "opacity-50 cursor-not-allowed grayscale"
+                          : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
+                      }`}
+                      draggable={!isLocked}
+                      onDragStart={(e) => onDragStart(e, type)}
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div
+                          className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                        >
+                          {iconMap[meta.defaultIcon] || (
+                            <div className="w-4 h-4 bg-white/20 rounded-full" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                        <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
+                          {meta.label}
+                        </span>
+                        <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
+                          {type}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {connectedTypes.length === 0 && independentTypes.length === 0 && (
+              <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35 mx-1">
+                没有匹配的组件
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {filteredProjects.length > 0 ? (
+              filteredProjects.map((proj) => {
+                const isCollapsed = collapsedProjects[proj.id];
+                return (
+                  <div key={proj.id} className="flex flex-col gap-1.5">
+                    <div
+                      className="flex items-center justify-between px-1 py-1 cursor-pointer rounded-[6px] hover:bg-white/[0.02] transition-colors group"
+                      onClick={() => toggleProject(proj.id)}
+                    >
+                      <div className="text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors">
+                        {proj.name}
+                      </div>
+                      <ChevronRight
+                        className={`w-3.5 h-3.5 text-white/30 group-hover:text-white/50 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                      />
+                    </div>
+                    {!isCollapsed && (
+                      <div className="flex flex-col gap-0.5">
+                        {proj.prompts.map((prompt) => (
+                          <div
+                            key={prompt.id}
+                            className="w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 hover:bg-white/[0.02] text-white/70 cursor-pointer group"
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors flex-shrink-0 mx-1" />
+                            <span className="text-xs truncate group-hover:text-white transition-colors">
+                              {prompt.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35 mx-1">
+                没有匹配的项目
+              </div>
+            )}
           </div>
         )}
       </div>
