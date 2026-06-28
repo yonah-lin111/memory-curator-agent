@@ -52,6 +52,12 @@ export const Header = ({
     settingsState,
   } = useHeaderStore();
 
+  const rightZoneKey = isChatOpen 
+    ? "chat" 
+    : isPromptsOpen 
+      ? "prompts" 
+      : `normal-${extraActions ? "extra" : "none"}-${settingsState ? "settings" : "none"}`;
+
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
       <div 
@@ -105,8 +111,8 @@ export const Header = ({
           })}
         </div>
         <div 
-          key={`right-${isChatOpen ? "chat" : "normal"}`}
-          className="flex items-center gap-1.5 animate-toast-in"
+          key={`right-zone-${rightZoneKey}`}
+          className="flex items-center gap-1.5 animate-slide-in-from-right"
         >
           {!isChatOpen && settingsState && (
             <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
@@ -135,35 +141,55 @@ export const Header = ({
             </div>
           )}
           {!isChatOpen && extraActions}
-          {chatLeadingAction}
-          {isPromptsOpen && (
-            <IconButton
-              aria-label={isPromptAiOpen ? "关闭提示词 AI" : "打开提示词 AI"}
-              title="提示词 AI 助手"
-              highlighted={isPromptAiOpen}
-              onClick={onPromptAiToggle}
-            >
-              <Bot className="h-3.5 w-3.5" />
-            </IconButton>
+          {/* 提示词展开后的扩展 icon 组 */}
+          {isPromptsOpen && !hideChatButton && (
+            <>
+              <IconButton
+                aria-label={isPromptAiOpen ? "关闭提示词 AI" : "打开提示词 AI"}
+                title="提示词 AI 助手"
+                highlighted={isPromptAiOpen}
+                onClick={onPromptAiToggle}
+              >
+                <Bot className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                aria-label="关闭提示词"
+                title="关闭提示词"
+                preset="close"
+                onClick={onPromptsToggle}
+              />
+            </>
           )}
-          {!isChatOpen && !hideChatButton && (
-            <IconButton
-              aria-label={isPromptsOpen ? "关闭提示词" : "打开提示词"}
-              title="提示词"
-              preset={isPromptsOpen ? "close" : undefined}
-              onClick={onPromptsToggle}
-            >
-              {isPromptsOpen ? null : <Book className="h-3.5 w-3.5" />}
-            </IconButton>
+          {/* 聊天展开后的扩展 icon 组 */}
+          {isChatOpen && !hideChatButton && (
+            <>
+              {chatLeadingAction}
+              <IconButton
+                aria-label="关闭对话"
+                title="关闭对话"
+                preset="close"
+                onClick={onChatToggle}
+              />
+            </>
           )}
-          {!hideChatButton && !isPromptsOpen && (
-            <IconButton
-              aria-label={isChatOpen ? "Close chat" : "Open chat"}
-              preset={isChatOpen ? "close" : undefined}
-              onClick={onChatToggle}
-            >
-              {isChatOpen ? null : <MessageSquare className="h-3.5 w-3.5" />}
-            </IconButton>
+          {/* 正常状态下的按钮组 */}
+          {!isChatOpen && !isPromptsOpen && !hideChatButton && (
+            <>
+              <IconButton
+                aria-label="打开提示词"
+                title="提示词"
+                onClick={onPromptsToggle}
+              >
+                <Book className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                aria-label="打开对话"
+                title="对话"
+                onClick={onChatToggle}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+              </IconButton>
+            </>
           )}
         </div>
       </div>

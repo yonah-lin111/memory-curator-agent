@@ -73,7 +73,7 @@ export const PeopleProfileForm = ({
     setHideChatButton(true);
 
     setExtraActions(
-      <div className="flex items-center gap-1.5">
+      <>
         <IconButton
           disabled={!formState.name.trim()}
           preset="save"
@@ -87,7 +87,7 @@ export const PeopleProfileForm = ({
           title="取消编辑"
           aria-label="Cancel"
         />
-      </div>,
+      </>,
     );
 
     return () => {
