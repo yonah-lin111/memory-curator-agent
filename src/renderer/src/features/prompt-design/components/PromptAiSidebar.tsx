@@ -23,11 +23,6 @@ export const PromptAiSidebar = ({
     >
       {isOpen && (
         <>
-          <div className="mb-1 mt-1 flex items-center justify-between border-b border-white/5 pb-1 shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="font-medium text-white/80">AI 助手</div>
-            </div>
-          </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] flex flex-col gap-2 pr-1">
             {/* 预留容器 */}
           </div>
