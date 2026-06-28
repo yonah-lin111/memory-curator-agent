@@ -19,6 +19,7 @@ import { CanvasControls } from "./CanvasControls";
 import { useFlowHistory } from "../hooks/useFlowHistory";
 import { PromptCanvasContextMenu, type ContextMenuState } from "./PromptCanvasContextMenu";
 import { useToast } from "@/components/ui/Toast";
+import { usePromptDesignStore } from "../store/promptDesignStore";
 
 const nodeTypes: NodeTypes = {
   promptNode: PromptNode,
@@ -217,6 +218,7 @@ export const PromptCanvas = () => {
 
   const [menuState, setMenuState] = useState<ContextMenuState>({ type: null, x: 0, y: 0 });
   const [copiedNode, setCopiedNode] = useState<Node | null>(null);
+  const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
   const toast = useToast();
 
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useFlowHistory(
@@ -275,6 +277,10 @@ export const PromptCanvas = () => {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      if (isLocked) {
+        toast.warning("画布已锁定，无法添加组件");
+        return;
+      }
 
       const type = event.dataTransfer.getData("application/reactflow");
 
@@ -292,11 +298,12 @@ export const PromptCanvas = () => {
       const newNode = createNewNode(type as PromptCardType, position);
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode],
+    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode, isLocked, toast],
   );
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {
+      if (isLocked) return;
       takeSnapshot();
       setEdges((eds) =>
         addEdge(
@@ -309,7 +316,7 @@ export const PromptCanvas = () => {
         ),
       );
     },
-    [setEdges, takeSnapshot],
+    [setEdges, takeSnapshot, isLocked],
   );
 
   const onNodeDragStart = useCallback(() => {
@@ -326,32 +333,35 @@ export const PromptCanvas = () => {
 
   const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
     event.preventDefault();
+    if (isLocked) return;
     setMenuState({
       type: "node",
       x: event.clientX,
       y: event.clientY,
       id: node.id,
     });
-  }, []);
+  }, [isLocked]);
 
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault();
+    if (isLocked) return;
     setMenuState({
       type: "edge",
       x: event.clientX,
       y: event.clientY,
       id: edge.id,
     });
-  }, []);
+  }, [isLocked]);
 
   const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
     event.preventDefault();
+    if (isLocked) return;
     setMenuState({
       type: "pane",
       x: event.clientX,
       y: event.clientY,
     });
-  }, []);
+  }, [isLocked]);
 
   const closeContextMenu = useCallback(() => {
     setMenuState({ type: null, x: 0, y: 0 });
@@ -436,6 +446,9 @@ export const PromptCanvas = () => {
         minZoom={0.1}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
+        nodesDraggable={!isLocked}
+        nodesConnectable={!isLocked}
+        deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
       >
         <Background color="#444" gap={20} size={1} />
         <CanvasControls

@@ -8,6 +8,7 @@ import {
   iconMap,
   type PromptCardType,
 } from "@/features/prompt-design/components/PromptNode";
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 
 type PromptSidebarProps = {
   isCollapsed?: boolean;
@@ -22,10 +23,13 @@ export const PromptSidebarList = ({
 }: PromptSidebarProps): React.JSX.Element => {
   const [searchKeyword, setSearchKeyword] = useState<string>("");
 
+  const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
+
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
     nodeType: PromptCardType,
   ) => {
+    if (isLocked) return;
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
   };
@@ -61,8 +65,12 @@ export const PromptSidebarList = ({
           {connectedTypesAll.map(([type, meta]) => (
             <Tooltip key={type} content={meta.label} placement="right">
               <div
-                className="w-9 h-9 flex-shrink-0 cursor-grab active:cursor-grabbing rounded-[6px] transition-colors hover:bg-white/[0.02]"
-                draggable
+                className={`w-9 h-9 flex-shrink-0 rounded-[6px] transition-colors ${
+                  isLocked
+                    ? "opacity-50 cursor-not-allowed grayscale"
+                    : "cursor-grab active:cursor-grabbing hover:bg-white/[0.02]"
+                }`}
+                draggable={!isLocked}
                 onDragStart={(e) => onDragStart(e, type)}
               >
                 <div
@@ -81,8 +89,12 @@ export const PromptSidebarList = ({
           {independentTypesAll.map(([type, meta]) => (
             <Tooltip key={type} content={meta.label} placement="right">
               <div
-                className="w-9 h-9 flex-shrink-0 cursor-grab active:cursor-grabbing rounded-[6px] transition-colors hover:bg-white/[0.02]"
-                draggable
+                className={`w-9 h-9 flex-shrink-0 rounded-[6px] transition-colors ${
+                  isLocked
+                    ? "opacity-50 cursor-not-allowed grayscale"
+                    : "cursor-grab active:cursor-grabbing hover:bg-white/[0.02]"
+                }`}
+                draggable={!isLocked}
                 onDragStart={(e) => onDragStart(e, type)}
               >
                 <div
@@ -158,8 +170,12 @@ export const PromptSidebarList = ({
               {connectedTypes.map(([type, meta]) => (
                 <div
                   key={type}
-                  className="w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing border border-transparent"
-                  draggable
+                  className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
+                    isLocked
+                      ? "opacity-50 cursor-not-allowed grayscale"
+                      : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
+                  }`}
+                  draggable={!isLocked}
                   onDragStart={(e) => onDragStart(e, type)}
                 >
                   <div className="relative flex-shrink-0">
@@ -196,8 +212,12 @@ export const PromptSidebarList = ({
               {independentTypes.map(([type, meta]) => (
                 <div
                   key={type}
-                  className="w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing border border-transparent"
-                  draggable
+                  className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
+                    isLocked
+                      ? "opacity-50 cursor-not-allowed grayscale"
+                      : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
+                  }`}
+                  draggable={!isLocked}
                   onDragStart={(e) => onDragStart(e, type)}
                 >
                   <div className="relative flex-shrink-0">
