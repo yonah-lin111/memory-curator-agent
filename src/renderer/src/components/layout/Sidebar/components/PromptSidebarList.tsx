@@ -470,6 +470,7 @@ export const PromptSidebarList = ({
                           <input
                             // eslint-disable-next-line jsx-a11y/no-autofocus
                             autoFocus
+                            onFocus={(e) => e.target.select()}
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
                             onBlur={handleRenameCommit}
@@ -503,6 +504,7 @@ export const PromptSidebarList = ({
                                 <input
                                   // eslint-disable-next-line jsx-a11y/no-autofocus
                                   autoFocus
+                                  onFocus={(e) => e.target.select()}
                                   value={editingName}
                                   onChange={(e) => setEditingName(e.target.value)}
                                   onBlur={handleRenameCommit}
