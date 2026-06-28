@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,8 +18,9 @@ import {
   type PromptCardType,
 } from "@/features/prompt-design/components/PromptNode";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+import { PromptSidebarContextMenu } from "./PromptSidebarContextMenu";
 
-const mockProjects = [
+const initialProjects = [
   {
     id: "proj1",
     name: "项目1",
@@ -53,18 +54,74 @@ export const PromptSidebarList = ({
   const [activeTab, setActiveTab] = useState<"components" | "projects">(
     "components",
   );
+  const [projects, setProjects] = useState(initialProjects);
   const [collapsedProjects, setCollapsedProjects] = useState<
     Record<string, boolean>
   >({});
   const [newProjectName, setNewProjectName] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>("");
+  const [contextMenu, setContextMenu] = useState<{
+    type: "project" | "prompt";
+    id: string;
+    title: string;
+    projectId?: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
+
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    type: "project" | "prompt",
+    item: { id: string; name: string },
+    projectId?: string,
+  ) => {
+    e.preventDefault();
+    setContextMenu({
+      type,
+      id: item.id,
+      title: item.name,
+      projectId,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
 
   const toggleProject = (projectId: string) => {
     setCollapsedProjects((prev) => ({
       ...prev,
       [projectId]: !prev[projectId],
     }));
+  };
+
+  const handleRenameCommit = () => {
+    if (!editingId || !editingName.trim()) {
+      setEditingId(null);
+      return;
+    }
+
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id === editingId) {
+          return { ...p, name: editingName.trim() };
+        }
+        return {
+          ...p,
+          prompts: p.prompts.map((pr) =>
+            pr.id === editingId ? { ...pr, name: editingName.trim() } : pr
+          ),
+        };
+      })
+    );
+    setEditingId(null);
   };
 
   const onDragStart = (
@@ -171,7 +228,7 @@ export const PromptSidebarList = ({
         _.toLowerCase().includes(keyword)),
   ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
 
-  const filteredProjects = mockProjects
+  const filteredProjects = projects
     .map((proj) => {
       if (proj.name.toLowerCase().includes(keyword)) {
         return proj;
@@ -184,12 +241,16 @@ export const PromptSidebarList = ({
       }
       return null;
     })
-    .filter(Boolean) as typeof mockProjects;
+    .filter(Boolean) as typeof initialProjects;
 
   const handleAddProjectConfirm = async () => {
     if (!newProjectName.trim()) return;
-    // TODO: 实现添加项目逻辑
-    console.log("Add project:", newProjectName);
+    const newProject = {
+      id: `proj-${Date.now()}`,
+      name: newProjectName.trim(),
+      prompts: [],
+    };
+    setProjects((prev) => [...prev, newProject]);
     setNewProjectName("");
   };
 
@@ -397,10 +458,30 @@ export const PromptSidebarList = ({
                   <div key={proj.id} className="flex flex-col gap-1.5">
                     <div
                       className="flex items-center justify-between px-1 py-1 cursor-pointer rounded-[6px] hover:bg-white/[0.02] transition-colors group"
-                      onClick={() => toggleProject(proj.id)}
+                      onClick={() => {
+                        if (editingId !== proj.id) {
+                          toggleProject(proj.id);
+                        }
+                      }}
+                      onContextMenu={(e) => handleContextMenu(e, "project", proj)}
                     >
-                      <div className="text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors">
-                        {proj.name}
+                      <div className="flex-1 min-w-0 text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors truncate pr-2">
+                        {editingId === proj.id ? (
+                          <input
+                            // eslint-disable-next-line jsx-a11y/no-autofocus
+                            autoFocus
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onBlur={handleRenameCommit}
+                            onKeyDown={(e) =>
+                              e.key === "Enter" && handleRenameCommit()
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
+                          />
+                        ) : (
+                          proj.name
+                        )}
                       </div>
                       <ChevronRight
                         className={`w-3.5 h-3.5 text-white/30 group-hover:text-white/50 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
@@ -412,10 +493,28 @@ export const PromptSidebarList = ({
                           <div
                             key={prompt.id}
                             className="w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 hover:bg-white/[0.02] text-white/70 cursor-pointer group"
+                            onContextMenu={(e) =>
+                              handleContextMenu(e, "prompt", prompt, proj.id)
+                            }
                           >
                             <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors flex-shrink-0 mx-1" />
-                            <span className="text-xs truncate group-hover:text-white transition-colors">
-                              {prompt.name}
+                            <span className="flex-1 min-w-0 text-xs truncate group-hover:text-white transition-colors">
+                              {editingId === prompt.id ? (
+                                <input
+                                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                                  autoFocus
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                  onBlur={handleRenameCommit}
+                                  onKeyDown={(e) =>
+                                    e.key === "Enter" && handleRenameCommit()
+                                  }
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
+                                />
+                              ) : (
+                                prompt.name
+                              )}
                             </span>
                           </div>
                         ))}
@@ -432,6 +531,61 @@ export const PromptSidebarList = ({
           </div>
         )}
       </div>
+
+      {contextMenu && (
+        <PromptSidebarContextMenu
+          type={contextMenu.type}
+          title={contextMenu.title}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onAddDesign={() => {
+            setProjects((prev) =>
+              prev.map((p) =>
+                p.id === contextMenu.id
+                  ? {
+                      ...p,
+                      prompts: [
+                        ...p.prompts,
+                        { id: `prompt-${Date.now()}`, name: "新提示词设计" },
+                      ],
+                    }
+                  : p
+              )
+            );
+            setCollapsedProjects((prev) => ({
+              ...prev,
+              [contextMenu.id]: false,
+            }));
+            setContextMenu(null);
+          }}
+          onRename={() => {
+            setEditingId(contextMenu.id);
+            setEditingName(contextMenu.title);
+            setContextMenu(null);
+          }}
+          onDelete={() => {
+            if (contextMenu.type === "project") {
+              setProjects((prev) =>
+                prev.filter((p) => p.id !== contextMenu.id)
+              );
+            } else {
+              setProjects((prev) =>
+                prev.map((p) =>
+                  p.id === contextMenu.projectId
+                    ? {
+                        ...p,
+                        prompts: p.prompts.filter(
+                          (pr) => pr.id !== contextMenu.id
+                        ),
+                      }
+                    : p
+                )
+              );
+            }
+            setContextMenu(null);
+          }}
+        />
+      )}
     </div>
   );
 };
