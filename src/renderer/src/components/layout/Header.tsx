@@ -48,7 +48,10 @@ export const Header = ({
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
-      <div className="flex items-center gap-2 text-xs font-mono">
+      <div 
+        key={`left-${activePage}-${isChatOpen ? "chat" : "normal"}`}
+        className="flex items-center gap-2 text-xs font-mono animate-slide-in-from-left"
+      >
         <span className="text-white/30">//</span>
         <span className="text-white/40 font-bold uppercase tracking-wider">
           {category}
@@ -95,55 +98,58 @@ export const Header = ({
             );
           })}
         </div>
-        {!isChatOpen && settingsState && (
-          <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
-            <span
-              className={`text-xs ${
-                settingsState.isDirty ? "text-amber-300" : "text-white/35"
-              }`}
-            >
-              {settingsState.isDirty ? "未保存" : "已同步"}
-            </span>
+        <div 
+          key={`right-${isChatOpen ? "chat" : "normal"}`}
+          className="flex items-center gap-1.5 animate-toast-in"
+        >
+          {!isChatOpen && settingsState && (
+            <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
+              <span
+                className={`text-xs ${
+                  settingsState.isDirty ? "text-amber-300" : "text-white/35"
+                }`}
+              >
+                {settingsState.isDirty ? "未保存" : "已同步"}
+              </span>
+              <IconButton
+                disabled={settingsState.isSaving}
+                onClick={settingsState.onReload}
+                title="重置修改"
+                aria-label="重置修改"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </IconButton>
+              <IconButton
+                preset="save"
+                disabled={settingsState.isSaving || !settingsState.isDirty}
+                onClick={settingsState.onSave}
+                title={settingsState.isSaving ? "保存中" : "保存设置"}
+                aria-label="保存设置"
+              />
+            </div>
+          )}
+          {!isChatOpen && extraActions}
+          {chatLeadingAction}
+          {!isChatOpen && !hideChatButton && (
             <IconButton
-              disabled={settingsState.isSaving}
-              onClick={settingsState.onReload}
-              title="重置修改"
-              aria-label="重置修改"
+              aria-label={isPromptsOpen ? "关闭提示词" : "打开提示词"}
+              title="提示词"
+              preset={isPromptsOpen ? "close" : undefined}
+              onClick={onPromptsToggle}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              {isPromptsOpen ? null : <Book className="h-3.5 w-3.5" />}
             </IconButton>
+          )}
+          {!hideChatButton && !isPromptsOpen && (
             <IconButton
-              preset="save"
-              disabled={settingsState.isSaving || !settingsState.isDirty}
-              onClick={settingsState.onSave}
-              title={settingsState.isSaving ? "保存中" : "保存设置"}
-              aria-label="保存设置"
-            />
-          </div>
-        )}
-        {!isChatOpen && extraActions}
-        {chatLeadingAction}
-        {!isChatOpen && (
-          <IconButton
-            aria-label={isPromptsOpen ? "关闭提示词" : "打开提示词"}
-            title="提示词"
-            highlighted={isPromptsOpen}
-            preset={isPromptsOpen ? "close" : undefined}
-            onClick={onPromptsToggle}
-          >
-            {isPromptsOpen ? null : <Book className="h-3.5 w-3.5" />}
-          </IconButton>
-        )}
-        {!hideChatButton && !isPromptsOpen && (
-          <IconButton
-            aria-label={isChatOpen ? "Close chat" : "Open chat"}
-            highlighted={isChatOpen}
-            preset={isChatOpen ? "close" : undefined}
-            onClick={onChatToggle}
-          >
-            {isChatOpen ? null : <MessageSquare className="h-3.5 w-3.5" />}
-          </IconButton>
-        )}
+              aria-label={isChatOpen ? "Close chat" : "Open chat"}
+              preset={isChatOpen ? "close" : undefined}
+              onClick={onChatToggle}
+            >
+              {isChatOpen ? null : <MessageSquare className="h-3.5 w-3.5" />}
+            </IconButton>
+          )}
+        </div>
       </div>
     </header>
   );

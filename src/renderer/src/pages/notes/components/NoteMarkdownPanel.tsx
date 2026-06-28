@@ -145,7 +145,7 @@ export const NoteMarkdownPanel = ({
     const activeCategory = categories.find((c) => c.id === draft.categoryId);
 
     setExtraActions(
-      <div className="flex items-center gap-1.5 animate-card-modal-in">
+      <div className="flex items-center gap-1.5">
         {/* 设置标签和分类的 Tooltip */}
         <Tooltip
           trigger="click"

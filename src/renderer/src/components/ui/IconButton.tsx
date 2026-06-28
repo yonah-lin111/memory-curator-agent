@@ -124,7 +124,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
   const stateStyles = disabled
     ? (highlighted ? "bg-white text-black" : `${defaultTextClass}`)
     : (highlighted
-        ? "bg-white text-black hover:bg-white/90"
+        ? (preset === "close"
+            ? "bg-white/85 text-black hover:bg-white"
+            : "bg-white text-black hover:bg-white/90")
         : `${defaultTextClass} ${finalHoverBg} ${finalHoverText}`);
 
   // 确定最终需要渲染的图标或子元素

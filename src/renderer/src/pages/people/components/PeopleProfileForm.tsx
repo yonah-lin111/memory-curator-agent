@@ -73,7 +73,7 @@ export const PeopleProfileForm = ({
     setHideChatButton(true);
 
     setExtraActions(
-      <div className="flex items-center gap-1.5 animate-card-modal-in">
+      <div className="flex items-center gap-1.5">
         <IconButton
           disabled={!formState.name.trim()}
           preset="save"
