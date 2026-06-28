@@ -164,7 +164,7 @@ export const SidebarNavigationList = ({
   const shouldUseCollapsedLayout = isCollapsed;
 
   return (
-    <div className="w-full min-h-0 flex-1 flex flex-col justify-between">
+    <div className="w-full h-full flex flex-col justify-between">
       <div
         className={`flex min-h-0 flex-1 flex-col gap-5 w-full ${
           shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
