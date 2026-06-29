@@ -98,6 +98,9 @@ export const usePersonalInfo = () => {
 
       toast.success('个人信息保存成功')
       setMode('view')
+      
+      // 派发自定义事件，通知 Sidebar 更新头像
+      window.dispatchEvent(new Event('mc:personal-info-updated'))
     } catch (error) {
       console.error('Failed to save profile:', error)
       toast.error('保存失败')
@@ -123,6 +126,9 @@ export const usePersonalInfo = () => {
       setProfile(null)
       toast.success('个人信息已清空')
       setMode('view')
+
+      // 派发自定义事件，通知 Sidebar 更新头像
+      window.dispatchEvent(new Event('mc:personal-info-updated'))
     } catch (error) {
       console.error('Failed to clear profile:', error)
       toast.error('清空个人信息失败')

@@ -181,9 +181,20 @@ export const SidebarNavigationList = ({
       }
     };
     fetchProfile();
-    // 监听本地存储变化以在其他地方更新个人信息后能同步
+    
+    // 监听自定义的个人信息更新事件
+    const handleProfileUpdate = () => {
+      void fetchProfile();
+    };
+
+    window.addEventListener("mc:personal-info-updated", handleProfileUpdate);
+    // 监听本地存储变化以在其他地方更新个人信息后能同步 ( fallback 用 )
     window.addEventListener("storage", fetchProfile);
-    return () => window.removeEventListener("storage", fetchProfile);
+    
+    return () => {
+      window.removeEventListener("mc:personal-info-updated", handleProfileUpdate);
+      window.removeEventListener("storage", fetchProfile);
+    };
   }, []);
 
   return (
