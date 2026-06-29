@@ -210,45 +210,50 @@ export const PeopleProfileForm = ({
             <span className="text-[10px] font-mono uppercase tracking-wider text-white/30">
               Avatar / 头像
             </span>
-            <div
-              role="button"
-              aria-label="Click or drag and drop to upload new avatar"
-              className={`relative w-20 h-20 rounded-[6px] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
-                isDragging
-                  ? "border-pink-500 bg-pink-500/5"
-                  : "border-white/10 hover:border-white/20 bg-black/40"
-              }`}
-              onClick={triggerFileSelect}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {formState.avatar ? (
-                <>
-                  <img
-                    src={formState.avatar}
-                    alt="预览"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] text-white/90">
-                    更换头像
+            <div className="relative group/avatar">
+              <div
+                role="button"
+                aria-label="Click or drag and drop to upload new avatar"
+                className={`relative w-20 h-20 rounded-[6px] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${
+                  isDragging
+                    ? "border-pink-500 bg-pink-500/5"
+                    : "border-white/10 hover:border-white/20 bg-black/40"
+                }`}
+                onClick={triggerFileSelect}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {formState.avatar ? (
+                  <>
+                    <img
+                      src={formState.avatar}
+                      alt="预览"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] text-white/90">
+                      更换头像
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <Upload className="h-4 w-4 text-white/30" />
+                    <span className="text-[9px] text-white/30 mt-1 leading-tight">
+                      点击/拖拽
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/80 hover:bg-black text-white/60 hover:text-white flex items-center justify-center text-[8px] border border-white/10 outline-none"
-                    onClick={handleRemoveAvatar}
-                    title="删除头像"
-                  >
-                    <X className="h-2 w-2" />
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-2">
-                  <Upload className="h-4 w-4 text-white/30" />
-                  <span className="text-[9px] text-white/30 mt-1 leading-tight">
-                    点击/拖拽
-                  </span>
-                </div>
+                )}
+              </div>
+              {formState.avatar && (
+                <button
+                  type="button"
+                  aria-label="Delete avatar"
+                  className="absolute -top-1.5 -right-1.5 z-10 hidden group-hover/avatar:flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#1C1C1C] shadow-md hover:bg-gray-200 transition-colors"
+                  onClick={handleRemoveAvatar}
+                  title="删除头像"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
               )}
             </div>
             <input
