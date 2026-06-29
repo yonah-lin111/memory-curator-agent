@@ -24,7 +24,7 @@ type PeopleProfileFormProps = {
   // 取消编辑。
   onCancel: () => void;
   // 保存表单。
-  onSave: () => Promise<void>;
+  onSave: (override?: Partial<FormState>) => Promise<void>;
 };
 
 // 关系分类下拉选项。
@@ -55,6 +55,8 @@ export const PeopleProfileForm = ({
 }: PeopleProfileFormProps): React.JSX.Element => {
   // 拖拽上传头像激活状态。
   const [isDragging, setIsDragging] = useState(false);
+  // 待上传的头像文件（保存时才真正上传）
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   // 文件上传 DOM 引用。
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // 消息提示实例。
@@ -62,6 +64,28 @@ export const PeopleProfileForm = ({
   // 全局头部状态。
   const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
     useHeaderStore();
+
+  const handleSaveWrapper = async () => {
+    let override: Partial<FormState> = {};
+    if (pendingAvatarFile && window.api?.files?.savePeopleAvatar) {
+      try {
+        const buffer = await pendingAvatarFile.arrayBuffer();
+        const result = await window.api.files.savePeopleAvatar({
+          name: pendingAvatarFile.name,
+          mimeType: pendingAvatarFile.type,
+          bytes: buffer,
+        });
+        if (result.url) {
+          override.avatar = result.url;
+          toast.success("头像已保存到本地 .mc 存储");
+        }
+      } catch (err) {
+        console.error("保存头像物理文件失败", err);
+        toast.error("保存头像物理文件失败");
+      }
+    }
+    await onSave(override);
+  };
 
   // 动态同步面包屑标题与操作按钮至全局 Header 顶栏。
   useEffect(() => {
@@ -77,7 +101,7 @@ export const PeopleProfileForm = ({
         <IconButton
           disabled={!formState.name.trim()}
           preset="save"
-          onClick={onSave}
+          onClick={handleSaveWrapper}
           title="保存档案"
           aria-label="Save"
         />
@@ -102,12 +126,13 @@ export const PeopleProfileForm = ({
     setExtraActions,
     setHideChatButton,
     resetHeader,
+    pendingAvatarFile,
   ]);
 
   /**
    * 处理文件选择与头像二进制落盘逻辑。
    */
-  const handleFileProcess = async (file: File): Promise<void> => {
+  const handleFileProcess = (file: File): void => {
     if (!file.type.startsWith("image/")) {
       toast.error("仅支持图片文件格式");
       return;
@@ -117,25 +142,9 @@ export const PeopleProfileForm = ({
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       setFormState((prev) => ({ ...prev, avatar: dataUrl }));
+      setPendingAvatarFile(file);
     };
     reader.readAsDataURL(file);
-
-    if (window.api?.files?.savePeopleAvatar) {
-      try {
-        const buffer = await file.arrayBuffer();
-        const result = await window.api.files.savePeopleAvatar({
-          name: file.name,
-          mimeType: file.type,
-          bytes: buffer,
-        });
-        if (result.url) {
-          setFormState((prev) => ({ ...prev, avatar: result.url }));
-          toast.success("头像已保存到本地 .mc 存储");
-        }
-      } catch (err) {
-        console.error("保存头像物理文件失败, 降级使用 base64 预览", err);
-      }
-    }
   };
 
   /**
@@ -190,6 +199,7 @@ export const PeopleProfileForm = ({
   const handleRemoveAvatar = (event: React.MouseEvent): void => {
     event.stopPropagation();
     setFormState((prev) => ({ ...prev, avatar: "" }));
+    setPendingAvatarFile(null);
   };
 
   return (

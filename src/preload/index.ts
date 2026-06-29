@@ -712,8 +712,12 @@ const api = {
       ipcRenderer.invoke('files:markdown-image:save', payload),
     savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:people-avatar:save', payload),
+    deletePeopleAvatar: (url: string): Promise<void> =>
+      ipcRenderer.invoke('files:people-avatar:delete', url),
     savePersonalAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:personal-avatar:save', payload),
+    deletePersonalAvatar: (url: string): Promise<void> =>
+      ipcRenderer.invoke('files:personal-avatar:delete', url),
     saveAiChatImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:ai-chat-image:save', payload),
     saveAiChatTextFile: (payload: MarkdownImageSavePayload): Promise<AiChatTextFileSaveResult> =>

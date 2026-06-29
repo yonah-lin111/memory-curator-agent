@@ -54,23 +54,26 @@ export const usePersonalInfo = () => {
     setMode('edit')
   }
 
-  const handleSaveForm = async () => {
-    if (!formState.name.trim()) {
+  const handleSaveForm = async (overrideFormState?: Partial<FormState>) => {
+    const currentState = { ...formState, ...overrideFormState }
+    if (!currentState.name.trim()) {
       toast.warning('姓名不能为空')
       return
     }
 
     try {
       const payload: PersonalProfilePayload = {
-        avatar: formState.avatar,
-        name: formState.name,
-        gender: formState.gender,
-        status: formState.status,
-        birthday: formState.birthday,
-        contact: formState.contact,
-        tags: formState.tags,
-        details: formState.details
+        avatar: currentState.avatar,
+        name: currentState.name,
+        gender: currentState.gender,
+        status: currentState.status,
+        birthday: currentState.birthday,
+        contact: currentState.contact,
+        tags: currentState.tags,
+        details: currentState.details
       }
+
+      const oldAvatar = profile?.avatar
 
       if (window.api?.profile) {
         const saved = await window.api.profile.update(payload)
@@ -87,6 +90,12 @@ export const usePersonalInfo = () => {
         setProfile(newProfile)
       }
 
+      if (oldAvatar && oldAvatar.startsWith('mc-img://') && oldAvatar !== payload.avatar) {
+        if (window.api?.files?.deletePersonalAvatar) {
+          await window.api.files.deletePersonalAvatar(oldAvatar)
+        }
+      }
+
       toast.success('个人信息保存成功')
       setMode('view')
     } catch (error) {
@@ -97,11 +106,20 @@ export const usePersonalInfo = () => {
 
   const handleClearProfile = async () => {
     try {
+      const oldAvatar = profile?.avatar
+
       if (window.api?.profile) {
         await window.api.profile.clear()
       } else {
         localStorage.removeItem('mc_personal_info')
       }
+
+      if (oldAvatar && oldAvatar.startsWith('mc-img://')) {
+        if (window.api?.files?.deletePersonalAvatar) {
+          window.api.files.deletePersonalAvatar(oldAvatar).catch(console.error)
+        }
+      }
+
       setProfile(null)
       toast.success('个人信息已清空')
       setMode('view')

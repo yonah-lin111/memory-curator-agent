@@ -60,7 +60,7 @@ export type PeopleProfilesState = {
   // 进入新建模式。
   enterCreateMode: () => void;
   // 保存表单。
-  handleSaveForm: () => Promise<void>;
+  handleSaveForm: (overrideFormState?: Partial<FormState>) => Promise<void>;
   // 删除人物。
   handleDeletePerson: (id: string, name: string) => Promise<void>;
 };
@@ -235,13 +235,14 @@ export const usePeopleProfiles = (): PeopleProfilesState => {
   /**
    * 保存当前表单。
    */
-  const handleSaveForm = async (): Promise<void> => {
-    if (!formState.name.trim()) {
+  const handleSaveForm = async (overrideFormState?: Partial<FormState>): Promise<void> => {
+    const currentState = { ...formState, ...overrideFormState };
+    if (!currentState.name.trim()) {
       toast.error("姓名不能为空");
       return;
     }
 
-    const payload = createPersonPayload(formState);
+    const payload = createPersonPayload(currentState);
 
     if (mode === "create") {
       try {
@@ -259,6 +260,7 @@ export const usePeopleProfiles = (): PeopleProfilesState => {
       }
     } else if (mode === "edit" && currentPerson) {
       try {
+        const oldAvatar = currentPerson.avatar;
         const updatedPerson = window.api?.people
           ? await window.api.people.update(currentPerson.id, payload)
           : createFallbackUpdatedPerson(currentPerson);
@@ -267,6 +269,13 @@ export const usePeopleProfiles = (): PeopleProfilesState => {
         );
         setPeople(updatedPeople);
         cachePeopleFallback(updatedPeople);
+
+        if (oldAvatar && oldAvatar.startsWith('mc-img://') && oldAvatar !== payload.avatar) {
+          if (window.api?.files?.deletePeopleAvatar) {
+            await window.api.files.deletePeopleAvatar(oldAvatar);
+          }
+        }
+
         toast.success("档案保存成功");
       } catch {
         toast.error("保存人物档案失败");
@@ -285,6 +294,8 @@ export const usePeopleProfiles = (): PeopleProfilesState => {
       return;
     }
 
+    const personToDelete = people.find((p) => p.id === id);
+
     try {
       if (window.api?.people) {
         await window.api.people.delete(id);
@@ -292,6 +303,12 @@ export const usePeopleProfiles = (): PeopleProfilesState => {
     } catch {
       toast.error("删除人物档案失败");
       return;
+    }
+
+    if (personToDelete?.avatar && personToDelete.avatar.startsWith('mc-img://')) {
+      if (window.api?.files?.deletePeopleAvatar) {
+        window.api.files.deletePeopleAvatar(personToDelete.avatar).catch(console.error);
+      }
     }
 
     const updated = people.filter((person) => person.id !== id);

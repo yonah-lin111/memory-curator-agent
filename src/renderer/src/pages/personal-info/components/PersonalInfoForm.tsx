@@ -14,7 +14,7 @@ type PersonalInfoFormProps = {
   formState: FormState;
   setFormState: React.Dispatch<React.SetStateAction<FormState>>;
   onCancel: () => void;
-  onSave: () => Promise<void>;
+  onSave: (override?: Partial<FormState>) => Promise<void>;
 };
 
 const GENDER_OPTIONS: SelectOption<string>[] = [
@@ -31,10 +31,33 @@ export const PersonalInfoForm = ({
   onSave,
 }: PersonalInfoFormProps): React.JSX.Element => {
   const [isDragging, setIsDragging] = useState(false);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
   const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
     useHeaderStore();
+
+  const handleSaveWrapper = async () => {
+    let override: Partial<FormState> = {};
+    if (pendingAvatarFile && window.api?.files?.savePersonalAvatar) {
+      try {
+        const buffer = await pendingAvatarFile.arrayBuffer();
+        const result = await window.api.files.savePersonalAvatar({
+          name: pendingAvatarFile.name,
+          mimeType: pendingAvatarFile.type,
+          bytes: buffer,
+        });
+        if (result.url) {
+          override.avatar = result.url;
+          toast.success("头像已保存");
+        }
+      } catch (err) {
+        console.error("保存头像物理文件失败", err);
+        toast.error("保存头像物理文件失败");
+      }
+    }
+    await onSave(override);
+  };
 
   useEffect(() => {
     setCustomTitle("编辑个人信息");
@@ -45,7 +68,7 @@ export const PersonalInfoForm = ({
         <IconButton
           disabled={!formState.name.trim()}
           preset="save"
-          onClick={onSave}
+          onClick={handleSaveWrapper}
           title="保存信息"
           aria-label="Save"
         />
@@ -70,9 +93,10 @@ export const PersonalInfoForm = ({
     setExtraActions,
     setHideChatButton,
     resetHeader,
+    pendingAvatarFile,
   ]);
 
-  const handleFileProcess = async (file: File): Promise<void> => {
+  const handleFileProcess = (file: File): void => {
     if (!file.type.startsWith("image/")) {
       toast.error("仅支持图片文件格式");
       return;
@@ -82,25 +106,9 @@ export const PersonalInfoForm = ({
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       setFormState((prev) => ({ ...prev, avatar: dataUrl }));
+      setPendingAvatarFile(file);
     };
     reader.readAsDataURL(file);
-
-    if (window.api?.files?.savePersonalAvatar) {
-      try {
-        const buffer = await file.arrayBuffer();
-        const result = await window.api.files.savePersonalAvatar({
-          name: file.name,
-          mimeType: file.type,
-          bytes: buffer,
-        });
-        if (result.url) {
-          setFormState((prev) => ({ ...prev, avatar: result.url }));
-          toast.success("头像已保存");
-        }
-      } catch (err) {
-        console.error("保存头像物理文件失败, 降级使用 base64 预览", err);
-      }
-    }
   };
 
   const triggerFileSelect = (): void => {
@@ -137,6 +145,7 @@ export const PersonalInfoForm = ({
   const handleRemoveAvatar = (event: React.MouseEvent): void => {
     event.stopPropagation();
     setFormState((prev) => ({ ...prev, avatar: "" }));
+    setPendingAvatarFile(null);
   };
 
   return (

@@ -2,7 +2,7 @@ import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'n
 import { basename, extname, join } from 'node:path'
 import { createCompactUuid } from '@/id'
 import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getPersonalAvatarDir, getAppDataRoot } from '@/paths'
-import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, createPersonalAvatarUrl, resolveAiChatTextFileName } from '@/protocols/localImages'
+import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, createPersonalAvatarUrl, resolveAiChatTextFileName, resolvePeopleAvatarFileName, resolvePersonalAvatarFileName } from '@/protocols/localImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -112,8 +112,12 @@ export type FilesService = {
   saveMarkdownImage: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 保存人物头像。
   savePeopleAvatar: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
+  // 删除人物头像。
+  deletePeopleAvatar: (url: string) => Promise<void>
   // 保存个人头像。
   savePersonalAvatar: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
+  // 删除个人头像。
+  deletePersonalAvatar: (url: string) => Promise<void>
   // 保存 AI 聊天图片。
   saveAiChatImage: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 列出未被 Markdown 引用的图片。
@@ -409,6 +413,19 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         url: createPeopleAvatarUrl(fileName)
       }
     },
+    deletePeopleAvatar: async (url: string) => {
+      const fileName = resolvePeopleAvatarFileName(url)
+      if (fileName) {
+        const filePath = join(peopleAvatarDir, fileName)
+        try {
+          if (await pathExists(filePath)) {
+            await rm(filePath)
+          }
+        } catch (error) {
+          console.error(`Failed to delete people avatar file: ${filePath}`, error)
+        }
+      }
+    },
     savePersonalAvatar: async (input) => {
       if (!input.mimeType.startsWith('image/')) {
         throw new Error('仅支持保存图片文件')
@@ -425,6 +442,19 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         fileName,
         filePath,
         url: createPersonalAvatarUrl(fileName)
+      }
+    },
+    deletePersonalAvatar: async (url: string) => {
+      const fileName = resolvePersonalAvatarFileName(url)
+      if (fileName) {
+        const filePath = join(personalAvatarDir, fileName)
+        try {
+          if (await pathExists(filePath)) {
+            await rm(filePath)
+          }
+        } catch (error) {
+          console.error(`Failed to delete personal avatar file: ${filePath}`, error)
+        }
       }
     },
     saveAiChatImage: async (input) => {

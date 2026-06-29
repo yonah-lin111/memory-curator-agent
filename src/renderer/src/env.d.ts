@@ -852,8 +852,12 @@ type AppAPI = {
     saveMarkdownImage: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存人物头像。
     savePeopleAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    // 删除人物头像。
+    deletePeopleAvatar?: (url: string) => Promise<void>
     // 保存个人头像。
     savePersonalAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    // 删除个人头像。
+    deletePersonalAvatar?: (url: string) => Promise<void>
     // 保存 AI 聊天图片。
     saveAiChatImage?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存 AI 聊天文本文件。

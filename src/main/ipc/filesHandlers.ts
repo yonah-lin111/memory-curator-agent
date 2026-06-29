@@ -20,8 +20,16 @@ export const registerFilesHandlers = (): void => {
     filesService.savePeopleAvatar(input)
   )
 
+  ipcMain.handle('files:people-avatar:delete', (_, url: string) =>
+    filesService.deletePeopleAvatar(url)
+  )
+
   ipcMain.handle('files:personal-avatar:save', (_, input: MarkdownImageSaveInput) =>
     filesService.savePersonalAvatar(input)
+  )
+
+  ipcMain.handle('files:personal-avatar:delete', (_, url: string) =>
+    filesService.deletePersonalAvatar(url)
   )
 
   ipcMain.handle('files:ai-chat-image:save', (_, input: MarkdownImageSaveInput) =>
