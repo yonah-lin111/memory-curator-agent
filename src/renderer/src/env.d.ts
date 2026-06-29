@@ -216,6 +216,26 @@ type SnippetUpdatePayload = {
 // 人物关系类型。
 type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
 
+// 个人信息保存载荷类型。
+type PersonalProfilePayload = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
 // 关联人物保存载荷类型。
 type AssociatedPersonPayload = {
   // 头像地址。
@@ -654,6 +674,16 @@ type AssociatedPersonItem = AssociatedPersonPayload & {
   updatedAt: string
 }
 
+// 页面使用的个人信息类型。
+type PersonalProfileItem = PersonalProfilePayload & {
+  // 自增主键。
+  id: number
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
 // Markdown 图片保存载荷类型。
 type MarkdownImageSavePayload = {
   // 原始文件名。
@@ -822,6 +852,8 @@ type AppAPI = {
     saveMarkdownImage: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存人物头像。
     savePeopleAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    // 保存个人头像。
+    savePersonalAvatar?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存 AI 聊天图片。
     saveAiChatImage?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存 AI 聊天文本文件。
@@ -888,6 +920,15 @@ type AppAPI = {
     update: (id: string, draft: AssociatedPersonPayload) => Promise<AssociatedPersonItem>
     // 删除关联人物。
     delete: (id: string) => Promise<void>
+  }
+  // 个人信息 API。
+  profile?: {
+    // 读取个人信息。
+    get: () => Promise<PersonalProfileItem | null>
+    // 更新个人信息。
+    update: (draft: PersonalProfilePayload) => Promise<PersonalProfileItem>
+    // 清空个人信息。
+    clear: () => Promise<void>
   }
   // AI 对话 API。
   ai?: {

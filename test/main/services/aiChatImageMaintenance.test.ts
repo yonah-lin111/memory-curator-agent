@@ -9,9 +9,10 @@ import type { FilesService } from '@/services/filesService'
 
 // 测试用文件服务。
 const filesService: FilesService = {
-  saveMarkdownImage: vi.fn(),
-  savePeopleAvatar: vi.fn(),
-  saveAiChatImage: vi.fn(),
+    saveMarkdownImage: vi.fn(),
+    savePeopleAvatar: vi.fn(),
+    savePersonalAvatar: vi.fn(),
+    saveAiChatImage: vi.fn(),
   listUnusedMarkdownImages: vi.fn(),
   restoreReferencedMarkdownImages: vi.fn(),
   deleteUnusedMarkdownImages: vi.fn(),

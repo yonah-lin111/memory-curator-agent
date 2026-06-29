@@ -1,7 +1,7 @@
 import type React from "react";
+import { useEffect, useState } from "react";
 import {
   BookOpen,
-  Brain,
   CalendarDays,
   CheckSquare,
   FileText,
@@ -13,9 +13,11 @@ import {
   Settings,
   StickyNote,
   Users,
+  User,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import type { SidebarPageId } from "../Sidebar";
+import type { PersonalProfile } from "@/pages/personal-info/components/personalInfoShared";
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
@@ -162,6 +164,27 @@ export const SidebarNavigationList = ({
   onPageChange,
 }: SidebarNavigationListProps): React.JSX.Element => {
   const shouldUseCollapsedLayout = isCollapsed;
+  const [profile, setProfile] = useState<PersonalProfile | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (window.api?.profile) {
+          const data = await window.api.profile.get();
+          setProfile(data as unknown as PersonalProfile);
+        } else {
+          const localData = localStorage.getItem("mc_personal_info");
+          if (localData) setProfile(JSON.parse(localData));
+        }
+      } catch (err) {
+        console.error("Failed to load profile for sidebar", err);
+      }
+    };
+    fetchProfile();
+    // 监听本地存储变化以在其他地方更新个人信息后能同步
+    window.addEventListener("storage", fetchProfile);
+    return () => window.removeEventListener("storage", fetchProfile);
+  }, []);
 
   return (
     <div className="w-full h-full flex flex-col justify-between">
@@ -170,15 +193,31 @@ export const SidebarNavigationList = ({
           shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
         }`}
       >
-        {/* 产品标识头 */}
+        {/* 用户头像与信息（替换了原来的产品标识头） */}
         <div
-          className={`flex items-center gap-3 px-1 ${
-            shouldUseCollapsedLayout ? "justify-center" : ""
-          }`}
+          className={`flex items-center gap-3 px-1 ${shouldUseCollapsedLayout ? "justify-center" : ""}`}
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
-            <Brain className="h-5 w-5" />
-          </div>
+          <Tooltip content="My Profile" placement="right">
+            <button
+              onClick={() => onPageChange("personal-info")}
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 overflow-hidden ${
+                activePage === "personal-info"
+                  ? "bg-white/20"
+                  : "bg-white/5 hover:bg-white/10"
+              }`}
+              aria-label="My Profile"
+            >
+              {profile?.avatar ? (
+                <img
+                  src={profile.avatar}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="h-4.5 w-4.5 text-white/60" />
+              )}
+            </button>
+          </Tooltip>
           {!shouldUseCollapsedLayout && (
             <div className="flex flex-col">
               <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">

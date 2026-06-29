@@ -7,6 +7,7 @@ import { registerDailyHandlers } from '@/ipc/dailyHandlers'
 import { registerNoteCategoryHandlers } from '@/ipc/noteCategoryHandlers'
 import { registerFilesHandlers } from '@/ipc/filesHandlers'
 import { registerPeopleHandlers } from '@/ipc/peopleHandlers'
+import { registerProfileHandlers } from '@/ipc/profileHandlers'
 import { registerAiHandlers } from '@/ipc/aiHandlers'
 import { registerPromptHistoryHandlers } from '@/ipc/promptHistoryHandlers'
 import { registerConfigHandlers } from '@/ipc/configHandlers'
@@ -61,6 +62,7 @@ app.whenReady().then(() => {
   registerDailyHandlers()
   registerFilesHandlers()
   registerPeopleHandlers()
+  registerProfileHandlers()
   registerAiHandlers()
   registerPromptHistoryHandlers()
   registerConfigHandlers()

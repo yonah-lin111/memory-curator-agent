@@ -1,0 +1,88 @@
+import { eq } from 'drizzle-orm'
+import { getDatabase } from '@/db'
+import { personalProfiles, type PersonalProfileItem, type PersonalProfileUpdateInput } from '@/db/schema'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+
+const PROFILE_ID = 1
+
+/**
+ * 转换数据库行到前端可用格式
+ */
+const mapRowToItem = (row: any): PersonalProfileItem => ({
+  id: row.id,
+  avatar: row.avatar,
+  name: row.name,
+  gender: row.gender,
+  status: row.status,
+  birthday: row.birthday,
+  contact: row.contact,
+  tags: JSON.parse(row.tags) as string[],
+  details: row.details,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt
+})
+
+/**
+ * 清空个人信息。
+ */
+export const clearProfile = (): void => {
+  const db = drizzle(getDatabase())
+  db.delete(personalProfiles).where(eq(personalProfiles.id, PROFILE_ID)).run()
+}
+
+/**
+ * 获取个人信息。如果不存在则返回 null。
+ */
+export const getProfile = (): PersonalProfileItem | null => {
+  const db = drizzle(getDatabase())
+  
+  const rows = db.select().from(personalProfiles).where(eq(personalProfiles.id, PROFILE_ID)).all()
+  if (rows.length === 0) {
+    return null
+  }
+  
+  return mapRowToItem(rows[0])
+}
+
+/**
+ * 更新或创建个人信息。
+ */
+export const updateProfile = (payload: PersonalProfileUpdateInput): PersonalProfileItem => {
+  const db = drizzle(getDatabase())
+  const now = new Date().toISOString()
+  
+  const existing = getProfile()
+  
+  if (!existing) {
+    db.insert(personalProfiles).values({
+      id: PROFILE_ID,
+      avatar: payload.avatar,
+      name: payload.name,
+      gender: payload.gender,
+      status: payload.status,
+      birthday: payload.birthday,
+      contact: payload.contact,
+      tags: JSON.stringify(payload.tags),
+      details: payload.details,
+      createdAt: now,
+      updatedAt: now
+    }).run()
+  } else {
+    db.update(personalProfiles)
+      .set({
+        avatar: payload.avatar,
+        name: payload.name,
+        gender: payload.gender,
+        status: payload.status,
+        birthday: payload.birthday,
+        contact: payload.contact,
+        tags: JSON.stringify(payload.tags),
+        details: payload.details,
+        updatedAt: now
+      })
+      .where(eq(personalProfiles.id, PROFILE_ID))
+      .run()
+  }
+  
+  return getProfile()!
+}

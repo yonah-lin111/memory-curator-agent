@@ -113,6 +113,26 @@ export type AssociatedPersonCreateInput = {
 // 关联人物更新输入类型。
 export type AssociatedPersonUpdateInput = AssociatedPersonCreateInput
 
+// 个人信息更新输入类型。
+export type PersonalProfileUpdateInput = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
 // 页面使用的笔记类型。
 export type NoteMaterialItem = {
   // 笔记唯一标识。
@@ -189,6 +209,16 @@ export type JournalItem = {
 export type AssociatedPersonItem = AssociatedPersonCreateInput & {
   // 人物唯一标识。
   id: string
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
+// 页面使用的个人信息类型。
+export type PersonalProfileItem = PersonalProfileUpdateInput & {
+  // 自增主键。
+  id: number
   // 创建时间。
   createdAt: string
   // 更新时间。
@@ -508,6 +538,32 @@ export type AssociatedPersonRow = {
   updated_at: string
 }
 
+// 个人信息数据库行类型。
+export type PersonalProfileRow = {
+  // 自增主键。
+  id: number
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // JSON 字符串标签列表。
+  tags: string
+  // Markdown 详细档案。
+  details: string
+  // 创建时间。
+  created_at: string
+  // 更新时间。
+  updated_at: string
+}
+
 // 笔记 SQLite 表定义。
 export const notes = sqliteTable('notes', {
   id: integer('id').primaryKey(),
@@ -749,6 +805,21 @@ export const associatedPeople = sqliteTable('associated_people', {
   name: text('name').notNull(),
   gender: text('gender').notNull(),
   relationship: text('relationship').$type<PersonRelationship>().notNull(),
+  status: text('status').notNull(),
+  birthday: text('birthday').notNull(),
+  contact: text('contact').notNull(),
+  tags: text('tags').notNull(),
+  details: text('details').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull()
+})
+
+// 个人信息 SQLite 表定义。
+export const personalProfiles = sqliteTable('personal_profiles', {
+  id: integer('id').primaryKey(),
+  avatar: text('avatar').notNull(),
+  name: text('name').notNull(),
+  gender: text('gender').notNull(),
   status: text('status').notNull(),
   birthday: text('birthday').notNull(),
   contact: text('contact').notNull(),

@@ -21,6 +21,7 @@ export type SidebarPageId =
   | "snippets"
   | "bills"
   | "people"
+  | "personal-info"
   | "showcase"
   | "style-test"
   | "settings";

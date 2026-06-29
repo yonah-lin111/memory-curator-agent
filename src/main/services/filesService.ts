@@ -1,8 +1,8 @@
 import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import { createCompactUuid } from '@/id'
-import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getAppDataRoot } from '@/paths'
-import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, resolveAiChatTextFileName } from '@/protocols/localImages'
+import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getPersonalAvatarDir, getAppDataRoot } from '@/paths'
+import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, createPersonalAvatarUrl, resolveAiChatTextFileName } from '@/protocols/localImages'
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -112,6 +112,8 @@ export type FilesService = {
   saveMarkdownImage: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 保存人物头像。
   savePeopleAvatar: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
+  // 保存个人头像。
+  savePersonalAvatar: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 保存 AI 聊天图片。
   saveAiChatImage: (input: MarkdownImageSaveInput) => Promise<MarkdownImageSaveResult>
   // 列出未被 Markdown 引用的图片。
@@ -363,6 +365,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
   const markdownImageDir = deps.markdownImageDir ?? getMarkdownImageDir()
   const markdownImageTrashDir = deps.markdownImageTrashDir ?? getMarkdownImageTrashDir()
   const peopleAvatarDir = getPeopleAvatarDir()
+  const personalAvatarDir = getPersonalAvatarDir()
   const aiChatImageDir = deps.aiChatImageDir ?? getAiChatImageDir()
   const aiChatImageTrashDir = deps.aiChatImageTrashDir ?? getAiChatImageTrashDir()
   const aiChatTextDir = getAiChatTextDir()
@@ -404,6 +407,24 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         fileName,
         filePath,
         url: createPeopleAvatarUrl(fileName)
+      }
+    },
+    savePersonalAvatar: async (input) => {
+      if (!input.mimeType.startsWith('image/')) {
+        throw new Error('仅支持保存图片文件')
+      }
+
+      const extension = resolveImageExtension(input.name, input.mimeType)
+      const fileName = `${createSafeFileStem(input.name)}-${createCompactUuid()}${extension}`
+      const filePath = join(personalAvatarDir, fileName)
+
+      await mkdir(personalAvatarDir, { recursive: true })
+      await writeFile(filePath, Buffer.from(new Uint8Array(input.bytes)))
+
+      return {
+        fileName,
+        filePath,
+        url: createPersonalAvatarUrl(fileName)
       }
     },
     saveAiChatImage: async (input) => {

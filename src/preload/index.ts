@@ -75,6 +75,26 @@ type SnippetUpdatePayload = {
 // 人物关系类型。
 type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
 
+// 个人信息保存载荷类型。
+type PersonalProfilePayload = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
+
 // 关联人物保存载荷类型。
 type AssociatedPersonPayload = {
   // 头像地址。
@@ -692,6 +712,8 @@ const api = {
       ipcRenderer.invoke('files:markdown-image:save', payload),
     savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:people-avatar:save', payload),
+    savePersonalAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
+      ipcRenderer.invoke('files:personal-avatar:save', payload),
     saveAiChatImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
       ipcRenderer.invoke('files:ai-chat-image:save', payload),
     saveAiChatTextFile: (payload: MarkdownImageSavePayload): Promise<AiChatTextFileSaveResult> =>
@@ -735,6 +757,11 @@ const api = {
     update: (id: string, draft: AssociatedPersonPayload) =>
       ipcRenderer.invoke('people:update', id, draft),
     delete: (id: string) => ipcRenderer.invoke('people:delete', id)
+  },
+  profile: {
+    get: () => ipcRenderer.invoke('profile:get'),
+    update: (draft: PersonalProfilePayload) => ipcRenderer.invoke('profile:update', draft),
+    clear: () => ipcRenderer.invoke('profile:clear')
   },
   ai: {
     listSessions: (payload?: AiChatSessionListPayload): Promise<AiChatSession[]> =>

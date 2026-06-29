@@ -12,6 +12,7 @@ type MigratableTableName =
   | 'snippets'
   | 'journals'
   | 'associated_people'
+  | 'personal_profiles'
   | 'ai_chat_sessions'
   | 'ai_chat_messages'
   | 'ai_agent_runs'
@@ -304,6 +305,47 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
     orderByClause: 'updated_at ASC, id ASC',
     timestampColumns: ['created_at', 'updated_at'],
     requiredColumns: ['external_id']
+  })
+  rebuildTable(database, {
+    tableName: 'personal_profiles',
+    columnsSql: `
+      avatar TEXT NOT NULL,
+      name TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      status TEXT NOT NULL,
+      birthday TEXT NOT NULL,
+      contact TEXT NOT NULL,
+      tags TEXT NOT NULL,
+      details TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    `.trim(),
+    insertColumns: [
+      'avatar',
+      'name',
+      'gender',
+      'status',
+      'birthday',
+      'contact',
+      'tags',
+      'details',
+      'created_at',
+      'updated_at'
+    ],
+    selectColumns: [
+      'avatar',
+      'name',
+      'gender',
+      'status',
+      'birthday',
+      'contact',
+      'tags',
+      'details',
+      'created_at',
+      'updated_at'
+    ],
+    orderByClause: 'updated_at ASC, id ASC',
+    timestampColumns: ['created_at', 'updated_at']
   })
   rebuildTable(database, {
     tableName: 'ai_chat_sessions',
@@ -687,6 +729,27 @@ export const createAssociatedPeopleTable = (database: Database.Database): void =
 }
 
 /**
+ * 创建个人信息表。
+ */
+export const createPersonalProfilesTable = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS personal_profiles (
+      id INTEGER PRIMARY KEY,
+      avatar TEXT NOT NULL,
+      name TEXT NOT NULL,
+      gender TEXT NOT NULL,
+      status TEXT NOT NULL,
+      birthday TEXT NOT NULL,
+      contact TEXT NOT NULL,
+      tags TEXT NOT NULL,
+      details TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+  `)
+}
+
+/**
  * 创建 AI Agent 持久化表与索引。
  */
 export const createAiChatPersistenceTables = (database: Database.Database): void => {
@@ -919,6 +982,7 @@ export const initDatabase = (): Database.Database => {
   createSnippetsTable(sqlite)
   createJournalsTable(sqlite)
   createAssociatedPeopleTable(sqlite)
+  createPersonalProfilesTable(sqlite)
   createAiChatPersistenceTables(sqlite)
   createWeeklySummariesTable(sqlite)
   createThemesTable(sqlite)

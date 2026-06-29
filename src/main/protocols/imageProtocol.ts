@@ -10,7 +10,8 @@ import {
   resolveAiChatTextFilePath,
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
-  resolvePeopleAvatarPath
+  resolvePeopleAvatarPath,
+  resolvePersonalAvatarPath
 } from '@/protocols/localImages'
 
 /**
@@ -104,6 +105,9 @@ export const registerImageProtocolHandler = (): void => {
     let filePath = resolveMarkdownImagePath(request.url)
     if (!filePath) {
       filePath = resolvePeopleAvatarPath(request.url)
+    }
+    if (!filePath) {
+      filePath = resolvePersonalAvatarPath(request.url)
     }
     if (!filePath) {
       filePath = resolveAiChatImagePath(request.url)

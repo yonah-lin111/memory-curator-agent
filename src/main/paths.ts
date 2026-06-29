@@ -32,6 +32,11 @@ export const getMarkdownImageDir = (): string => join(getAppDataRoot(), 'img', '
 export const getPeopleAvatarDir = (): string => join(getAppDataRoot(), 'img', 'people')
 
 /**
+ * 获取个人头像存储目录。
+ */
+export const getPersonalAvatarDir = (): string => join(getAppDataRoot(), 'img', 'profile')
+
+/**
  * 获取 AI 聊天图片存储目录。
  */
 export const getAiChatImageDir = (): string => join(getAppDataRoot(), 'img', 'chat')
