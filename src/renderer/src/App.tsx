@@ -25,6 +25,7 @@ import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
 import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
 import { PromptDesignWorkspace } from "@/features/prompt-design/components/PromptDesignWorkspace";
 import { useAiChatController } from "@/features/ai-chat/useAiChatController";
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
 import type { AiChatInputCommandId } from "@/features/ai-chat/components/AiChatInput/types";
@@ -145,6 +146,8 @@ const AppContent = (): React.JSX.Element => {
   // 当前中间主内容页面。
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
+
+  const { requestExport } = usePromptDesignStore();
 
   // 主内容页面切换时的 Loading 状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
@@ -291,6 +294,7 @@ const AppContent = (): React.JSX.Element => {
           onPromptsToggle={() => setActiveOverlay(prev => prev === "prompts" ? null : "prompts")}
           isPromptAiOpen={isPromptAiSidebarOpen}
           onPromptAiToggle={handlePromptAiToggle}
+          onPromptExport={requestExport}
           chatTitle={activeChatSession.title}
           chatLeadingAction={
             activeOverlay === "chat" ? (
