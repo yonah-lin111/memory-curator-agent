@@ -45,7 +45,7 @@ type ThemeItemsItem = {
 
 /** 主题时间线节点 */
 type ThemeTimelineItem = {
-  weekStartDate: string;
+  date: string;
   itemCount: number;
   mentionedInSummary: boolean;
 };
@@ -125,13 +125,59 @@ export const ThemesPage = (): React.JSX.Element => {
   useEffect(() => {
     if (!selectedThemeId || !window.api?.themes) return;
     setItemsLoading(true);
-    Promise.all([
-      window.api.themes.listItems(selectedThemeId),
-      window.api.themes.timeline(selectedThemeId),
-    ])
-      .then(([itemsResult, timelineResult]) => {
+    window.api.themes.listItems(selectedThemeId)
+      .then((itemsResult) => {
         setItems(itemsResult);
-        setTimeline(timelineResult);
+        
+        // 基于素材的实际日期生成 Daily Timeline 并自动补全空白日期
+        const grouped = new Map<string, { count: number; summary: boolean }>();
+        itemsResult.forEach((item) => {
+          const dateStr = (item.sourceEntryDate || item.createdAt).substring(0, 10).replace(/\//g, "-");
+          if (!grouped.has(dateStr)) {
+            grouped.set(dateStr, { count: 0, summary: false });
+          }
+          const g = grouped.get(dateStr)!;
+          g.count += 1;
+          if (item.sourceType === "weekly_summary") {
+            g.summary = true;
+          }
+        });
+
+        const dates = Array.from(grouped.keys()).sort();
+        if (dates.length === 0) {
+          setTimeline([]);
+          return;
+        }
+
+        const minDate = new Date(dates[0]);
+        const maxDate = new Date(dates[dates.length - 1]);
+        const today = new Date();
+        const end = maxDate > today ? maxDate : today;
+        let start = minDate;
+        
+        // 确保至少显示最近 7 天的脉络
+        const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
+        if (diffDays < 6) {
+          start = new Date(end.getTime() - 6 * 24 * 3600 * 1000);
+        }
+
+        const newTimeline: ThemeTimelineItem[] = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          // 本地时区格式化 YYYY-MM-DD
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const ds = `${y}-${m}-${day}`;
+          
+          const g = grouped.get(ds);
+          newTimeline.push({
+            date: ds,
+            itemCount: g ? g.count : 0,
+            mentionedInSummary: g ? g.summary : false,
+          });
+        }
+        
+        setTimeline(newTimeline);
       })
       .catch(() => toast.error("加载主题详情失败"))
       .finally(() => setItemsLoading(false));
@@ -296,13 +342,13 @@ export const ThemesPage = (): React.JSX.Element => {
       timelineInstance.current = echarts.init(timelineChartRef.current);
     }
 
-    const xAxisData = timeline.map((t) => t.weekStartDate.substring(5));
+    const xAxisData = timeline.map((t) => t.date.substring(5));
     const seriesData = timeline.map((t) => ({
       value: t.itemCount,
       itemStyle: {
         color: t.mentionedInSummary
-          ? "rgba(74, 222, 128, 0.8)"
-          : "rgba(255, 255, 255, 0.2)",
+          ? "rgba(74, 222, 128, 1)"
+          : "rgba(255, 255, 255, 0.8)",
       },
     }));
 
@@ -313,7 +359,7 @@ export const ThemesPage = (): React.JSX.Element => {
         backgroundColor: "rgba(33, 33, 33, 0.95)",
         borderColor: "rgba(255,255,255,0.05)",
         textStyle: { color: "#ffffff", fontSize: 12, fontFamily: "monospace" },
-        axisPointer: { type: "shadow" },
+        axisPointer: { type: "line" },
       },
       grid: {
         top: 20,
@@ -348,11 +394,20 @@ export const ThemesPage = (): React.JSX.Element => {
       series: [
         {
           name: "关联数量",
-          type: "bar",
+          type: "line",
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 6,
           data: seriesData,
-          barMaxWidth: 16,
-          itemStyle: {
-            borderRadius: [2, 2, 0, 0],
+          lineStyle: {
+            color: "rgba(255, 255, 255, 0.2)",
+            width: 2,
+          },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(255, 255, 255, 0.1)" },
+              { offset: 1, color: "rgba(255, 255, 255, 0)" },
+            ]),
           },
         },
       ],
