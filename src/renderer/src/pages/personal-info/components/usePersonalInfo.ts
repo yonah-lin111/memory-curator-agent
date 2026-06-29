@@ -16,7 +16,7 @@ export const usePersonalInfo = () => {
         const data = await window.api.profile.get()
         setProfile(data as unknown as PersonalProfile)
       } else {
-        // Fallback to localStorage
+        // 回退到 localStorage
         const localData = localStorage.getItem('mc_personal_info')
         if (localData) {
           setProfile(JSON.parse(localData))
@@ -79,7 +79,7 @@ export const usePersonalInfo = () => {
         const saved = await window.api.profile.update(payload)
         setProfile(saved as unknown as PersonalProfile)
       } else {
-        // Fallback
+        // 回退方案
         const newProfile: PersonalProfile = {
           id: 1,
           ...payload,

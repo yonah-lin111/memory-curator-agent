@@ -569,7 +569,7 @@ export const AiChatContextTimeline = ({
                                         tool.meta.inputJson as string,
                                       );
                                     } catch {
-                                      // Ignored
+                                      // 忽略错误
                                     }
                                   }
 
@@ -641,7 +641,7 @@ export const AiChatContextTimeline = ({
                                     </div>,
                                   );
                                 } else {
-                                  // Fallback to model's own tool step state (e.g. if tool is running/failed/unsubmitted)
+                                  // 回退到模型自身的工具步骤状态（例如，如果工具正在运行/失败/未提交）
                                   const step = fullMessage.toolSteps?.find(
                                     (s) => s.id === part.stepId,
                                   );
@@ -655,7 +655,7 @@ export const AiChatContextTimeline = ({
                                         try {
                                           parsedArgs = JSON.parse(step.input);
                                         } catch {
-                                          // Ignored
+                                          // 忽略错误
                                         }
                                       } else {
                                         parsedArgs = step.input as Record<
@@ -754,7 +754,7 @@ export const AiChatContextTimeline = ({
                                     tool.meta.inputJson as string,
                                   );
                                 } catch {
-                                  // Ignored
+                                  // 忽略错误
                                 }
                               }
 

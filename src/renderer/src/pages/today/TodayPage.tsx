@@ -315,7 +315,7 @@ export const TodayPage = (): React.JSX.Element => {
       const result = await window.api.bill.todaySummary(entryDate);
       setBillSummary(result);
     } catch {
-      // Ignore
+      // 忽略错误
     }
   };
 

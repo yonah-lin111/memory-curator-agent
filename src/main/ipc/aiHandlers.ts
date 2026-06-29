@@ -62,7 +62,7 @@ import {
 } from "./ai/helpers";
 import { startAiChat } from "./ai/chatRunner";
 
-// Re-export methods for test compatibility
+// 为测试兼容性重新导出方法
 export { createSystemPrompt, createModelOptionsResponse };
 
 /**
