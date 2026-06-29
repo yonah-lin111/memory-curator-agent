@@ -1,4 +1,5 @@
 import type React from "react";
+import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 
 type PromptAiSidebarProps = {
   isOpen?: boolean;
@@ -18,16 +19,10 @@ export const PromptAiSidebar = ({
       }}
       className={`flex-shrink-0 flex flex-col min-h-0 bg-[#212121] rounded-[6px] border border-white/5 text-xs text-white/55 custom-scrollbar [scrollbar-gutter:stable] select-none ${
         isTransitionEnabled ? "transition-all duration-300 ease-in-out" : ""
-      } ${isOpen ? "overflow-y-auto px-4 py-2" : "overflow-hidden pointer-events-none px-0 py-0"}`}
+      } ${isOpen ? "overflow-y-auto" : "overflow-hidden pointer-events-none"}`}
       aria-label="Prompt AI Sidebar"
     >
-      {isOpen && (
-        <>
-          <div className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] flex flex-col gap-2 pr-1">
-            {/* 预留容器 */}
-          </div>
-        </>
-      )}
+      {isOpen && <PromptAiChatWorkspace />}
     </div>
   );
 };
