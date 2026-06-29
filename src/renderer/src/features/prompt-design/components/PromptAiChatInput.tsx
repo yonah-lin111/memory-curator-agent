@@ -1,9 +1,55 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
+import { Select } from "@/components/ui/Select";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void }) => {
   const [inputText, setInputText] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 模拟选择模型的状态
+  const [selectedModel, setSelectedModel] = useState("anthropic/claude-3.5-sonnet");
+  const modelOptions = [
+    {
+      label: "Anthropic",
+      options: [
+        { label: "Claude 3.5 Sonnet", value: "anthropic/claude-3.5-sonnet", icon: "anthropic" },
+        { label: "Claude 3.5 Haiku", value: "anthropic/claude-3.5-haiku", icon: "anthropic" },
+      ],
+    },
+    {
+      label: "OpenAI",
+      options: [
+        { label: "GPT-4o", value: "openai/gpt-4o", icon: "openai" },
+        { label: "GPT-4o mini", value: "openai/gpt-4o-mini", icon: "openai" },
+        { label: "o1-mini", value: "openai/o1-mini", icon: "openai" },
+      ],
+    },
+    {
+      label: "Google",
+      options: [
+        { label: "Gemini 1.5 Pro", value: "google/gemini-1.5-pro", icon: "google" },
+        { label: "Gemini 1.5 Flash", value: "google/gemini-1.5-flash", icon: "google" },
+      ],
+    },
+    {
+      label: "Local",
+      options: [
+        { label: "Qwen 2.5 Coder 32B", value: "ollama/qwen2.5-coder:32b", icon: "ollama" },
+        { label: "DeepSeek R1", value: "ollama/deepseek-r1:14b", icon: "ollama" },
+      ],
+    }
+  ];
+
+  const TEXTAREA_MIN_ROWS = 2;
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    // 如果点击的是容器本身（而非内部子元素），则聚焦输入框
+    if (e.target === e.currentTarget && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  };
 
   const handleSend = () => {
     if (inputText.trim() && onSend) {
@@ -12,12 +58,28 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
     }
   };
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const minHeight = TEXTAREA_MIN_ROWS * 20; 
+      const newHeight = inputText.length === 0 
+        ? minHeight 
+        : Math.max(minHeight, Math.min(textareaRef.current.scrollHeight, 180));
+        
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [inputText]);
+
   return (
     <div className="flex-shrink-0 p-3">
-      <div className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full">
+      <div 
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
+        onClick={handleContainerClick}
+      >
         {/* 输入框 */}
         <textarea
-          rows={1}
+          ref={textareaRef}
+          rows={TEXTAREA_MIN_ROWS}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={(e) => {
@@ -29,13 +91,39 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
           placeholder="输入您的问题..."
           aria-label="Prompt AI Chat Input Area"
           className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
-          style={{ minHeight: '24px' }}
         />
 
         {/* 工具栏与发送按钮 */}
-        <div className="flex items-center justify-between mt-1">
+        <div className="flex items-center justify-between mt-1 cursor-default">
           {/* 左侧附加操作 */}
           <div className="flex min-w-0 items-center gap-2">
+            <Select
+              value={selectedModel}
+              onChange={setSelectedModel}
+              options={modelOptions}
+              position="up"
+              bgClass="bg-[#303030]"
+              className="!w-fit max-w-[220px]"
+            />
+            
+            <Tooltip title="Tokens 使用量：1,250 / 200,000 (0.6%)" placement="top">
+              <div className="relative flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full flex-shrink-0 group/context-circle">
+                <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" strokeWidth="10" className="stroke-white/10" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    strokeWidth="10"
+                    className="stroke-[#3B82F6]"
+                    strokeDasharray="282.7"
+                    strokeDashoffset={282.7 - (282.7 * 0.6) / 100}
+                  />
+                </svg>
+              </div>
+            </Tooltip>
+            
             <IconButton
               aria-label="Add attachment"
               className="text-white/30 hover:text-white/50"

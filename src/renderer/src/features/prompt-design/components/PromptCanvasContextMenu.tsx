@@ -10,7 +10,7 @@ export type ContextMenuState = {
   type: ContextMenuType;
   x: number;
   y: number;
-  id?: string; // nodeId or edgeId
+  id?: string; // 节点 ID 或边 ID
 };
 
 export interface PromptCanvasContextMenuProps {

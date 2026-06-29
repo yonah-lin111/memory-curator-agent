@@ -343,7 +343,7 @@ export const PromptCanvas = () => {
     takeSnapshot();
     const position = screenToFlowPosition({ x: clientX, y: clientY });
     
-    // Copy input and output IDs to be unique
+    // 复制输入和输出的 ID 使其唯一
     const newData = { ...(copiedNode.data as PromptNodeData) };
     if (newData.inputs) {
       newData.inputs = newData.inputs.map(i => ({ ...i, id: `in_${Date.now()}_${Math.random().toString(36).substring(7)}` }));
