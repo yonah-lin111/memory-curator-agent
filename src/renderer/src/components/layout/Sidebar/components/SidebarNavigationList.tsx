@@ -208,7 +208,7 @@ export const SidebarNavigationList = ({
         <div
           className={`flex items-center gap-3 px-1 ${shouldUseCollapsedLayout ? "justify-center" : ""}`}
         >
-          <Tooltip content="My Profile" placement="right">
+          <Tooltip content={profile?.name || "My Profile"} placement="right">
             <button
               onClick={() => onPageChange("personal-info")}
               className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 overflow-hidden ${
