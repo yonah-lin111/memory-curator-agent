@@ -2,8 +2,15 @@ import { useState } from "react";
 import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 
-export const PromptAiChatInput = () => {
+export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void }) => {
   const [inputText, setInputText] = useState("");
+
+  const handleSend = () => {
+    if (inputText.trim() && onSend) {
+      onSend(inputText.trim());
+      setInputText("");
+    }
+  };
 
   return (
     <div className="flex-shrink-0 p-3">
@@ -13,6 +20,12 @@ export const PromptAiChatInput = () => {
           rows={1}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           placeholder="输入您的问题..."
           aria-label="Prompt AI Chat Input Area"
           className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
@@ -50,6 +63,7 @@ export const PromptAiChatInput = () => {
               aria-label="Send message"
               disabled={!inputText.trim()}
               highlighted={!!inputText.trim()}
+              onClick={handleSend}
               className={`rounded-full flex items-center justify-center transition-all ${
                 inputText.trim()
                   ? "bg-white text-black hover:bg-white/90"

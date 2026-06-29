@@ -1,7 +1,8 @@
+import { useState, useRef, useLayoutEffect } from "react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
 
-const MOCK_MESSAGES = [
+const INITIAL_MESSAGES = [
   {
     id: "msg-1",
     role: "user" as const,
@@ -38,6 +39,81 @@ const MOCK_MESSAGES = [
 ];
 
 export const PromptAiChatWorkspace = () => {
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const latestUserMessageRef = useRef<HTMLDivElement>(null);
+  const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
+  const [topPinnedUserId, setTopPinnedUserId] = useState<string | null>(null);
+
+  const LATEST_ASSISTANT_TOP_OFFSET = 4;
+
+  const handleSend = (text: string) => {
+    const userMsgId = `msg-${Date.now()}`;
+    const newMessage = {
+      id: userMsgId,
+      role: "user" as const,
+      content: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    };
+    setMessages(prev => [...prev, newMessage]);
+    setTopPinnedUserId(newMessage.id);
+
+    // 模拟 AI 回复
+    setTimeout(() => {
+      const aiMessage = {
+        id: `msg-${Date.now()}-ai`,
+        role: "assistant" as const,
+        content: "这是一个自动回复的 Mock 消息，您可以继续进行其他测试或操作。",
+        reasoning: "检测到用户输入，正在根据上下文生成对应的 Mock 响应。",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+        model: "claude-3.5-sonnet"
+      };
+      setMessages(prev => [...prev, aiMessage]);
+    }, 1000);
+  };
+
+  useLayoutEffect(() => {
+    if (!topPinnedUserId) {
+      setBottomSpacerHeight(0);
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const userMessage = latestUserMessageRef.current;
+
+    if (container && userMessage) {
+      setBottomSpacerHeight((prev) => {
+        const viewportHeight = container.clientHeight;
+        const targetScrollTop = Math.max(
+          userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
+          0
+        );
+        const requiredSpacer = Math.round(
+          Math.max(
+            0,
+            targetScrollTop + viewportHeight - container.scrollHeight + prev
+          )
+        );
+
+        return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
+      });
+    }
+  }, [topPinnedUserId, messages.length]);
+
+  useLayoutEffect(() => {
+    if (topPinnedUserId && latestUserMessageRef.current && scrollContainerRef.current) {
+      const targetTop = Math.max(
+        latestUserMessageRef.current.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
+        0
+      );
+      scrollContainerRef.current.scrollTo({
+        top: targetTop,
+        behavior: "smooth"
+      });
+    }
+  }, [topPinnedUserId, messages.length, bottomSpacerHeight]);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* 消息区域容器 */}
@@ -46,6 +122,7 @@ export const PromptAiChatWorkspace = () => {
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* 消息列表 */}
           <div
+            ref={scrollContainerRef}
             style={{
               paddingLeft: "1rem",
               paddingRight: "1rem",
@@ -53,14 +130,27 @@ export const PromptAiChatWorkspace = () => {
             className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0"
           >
             <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
-              {MOCK_MESSAGES.map((message) => (
-                <PromptAiChatMessageBubble key={message.id} message={message} />
-              ))}
+              {messages.map((message) => {
+                const isLatestUser = message.role === "user" && message.id === topPinnedUserId;
+                return (
+                  <div key={message.id} ref={isLatestUser ? latestUserMessageRef : null}>
+                    <PromptAiChatMessageBubble message={message} />
+                  </div>
+                );
+              })}
+              {bottomSpacerHeight > 0 && (
+                <div
+                  data-ai-chat-bottom-spacer="true"
+                  style={{ height: `${bottomSpacerHeight}px` }}
+                  className="flex-shrink-0"
+                />
+              )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
           {/* 输入区域 */}
-          <PromptAiChatInput />
+          <PromptAiChatInput onSend={handleSend} />
         </div>
       </div>
     </div>

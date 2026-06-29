@@ -31,7 +31,7 @@ export const PromptAiChatMessageBubble = ({
   }] : undefined;
 
   return (
-    <div className={`flex gap-3 w-full max-w-[85%] scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
+    <div className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
       
       <div className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}>
         <div
