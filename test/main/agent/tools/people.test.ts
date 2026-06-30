@@ -10,7 +10,7 @@ import {
   createPeopleQueryTool,
   createPeopleTools,
   createPeopleUpdateTool,
-} from '@/agent/tools/peopleTool';
+} from '@/agent/tools/people';
 import type { PeopleService } from '@/services/peopleService';
 
 const people: AssociatedPersonItem[] = [

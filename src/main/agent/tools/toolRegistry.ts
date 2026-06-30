@@ -1,4 +1,4 @@
-import { createPeopleTools } from '@/agent/tools/peopleTool'
+import { createPeopleTools } from '@/agent/tools/people'
 import { createTodoTools } from '@/agent/tools/todoTool'
 import { createSnippetTools } from '@/agent/tools/snippetTool'
 import { createNoteTools } from '@/agent/tools/noteTool'
