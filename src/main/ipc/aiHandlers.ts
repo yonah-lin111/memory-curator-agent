@@ -42,6 +42,7 @@ import {
 } from "@/services/filesService";
 import { scheduleAiChatImageMaintenance } from "@/services/aiChatImageMaintenance";
 import { createAgentToolRegistry } from "@/agent/tools/toolRegistry";
+import { createAggregatorService } from "@/services/aggregatorService";
 
 import {
   type AiChatSessionListPayload,
@@ -97,6 +98,14 @@ export const registerAiHandlers = (): void => {
   const aiChatService = createAiChatPersistenceService(
     database as unknown as AiChatDatabaseConnection,
   );
+  const aggregatorService = createAggregatorService({
+    todosService,
+    snippetsService,
+    journalsService,
+    billsService,
+    notesService,
+  });
+
   const toolRegistry = createAgentToolRegistry({
     notesService,
     journalsService,
@@ -106,6 +115,7 @@ export const registerAiHandlers = (): void => {
     noteCategoryService,
     themesService,
     billsService,
+    aggregatorService,
   });
 
   ipcMain.handle("ai:model-options:get", async () =>

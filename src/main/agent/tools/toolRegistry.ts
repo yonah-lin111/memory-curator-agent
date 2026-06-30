@@ -8,6 +8,7 @@ import { createAskTool } from '@/agent/tools/askTool'
 import { createNoteCategoryTools } from '@/agent/tools/noteCategoryTool'
 import { createThemeTools } from '@/agent/tools/themeTool'
 import { createBillsTools } from '@/agent/tools/billsTool'
+import { createTodayTool } from '@/agent/tools/todayTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
 import type { NotesService } from '@/services/notesService'
 import type { JournalsService } from '@/services/journalsService'
@@ -17,6 +18,7 @@ import type { SnippetsService } from '@/services/snippetsService'
 import type { NoteCategoryService } from '@/services/noteCategoryService'
 import type { ThemesService } from '@/services/themesService'
 import type { BillsService } from '@/services/billsService'
+import type { AggregatorService } from '@/services/aggregatorService'
 
 // Agent 工具注册上下文。
 export type AgentToolRegistryContext = {
@@ -36,6 +38,8 @@ export type AgentToolRegistryContext = {
   themesService?: ThemesService
   // Bills 服务。
   billsService?: Pick<BillsService, 'list' | 'todaySummary' | 'create' | 'update' | 'delete'>
+  // 聚合器服务。
+  aggregatorService?: AggregatorService
 }
 
 // Agent 工具工厂。
@@ -72,6 +76,7 @@ const builtinToolFactories: AgentToolFactory[] = [
   ({ noteCategoryService }) => createNoteCategoryTools(noteCategoryService),
   ({ themesService }) => themesService ? createThemeTools(themesService) : [],
   ({ billsService }) => billsService ? createBillsTools(billsService) : [],
+  (context) => createTodayTool(context),
   () => createTimeNowTool(),
   () => createDateOffsetTool()
 ]

@@ -54,7 +54,8 @@ const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
   {
     id: 'today',
     token: 'today_agent',
-    description: 'Prefer Today-related daily input, current-day records, and short-term flow context first.'
+    description: 'Prefer Today-related daily input, current-day records, and short-term flow context first.',
+    tools: ['today_tool_summary', 'journals_tool_add']
   },
   {
     id: 'bills',
