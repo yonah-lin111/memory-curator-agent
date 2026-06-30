@@ -105,7 +105,7 @@ export const PromptNode = memo(
         className={`group/node relative w-[240px] rounded-xl border bg-[#1C1C1C] transition-all duration-200 ${
           meta.isIndependent
             ? "border-dashed border-white/10"
-            : selected
+            : selected && !isLocked
               ? "border-white"
               : "border-transparent"
         } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""}`}
