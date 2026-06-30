@@ -60,24 +60,8 @@ export type PeoplePageMode = "view" | "edit" | "create";
 // LocalStorage 存储键名。
 export const LOCAL_STORAGE_KEY = "mc_people_profiles";
 
-// tolin 初始档案。
-export const TOLIN_PROFILE: PersonProfile = {
-  id: "tolin",
-  avatar: "",
-  name: "tolin",
-  gender: "女",
-  relationship: "女朋友",
-  status: "温柔可爱，善解人意",
-  birthday: "12月14日",
-  contact: "WeChat: tolin_love",
-  tags: ["温柔", "可爱", "善解人意", "小吃货", "爱笑", "心头肉"],
-  details: `# tolin 的个人档案 🤍\n\n> 她是世界上最温柔可爱、最善解人意的女孩子。\n\n### 🌸 基本特征\n- **性格**：超级爱笑，性格温和，极其善解人意。生气的时候也软软的，很好哄。\n- **喜好**：喜欢吃甜品、抹茶冰淇淋，喜欢猫咪和各种毛茸茸的动物。\n- **小习惯**：说话喜欢带轻微的尾音，开心的时候会小碎步地走路。\n\n### 📝 备忘录 / 偏好\n- 不喜欢吃香菜，火锅最爱番茄底和清油辣。\n- 换季时容易有些敏感，需要备好温和的面霜。\n- 收到小礼物（哪怕是一朵花或好看的卡片）会开心很久。`,
-  createdAt: "2026-05-29T10:00:00.000Z",
-  updatedAt: "2026-05-29T10:00:00.000Z",
-};
-
 // 初始人物种子。
-export const INITIAL_PEOPLE: PersonProfile[] = [TOLIN_PROFILE];
+export const INITIAL_PEOPLE: PersonProfile[] = [];
 
 // 关系对应的背景与文本颜色。
 export const RELATIONSHIP_COLORS: Record<
@@ -148,7 +132,7 @@ export const createDisplayTime = (): string => {
 };
 
 /**
- * 读取唯一允许自动初始化的人物种子。
+ * 读取本地存储的人物档案。
  */
 export const readPeopleSeed = (): PersonProfile[] => {
   const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -158,10 +142,7 @@ export const readPeopleSeed = (): PersonProfile[] => {
 
   try {
     const parsed = JSON.parse(saved) as PersonProfile[];
-    const savedTolin = Array.isArray(parsed)
-      ? parsed.find((person) => person.id === "tolin" || person.name === "tolin")
-      : null;
-    return savedTolin ? [{ ...TOLIN_PROFILE, ...savedTolin, id: "tolin" }] : INITIAL_PEOPLE;
+    return Array.isArray(parsed) ? parsed : INITIAL_PEOPLE;
   } catch {
     return INITIAL_PEOPLE;
   }

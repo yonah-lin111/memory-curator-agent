@@ -573,7 +573,7 @@ export const AiChatHistoryList = ({
         </div>
       </div>
 
-      {/* 搜索框 (仅用于静态 Mock 展示) */}
+      {/* 搜索框 */}
       <div className="relative px-1">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/20" />
         <input
