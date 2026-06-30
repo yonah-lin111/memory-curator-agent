@@ -966,6 +966,35 @@ export const createBillsTable = (database: Database.Database): void => {
 }
 
 /**
+ * 创建提示词设计项目表。
+ */
+export const createPromptDesignTables = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS prompt_design_projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'virtual',
+      path TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS prompt_design_items (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      design_data TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_design_items_project_id
+    ON prompt_design_items(project_id);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -988,6 +1017,7 @@ export const initDatabase = (): Database.Database => {
   createThemesTable(sqlite)
   createThemeItemsTable(sqlite)
   createBillsTable(sqlite)
+  createPromptDesignTables(sqlite)
 
   return sqlite
 }

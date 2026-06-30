@@ -15,6 +15,7 @@ import { registerConfigHandlers } from '@/ipc/configHandlers'
 import { registerWeeklyHandlers } from '@/ipc/weeklyHandlers'
 import { registerThemesHandlers } from '@/ipc/themesHandlers'
 import { registerBillsHandlers } from '@/ipc/billsHandlers'
+import { registerPromptDesignHandlers } from '@/ipc/promptDesignHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from '@/protocols/imageProtocol'
 import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
 import { scheduleStartupMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
@@ -70,6 +71,7 @@ app.whenReady().then(() => {
   registerWeeklyHandlers()
   registerThemesHandlers()
   registerBillsHandlers()
+  registerPromptDesignHandlers()
   registerImageProtocolHandler()
   scheduleStartupMarkdownImageMaintenance(
     createFilesService({ database: database as unknown as FilesDatabaseConnection })
@@ -96,6 +98,15 @@ app.whenReady().then(() => {
       throw new Error("Cannot find window for dialog");
     }
     const result = await dialog.showSaveDialog(window, options);
+    return result;
+  });
+
+  ipcMain.handle('dialog:showOpenDialog', async (event, options) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      throw new Error("Cannot find window for dialog");
+    }
+    const result = await dialog.showOpenDialog(window, options);
     return result;
   });
 

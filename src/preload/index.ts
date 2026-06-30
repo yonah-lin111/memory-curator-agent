@@ -729,7 +729,9 @@ const api = {
   },
   dialog: {
     showSaveDialog: (options: Electron.SaveDialogOptions): Promise<Electron.SaveDialogReturnValue> =>
-      ipcRenderer.invoke('dialog:showSaveDialog', options)
+      ipcRenderer.invoke('dialog:showSaveDialog', options),
+    showOpenDialog: (options: Electron.OpenDialogOptions): Promise<Electron.OpenDialogReturnValue> =>
+      ipcRenderer.invoke('dialog:showOpenDialog', options)
   },
   fs: {
     writeFile: (filePath: string, content: string): Promise<void> =>
@@ -877,6 +879,22 @@ const api = {
       ipcRenderer.invoke('bills:delete', id),
     todaySummary: (date?: string): Promise<BillTodaySummary> =>
       ipcRenderer.invoke('bills:today-summary', date)
+  },
+  promptDesign: {
+    projects: {
+      list: () => ipcRenderer.invoke('prompt-design:projects:list'),
+      create: (input: any) => ipcRenderer.invoke('prompt-design:projects:create', input),
+      rename: (id: string, name: string) => ipcRenderer.invoke('prompt-design:projects:rename', id, name),
+      update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:projects:update', id, input),
+      delete: (id: string) => ipcRenderer.invoke('prompt-design:projects:delete', id)
+    },
+    designs: {
+      list: (projectId?: string) => ipcRenderer.invoke('prompt-design:designs:list', projectId),
+      create: (input: any) => ipcRenderer.invoke('prompt-design:designs:create', input),
+      rename: (id: string, name: string) => ipcRenderer.invoke('prompt-design:designs:rename', id, name),
+      update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:designs:update', id, input),
+      delete: (id: string) => ipcRenderer.invoke('prompt-design:designs:delete', id)
+    }
   }
 }
 

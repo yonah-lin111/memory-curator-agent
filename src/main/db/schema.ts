@@ -303,7 +303,80 @@ export type AiChatMessagePart =
         | "notes"
         | "today"
         | "common";
-    };
+};
+
+// ==================== Prompt Design ====================
+
+/** 提示词设计项目类型 */
+export type PromptProjectType = "filesystem" | "virtual";
+
+/** 提示词设计项目数据库行 */
+export type PromptDesignProjectRow = {
+  id: string;
+  name: string;
+  type: string;
+  path: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 提示词设计项目 */
+export type PromptDesignProject = {
+  id: string;
+  name: string;
+  type: PromptProjectType;
+  path?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** 提示词设计项目创建输入 */
+export type PromptDesignProjectCreateInput = {
+  id: string;
+  name: string;
+  type: PromptProjectType;
+  path?: string;
+};
+
+/** 提示词设计项目更新输入 */
+export type PromptDesignProjectUpdateInput = {
+  name?: string;
+  path?: string;
+};
+
+/** 提示词设计数据库行 */
+export type PromptDesignRow = {
+  id: string;
+  project_id: string;
+  name: string;
+  design_data: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 提示词设计 */
+export type PromptDesign = {
+  id: string;
+  projectId: string;
+  name: string;
+  designData: any; // 存储为 JSON 字符串，解析后为对象
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** 提示词设计创建输入 */
+export type PromptDesignCreateInput = {
+  id: string;
+  projectId: string;
+  name: string;
+  designData?: any;
+};
+
+/** 提示词设计更新输入 */
+export type PromptDesignUpdateInput = {
+  name?: string;
+  designData?: any;
+};
 
 // AI 工具步骤类型。
 export type AiToolStep = {

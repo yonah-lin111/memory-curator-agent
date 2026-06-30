@@ -3,6 +3,15 @@ export type Project = {
   name: string;
   type: "filesystem" | "virtual";
   path?: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PromptDesign = {
+  id: string;
+  projectId: string;
+  name: string;
+  designData: any;
+  createdAt: string;
+  updatedAt: string;
 };

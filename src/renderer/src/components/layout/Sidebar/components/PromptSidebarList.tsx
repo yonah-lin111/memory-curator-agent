@@ -20,25 +20,6 @@ import {
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { PromptSidebarContextMenu } from "./PromptSidebarContextMenu";
 
-const initialProjects = [
-  {
-    id: "proj1",
-    name: "项目1",
-    prompts: [
-      { id: "p1-1", name: "提示词设计1" },
-      { id: "p1-2", name: "提示词设计2" },
-    ],
-  },
-  {
-    id: "proj2",
-    name: "项目2",
-    prompts: [
-      { id: "p2-1", name: "提示词设计1" },
-      { id: "p2-2", name: "提示词设计2" },
-    ],
-  },
-];
-
 type PromptSidebarProps = {
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -54,11 +35,15 @@ export const PromptSidebarList = ({
   const [activeTab, setActiveTab] = useState<"components" | "projects">(
     "components",
   );
-  const [projects, setProjects] = useState(initialProjects);
+  
+  const [projects, setProjects] = useState<any[]>([]);
+  const [designs, setDesigns] = useState<any[]>([]);
+
   const [collapsedProjects, setCollapsedProjects] = useState<
     Record<string, boolean>
   >({});
   const [newProjectName, setNewProjectName] = useState<string>("");
+  const [newProjectPath, setNewProjectPath] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
   const [contextMenu, setContextMenu] = useState<{
@@ -72,7 +57,19 @@ export const PromptSidebarList = ({
 
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
 
+  const fetchData = async () => {
+    try {
+      const p = await (window.api as any).promptDesign.projects.list();
+      const d = await (window.api as any).promptDesign.designs.list();
+      setProjects(p);
+      setDesigns(d);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
+    fetchData();
     const handleClick = () => setContextMenu(null);
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
@@ -102,25 +99,23 @@ export const PromptSidebarList = ({
     }));
   };
 
-  const handleRenameCommit = () => {
+  const handleRenameCommit = async () => {
     if (!editingId || !editingName.trim()) {
       setEditingId(null);
       return;
     }
 
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === editingId) {
-          return { ...p, name: editingName.trim() };
-        }
-        return {
-          ...p,
-          prompts: p.prompts.map((pr) =>
-            pr.id === editingId ? { ...pr, name: editingName.trim() } : pr
-          ),
-        };
-      })
-    );
+    try {
+      const isProject = projects.some(p => p.id === editingId);
+      if (isProject) {
+        await (window.api as any).promptDesign.projects.rename(editingId, editingName.trim());
+      } else {
+        await (window.api as any).promptDesign.designs.rename(editingId, editingName.trim());
+      }
+      await fetchData();
+    } catch (error) {
+      console.error("Rename failed", error);
+    }
     setEditingId(null);
   };
 
@@ -228,12 +223,17 @@ export const PromptSidebarList = ({
         _.toLowerCase().includes(keyword)),
   ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
 
-  const filteredProjects = projects
+  const mergedProjects = projects.map(proj => ({
+    ...proj,
+    prompts: designs.filter(d => d.projectId === proj.id)
+  }));
+
+  const filteredProjects = mergedProjects
     .map((proj) => {
       if (proj.name.toLowerCase().includes(keyword)) {
         return proj;
       }
-      const filteredPrompts = proj.prompts.filter((p) =>
+      const filteredPrompts = proj.prompts.filter((p: any) =>
         p.name.toLowerCase().includes(keyword),
       );
       if (filteredPrompts.length > 0) {
@@ -241,21 +241,48 @@ export const PromptSidebarList = ({
       }
       return null;
     })
-    .filter(Boolean) as typeof initialProjects;
+    .filter(Boolean) as any[];
 
   const handleAddProjectConfirm = async () => {
     if (!newProjectName.trim()) return;
-    const newProject = {
-      id: `proj-${Date.now()}`,
-      name: newProjectName.trim(),
-      prompts: [],
-    };
-    setProjects((prev) => [...prev, newProject]);
+    try {
+      await (window.api as any).promptDesign.projects.create({
+        name: newProjectName.trim(),
+        type: newProjectPath ? "filesystem" : "virtual",
+        path: newProjectPath || undefined,
+      });
+      await fetchData();
+    } catch (e) {
+      console.error(e);
+    }
     setNewProjectName("");
+    setNewProjectPath("");
   };
 
   const handleAddProjectCancel = () => {
     setNewProjectName("");
+    setNewProjectPath("");
+  };
+
+  const handleImportProject = async () => {
+    try {
+      const result = await (window.api as any).dialog.showOpenDialog({
+        properties: ["openDirectory"],
+        title: "选择项目文件夹",
+      });
+      if (!result.canceled && result.filePaths.length > 0) {
+        const selectedPath = result.filePaths[0];
+        const folderName = selectedPath.split(/[/\\]/).pop() || "未命名项目";
+        await (window.api as any).promptDesign.projects.create({
+          name: folderName,
+          type: "filesystem",
+          path: selectedPath,
+        });
+        await fetchData();
+      }
+    } catch (error) {
+      console.error("Failed to import project:", error);
+    }
   };
 
   const renderAddProjectForm = () => (
@@ -269,6 +296,19 @@ export const PromptSidebarList = ({
           value={newProjectName}
           onChange={(e) => setNewProjectName(e.target.value)}
           placeholder="请输入项目名称"
+          size="xs"
+          className="!h-[28px]"
+        />
+      </div>
+      <div className="flex flex-col gap-1 text-left">
+        <span className="text-[11px] font-semibold text-white/40">
+          项目地址 (可选)
+        </span>
+        <Input
+          type="text"
+          value={newProjectPath}
+          onChange={(e) => setNewProjectPath(e.target.value)}
+          placeholder="例如: /Users/xxx/project"
           size="xs"
           className="!h-[28px]"
         />
@@ -297,7 +337,7 @@ export const PromptSidebarList = ({
           {activeTab === "projects" && (
             <>
               <Tooltip content="导入项目" placement="bottom">
-                <IconButton aria-label="Import project">
+                <IconButton aria-label="Import project" onClick={handleImportProject}>
                   <Import className="h-4 w-4" />
                 </IconButton>
               </Tooltip>
@@ -465,25 +505,31 @@ export const PromptSidebarList = ({
                       }}
                       onContextMenu={(e) => handleContextMenu(e, "project", proj)}
                     >
-                      <div className="flex-1 min-w-0 text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors truncate pr-2">
-                        {editingId === proj.id ? (
-                          <input
-                            // eslint-disable-next-line jsx-a11y/no-autofocus
-                            autoFocus
-                            onFocus={(e) => e.target.select()}
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onBlur={handleRenameCommit}
-                            onKeyDown={(e) =>
-                              e.key === "Enter" && handleRenameCommit()
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
-                          />
-                        ) : (
-                          proj.name
-                        )}
-                      </div>
+                      <Tooltip 
+                        content={proj.path ? `${proj.name}\n${proj.path}` : proj.name} 
+                        placement="right" 
+                        contentClassName="whitespace-pre-wrap"
+                      >
+                        <div className="flex-1 min-w-0 text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors truncate pr-2">
+                          {editingId === proj.id ? (
+                            <input
+                              // eslint-disable-next-line jsx-a11y/no-autofocus
+                              autoFocus
+                              onFocus={(e) => e.target.select()}
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onBlur={handleRenameCommit}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && handleRenameCommit()
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
+                            />
+                          ) : (
+                            proj.name
+                          )}
+                        </div>
+                      </Tooltip>
                       <ChevronRight
                         className={`w-3.5 h-3.5 text-white/30 group-hover:text-white/50 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                       />
@@ -540,24 +586,20 @@ export const PromptSidebarList = ({
           title={contextMenu.title}
           x={contextMenu.x}
           y={contextMenu.y}
-          onAddDesign={() => {
-            setProjects((prev) =>
-              prev.map((p) =>
-                p.id === contextMenu.id
-                  ? {
-                      ...p,
-                      prompts: [
-                        ...p.prompts,
-                        { id: `prompt-${Date.now()}`, name: "新提示词设计" },
-                      ],
-                    }
-                  : p
-              )
-            );
-            setCollapsedProjects((prev) => ({
-              ...prev,
-              [contextMenu.id]: false,
-            }));
+          onAddDesign={async () => {
+            try {
+              await (window.api as any).promptDesign.designs.create({
+                projectId: contextMenu.id,
+                name: "新提示词设计",
+              });
+              await fetchData();
+              setCollapsedProjects((prev) => ({
+                ...prev,
+                [contextMenu.id]: false,
+              }));
+            } catch (error) {
+              console.error("Add design failed", error);
+            }
             setContextMenu(null);
           }}
           onRename={() => {
@@ -565,24 +607,16 @@ export const PromptSidebarList = ({
             setEditingName(contextMenu.title);
             setContextMenu(null);
           }}
-          onDelete={() => {
-            if (contextMenu.type === "project") {
-              setProjects((prev) =>
-                prev.filter((p) => p.id !== contextMenu.id)
-              );
-            } else {
-              setProjects((prev) =>
-                prev.map((p) =>
-                  p.id === contextMenu.projectId
-                    ? {
-                        ...p,
-                        prompts: p.prompts.filter(
-                          (pr) => pr.id !== contextMenu.id
-                        ),
-                      }
-                    : p
-                )
-              );
+          onDelete={async () => {
+            try {
+              if (contextMenu.type === "project") {
+                await (window.api as any).promptDesign.projects.delete(contextMenu.id);
+              } else {
+                await (window.api as any).promptDesign.designs.delete(contextMenu.id);
+              }
+              await fetchData();
+            } catch (error) {
+              console.error("Delete failed", error);
             }
             setContextMenu(null);
           }}
