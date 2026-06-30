@@ -568,8 +568,8 @@ export const PromptCanvas = () => {
     }
 
     try {
-      if (window.api && window.api.dialog) {
-        const result = await window.api.dialog.showSaveDialog(
+      if (window.api && (window.api as any).dialog) {
+        const result = await (window.api as any).dialog.showSaveDialog(
           {
             title: "导出提示词流程",
             defaultPath: `prompt_flow_${Date.now()}.md`,
@@ -582,11 +582,11 @@ export const PromptCanvas = () => {
           // 比较正规的做法是增加 api.files.writeFile
           
           // 我们先修改调用方式，这里直接调用 ipcRenderer 如果是在 preload 中暴露的话
-          await window.api.fs.writeFile(
+          await (window.api as any).fs.writeFile(
             result.filePath,
             md
           );
-          toast.success("导出成功", { description: result.filePath });
+          toast.success(`导出成功: ${result.filePath}`);
         }
       } else {
         const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
@@ -602,9 +602,7 @@ export const PromptCanvas = () => {
       }
     } catch (err) {
       console.error(err);
-      toast.error("导出失败", {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      toast.error(`导出失败: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       resetExportRequest();
     }
@@ -690,7 +688,7 @@ export const PromptCanvas = () => {
       setEdges((eds) => {
         const sourceNode = nodes.find((n) => n.id === params.source);
         const sourceType = sourceNode?.data?.nodeType;
-        const strokeColor = getEdgeColor(sourceType, params.sourceHandle);
+        const strokeColor = getEdgeColor(sourceType as string, params.sourceHandle);
         return addEdge(
           {
             ...params,
