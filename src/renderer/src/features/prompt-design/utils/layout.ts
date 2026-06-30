@@ -1,19 +1,19 @@
 import * as dagre from "dagre";
 import type { Node, Edge } from "@xyflow/react";
 
-const nodeWidth = 340; // 预估宽度
-const nodeHeight = 250; // 预估平均高度
-const indepNodeHeight = 120; // 独立卡片预估高度
+const nodeWidth = 240; // 预估宽度，因为包含了内容稍微宽一点
+const nodeHeight = 160; // 流节点预估平均高度（考虑到有很多输入输出和内容）
+const indepNodeHeight = 100; // 独立卡片预估高度
 
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "LR") => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  
+
   // 设置图的排版方向和节点间距
-  dagreGraph.setGraph({ 
+  dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 80, // 同一层级节点之间的间距
-    ranksep: 120, // 层级之间的间距
+    nodesep: 40, // 同一层级节点之间的间距（竖向间距）
+    ranksep: 60, // 层级之间的间距（横向间距）
   });
 
   const independentTypes = ["comment", "variable", "group"];
@@ -58,7 +58,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "L
   if (minY === Infinity) minY = 0;
 
   // 独立卡片排在流节点左侧，Y 轴对齐顶端，纵向堆叠
-  const indepStartX = minX - nodeWidth - 120; // 左侧间距 120
+  const indepStartX = minX - nodeWidth - 60; // 左侧间距 60
   let currentY = minY;
 
   const layoutedIndepNodes = independentNodes.map((node) => {

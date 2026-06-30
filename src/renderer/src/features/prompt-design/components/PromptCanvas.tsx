@@ -66,95 +66,48 @@ const rawInitialNodes = [
     } as PromptNodeData,
   },
 
-  /* ── 连线卡片：系统角色 ── */
+  /* ── 连线卡片：模板片段 ── */
   {
-    id: "sys-1",
+    id: "tpl-role",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "前端专家角色",
+      title: "角色设定",
       description: "设定 AI 的前端开发角色",
-      nodeType: "system",
+      nodeType: "template",
       content: "你是一个资深的前端开发工程师，精通 {{framework}}，擅长编写安全、优雅且符合现代 UI 规范的登录组件。",
       variables: ["framework"],
       outputs: [
-        { id: "out-sys", name: "System", type: "message/system" },
+        { id: "out-role", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
-
-  /* ── 上下文注入 ── */
   {
     id: "ctx-1",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "API 接口与设计规范",
-      description: "注入后端登录接口文档",
+      title: "API 文档",
+      description: "注入后端登录接口规范",
       nodeType: "context",
+      content: "【登录接口】\nPOST /api/v1/auth/login\n请求体：{ email, password, captcha }\n响应：{ token, user: { id, name, avatar, roles } }\n注意处理 401 和 429 状态码。",
       outputs: [
-        { id: "out-ctx", name: "Context", type: "context" },
+        { id: "out-ctx", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
-
-  /* ── 用户任务 ── */
   {
     id: "tpl-task",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "登录表单需求",
+      title: "需求描述",
+      description: "业务需求明细",
       nodeType: "template",
-      content: "请实现一个登录页面。要求：\n1. 包含邮箱和密码输入框，并支持表单校验；\n2. 包含“记住我”复选框和“忘记密码”链接；\n3. 提交时调用上下文中提供的登录接口，处理 loading 状态与错误提示。\n\n技术栈限定：{{framework}} + {{ui_library}}",
-      variables: ["framework", "ui_library"],
-      outputs: [
-        { id: "out-task", name: "User Task", type: "message/user" },
-      ],
-    } as PromptNodeData,
-  },
-
-  /* ── 其他演示卡片：用户、助手、工具、组、条件、循环 ── */
-  {
-    id: "usr-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "补充用户输入",
-      description: "用户的实际提问",
-      nodeType: "user",
-      content: "我需要你基于这个登录组件的规范，生成一份可用的代码，并且给出详细注释。",
-      outputs: [
-        { id: "out-usr", name: "User", type: "message/user" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "ast-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "助手预设回复",
-      description: "设定助手的默认思考/引导",
-      nodeType: "assistant",
-      content: "好的，我已经理解了您的需求。接下来我将分析上下文：\n1. 您提供的登录接口包含邮箱和密码校验...\n2. 前端框架选用 {{framework}}...",
+      content: "请使用 {{framework}} 实现一个登录页面。\n要求包含邮箱和密码校验，并在提交时展示 loading 状态。\n界面要包含“忘记密码”入口。",
       variables: ["framework"],
       outputs: [
-        { id: "out-ast", name: "Assistant", type: "message/assistant" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "tool-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "文件读取工具",
-      description: "读取本地组件库规范文件",
-      nodeType: "tool_message",
-      content: "{\n  \"components\": [\"Button\", \"Input\", \"Checkbox\"],\n  \"style\": \"TailwindCSS\"\n}",
-      outputs: [
-        { id: "out-tool", name: "Tool", type: "message/tool" },
+        { id: "out-task", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
@@ -163,79 +116,50 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "是否需要移动端适配",
-      description: "根据需求判断代码生成逻辑",
+      title: "框架选择?",
+      description: "根据变量分支输出",
       nodeType: "condition",
-      content: "if ({{ui_library}} === 'Ant Design Mobile')",
-      variables: ["ui_library"],
       inputs: [
-        { id: "in-cond", name: "Input", type: "any" },
+        { id: "in-cond", name: "Input", type: "text" },
       ],
       outputs: [
-        { id: "out-cond-true", name: "分支 1 (True)", type: "branch" },
-        { id: "out-cond-false", name: "分支 2 (False)", type: "branch" },
+        { id: "out-true", name: "React", type: "text" },
+        { id: "out-false", name: "Vue", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "loop-1",
+    id: "tpl-react",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "遍历错误码字典",
-      description: "生成所有接口错误处理逻辑",
-      nodeType: "loop",
-      content: "for each error_code in {{error_codes}}",
-      variables: ["error_codes"],
+      title: "React 版",
+      nodeType: "template",
+      content: "使用 React + Tailwind CSS 实现组件。",
       inputs: [
-        { id: "in-loop", name: "Input", type: "any" },
+        { id: "in-react", name: "Input", type: "text" },
       ],
       outputs: [
-        { id: "out-loop", name: "Output", type: "any" },
+        { id: "out-react", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "grp-1",
+    id: "tpl-vue",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "安全相关约束组",
-      description: "安全与审计要求的集合",
-      nodeType: "group",
-      content: "- 密码传输必须使用 HTTPS\n- 密码在前端不进行任何哈希计算\n- 对登录失败进行防暴破限流提示",
-      outputs: [
-        { id: "out-grp", name: "Group", type: "any" },
-      ],
-    } as PromptNodeData,
-  },
-
-  /* ── 消息组装 ── */
-  {
-    id: "asm-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "消息组装",
-      description: "按序拼接登录功能提示词",
-      nodeType: "assemble",
+      title: "Vue 版",
+      nodeType: "template",
+      content: "使用 Vue 3 + Element Plus 实现组件。",
       inputs: [
-        { id: "in-asm-sys", name: "角色设定", type: "message/system" },
-        { id: "in-asm-ctx", name: "接口文档", type: "context" },
-        { id: "in-asm-grp", name: "安全约束", type: "any" },
-        { id: "in-asm-task", name: "具体需求", type: "message/user" },
-        { id: "in-asm-tool", name: "工具结果", type: "message/tool" },
-        { id: "in-asm-cond", name: "条件分支", type: "branch" },
-        { id: "in-asm-usr", name: "用户补充", type: "message/user" },
-        { id: "in-asm-ast", name: "助手引导", type: "message/assistant" },
+        { id: "in-vue", name: "Input", type: "text" },
       ],
       outputs: [
-        { id: "out-asm", name: "Messages", type: "messages" },
+        { id: "out-vue", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
-
-  /* ── 输出终点 ── */
   {
     id: "out-1",
     type: "promptNode",
@@ -244,23 +168,22 @@ const rawInitialNodes = [
       title: "最终提示词",
       nodeType: "output",
       inputs: [
-        { id: "in-out", name: "Messages", type: "messages" },
+        { id: "in-out-role", name: "角色", type: "text" },
+        { id: "in-out-ctx", name: "文档", type: "text" },
+        { id: "in-out-res", name: "结果", type: "text" },
       ],
     } as PromptNodeData,
   },
 ];
 
 const rawInitialEdges: Edge[] = [
-  { id: "e-sys-asm",   source: "sys-1",     target: "asm-1", sourceHandle: "out-sys",   targetHandle: "in-asm-sys" },
-  { id: "e-ctx-asm",   source: "ctx-1",     target: "asm-1", sourceHandle: "out-ctx",   targetHandle: "in-asm-ctx" },
-  { id: "e-grp-asm",   source: "grp-1",     target: "asm-1", sourceHandle: "out-grp",   targetHandle: "in-asm-grp" },
-  { id: "e-task-asm",  source: "tpl-task",  target: "asm-1", sourceHandle: "out-task",  targetHandle: "in-asm-task" },
-  { id: "e-tool-asm",  source: "tool-1",    target: "asm-1", sourceHandle: "out-tool",  targetHandle: "in-asm-tool" },
-  { id: "e-loop-cond", source: "loop-1",    target: "cond-1", sourceHandle: "out-loop",  targetHandle: "in-cond" },
-  { id: "e-cond-asm",  source: "cond-1",    target: "asm-1", sourceHandle: "out-cond-true", targetHandle: "in-asm-cond" },
-  { id: "e-usr-asm",   source: "usr-1",     target: "asm-1", sourceHandle: "out-usr",   targetHandle: "in-asm-usr" },
-  { id: "e-ast-asm",   source: "ast-1",     target: "asm-1", sourceHandle: "out-ast",   targetHandle: "in-asm-ast" },
-  { id: "e-asm-out",   source: "asm-1",     target: "out-1", sourceHandle: "out-asm",   targetHandle: "in-out" },
+  { id: "e-role-out",  source: "tpl-role",  target: "out-1",     sourceHandle: "out-role",  targetHandle: "in-out-role" },
+  { id: "e-ctx-out",   source: "ctx-1",     target: "out-1",     sourceHandle: "out-ctx",   targetHandle: "in-out-ctx" },
+  { id: "e-task-cond", source: "tpl-task",  target: "cond-1",    sourceHandle: "out-task",  targetHandle: "in-cond" },
+  { id: "e-cond-react",source: "cond-1",    target: "tpl-react", sourceHandle: "out-true",  targetHandle: "in-react" },
+  { id: "e-cond-vue",  source: "cond-1",    target: "tpl-vue",   sourceHandle: "out-false", targetHandle: "in-vue" },
+  { id: "e-react-out", source: "tpl-react", target: "out-1",     sourceHandle: "out-react", targetHandle: "in-out-res" },
+  { id: "e-vue-out",   source: "tpl-vue",   target: "out-1",     sourceHandle: "out-vue",   targetHandle: "in-out-res" },
 ].map((e) => ({
   ...e,
   animated: true,
@@ -278,6 +201,7 @@ export const PromptCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { screenToFlowPosition } = useReactFlow();
+  const { takeSnapshot, undo, redo, canUndo, canRedo } = useFlowHistory(nodes, edges, setNodes, setEdges);
 
   const [menuState, setMenuState] = useState<ContextMenuState>({ type: null, x: 0, y: 0 });
   const [copiedNode, setCopiedNode] = useState<Node | null>(null);
@@ -297,249 +221,216 @@ export const PromptCanvas = () => {
     const dataMap = new Map(nodes.map((n) => [n.id, n.data as PromptNodeData]));
 
     const outgoing = new Map<string, Edge[]>();
-    const incoming = new Map<string, Edge[]>();
     for (const e of edges) {
       if (!outgoing.has(e.source)) outgoing.set(e.source, []);
       outgoing.get(e.source)!.push(e);
-      if (!incoming.has(e.target)) incoming.set(e.target, []);
-      incoming.get(e.target)!.push(e);
     }
 
     // ── 从 Output 节点反向 BFS 找出连通子图 ──
     const outputIds = nodes
       .filter((n) => dataMap.get(n.id)?.nodeType === "output")
       .map((n) => n.id);
-    const connected = new Set<string>();
-    const bfsQueue: string[] = outputIds.length > 0 ? [...outputIds] : [...nodes.map((n) => n.id)];
-    while (bfsQueue.length) {
-      const id = bfsQueue.shift()!;
-      if (connected.has(id)) continue;
-      connected.add(id);
-      for (const e of incoming.get(id) || []) bfsQueue.push(e.source);
-      // 若没有 output 节点，则也正向扩展使所有节点可见
-      if (outputIds.length === 0)
-        for (const e of outgoing.get(id) || []) bfsQueue.push(e.target);
+    
+    // 如果没有 output 节点，提示用户
+    if (outputIds.length === 0) {
+      toast.warning("请添加至少一个「输出终点」卡片");
+      return;
     }
 
-    // ── 拓扑排序 (Kahn) —— 叶子先、Output 最后 ──
-    const inDegree = new Map<string, number>();
-    for (const id of connected) {
-      const ins = (incoming.get(id) || []).filter((e) => connected.has(e.source));
-      inDegree.set(id, ins.length);
+    const connected = new Set<string>();
+    const bfsQueue: string[] = [...outputIds];
+    const incomingReverse = new Map<string, string[]>();
+    for (const e of edges) {
+      if (!incomingReverse.has(e.target)) incomingReverse.set(e.target, []);
+      incomingReverse.get(e.target)!.push(e.source);
     }
-    const topoOrder: string[] = [];
-    const deg0: string[] = [];
-    for (const [id, d] of inDegree) if (d === 0) deg0.push(id);
-    while (deg0.length) {
-      const id = deg0.shift()!;
-      topoOrder.push(id);
-      for (const e of outgoing.get(id) || []) {
-        if (!connected.has(e.target)) continue;
-        const nd = (inDegree.get(e.target) || 1) - 1;
-        inDegree.set(e.target, nd);
-        if (nd === 0) deg0.push(e.target);
+
+    while (bfsQueue.length) {
+      const curr = bfsQueue.shift()!;
+      if (!connected.has(curr)) {
+        connected.add(curr);
+        const prevNodes = incomingReverse.get(curr) || [];
+        for (const p of prevNodes) {
+          if (!connected.has(p)) bfsQueue.push(p);
+        }
       }
     }
-    // 兜底：因环等原因未入列的节点直接追加
-    for (const id of connected) if (!topoOrder.includes(id)) topoOrder.push(id);
 
-    // ── 显示映射 ──
-    const TYPE_LABEL: Record<string, string> = {
-      system: "SYSTEM", user: "USER", assistant: "ASSISTANT",
-      context: "CONTEXT", template: "TEMPLATE", variable: "VARIABLE",
-      assemble: "ASSEMBLE", condition: "CONDITION", loop: "LOOP",
-      output: "OUTPUT", comment: "COMMENT", tool_message: "TOOL",
-      group: "GROUP",
-    };
-    const TYPE_CN: Record<string, string> = {
-      system: "系统角色", user: "用户消息", assistant: "助手消息",
-      context: "上下文", template: "模板", variable: "变量",
-      assemble: "组装", condition: "条件", loop: "循环",
-      output: "输出", comment: "注释", tool_message: "工具消息",
-      group: "分组",
-    };
+    // 将独立的变量节点也加入（只要存在就导出到变量表）
+    const allVariables = new Set<string>();
+    for (const n of nodes) {
+      const data = dataMap.get(n.id);
+      if (data?.nodeType === "variable" && data.variables?.length) {
+        data.variables.forEach(v => allVariables.add(v));
+      }
+      if (connected.has(n.id) && data?.variables) {
+        data.variables.forEach(v => allVariables.add(v));
+      }
+    }
 
-    // ── 工具函数 ──
-    const mId = (id: string) => id.replace(/[^a-zA-Z0-9_]/g, "_");
-    const esc = (s: string) =>
-      s.replace(/"/g, "'").replace(/\n/g, " ").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const hName = (data: PromptNodeData, handleId: string | null | undefined, isInput: boolean) => {
-      if (!handleId) return "?";
-      const list = isInput ? data.inputs : data.outputs;
-      return list?.find((h) => h.id === handleId)?.name || handleId;
-    };
-
-    let md = `# 提示词架构导出\n\n`;
-    md += `> 导出时间: ${new Date().toLocaleString()}\n`;
-    md += `> 节点: ${nodes.length} | 连线: ${edges.length} | 连通节点: ${connected.size}\n\n`;
-
-    // ═══════ Mermaid 架构图 ═══════
-    md += `## 架构图\n\n\`\`\`mermaid\nflowchart LR\n`;
-    for (const node of nodes) {
-      const d = dataMap.get(node.id);
-      const title = esc(d?.title || node.id);
-      const tag = TYPE_LABEL[d?.nodeType || ""] || (d?.nodeType || "").toUpperCase();
-      const mid = mId(node.id);
-      if (d?.nodeType === "output") md += `  ${mid}(["${title}<br/>${tag}"])\n`;
-      else if (d?.nodeType === "condition") md += `  ${mid}{{"${title}<br/>${tag}"}}\n`;
-      else md += `  ${mid}["${title}<br/>${tag}"]\n`;
+    // ── 拓扑排序 (Kahn's algorithm) ──
+    const inDegree = new Map<string, number>();
+    for (const id of connected) {
+      inDegree.set(id, 0);
     }
     for (const e of edges) {
-      const src = mId(e.source);
-      const tgt = mId(e.target);
-      const lbl = esc(hName(dataMap.get(e.source)!, e.sourceHandle, false));
-      md += `  ${src} -- "${lbl}" --> ${tgt}\n`;
+      if (connected.has(e.source) && connected.has(e.target)) {
+        inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
+      }
+    }
+
+    const queue: string[] = [];
+    for (const [id, deg] of inDegree.entries()) {
+      if (deg === 0) queue.push(id);
+    }
+
+    const sortedIds: string[] = [];
+    while (queue.length) {
+      const curr = queue.shift()!;
+      sortedIds.push(curr);
+      const outEdges = outgoing.get(curr) || [];
+      for (const e of outEdges) {
+        if (connected.has(e.target)) {
+          const deg = (inDegree.get(e.target) || 0) - 1;
+          inDegree.set(e.target, deg);
+          if (deg === 0) queue.push(e.target);
+        }
+      }
+    }
+
+    if (sortedIds.length !== connected.size) {
+      toast.warning("检测到循环依赖，导出结果可能不准确");
+    }
+
+    // ── 组装 Markdown ──
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    let md = `# 提示词导出\n> ${dateStr} | ${sortedIds.length} 节点\n\n`;
+
+    // 1. Mermaid 架构图
+    md += `## 架构图\n\`\`\`mermaid\nflowchart LR\n`;
+    const safeName = (id: string) => {
+      const title = dataMap.get(id)?.title || id;
+      return title.replace(/["\[\]\(\)\{\}]/g, ''); // 移除在 Mermaid 中可能引起语法错误的特殊字符
+    };
+    
+    for (const e of edges) {
+      if (connected.has(e.source) && connected.has(e.target)) {
+        const sourceData = dataMap.get(e.source);
+        let linkLabel = "";
+        if (sourceData?.nodeType === "condition") {
+          if (e.sourceHandle === "out-true") linkLabel = " -- True --> ";
+          else if (e.sourceHandle === "out-false") linkLabel = " -- False --> ";
+          else linkLabel = " --> ";
+        } else {
+          linkLabel = " --> ";
+        }
+        
+        let targetShape = `[${safeName(e.target)}]`;
+        if (dataMap.get(e.target)?.nodeType === "output") {
+          targetShape = `((${safeName(e.target)}))`;
+        } else if (dataMap.get(e.target)?.nodeType === "condition") {
+          targetShape = `{${safeName(e.target)}}`;
+        }
+
+        let sourceShape = `[${safeName(e.source)}]`;
+        if (sourceData?.nodeType === "condition") {
+           sourceShape = `{${safeName(e.source)}}`;
+        }
+        
+        md += `  ${e.source.replace(/-/g, '_')}${sourceShape}${linkLabel}${e.target.replace(/-/g, '_')}${targetShape}\n`;
+      }
     }
     md += `\`\`\`\n\n`;
 
-    // ═══════ 连通流程 (拓扑序) ═══════
-    md += `## 完整流程\n\n`;
+    // 2. 流程内容
+    md += `## 流程\n\n`;
+    for (const id of sortedIds) {
+      const data = dataMap.get(id);
+      if (!data) continue;
 
-    for (const id of topoOrder) {
-      const d = dataMap.get(id);
-      if (!d) continue;
-      const tag = TYPE_LABEL[d.nodeType] || d.nodeType;
-      const cn = TYPE_CN[d.nodeType] || d.nodeType;
+      if (data.nodeType === "comment" || data.nodeType === "variable") continue; // 跳过
 
-      md += `### ${d.title || id}  \`[${tag}]\`\n`;
-      md += `> **ID** \`${id}\` | **类型** ${cn}`;
-      if (d.description) md += ` | ${d.description}`;
-      md += `\n\n`;
+      md += `### ${data.title}`;
+      if (data.nodeType === "condition") md += ` \`[条件]\``;
+      if (data.nodeType === "output") md += ` \`[输出]\``;
+      md += `\n`;
 
-      if (d.content) {
-        const multiline = d.content.includes("\n");
-        if (multiline) md += `\`\`\`\n${d.content}\n\`\`\`\n\n`;
-        else md += `${d.content}\n\n`;
-      }
-
-      if (d.variables?.length) {
-        md += `> 变量: ${d.variables.map((v) => `\`${v}\``).join(", ")}\n\n`;
-      }
-
-      // ── 输入 ──
-      const ins = (incoming.get(id) || []).filter((e) => connected.has(e.source));
-      const outs = (outgoing.get(id) || []).filter((e) => connected.has(e.target));
-
-      if (d.nodeType === "assemble" && d.inputs) {
-        md += `**输入插槽**:\n\n| # | 插槽 | 类型 | 来源 |\n|---|------|------|------|\n`;
-        for (let i = 0; i < d.inputs.length; i++) {
-          const slot = d.inputs[i];
-          const edge = ins.find((e) => e.targetHandle === slot.id);
-          if (edge) {
-            const srcD = dataMap.get(edge.source);
-            md += `| ${i + 1} | ${slot.name} | \`${slot.type}\` | ${srcD?.title || edge.source} (\`${edge.source}\`) |\n`;
-          } else {
-            md += `| ${i + 1} | ${slot.name} | \`${slot.type}\` | *未连接* |\n`;
-          }
-        }
-        md += "\n";
-      } else if (ins.length > 0) {
-        md += "**输入**:\n";
-        for (const e of ins) {
-          const srcD = dataMap.get(e.source);
-          md += `- ${hName(d, e.targetHandle, true)} ← **${srcD?.title || e.source}** (\`${e.source}\`)\n`;
-        }
-        md += "\n";
-      }
-
-      // ── 输出 (条件节点特殊处理分支) ──
-      if (d.nodeType === "condition" && d.outputs) {
-        md += "**分支输出**:\n";
-        for (const branch of d.outputs) {
-          const edge = outs.find((e) => e.sourceHandle === branch.id);
-          if (edge) {
-            const tgtD = dataMap.get(edge.target);
-            md += `- ✅ **${branch.name}** → **${tgtD?.title || edge.target}** (\`${edge.target}\`) | 插槽: ${hName(dataMap.get(edge.target)!, edge.targetHandle, true)}\n`;
-          } else {
-            md += `- ❌ **${branch.name}** → *未连接*\n`;
-          }
-        }
-        md += "\n";
-      } else if (outs.length > 0) {
-        md += "**输出**:\n";
-        for (const e of outs) {
-          const tgtD = dataMap.get(e.target);
-          md += `- ${hName(d, e.sourceHandle, false)} → **${tgtD?.title || e.target}** (\`${e.target}\`) | 插槽: ${hName(dataMap.get(e.target)!, e.targetHandle, true)}\n`;
-        }
-        md += "\n";
-      }
-
-      if (ins.length === 0 && outs.length === 0) {
-        md += "*无连接*\n\n";
-      }
-
-      md += "---\n\n";
-    }
-
-    // ═══════ 未连接节点 ═══════
-    const orphans = nodes.filter((n) => !connected.has(n.id));
-    if (orphans.length > 0) {
-      md += `## 未连接节点\n\n`;
-      for (const node of orphans) {
-        const d = dataMap.get(node.id);
-        if (!d) continue;
-        const tag = TYPE_LABEL[d.nodeType] || d.nodeType;
-        md += `### ${d.title || node.id}  \`[${tag}]\`\n`;
-        md += `> **ID** \`${node.id}\` | **类型** ${TYPE_CN[d.nodeType] || d.nodeType}`;
-        if (d.description) md += ` | ${d.description}`;
-        md += `\n\n`;
-        if (d.content) md += `\`\`\`\n${d.content}\n\`\`\`\n\n`;
-        if (d.variables?.length)
-          md += `> 变量: ${d.variables.map((v) => `\`${v}\``).join(", ")}\n\n`;
-        md += "---\n\n";
-      }
-    }
-
-    // ═══════ 写出文件 ═══════
-    try {
-      if ("showSaveFilePicker" in window) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `prompt-export-${Date.now()}.md`,
-          types: [
-            {
-              description: "Markdown File",
-              accept: { "text/markdown": [".md"] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(md);
-        await writable.close();
-        toast.success("提示词导出成功");
+      if (data.nodeType === "condition") {
+        md += `**分支**:\n`;
+        const outs = outgoing.get(id) || [];
+        const trueTarget = outs.find(e => e.sourceHandle === "out-true")?.target;
+        const falseTarget = outs.find(e => e.sourceHandle === "out-false")?.target;
+        
+        if (trueTarget) md += `- ✅ True → 输出到 **${dataMap.get(trueTarget)?.title || trueTarget}**\n`;
+        if (falseTarget) md += `- ❌ False → 输出到 **${dataMap.get(falseTarget)?.title || falseTarget}**\n`;
       } else {
-        const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `prompt-export-${Date.now()}.md`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        if (data.description) {
+           md += `*${data.description}*\n\n`;
+        }
+        if (data.content) {
+          if (data.content.includes('\n')) {
+             md += `\`\`\`\n${data.content}\n\`\`\`\n`;
+          } else {
+             md += `${data.content}\n`;
+          }
+        }
       }
-    } catch (err: any) {
-      if (err.name !== "AbortError") {
-        toast.error("导出失败: " + err.message);
-      }
+      md += `\n`;
     }
-  }, [nodes, edges, toast]);
-  
-  useEffect(() => {
-    if (exportRequest > 0) {
-      handleExport();
+
+    md += `---\n\n`;
+
+    // 3. 变量表
+    if (allVariables.size > 0) {
+      md += `### 变量\n| 变量 | 占位符 |\n|------|--------|\n`;
+      for (const v of allVariables) {
+        md += `| \`{{${v}}}\` | ${v} |\n`;
+      }
+    } else {
+      md += `*无变量定义*\n`;
+    }
+
+    try {
+      if (window.electron && window.electron.ipcRenderer) {
+        const result = await window.electron.ipcRenderer.invoke(
+          "dialog:showSaveDialog",
+          {
+            title: "导出提示词流程",
+            defaultPath: `prompt_flow_${Date.now()}.md`,
+            filters: [{ name: "Markdown Files", extensions: ["md"] }],
+          }
+        );
+        if (result && !result.canceled && result.filePath) {
+          await window.electron.ipcRenderer.invoke(
+            "fs:writeFile",
+            result.filePath,
+            md
+          );
+          toast.success("导出成功", { description: result.filePath });
+        }
+      } else {
+        const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `prompt_flow_${Date.now()}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("导出成功");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("导出失败", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
       resetExportRequest();
     }
-  }, [exportRequest, handleExport, resetExportRequest]);
-
-  const { undo, redo, canUndo, canRedo, takeSnapshot } = useFlowHistory(
-    nodes,
-    edges,
-    setNodes,
-    setEdges
-  );
-
+  }, [nodes, edges, resetExportRequest, toast]);
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -554,19 +445,14 @@ export const PromptCanvas = () => {
       if (type === "condition") {
         initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
         initialOutputs = [
-          { id: `branch_true_${Date.now()}`, name: "分支 1", type: "branch" },
-          { id: `branch_false_${Date.now()}`, name: "分支 2", type: "branch" },
+          { id: "out-true", name: "True", type: "branch" },
+          { id: "out-false", name: "False", type: "branch" },
         ];
-      } else if (type === "system" || type === "context") {
+      } else if (type === "context" || type === "template") {
+        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
         initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
       } else if (type === "output") {
         initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-      } else if (type === "assemble") {
-        initialInputs = [
-          { id: `in_1_${Date.now()}`, name: "Input 1", type: "any" },
-          { id: `in_2_${Date.now()}`, name: "Input 2", type: "any" }
-        ];
-        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
       } else {
         initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
         initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
@@ -585,7 +471,6 @@ export const PromptCanvas = () => {
       } as PromptNodeData,
     };
   }, []);
-
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
