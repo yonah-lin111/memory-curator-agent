@@ -43,24 +43,22 @@ export const createModelOptionsResponse = (): AiModelOptionsResponse => {
 };
 
 /**
- * 创建当前分钟时间戳。
+ * 创建时间戳。
  */
 export const createTimestamp = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const date = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${date} ${hours}:${minutes}`;
+  return new Date().toISOString();
 };
 
 /**
- * 创建聊天展示时间。
+ * 提取展示时间 (HH:mm)
  */
-export const createDisplayTime = (timestamp: string): string =>
-  timestamp.slice(11, 16) || timestamp;
+export const createDisplayTime = (timestamp: string): string => {
+  if (!timestamp) return "";
+  if (timestamp.includes("T")) {
+    return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  return timestamp.slice(11, 16) || timestamp;
+};
 
 /**
  * 从用户消息生成兜底会话标题。

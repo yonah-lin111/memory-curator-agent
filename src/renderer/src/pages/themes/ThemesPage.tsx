@@ -827,7 +827,7 @@ export const ThemesPage = (): React.JSX.Element => {
                         CREATED AT
                       </span>
                       <span className="text-xs text-white/60 font-mono mt-0.5">
-                        {selectedTheme.createdAt.split(" ")[0]}
+                        {selectedTheme.createdAt.split("T")[0]}
                       </span>
                     </div>
                     <div className="w-px h-6 bg-white/5" />
@@ -836,7 +836,7 @@ export const ThemesPage = (): React.JSX.Element => {
                         LAST UPDATE
                       </span>
                       <span className="text-xs text-white/60 font-mono mt-0.5">
-                        {selectedTheme.updatedAt.split(" ")[0]}
+                        {selectedTheme.updatedAt.split("T")[0]}
                       </span>
                     </div>
                   </div>

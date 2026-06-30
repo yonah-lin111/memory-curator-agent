@@ -118,7 +118,7 @@ const sqlRowToToolItem = (row: SnippetSqlRow): SnippetQueryToolItem =>
     title: row.title as string,
     content: row.content as string,
     tags: parseSqlTags(row.tags as string),
-    time: typeof row.created_at === 'string' && row.created_at.length >= 16 ? row.created_at.slice(11, 16) : '',
+    time: typeof row.created_at === 'string' && row.created_at.includes('T') ? new Date(row.created_at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : (typeof row.created_at === 'string' ? row.created_at.slice(11, 16) : ''),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string
   })

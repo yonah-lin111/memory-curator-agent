@@ -33,8 +33,9 @@ export const JournalEditorSurface = ({
   onBlur,
 }: JournalEditorSurfaceProps): React.JSX.Element => {
   // 最近保存时间展示值。
-  const savedLabel =
-    lastSavedAt?.slice(-5) ?? (isDirty ? "等待保存" : "未保存");
+  const savedLabel = lastSavedAt 
+    ? (lastSavedAt.includes("T") ? new Date(lastSavedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : lastSavedAt.slice(-5))
+    : (isDirty ? "等待保存" : "未保存");
 
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-[6px] border border-white/6 bg-[#212121] p-4 gap-3">

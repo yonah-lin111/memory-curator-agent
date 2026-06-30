@@ -44,9 +44,7 @@ const getWeekDates = (weekStartDate: string): string[] => {
  * 格式化当前时间为 'YYYY-MM-DD HH:mm'。
  */
 const formatNow = (): string => {
-  const now = new Date();
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return new Date().toISOString();
 };
 
 /** 把关检查结果 */

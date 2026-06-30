@@ -74,7 +74,11 @@ export const PromptAiChatMessageBubble = ({
             isUser ? "justify-end text-right" : "justify-start text-left"
           }`}
         >
-          <span>{message.time}</span>
+          <span>
+            {message.time.includes("T") 
+              ? new Date(message.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
+              : message.time}
+          </span>
           {!isUser && message.model && (
             <Tag
               size="default"

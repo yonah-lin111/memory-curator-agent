@@ -32,13 +32,7 @@ const getInsertedRowId = (result: unknown): number => {
 
 /** 生成当前时间戳 */
 const createTimestamp = (): string => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const date = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${date} ${hours}:${minutes}`
+  return new Date().toISOString()
 }
 
 /** 生成今日日期 */

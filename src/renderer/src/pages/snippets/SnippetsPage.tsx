@@ -21,8 +21,13 @@ type DailySnippetRecord = Awaited<
 >["snippets"][number];
 
 // 生成本地回退时间标签。
-const createFallbackTimestamp = (entryDate: string): string =>
-  `${entryDate} 00:00`;
+const createFallbackTimestamp = (entryDate: string): string => {
+  const d = new Date(entryDate);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString();
+  }
+  return new Date().toISOString();
+};
 
 /**
  * SnippetsPage 组件 - 当日片段档案页。

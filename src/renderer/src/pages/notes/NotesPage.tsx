@@ -372,7 +372,19 @@ export const NotesPage = (): React.JSX.Element => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 text-[11px] font-mono text-white/30 leading-none">
                           <Clock className="h-3 w-3 flex-shrink-0" />
-                          <span className="text-xs">{note.time}</span>
+                          <span className="text-xs">
+                            {note.time.includes("T")
+                              ? (() => {
+                                  const d = new Date(note.time);
+                                  const y = d.getFullYear();
+                                  const m = String(d.getMonth() + 1).padStart(2, '0');
+                                  const dd = String(d.getDate()).padStart(2, '0');
+                                  const hh = String(d.getHours()).padStart(2, '0');
+                                  const min = String(d.getMinutes()).padStart(2, '0');
+                                  return `${y}-${m}-${dd} ${hh}:${min}`;
+                                })()
+                              : note.time}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1.5 opacity-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150">
                           <IconButton

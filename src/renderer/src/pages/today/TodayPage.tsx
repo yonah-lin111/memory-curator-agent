@@ -80,8 +80,8 @@ const FALLBACK_TODOS: TodayTodoItem[] = [
     completed: false,
     priority: "P1",
     sortOrder: 0,
-    createdAt: "2026-05-27 09:25",
-    updatedAt: "2026-05-27 09:25",
+    createdAt: "2026-05-27T09:25:00.000Z",
+    updatedAt: "2026-05-27T09:25:00.000Z",
   },
   {
     id: 3,
@@ -90,8 +90,8 @@ const FALLBACK_TODOS: TodayTodoItem[] = [
     completed: false,
     priority: "P2",
     sortOrder: 1,
-    createdAt: "2026-05-27 09:20",
-    updatedAt: "2026-05-27 09:20",
+    createdAt: "2026-05-27T09:20:00.000Z",
+    updatedAt: "2026-05-27T09:20:00.000Z",
   },
   {
     id: 2,
@@ -100,8 +100,8 @@ const FALLBACK_TODOS: TodayTodoItem[] = [
     completed: true,
     priority: "P0",
     sortOrder: 2,
-    createdAt: "2026-05-27 09:15",
-    updatedAt: "2026-05-27 09:15",
+    createdAt: "2026-05-27T09:15:00.000Z",
+    updatedAt: "2026-05-27T09:15:00.000Z",
   },
   {
     id: 1,
@@ -110,8 +110,8 @@ const FALLBACK_TODOS: TodayTodoItem[] = [
     completed: true,
     priority: "P1",
     sortOrder: 3,
-    createdAt: "2026-05-27 09:10",
-    updatedAt: "2026-05-27 09:10",
+    createdAt: "2026-05-27T09:10:00.000Z",
+    updatedAt: "2026-05-27T09:10:00.000Z",
   },
   {
     id: 5,
@@ -120,8 +120,8 @@ const FALLBACK_TODOS: TodayTodoItem[] = [
     completed: true,
     priority: "P3",
     sortOrder: 4,
-    createdAt: "2026-05-27 09:30",
-    updatedAt: "2026-05-27 09:30",
+    createdAt: "2026-05-27T09:30:00.000Z",
+    updatedAt: "2026-05-27T09:30:00.000Z",
   },
 ];
 
@@ -135,8 +135,8 @@ const FALLBACK_NOTES: TodayNoteItem[] = [
       "所有的临时闪念都不应该直接成为长期记忆，必须经过一个类似海马体的主动策展层。今天看到一个概念：信息不仅需要被存储，更需要主动被遗忘以保持高信噪比。",
     tags: ["方法论", "产品思考"],
     time: "10:15",
-    createdAt: "2026-05-27 10:15",
-    updatedAt: "2026-05-27 10:15",
+    createdAt: "2026-05-27T10:15:00.000Z",
+    updatedAt: "2026-05-27T10:15:00.000Z",
   },
   {
     id: 2,
@@ -146,8 +146,8 @@ const FALLBACK_NOTES: TodayNoteItem[] = [
       "目前使用本地优先的文件存取，在处理高并发的多维关联查询时表现优异，读写响应时间极短，很适合桌面客户端。",
     tags: ["架构", "本地存储"],
     time: "13:40",
-    createdAt: "2026-05-27 13:40",
-    updatedAt: "2026-05-27 13:40",
+    createdAt: "2026-05-27T13:40:00.000Z",
+    updatedAt: "2026-05-27T13:40:00.000Z",
   },
   {
     id: 3,
@@ -157,8 +157,8 @@ const FALLBACK_NOTES: TodayNoteItem[] = [
       "Agent 不需要给出诊断式结论（比如直接断定你焦虑了），它只需要默默地把“关系消耗”、“计划延后”作为一根根绳索摆在你面前，让你自己去连线和确认。",
     tags: ["UX", "AI-Agent"],
     time: "15:20",
-    createdAt: "2026-05-27 15:20",
-    updatedAt: "2026-05-27 15:20",
+    createdAt: "2026-05-27T15:20:00.000Z",
+    updatedAt: "2026-05-27T15:20:00.000Z",
   },
 ];
 
@@ -480,8 +480,8 @@ export const TodayPage = (): React.JSX.Element => {
           completed: false,
           priority: draft.priority,
           sortOrder: nextOrder,
-          createdAt: `${entryDate} 00:00`,
-          updatedAt: `${entryDate} 00:00`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
         setTodos((currentTodos) => [created, ...currentTodos]);
         return true;
@@ -640,8 +640,8 @@ export const TodayPage = (): React.JSX.Element => {
           content: savedNote.content.trim(),
           tags: savedNote.tags,
           time: "00:00",
-          createdAt: `${entryDate} 00:00`,
-          updatedAt: `${entryDate} 00:00`,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
         setNotes((currentNotes) => [created, ...currentNotes]);
         return true;

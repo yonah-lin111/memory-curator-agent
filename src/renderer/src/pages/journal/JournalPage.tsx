@@ -11,15 +11,8 @@ import {
 } from "@/lib/dailyShared";
 
 // 生成当前时间戳，供无 bridge 环境回退使用。
-const createCurrentTimestamp = (entryDate: string): string => {
-  // 当前本地时间。
-  const now = new Date();
-  // 当前小时。
-  const hours = String(now.getHours()).padStart(2, "0");
-  // 当前分钟。
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${entryDate} ${hours}:${minutes}`;
+const createCurrentTimestamp = (_entryDate: string): string => {
+  return new Date().toISOString();
 };
 
 /**

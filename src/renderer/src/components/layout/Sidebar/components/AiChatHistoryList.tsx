@@ -63,7 +63,7 @@ type AiChatContextMenuState = {
  * 将会话时间转换为可比较时间戳，无法解析时保留稳定靠后排序。
  */
 const getSessionTimestampValue = (time: string): number => {
-  const value = Date.parse(time.replace(" ", "T"));
+  const value = Date.parse(time);
 
   return Number.isNaN(value) ? 0 : value;
 };
@@ -87,9 +87,21 @@ const sortSessionsByUpdatedTime = (items: AiChatSession[]): AiChatSession[] =>
   });
 
 /**
- * 历史列表展示到年月日时分，兼容旧的短时间数据。
+ * 历史列表展示到年月日时分，兼容新旧时间数据。
  */
-const formatSessionListTime = (time: string): string => time.slice(0, 16);
+const formatSessionListTime = (time: string): string => {
+  if (!time) return "";
+  if (time.includes("T")) {
+    const d = new Date(time);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  }
+  return time.slice(0, 16);
+};
 
 /**
  * AiChatHistoryList - 负责左侧对话历史列表的渲染与交互

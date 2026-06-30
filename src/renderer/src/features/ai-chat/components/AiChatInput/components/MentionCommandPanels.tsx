@@ -166,7 +166,9 @@ export const MentionCommandPanels = ({
             </span>
             <span className="text-xs text-white/30">-</span>
             <span className="truncate text-xs text-white/45">
-              {session.time}
+              {session.time.includes("T") 
+                ? new Date(session.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
+                : session.time}
             </span>
           </span>
         )}

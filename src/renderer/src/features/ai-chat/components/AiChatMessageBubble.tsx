@@ -1035,7 +1035,9 @@ export const AiChatMessageBubble = ({
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50"></span>
               </span>
             ) : (
-              message.time
+              message.time.includes("T") 
+                ? new Date(message.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
+                : message.time.slice(11, 16) || message.time
             )}
           </span>
           {!isUser && message.model && (

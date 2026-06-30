@@ -48,9 +48,7 @@ export type ThemesService = {
 
 /** 生成当前时间戳 */
 const createTimestamp = (): string => {
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+  return new Date().toISOString()
 }
 
 /** 数据库行 -> 页面主题 */

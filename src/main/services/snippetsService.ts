@@ -56,20 +56,19 @@ const getInsertedRowId = (result: unknown, entityName: string): number => {
  * 生成当前时间戳。
  */
 const createTimestamp = (): string => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const date = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${date} ${hours}:${minutes}`
+  return new Date().toISOString()
 }
 
 /**
  * 从时间戳提取列表展示时间。
  */
-const toDisplayTime = (timestamp: string): string => timestamp.slice(11, 16)
+const toDisplayTime = (timestamp: string): string => {
+  if (!timestamp) return "";
+  if (timestamp.includes("T")) {
+    return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+  return timestamp.slice(11, 16) || timestamp;
+}
 
 /**
  * 解析数据库标签字段。
