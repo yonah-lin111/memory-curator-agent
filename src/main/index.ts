@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'node:path'
+import * as fs from 'node:fs/promises'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { initDatabase } from '@/db'
 import { registerNotesHandlers } from '@/ipc/notesHandlers'
@@ -88,6 +89,19 @@ app.whenReady().then(() => {
       createWindow()
     }
   })
+
+  ipcMain.handle('dialog:showSaveDialog', async (event, options) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) {
+      throw new Error("Cannot find window for dialog");
+    }
+    const result = await dialog.showSaveDialog(window, options);
+    return result;
+  });
+
+  ipcMain.handle('fs:writeFile', async (_, filePath, content) => {
+    await fs.writeFile(filePath, content, 'utf-8');
+  });
 })
 
 app.on('window-all-closed', () => {

@@ -727,6 +727,14 @@ const api = {
     readAiChatTextFile: (url: string): Promise<string> =>
       ipcRenderer.invoke('files:ai-chat-text:read', url)
   },
+  dialog: {
+    showSaveDialog: (options: Electron.SaveDialogOptions): Promise<Electron.SaveDialogReturnValue> =>
+      ipcRenderer.invoke('dialog:showSaveDialog', options)
+  },
+  fs: {
+    writeFile: (filePath: string, content: string): Promise<void> =>
+      ipcRenderer.invoke('fs:writeFile', filePath, content)
+  },
   notes: {
     list: (categoryId?: number) => ipcRenderer.invoke('notes:list', categoryId),
     create: (draft: NoteDraftPayload & { categoryId?: number }) => ipcRenderer.invoke('notes:create', draft),

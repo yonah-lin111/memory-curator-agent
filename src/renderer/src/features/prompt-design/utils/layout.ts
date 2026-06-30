@@ -1,8 +1,8 @@
 import * as dagre from "dagre";
 import type { Node, Edge } from "@xyflow/react";
 
-const nodeWidth = 240; // 预估宽度，因为包含了内容稍微宽一点
-const nodeHeight = 160; // 流节点预估平均高度（考虑到有很多输入输出和内容）
+const nodeWidth = 280; // 预估宽度，因为包含了内容稍微宽一点，增大宽度边界
+const nodeHeight = 220; // 流节点预估平均高度（考虑到有很多输入输出和内容），增大高度边界
 const indepNodeHeight = 100; // 独立卡片预估高度
 
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "LR") => {
@@ -12,8 +12,10 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "L
   // 设置图的排版方向和节点间距
   dagreGraph.setGraph({
     rankdir: direction,
-    nodesep: 40, // 同一层级节点之间的间距（竖向间距）
-    ranksep: 60, // 层级之间的间距（横向间距）
+    nodesep: 80, // 同一层级节点之间的间距（竖向间距）- 增大以防止连线穿过节点
+    ranksep: 200, // 层级之间的间距（横向间距）- 增大以为连线提供空间
+    edgesep: 50, // 边与边之间的间距
+    ranker: "network-simplex", // 使用 network-simplex 算法，通常能减少交叉
   });
 
   const independentTypes = ["comment", "variable", "group"];

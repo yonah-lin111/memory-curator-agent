@@ -31,7 +31,9 @@ export type PromptCardType =
   | "loop"
   | "output"
   | "variable"
-  | "comment";
+  | "comment"
+  | "requirement"
+  | "role";
 
 /** 卡片类型元数据 */
 export type CardTypeMeta = {
@@ -49,6 +51,8 @@ export const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
   output:       { label: "输出终点",    defaultIcon: "CornerDownRight",  color: "text-lime-400 bg-lime-500/20",        isIndependent: false },
   variable:     { label: "变量定义",    defaultIcon: "Hash",             color: "text-yellow-400 bg-yellow-500/20",    isIndependent: true },
   comment:      { label: "注释说明",    defaultIcon: "StickyNote",       color: "text-gray-400 bg-gray-500/20",        isIndependent: true },
+  requirement:  { label: "业务需求",    defaultIcon: "FolderOpen",       color: "text-blue-400 bg-blue-500/20",        isIndependent: false },
+  role:         { label: "角色设定",    defaultIcon: "User",             color: "text-pink-400 bg-pink-500/20",        isIndependent: false },
 };
 
 export const iconMap: Record<string, React.ReactNode> = {
@@ -59,6 +63,8 @@ export const iconMap: Record<string, React.ReactNode> = {
   CornerDownRight:  <CornerDownRight className="w-4 h-4" />,
   Hash:             <Hash className="w-4 h-4" />,
   StickyNote:       <StickyNote className="w-4 h-4" />,
+  FolderOpen:       <FolderOpen className="w-4 h-4" />,
+  User:             <User className="w-4 h-4" />,
 };
 
 export type PromptNodeData = {

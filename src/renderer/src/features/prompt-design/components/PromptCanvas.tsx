@@ -49,10 +49,21 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "{{framework}}",
-      description: "前端框架变量",
+      title: "{{component}}",
+      description: "组件名称",
       nodeType: "variable",
-      variables: ["framework"],
+      variables: ["component"],
+    } as PromptNodeData,
+  },
+  {
+    id: "var-2",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "{{theme}}",
+      description: "UI 主题风格",
+      nodeType: "variable",
+      variables: ["theme"],
     } as PromptNodeData,
   },
   {
@@ -60,132 +71,184 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "设计备忘",
+      title: "需求梳理",
       nodeType: "comment",
-      content: "这是一个用于生成【登录功能】代码的提示词流程：\n结合了技术栈变量、系统角色定义以及接口文档上下文。",
+      content: "这是一个生成复杂 React 组件的提示词。\n目标是支持自动注入 UI 规范、解析业务需求，并在需要时生成 mock 数据。\n涉及到条件判断以决定是否包含测试代码，以及循环处理多个相似的子组件。",
     } as PromptNodeData,
   },
 
-  /* ── 连线卡片：模板片段 ── */
+  /* ── 连线卡片 ── */
   {
     id: "tpl-role",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
       title: "角色设定",
-      description: "设定 AI 的前端开发角色",
-      nodeType: "template",
-      content: "你是一个资深的前端开发工程师，精通 {{framework}}，擅长编写安全、优雅且符合现代 UI 规范的登录组件。",
-      variables: ["framework"],
+      description: "定义 AI 前端专家身份",
+      nodeType: "role",
+      content: "你是一个资深的 React 架构师。请使用 TypeScript 和 Tailwind CSS 为我实现一个高质量的 {{component}} 组件。\n请遵循当前项目的 {{theme}} 主题规范。",
+      variables: ["component", "theme"],
       outputs: [
         { id: "out-role", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "ctx-1",
+    id: "ctx-api",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "API 文档",
-      description: "注入后端登录接口规范",
+      title: "UI 规范上下文",
+      description: "注入项目设计系统文档",
       nodeType: "context",
-      content: "【登录接口】\nPOST /api/v1/auth/login\n请求体：{ email, password, captcha }\n响应：{ token, user: { id, name, avatar, roles } }\n注意处理 401 和 429 状态码。",
+      content: "【设计规范】\n- 按钮圆角：rounded-md\n- 主色调：bg-indigo-600 hover:bg-indigo-700\n- 阴影：shadow-sm\n- 字体：font-sans text-sm\n所有交互元素必须包含焦点状态 (focus-visible)。",
       outputs: [
-        { id: "out-ctx", name: "Output", type: "text" },
+        { id: "out-ctx-api", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "tpl-task",
+    id: "tpl-task-1",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "需求描述",
-      description: "业务需求明细",
+      title: "需求: 基础框架",
+      description: "描述组件的核心骨架",
       nodeType: "template",
-      content: "请使用 {{framework}} 实现一个登录页面。\n要求包含邮箱和密码校验，并在提交时展示 loading 状态。\n界面要包含“忘记密码”入口。",
-      variables: ["framework"],
+      content: "该组件需要展示一个数据表格的整体布局骨架，包括表头、表格主体区域，并支持基础响应式。",
+      inputs: [
+        { id: "in-task1-role", name: "角色设定", type: "text" },
+        { id: "in-task1-ctx", name: "UI 规范", type: "text" },
+      ],
       outputs: [
-        { id: "out-task", name: "Output", type: "text" },
+        { id: "out-task-1", name: "基础要求", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "cond-1",
+    id: "tpl-task-2",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "框架选择?",
-      description: "根据变量分支输出",
+      title: "需求: 分页功能",
+      description: "描述分页组件逻辑",
+      nodeType: "requirement",
+      content: "在表格底部增加分页控制器，包含上一页、下一页和页码快速跳转。支持每页展示数量切换。",
+      inputs: [
+        { id: "in-task2-base", name: "依赖骨架", type: "text" },
+      ],
+      outputs: [
+        { id: "out-task-2", name: "分页要求", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
+    id: "tpl-task-3",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "需求: 搜索与过滤",
+      description: "描述表头搜索逻辑",
+      nodeType: "requirement",
+      content: "在表格顶部增加搜索框和列过滤器。要求实现搜索防抖，并且清空搜索时重置回第一页。",
+      inputs: [
+        { id: "in-task3-base", name: "依赖骨架", type: "text" },
+      ],
+      outputs: [
+        { id: "out-task-3", name: "搜索要求", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
+    id: "cond-test",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "数据源类型?",
+      description: "根据数据获取方式分支",
       nodeType: "condition",
       inputs: [
-        { id: "in-cond", name: "Input", type: "text" },
+        { id: "in-cond", name: "集成所有需求", type: "text" },
       ],
       outputs: [
-        { id: "out-true", name: "React", type: "text" },
-        { id: "out-false", name: "Vue", type: "text" },
+        { id: "out-true", name: "API 联调", type: "text" },
+        { id: "out-false", name: "纯前端 Mock", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "tpl-react",
+    id: "tpl-api",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "React 版",
+      title: "请求逻辑生成",
       nodeType: "template",
-      content: "使用 React + Tailwind CSS 实现组件。",
+      content: "请使用 SWR 或 React Query 编写数据请求钩子。处理 isLoading 和 error 状态，实现接口请求参数与分页、搜索状态的双向绑定。",
       inputs: [
-        { id: "in-react", name: "Input", type: "text" },
+        { id: "in-api", name: "前置需求", type: "text" },
       ],
       outputs: [
-        { id: "out-react", name: "Output", type: "text" },
+        { id: "out-api", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "tpl-vue",
+    id: "loop-mock",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "Vue 版",
-      nodeType: "template",
-      content: "使用 Vue 3 + Element Plus 实现组件。",
+      title: "生成 Mock 数据",
+      description: "为表格列生成测试数据",
+      nodeType: "loop",
+      content: "对于表格中的每一列，生成 20 条符合字段类型的随机 mock 数据。实现一个本地的假分页和搜索过滤逻辑。",
       inputs: [
-        { id: "in-vue", name: "Input", type: "text" },
+        { id: "in-loop", name: "前置需求", type: "text" },
       ],
       outputs: [
-        { id: "out-vue", name: "Output", type: "text" },
+        { id: "out-loop", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
   {
-    id: "out-1",
+    id: "out-final",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "最终提示词",
+      title: "最终代码生成",
       nodeType: "output",
       inputs: [
-        { id: "in-out-role", name: "角色", type: "text" },
-        { id: "in-out-ctx", name: "文档", type: "text" },
-        { id: "in-out-res", name: "结果", type: "text" },
+        { id: "in-out-api", name: "API版代码", type: "text" },
+        { id: "in-out-mock", name: "Mock版代码", type: "text" },
       ],
     } as PromptNodeData,
   },
 ];
 
 const rawInitialEdges: Edge[] = [
-  { id: "e-role-out",  source: "tpl-role",  target: "out-1",     sourceHandle: "out-role",  targetHandle: "in-out-role" },
-  { id: "e-ctx-out",   source: "ctx-1",     target: "out-1",     sourceHandle: "out-ctx",   targetHandle: "in-out-ctx" },
-  { id: "e-task-cond", source: "tpl-task",  target: "cond-1",    sourceHandle: "out-task",  targetHandle: "in-cond" },
-  { id: "e-cond-react",source: "cond-1",    target: "tpl-react", sourceHandle: "out-true",  targetHandle: "in-react" },
-  { id: "e-cond-vue",  source: "cond-1",    target: "tpl-vue",   sourceHandle: "out-false", targetHandle: "in-vue" },
-  { id: "e-react-out", source: "tpl-react", target: "out-1",     sourceHandle: "out-react", targetHandle: "in-out-res" },
-  { id: "e-vue-out",   source: "tpl-vue",   target: "out-1",     sourceHandle: "out-vue",   targetHandle: "in-out-res" },
+  // 角色和规范 -> 需求1（骨架）
+  { id: "e-role-task1", source: "tpl-role", target: "tpl-task-1", sourceHandle: "out-role", targetHandle: "in-task1-role" },
+  { id: "e-ctx-task1", source: "ctx-api", target: "tpl-task-1", sourceHandle: "out-ctx-api", targetHandle: "in-task1-ctx" },
+  
+  // 需求1（骨架）-> 需求2 和 需求3 (并行拆解功能)
+  { id: "e-task1-task2", source: "tpl-task-1", target: "tpl-task-2", sourceHandle: "out-task-1", targetHandle: "in-task2-base" },
+  { id: "e-task1-task3", source: "tpl-task-1", target: "tpl-task-3", sourceHandle: "out-task-1", targetHandle: "in-task3-base" },
+
+  // 需求2 和 需求3 -> 汇聚到条件判断
+  // 这里通过复用 in-cond 接口来汇集多个需求流，在实际业务中可能也是个集线器（这里为了简便直接连到条件）
+  { id: "e-task2-cond", source: "tpl-task-2", target: "cond-test", sourceHandle: "out-task-2", targetHandle: "in-cond" },
+  { id: "e-task3-cond", source: "tpl-task-3", target: "cond-test", sourceHandle: "out-task-3", targetHandle: "in-cond" },
+  
+  // 条件 -> 真实API请求模块 (True 分支)
+  { id: "e-cond-api", source: "cond-test", target: "tpl-api", sourceHandle: "out-true", targetHandle: "in-api" },
+  // 条件 -> Mock生成模块 (False 分支)
+  { id: "e-cond-mock", source: "cond-test", target: "loop-mock", sourceHandle: "out-false", targetHandle: "in-loop" },
+  
+  // 分支模块 -> 最终输出
+  { id: "e-api-out", source: "tpl-api", target: "out-final", sourceHandle: "out-api", targetHandle: "in-out-api" },
+  { id: "e-mock-out", source: "loop-mock", target: "out-final", sourceHandle: "out-loop", targetHandle: "in-out-mock" },
 ].map((e) => ({
   ...e,
+  type: "smoothstep", // 使用 smoothstep 类型
   animated: true,
   style: { stroke: "#818cf8", strokeWidth: 2 },
 }));
@@ -393,9 +456,8 @@ export const PromptCanvas = () => {
     }
 
     try {
-      if (window.electron && window.electron.ipcRenderer) {
-        const result = await window.electron.ipcRenderer.invoke(
-          "dialog:showSaveDialog",
+      if (window.api && window.api.dialog) {
+        const result = await window.api.dialog.showSaveDialog(
           {
             title: "导出提示词流程",
             defaultPath: `prompt_flow_${Date.now()}.md`,
@@ -403,8 +465,12 @@ export const PromptCanvas = () => {
           }
         );
         if (result && !result.canceled && result.filePath) {
-          await window.electron.ipcRenderer.invoke(
-            "fs:writeFile",
+          // 这里可以使用 files 模块的 API 或者是增加一个 writeFile API
+          // 暂时使用 Blob 下载的方式来作为 fallback，或者我们增加一个 writeFile API
+          // 比较正规的做法是增加 api.files.writeFile
+          
+          // 我们先修改调用方式，这里直接调用 ipcRenderer 如果是在 preload 中暴露的话
+          await window.api.fs.writeFile(
             result.filePath,
             md
           );
@@ -431,6 +497,13 @@ export const PromptCanvas = () => {
       resetExportRequest();
     }
   }, [nodes, edges, resetExportRequest, toast]);
+
+  useEffect(() => {
+    if (exportRequest > 0) {
+      handleExport();
+    }
+  }, [exportRequest, handleExport]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -506,6 +579,7 @@ export const PromptCanvas = () => {
         addEdge(
           {
             ...params,
+            type: "smoothstep", // 新连接的线也使用 smoothstep
             animated: true,
             style: { stroke: "#818cf8", strokeWidth: 2 },
           } as Edge,
