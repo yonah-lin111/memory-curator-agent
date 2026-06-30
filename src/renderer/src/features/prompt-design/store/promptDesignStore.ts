@@ -8,6 +8,14 @@ interface PromptDesignState {
   resetExportRequest: () => void;
   edgeType: 'smoothstep' | 'default';
   setEdgeType: (type: 'smoothstep' | 'default') => void;
+  projectName: string;
+  setProjectName: (name: string) => void;
+  itemName: string;
+  setItemName: (name: string) => void;
+  activeProjectId: string | null;
+  setActiveProjectId: (id: string | null) => void;
+  activeDesignId: string | null;
+  setActiveDesignId: (id: string | null) => void;
 }
 
 export const usePromptDesignStore = create<PromptDesignState>((set) => ({
@@ -18,4 +26,12 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   resetExportRequest: () => set({ exportRequest: 0 }),
   edgeType: 'default',
   setEdgeType: (type: 'smoothstep' | 'default') => set({ edgeType: type }),
+  projectName: '未命名项目',
+  setProjectName: (name: string) => set({ projectName: name }),
+  itemName: '未命名设计',
+  setItemName: (name: string) => set({ itemName: name }),
+  activeProjectId: null,
+  setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
+  activeDesignId: null,
+  setActiveDesignId: (id: string | null) => set({ activeDesignId: id }),
 }));

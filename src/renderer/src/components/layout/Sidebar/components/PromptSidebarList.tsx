@@ -56,6 +56,12 @@ export const PromptSidebarList = ({
   } | null>(null);
 
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
+  const activeProjectId = usePromptDesignStore((state) => state.activeProjectId);
+  const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
+  const setActiveProjectId = usePromptDesignStore((state) => state.setActiveProjectId);
+  const setActiveDesignId = usePromptDesignStore((state) => state.setActiveDesignId);
+  const setProjectName = usePromptDesignStore((state) => state.setProjectName);
+  const setItemName = usePromptDesignStore((state) => state.setItemName);
 
   const fetchData = async () => {
     try {
@@ -497,7 +503,7 @@ export const PromptSidebarList = ({
                 return (
                   <div key={proj.id} className="flex flex-col gap-1.5">
                     <div
-                      className="flex items-center justify-between px-1 py-1 cursor-pointer rounded-[6px] hover:bg-white/[0.02] transition-colors group"
+                      className={`flex items-center justify-between px-1 py-1 cursor-pointer rounded-[6px] transition-colors group ${activeProjectId === proj.id ? 'bg-white/10' : 'hover:bg-white/[0.02]'}`}
                       onClick={() => {
                         if (editingId !== proj.id) {
                           toggleProject(proj.id);
@@ -510,7 +516,7 @@ export const PromptSidebarList = ({
                         placement="right" 
                         contentClassName="whitespace-pre-wrap"
                       >
-                        <div className="flex-1 min-w-0 text-xs font-semibold text-white/40 uppercase tracking-wider group-hover:text-white/60 transition-colors truncate pr-2">
+                        <div className={`flex-1 min-w-0 text-xs font-semibold uppercase tracking-wider transition-colors truncate pr-2 ${activeProjectId === proj.id ? 'text-white/90' : 'text-white/40 group-hover:text-white/60'}`}>
                           {editingId === proj.id ? (
                             <input
                               // eslint-disable-next-line jsx-a11y/no-autofocus
@@ -536,36 +542,48 @@ export const PromptSidebarList = ({
                     </div>
                     {!isCollapsed && (
                       <div className="flex flex-col gap-0.5">
-                        {proj.prompts.map((prompt) => (
-                          <div
-                            key={prompt.id}
-                            className="w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 hover:bg-white/[0.02] text-white/70 cursor-pointer group"
-                            onContextMenu={(e) =>
-                              handleContextMenu(e, "prompt", prompt, proj.id)
-                            }
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors flex-shrink-0 mx-1" />
-                            <span className="flex-1 min-w-0 text-xs truncate group-hover:text-white transition-colors">
-                              {editingId === prompt.id ? (
-                                <input
-                                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                                  autoFocus
-                                  onFocus={(e) => e.target.select()}
-                                  value={editingName}
-                                  onChange={(e) => setEditingName(e.target.value)}
-                                  onBlur={handleRenameCommit}
-                                  onKeyDown={(e) =>
-                                    e.key === "Enter" && handleRenameCommit()
-                                  }
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
-                                />
-                              ) : (
-                                prompt.name
-                              )}
-                            </span>
+                        {proj.prompts.length > 0 ? (
+                          proj.prompts.map((prompt) => (
+                            <div
+                              key={prompt.id}
+                              className={`w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 cursor-pointer group ${activeDesignId === prompt.id ? 'bg-white/10 text-white' : 'hover:bg-white/[0.02] text-white/70'}`}
+                              onClick={() => {
+                                setActiveProjectId(proj.id);
+                                setActiveDesignId(prompt.id);
+                                setProjectName(proj.name);
+                                setItemName(prompt.name);
+                              }}
+                              onContextMenu={(e) =>
+                                handleContextMenu(e, "prompt", prompt, proj.id)
+                              }
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full transition-colors flex-shrink-0 mx-1 ${activeDesignId === prompt.id ? 'bg-white/50' : 'bg-white/10 group-hover:bg-white/30'}`} />
+                              <span className={`flex-1 min-w-0 text-xs truncate transition-colors ${activeDesignId === prompt.id ? 'text-white' : 'group-hover:text-white'}`}>
+                                {editingId === prompt.id ? (
+                                  <input
+                                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                                    autoFocus
+                                    onFocus={(e) => e.target.select()}
+                                    value={editingName}
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    onBlur={handleRenameCommit}
+                                    onKeyDown={(e) =>
+                                      e.key === "Enter" && handleRenameCommit()
+                                    }
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
+                                  />
+                                ) : (
+                                  prompt.name
+                                )}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-xs text-white/20 text-center select-none">
+                            暂无设计，请右键新建
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>

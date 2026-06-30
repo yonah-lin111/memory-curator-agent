@@ -147,7 +147,7 @@ const AppContent = (): React.JSX.Element => {
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
 
-  const { requestExport } = usePromptDesignStore();
+  const { requestExport, projectName, itemName } = usePromptDesignStore();
 
   // 主内容页面切换时的 Loading 状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
@@ -296,6 +296,8 @@ const AppContent = (): React.JSX.Element => {
           onPromptAiToggle={handlePromptAiToggle}
           onPromptExport={requestExport}
           chatTitle={activeChatSession.title}
+          promptsProjectName={projectName}
+          promptsItemName={itemName}
           chatLeadingAction={
             activeOverlay === "chat" ? (
               <IconButton

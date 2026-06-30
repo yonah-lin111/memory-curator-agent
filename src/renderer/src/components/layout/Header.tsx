@@ -28,6 +28,10 @@ export interface HeaderProps {
   onPromptAiToggle?: () => void;
   // 导出提示词回调
   onPromptExport?: () => void;
+  // 提示词项目名称
+  promptsProjectName?: string;
+  // 提示词设计项名称
+  promptsItemName?: string;
 }
 
 /**
@@ -45,6 +49,8 @@ export const Header = ({
   isPromptAiOpen = false,
   onPromptAiToggle,
   onPromptExport,
+  promptsProjectName,
+  promptsItemName,
 }: HeaderProps): React.JSX.Element => {
   const { toasts } = useToast();
   const {
@@ -55,15 +61,15 @@ export const Header = ({
     settingsState,
   } = useHeaderStore();
 
-  const rightZoneKey = isChatOpen 
-    ? "chat" 
-    : isPromptsOpen 
-      ? "prompts" 
+  const rightZoneKey = isChatOpen
+    ? "chat"
+    : isPromptsOpen
+      ? "prompts"
       : `normal-${extraActions ? "extra" : "none"}-${settingsState ? "settings" : "none"}`;
 
   return (
     <header className="flex-shrink-0 mb-3 rounded-[6px] border border-white/5 bg-[#212121] px-4 py-2 flex items-center justify-between h-10 relative z-30">
-      <div 
+      <div
         key={`left-${activePage}-${isChatOpen ? "chat" : "normal"}`}
         className="flex items-center gap-2 text-xs font-mono animate-slide-in-from-left"
       >
@@ -94,6 +100,24 @@ export const Header = ({
             </span>
           </>
         )}
+        {isPromptsOpen && (promptsProjectName || promptsItemName) && (
+          <>
+            <span className="text-white/30 font-bold">·</span>
+            <span className="flex items-center max-w-[300px] truncate select-text">
+              {promptsProjectName && (
+                <span className="text-white font-bold">
+                  {promptsProjectName}
+                </span>
+              )}
+              {promptsProjectName && promptsItemName && (
+                <span className="text-white/30 mx-1.5">-</span>
+              )}
+              {promptsItemName && (
+                <span className="text-white font-bold">{promptsItemName}</span>
+              )}
+            </span>
+          </>
+        )}
       </div>
       <div className="flex items-center gap-1.5">
         {/* 全局 Toast 文字消息展示 */}
@@ -113,7 +137,7 @@ export const Header = ({
             );
           })}
         </div>
-        <div 
+        <div
           key={`right-zone-${rightZoneKey}`}
           className="flex items-center gap-1.5 animate-slide-in-from-right"
         >
