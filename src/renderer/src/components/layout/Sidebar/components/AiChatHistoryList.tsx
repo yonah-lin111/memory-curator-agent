@@ -617,16 +617,16 @@ export const AiChatHistoryList = ({
             !isGenerating &&
             (completedSessionIds.has(session.id) || Boolean(completionNoticeSessionIds?.has(session.id)));
           const itemStyleClass = isActive
-            ? "bg-white text-black font-semibold"
+            ? "bg-white/10 text-white font-semibold"
             : hasCompletionNotice
               ? "bg-emerald-950/20 text-emerald-300 font-semibold shadow-[inset_0_0_10px_rgba(16,185,129,0.06)]"
-              : "bg-white/[0.03] text-white/70 hover:bg-white/[0.06] hover:text-white";
+              : "hover:bg-white/[0.02] text-white/70 group";
 
           return (
             <div
               key={session.id}
               aria-current={isActive ? "true" : undefined}
-              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${itemStyleClass} ${isEditing ? "" : "cursor-pointer"}`}
+              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${itemStyleClass} ${isEditing ? "" : "cursor-pointer"}`}
               role={isEditing ? undefined : "button"}
               tabIndex={isEditing ? undefined : 0}
               onClick={() => {
@@ -657,11 +657,9 @@ export const AiChatHistoryList = ({
                     aria-hidden="true"
                     className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-[4px] border ${
                       isSelected
-                        ? isActive
-                          ? "border-black bg-black text-white"
-                          : "border-white bg-white text-black"
+                        ? "border-white bg-white text-black"
                         : isActive
-                          ? "border-black/30"
+                          ? "border-white/30"
                           : "border-white/15"
                     }`}
                   >
@@ -669,19 +667,12 @@ export const AiChatHistoryList = ({
                   </span>
                 ) : null}
                 {isEditing ? (
-                  <div className="relative min-w-0 flex-1">
-                    <div
-                      aria-hidden="true"
-                      className="invisible min-h-[14px] break-words whitespace-pre-wrap text-xs font-bold leading-none"
-                    >
-                      {editingTitle?.title || " "}
-                    </div>
+                  <div className="min-w-0 flex-1">
                     <input
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
                       autoFocus
                       aria-label={`Edit chat title ${session.title}`}
-                      className={`absolute inset-0 h-full w-full min-w-0 rounded-[4px] border border-transparent bg-transparent text-xs font-bold leading-none outline-none focus:border-transparent ${
-                        isActive ? "text-black" : "text-white"
-                      }`}
+                      className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full text-xs font-bold leading-none pb-0.5"
                       onBlur={() => void handleCommitEditTitle(session)}
                       onChange={(event) =>
                         setEditingTitle((currentDraft) =>
@@ -703,18 +694,30 @@ export const AiChatHistoryList = ({
                           setEditingTitle(null);
                         }
                       }}
+                      onClick={(e) => e.stopPropagation()}
                       value={editingTitle?.title ?? ""}
                     />
+                    <span
+                      className={`mt-1 block truncate text-[10px] font-mono leading-none ${
+                        isActive
+                          ? "text-white/60"
+                          : hasCompletionNotice
+                            ? "text-emerald-400/50"
+                            : "text-white/30"
+                      }`}
+                    >
+                      {formatSessionListTime(session.time)}
+                    </span>
                   </div>
                 ) : (
                   <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-bold leading-none">
+                    <span className={`block truncate text-xs font-bold leading-none transition-colors ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
                       {session.title}
                     </span>
                     <span
                       className={`mt-1 block truncate text-[10px] font-mono leading-none ${
                         isActive
-                          ? "text-black/55"
+                          ? "text-white/60"
                           : hasCompletionNotice
                             ? "text-emerald-400/50"
                             : "text-white/30"
@@ -728,7 +731,7 @@ export const AiChatHistoryList = ({
                   <span
                     className={`flex min-h-2.5 min-w-[2.5rem] flex-shrink-0 items-center justify-end text-[10px] font-mono leading-none ${
                       isActive
-                        ? "text-black/55"
+                        ? "text-white/60"
                         : hasCompletionNotice
                           ? "text-emerald-400/50"
                           : "text-white/30"
