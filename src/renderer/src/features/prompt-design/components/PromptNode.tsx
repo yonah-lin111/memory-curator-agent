@@ -3,15 +3,10 @@ import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { useToast } from "@/components/ui/Toast";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import {
-  Bot,
   User,
-  MessageSquare,
   FileText,
   Settings,
-  Settings2,
   Database,
-  BrainCircuit,
-  Wrench,
   Info,
   GitBranch,
   RefreshCw,
@@ -19,7 +14,6 @@ import {
   Hash,
   StickyNote,
   FolderOpen,
-  Layers,
   X,
 } from "lucide-react";
 
@@ -35,7 +29,28 @@ export type PromptCardType =
   | "requirement"
   | "role";
 
-/** 卡片类型元数据 */
+/** 
+ * 卡片类型元数据 
+ * 
+ * 卡片设计定位及使用场景：
+ * 
+ * 1. 内容定义类（构建提示词的主体）：
+ * - role (角色设定): 流程起点，设定 AI 的人设、技能栈和语气 (如："你是一个资深 React 架构师")。
+ * - context (上下文注入): 提供 AI 完成任务所需的背景知识、前置规则或参考文档 (如：API文档、设计规范)。
+ * - requirement (业务需求): 清晰描述具体要 AI 执行的任务目标 (如："实现一个带分页的数据表格")。
+ * - template (模板片段): 通用的内容组装块，用于格式要求、补充说明等 (如："请只输出代码，不带解释")。
+ * 
+ * 2. 逻辑控制类（让提示词具备动态变化能力）：
+ * - condition (条件分支): 根据前置条件决定提示词的拼接走向 (如："是否生成测试"，True 拼接测试要求，False 拼接 Mock 数据)。
+ * - loop (循环迭代): 指示 AI 对一组数据执行重复操作的指令包装。
+ * 
+ * 3. 终点类：
+ * - output (输出终点): 所有连线的归宿，负责将连入的碎片合并成最终发送给大模型的完整提示词。
+ * 
+ * 4. 变量与辅助类（独立存在，isIndependent: true）：
+ * - variable (变量定义): 定义运行时动态传入的占位符 (如：{{framework}})。
+ * - comment (注释说明): 仅供设计者阅读的便签，不参与最终提示词生成。
+ */
 export type CardTypeMeta = {
   label: string;
   defaultIcon: string;

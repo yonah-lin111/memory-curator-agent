@@ -280,7 +280,6 @@ export const PromptCanvas = () => {
     }
 
     // ── 数据结构准备 ──
-    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const dataMap = new Map(nodes.map((n) => [n.id, n.data as PromptNodeData]));
 
     const outgoing = new Map<string, Edge[]>();
