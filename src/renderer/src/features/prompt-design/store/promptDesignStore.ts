@@ -6,6 +6,8 @@ interface PromptDesignState {
   exportRequest: number;
   requestExport: () => void;
   resetExportRequest: () => void;
+  edgeType: 'smoothstep' | 'default';
+  setEdgeType: (type: 'smoothstep' | 'default') => void;
 }
 
 export const usePromptDesignStore = create<PromptDesignState>((set) => ({
@@ -14,4 +16,6 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   exportRequest: 0,
   requestExport: () => set((state) => ({ exportRequest: state.exportRequest + 1 })),
   resetExportRequest: () => set({ exportRequest: 0 }),
+  edgeType: 'default',
+  setEdgeType: (type: 'smoothstep' | 'default') => set({ edgeType: type }),
 }));

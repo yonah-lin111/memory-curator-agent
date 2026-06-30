@@ -40,6 +40,34 @@ const minimapColors: Record<string, string> = {
   variable:     "#facc15",
   comment:      "#9ca3af",
   group:        "#a1a1aa",
+  fewshot:      "#e879f9",
+  format:       "#818cf8",
+  constraint:   "#f43f5e",
+  audience:     "#2dd4bf",
+};
+
+/** 获取连接线的颜色 */
+const getEdgeColor = (nodeType?: string, sourceHandle?: string | null): string => {
+  if (nodeType === "condition") {
+    if (sourceHandle === "out-true") return "#10b981"; // 绿色 (emerald-500)
+    if (sourceHandle === "out-false") return "#ef4444"; // 红色 (rose-500)
+    return "#fb923c"; // 橘色 (orange-400)
+  }
+  
+  const colors: Record<string, string> = {
+    role:         "#f472b6", // 粉色 (pink-400)
+    context:      "#c084fc", // 紫色 (purple-400)
+    audience:     "#2dd4bf", // 蒂芙尼蓝 (teal-400)
+    fewshot:      "#e879f9", // 紫罗兰/洋红色 (fuchsia-400)
+    format:       "#818cf8", // 靛蓝色 (indigo-400)
+    constraint:   "#f43f5e", // 玫瑰红 (rose-400)
+    template:     "#fbbf24", // 琥珀黄 (amber-400)
+    requirement:  "#60a5fa", // 亮蓝色 (blue-400)
+    loop:         "#22d3ee", // 青色 (cyan-400)
+    output:       "#a3e635", // 莱姆绿 (lime-400)
+  };
+
+  return colors[nodeType || ""] || "#818cf8"; // 默认 indigo-400
 };
 
 const rawInitialNodes = [
@@ -71,9 +99,9 @@ const rawInitialNodes = [
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
-      title: "需求梳理",
+      title: "需求与规约设计",
       nodeType: "comment",
-      content: "这是一个生成复杂 React 组件的提示词。\n目标是支持自动注入 UI 规范、解析业务需求，并在需要时生成 mock 数据。\n涉及到条件判断以决定是否包含测试代码，以及循环处理多个相似的子组件。",
+      content: "这是一个生成复杂 React 数据表格的工程流。\n我们加入了：\n- 目标受众：规定生成代码的解释颗粒度\n- 示例示范：指导 API 数据获取规范 (SWR)\n- 约束限制：定义核心开发的红线准则\n- 输出格式：控制最终代码交付标准",
     } as PromptNodeData,
   },
 
@@ -94,12 +122,26 @@ const rawInitialNodes = [
     } as PromptNodeData,
   },
   {
+    id: "aud-junior",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "受众: 初级开发者",
+      description: "限定代码解释的详细度",
+      nodeType: "audience",
+      content: "【目标受众】团队中的初级开发者。\n要求：代码中需要包含详尽的 TypeScript 类型解释以及 React Hooks (如 useMemo, useCallback) 的原理解析注释，帮助初学者快速理解核心逻辑。",
+      outputs: [
+        { id: "out-aud", name: "Output", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
     id: "ctx-api",
     type: "promptNode",
     position: { x: 0, y: 0 },
     data: {
       title: "UI 规范上下文",
-      description: "注入项目设计系统文档",
+      description: "注入项目设计 system 文档",
       nodeType: "context",
       content: "【设计规范】\n- 按钮圆角：rounded-md\n- 主色调：bg-indigo-600 hover:bg-indigo-700\n- 阴影：shadow-sm\n- 字体：font-sans text-sm\n所有交互元素必须包含焦点状态 (focus-visible)。",
       outputs: [
@@ -119,6 +161,7 @@ const rawInitialNodes = [
       inputs: [
         { id: "in-task1-role", name: "角色设定", type: "text" },
         { id: "in-task1-ctx", name: "UI 规范", type: "text" },
+        { id: "in-task1-aud", name: "目标受众", type: "text" },
       ],
       outputs: [
         { id: "out-task-1", name: "基础要求", type: "text" },
@@ -177,6 +220,20 @@ const rawInitialNodes = [
     } as PromptNodeData,
   },
   {
+    id: "few-swr",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "示例: SWR 获取标准",
+      description: "API 数据流处理示例",
+      nodeType: "fewshot",
+      content: "【示范代码】\n```typescript\nconst { data, error, isLoading } = useSWR('/api/list', fetcher, {\n  revalidateOnFocus: false,\n  dedupingInterval: 5000\n});\n```\n必须使用 useSWR 代替普通的 useEffect 进行异步状态抓取。",
+      outputs: [
+        { id: "out-few", name: "Output", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
     id: "tpl-api",
     type: "promptNode",
     position: { x: 0, y: 0 },
@@ -186,6 +243,7 @@ const rawInitialNodes = [
       content: "请使用 SWR 或 React Query 编写数据请求钩子。处理 isLoading 和 error 状态，实现接口请求参数与分页、搜索状态的双向绑定。",
       inputs: [
         { id: "in-api", name: "前置需求", type: "text" },
+        { id: "in-api-few", name: "API 示范", type: "text" },
       ],
       outputs: [
         { id: "out-api", name: "Output", type: "text" },
@@ -200,12 +258,40 @@ const rawInitialNodes = [
       title: "生成 Mock 数据",
       description: "为表格列生成测试数据",
       nodeType: "loop",
-      content: "对于表格中的每一列，生成 20 条符合字段类型的随机 mock 数据。实现一个本地的假分页和搜索过滤逻辑。",
+      content: "对于表格中的每一列，生成 20 条符合字段类型的随机 mock 数据。实现一个本地的假分页 and 搜索过滤逻辑。",
       inputs: [
         { id: "in-loop", name: "前置需求", type: "text" },
       ],
       outputs: [
         { id: "out-loop", name: "Output", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
+    id: "const-rules",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "开发规范与红线",
+      description: "严格执行的代码边界",
+      nodeType: "constraint",
+      content: "【严禁规则】\n1. 禁止引入除 lucide-react 以外的第三方图标库。\n2. 代码必须完全通过 TypeScript 严格类型检查，绝不能使用 any 类型。\n3. 不要添加任何额外的第三方状态管理库 (如 Redux)。",
+      outputs: [
+        { id: "out-const", name: "Output", type: "text" },
+      ],
+    } as PromptNodeData,
+  },
+  {
+    id: "fmt-json",
+    type: "promptNode",
+    position: { x: 0, y: 0 },
+    data: {
+      title: "输出格式约束",
+      description: "约束最终的代码交付标准",
+      nodeType: "format",
+      content: "【最终交付格式】\n1. 顶层给出组件的设计思路概览 (30字以内)。\n2. 接下来是用 ```tsx 标记包裹的单文件完整代码。\n3. 尾部提供一个该组件的 Jest 单体测试示范用例。",
+      outputs: [
+        { id: "out-fmt", name: "Output", type: "text" },
       ],
     } as PromptNodeData,
   },
@@ -219,39 +305,56 @@ const rawInitialNodes = [
       inputs: [
         { id: "in-out-api", name: "API版代码", type: "text" },
         { id: "in-out-mock", name: "Mock版代码", type: "text" },
+        { id: "in-out-const", name: "开发约束", type: "text" },
+        { id: "in-out-fmt", name: "格式约束", type: "text" },
       ],
     } as PromptNodeData,
   },
 ];
 
+const initialNodeTypesMap = new Map<string, string>(
+  rawInitialNodes.map((n) => [n.id, n.data.nodeType as string])
+);
+
 const rawInitialEdges: Edge[] = [
-  // 角色和规范 -> 需求1（骨架）
+  // 角色、受众和规范 -> 需求1（骨架）
   { id: "e-role-task1", source: "tpl-role", target: "tpl-task-1", sourceHandle: "out-role", targetHandle: "in-task1-role" },
   { id: "e-ctx-task1", source: "ctx-api", target: "tpl-task-1", sourceHandle: "out-ctx-api", targetHandle: "in-task1-ctx" },
+  { id: "e-aud-task1", source: "aud-junior", target: "tpl-task-1", sourceHandle: "out-aud", targetHandle: "in-task1-aud" },
   
   // 需求1（骨架）-> 需求2 和 需求3 (并行拆解功能)
   { id: "e-task1-task2", source: "tpl-task-1", target: "tpl-task-2", sourceHandle: "out-task-1", targetHandle: "in-task2-base" },
   { id: "e-task1-task3", source: "tpl-task-1", target: "tpl-task-3", sourceHandle: "out-task-1", targetHandle: "in-task3-base" },
 
   // 需求2 和 需求3 -> 汇聚到条件判断
-  // 这里通过复用 in-cond 接口来汇集多个需求流，在实际业务中可能也是个集线器（这里为了简便直接连到条件）
   { id: "e-task2-cond", source: "tpl-task-2", target: "cond-test", sourceHandle: "out-task-2", targetHandle: "in-cond" },
   { id: "e-task3-cond", source: "tpl-task-3", target: "cond-test", sourceHandle: "out-task-3", targetHandle: "in-cond" },
   
   // 条件 -> 真实API请求模块 (True 分支)
   { id: "e-cond-api", source: "cond-test", target: "tpl-api", sourceHandle: "out-true", targetHandle: "in-api" },
+  // 示例示范 -> 真实API请求模块
+  { id: "e-few-api", source: "few-swr", target: "tpl-api", sourceHandle: "out-few", targetHandle: "in-api-few" },
+
   // 条件 -> Mock生成模块 (False 分支)
   { id: "e-cond-mock", source: "cond-test", target: "loop-mock", sourceHandle: "out-false", targetHandle: "in-loop" },
   
   // 分支模块 -> 最终输出
   { id: "e-api-out", source: "tpl-api", target: "out-final", sourceHandle: "out-api", targetHandle: "in-out-api" },
   { id: "e-mock-out", source: "loop-mock", target: "out-final", sourceHandle: "out-loop", targetHandle: "in-out-mock" },
-].map((e) => ({
-  ...e,
-  type: "smoothstep", // 使用 smoothstep 类型
-  animated: true,
-  style: { stroke: "#818cf8", strokeWidth: 2 },
-}));
+
+  // 约束限制和输出格式 -> 最终输出
+  { id: "e-const-out", source: "const-rules", target: "out-final", sourceHandle: "out-const", targetHandle: "in-out-const" },
+  { id: "e-fmt-out", source: "fmt-json", target: "out-final", sourceHandle: "out-fmt", targetHandle: "in-out-fmt" },
+].map((e) => {
+  const sourceType = initialNodeTypesMap.get(e.source);
+  const strokeColor = getEdgeColor(sourceType, e.sourceHandle);
+  return {
+    ...e,
+    type: "default",
+    animated: true,
+    style: { stroke: strokeColor, strokeWidth: 2 },
+  };
+});
 
 // 初始化时即进行一次排版
 const { nodes: initialNodes, edges: initialEdges } = getLayoutedElements(
@@ -271,7 +374,17 @@ export const PromptCanvas = () => {
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
   const exportRequest = usePromptDesignStore((state) => state.exportRequest);
   const resetExportRequest = usePromptDesignStore((state) => state.resetExportRequest);
+  const edgeType = usePromptDesignStore((state) => state.edgeType);
   const toast = useToast();
+
+  useEffect(() => {
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        type: edgeType,
+      }))
+    );
+  }, [edgeType, setEdges]);
 
   const handleExport = useCallback(async () => {
     if (nodes.length === 0) {
@@ -574,19 +687,22 @@ export const PromptCanvas = () => {
     (params: Connection | Edge) => {
       if (isLocked) return;
       takeSnapshot();
-      setEdges((eds) =>
-        addEdge(
+      setEdges((eds) => {
+        const sourceNode = nodes.find((n) => n.id === params.source);
+        const sourceType = sourceNode?.data?.nodeType;
+        const strokeColor = getEdgeColor(sourceType, params.sourceHandle);
+        return addEdge(
           {
             ...params,
-            type: "smoothstep", // 新连接的线也使用 smoothstep
+            type: edgeType, // 动态使用 store 中的连接线类型
             animated: true,
-            style: { stroke: "#818cf8", strokeWidth: 2 },
+            style: { stroke: strokeColor, strokeWidth: 2 },
           } as Edge,
           eds,
-        ),
-      );
+        );
+      });
     },
-    [setEdges, takeSnapshot, isLocked],
+    [setEdges, takeSnapshot, isLocked, nodes, edgeType],
   );
 
   const onNodeDragStart = useCallback(() => {

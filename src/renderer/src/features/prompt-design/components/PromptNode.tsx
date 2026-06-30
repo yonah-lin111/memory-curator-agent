@@ -15,6 +15,10 @@ import {
   StickyNote,
   FolderOpen,
   X,
+  Sparkles,
+  Braces,
+  Ban,
+  Target,
 } from "lucide-react";
 
 /** 提示词卡片类型 */
@@ -27,7 +31,11 @@ export type PromptCardType =
   | "variable"
   | "comment"
   | "requirement"
-  | "role";
+  | "role"
+  | "fewshot"
+  | "format"
+  | "constraint"
+  | "audience";
 
 /** 
  * 卡片类型元数据 
@@ -39,6 +47,10 @@ export type PromptCardType =
  * - context (上下文注入): 提供 AI 完成任务所需的背景知识、前置规则或参考文档 (如：API文档、设计规范)。
  * - requirement (业务需求): 清晰描述具体要 AI 执行的任务目标 (如："实现一个带分页的数据表格")。
  * - template (模板片段): 通用的内容组装块，用于格式要求、补充说明等 (如："请只输出代码，不带解释")。
+ * - fewshot (示例示范): 提供输入与输出的配对示范，让大模型学习模式，提升复杂任务的稳定度。
+ * - format (输出格式): 严格约束 AI 的返回格式，如 JSON Schema、Markdown 的具体结构等。
+ * - constraint (约束限制): 明确禁止或强制要求的边界条件（如：“不要引入外部依赖”、“代码不得多于 100 行”）。
+ * - audience (目标受众): 限定生成内容的最终阅读者或消费者（如：“写给 React 初学者的文档”），从而调整语气和深度。
  * 
  * 2. 逻辑控制类（让提示词具备动态变化能力）：
  * - condition (条件分支): 根据前置条件决定提示词的拼接走向 (如："是否生成测试"，True 拼接测试要求，False 拼接 Mock 数据)。
@@ -48,7 +60,7 @@ export type PromptCardType =
  * - output (输出终点): 所有连线的归宿，负责将连入的碎片合并成最终发送给大模型的完整提示词。
  * 
  * 4. 变量与辅助类（独立存在，isIndependent: true）：
- * - variable (变量定义): 定义运行时动态传入的占位符 (如：{{framework}})。
+ * - variable (变量定义): 定义运行时动态传入的占位符 (如：{{framework}}).
  * - comment (注释说明): 仅供设计者阅读的便签，不参与最终提示词生成。
  */
 export type CardTypeMeta = {
@@ -68,6 +80,10 @@ export const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
   comment:      { label: "注释说明",    defaultIcon: "StickyNote",       color: "text-gray-400 bg-gray-500/20",        isIndependent: true },
   requirement:  { label: "业务需求",    defaultIcon: "FolderOpen",       color: "text-blue-400 bg-blue-500/20",        isIndependent: false },
   role:         { label: "角色设定",    defaultIcon: "User",             color: "text-pink-400 bg-pink-500/20",        isIndependent: false },
+  fewshot:      { label: "示例示范",    defaultIcon: "Sparkles",         color: "text-fuchsia-400 bg-fuchsia-500/20",  isIndependent: false },
+  format:       { label: "输出格式",    defaultIcon: "Braces",           color: "text-indigo-400 bg-indigo-500/20",    isIndependent: false },
+  constraint:   { label: "约束限制",    defaultIcon: "Ban",              color: "text-rose-400 bg-rose-500/20",        isIndependent: false },
+  audience:     { label: "目标受众",    defaultIcon: "Target",           color: "text-teal-400 bg-teal-500/20",        isIndependent: false },
 };
 
 export const iconMap: Record<string, React.ReactNode> = {
@@ -80,6 +96,10 @@ export const iconMap: Record<string, React.ReactNode> = {
   StickyNote:       <StickyNote className="w-4 h-4" />,
   FolderOpen:       <FolderOpen className="w-4 h-4" />,
   User:             <User className="w-4 h-4" />,
+  Sparkles:         <Sparkles className="w-4 h-4" />,
+  Braces:           <Braces className="w-4 h-4" />,
+  Ban:              <Ban className="w-4 h-4" />,
+  Target:           <Target className="w-4 h-4" />,
 };
 
 export type PromptNodeData = {

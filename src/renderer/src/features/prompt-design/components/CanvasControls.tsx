@@ -9,6 +9,8 @@ import {
   Redo2,
   Lock,
   Unlock,
+  Spline,
+  CornerDownRight,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -36,6 +38,8 @@ export const CanvasControls = ({
     useReactFlow();
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
   const setIsLocked = usePromptDesignStore((state) => state.setIsCanvasLocked);
+  const edgeType = usePromptDesignStore((state) => state.edgeType);
+  const setEdgeType = usePromptDesignStore((state) => state.setEdgeType);
 
   const onLayout = useCallback(() => {
     if (isLocked) {
@@ -86,6 +90,19 @@ export const CanvasControls = ({
       <Tooltip content="自动整理排版" placement="top">
         <IconButton iconOnly onClick={onLayout} disabled={isLocked}>
           <Workflow className="w-4 h-4" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip content={edgeType === "smoothstep" ? "切换为曲线连接" : "切换为折线连接"} placement="top">
+        <IconButton
+          iconOnly
+          onClick={() => {
+            const nextType = edgeType === "smoothstep" ? "default" : "smoothstep";
+            setEdgeType(nextType);
+            toast.info(nextType === "smoothstep" ? "已切换为折线连接" : "已切换为曲线连接");
+          }}
+          disabled={isLocked}
+        >
+          {edgeType === "smoothstep" ? <CornerDownRight className="w-4 h-4" /> : <Spline className="w-4 h-4" />}
         </IconButton>
       </Tooltip>
       <Tooltip content={isLocked ? "解锁画布" : "锁定画布"} placement="top">
