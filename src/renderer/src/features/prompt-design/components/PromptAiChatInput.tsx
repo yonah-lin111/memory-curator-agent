@@ -3,44 +3,18 @@ import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
 
 export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void }) => {
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 模拟选择模型的状态
-  const [selectedModel, setSelectedModel] = useState("anthropic/claude-3.5-sonnet");
-  const modelOptions = [
-    {
-      label: "Anthropic",
-      options: [
-        { label: "Claude 3.5 Sonnet", value: "anthropic/claude-3.5-sonnet", icon: "anthropic" },
-        { label: "Claude 3.5 Haiku", value: "anthropic/claude-3.5-haiku", icon: "anthropic" },
-      ],
-    },
-    {
-      label: "OpenAI",
-      options: [
-        { label: "GPT-4o", value: "openai/gpt-4o", icon: "openai" },
-        { label: "GPT-4o mini", value: "openai/gpt-4o-mini", icon: "openai" },
-        { label: "o1-mini", value: "openai/o1-mini", icon: "openai" },
-      ],
-    },
-    {
-      label: "Google",
-      options: [
-        { label: "Gemini 1.5 Pro", value: "google/gemini-1.5-pro", icon: "google" },
-        { label: "Gemini 1.5 Flash", value: "google/gemini-1.5-flash", icon: "google" },
-      ],
-    },
-    {
-      label: "Local",
-      options: [
-        { label: "Qwen 2.5 Coder 32B", value: "ollama/qwen2.5-coder:32b", icon: "ollama" },
-        { label: "DeepSeek R1", value: "ollama/deepseek-r1:14b", icon: "ollama" },
-      ],
-    }
-  ];
+  const {
+    selectedModel,
+    hasModelOptions,
+    selectOptions,
+    handleModelChange,
+  } = useActiveAiModels();
 
   const TEXTAREA_MIN_ROWS = 2;
 
@@ -99,10 +73,11 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
           <div className="flex min-w-0 items-center gap-2">
             <Select
               value={selectedModel}
-              onChange={setSelectedModel}
-              options={modelOptions}
+              onChange={handleModelChange}
+              options={selectOptions}
               position="up"
               bgClass="bg-[#303030]"
+              disabled={!hasModelOptions}
               className="!w-fit max-w-[220px]"
             />
             
