@@ -971,7 +971,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                           </div>
 
                           {/* Content Stream */}
-                          <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar overscroll-contain [scrollbar-gutter:stable] pr-2 pb-2">
+                           <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] pr-2 pb-2">
                             {/* Journal */}
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-1.5">
