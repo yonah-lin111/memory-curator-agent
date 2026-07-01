@@ -1,4 +1,5 @@
 import type React from "react";
+import { useMemo } from "react";
 import { BookOpen } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
@@ -27,6 +28,16 @@ export const TodayJournalPanel = ({
   onJournalContentChange,
   onJournalBlur,
 }: TodayJournalPanelProps): React.JSX.Element => {
+  const savedLabel = useMemo(() => {
+    if (!lastSavedAt) {
+      return "未保存";
+    }
+
+    return lastSavedAt.includes("T")
+      ? new Date(lastSavedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
+      : lastSavedAt.slice(-5);
+  }, [lastSavedAt]);
+
   return (
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0 mb-1">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -37,7 +48,7 @@ export const TodayJournalPanel = ({
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs font-mono text-white/40">
-          <span>最近保存: {lastSavedAt ?? "未保存"}</span>
+          <span>最近保存: {savedLabel}</span>
         </div>
       </div>
       <div className="p-1">
