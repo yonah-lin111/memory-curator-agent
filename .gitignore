@@ -53,11 +53,3 @@ pnpm-debug.log*
 .claude/
 
 .codegraph/
-
-# Agent 配置文件
-CLAUDE.md
-GEMINI.md
-AGENTS.md
-
-# 项目文档
-docs/
