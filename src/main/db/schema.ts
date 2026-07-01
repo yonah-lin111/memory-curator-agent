@@ -378,6 +378,132 @@ export type PromptDesignUpdateInput = {
   designData?: any;
 };
 
+// ==================== Prompt Design AI Chat ====================
+
+// 提示词 AI 对话会话数据库行
+export type PromptAiChatSessionRow = {
+  // 会话唯一标识 (UUID)
+  id: string;
+  // 关联的提示词设计项 ID (关联 prompt_design_items 表)
+  design_item_id: string;
+  // 会话标题
+  title: string;
+  // 会话状态 (与 AiChatSessionStatus 保持一致: "idle" | "running" | "completed" | "failed")
+  status: AiChatSessionStatus;
+  // 创建时间
+  created_at: string;
+  // 更新时间
+  updated_at: string;
+  // 最近消息时间
+  last_message_at: string;
+};
+
+// 提示词 AI 对话消息数据库行
+export type PromptAiChatMessageRow = {
+  // 消息唯一标识 (UUID)
+  id: string;
+  // 所属会话标识
+  session_id: string;
+  // 消息角色 ("user" | "assistant")
+  role: AiChatMessageRole;
+  // 消息正文
+  content: string;
+  // 助手最终回答
+  answer: string | null;
+  // 顺序片段 JSON (例如图片、附件等多模态数据)
+  parts_json: string;
+  // 工具步骤 JSON (仅用于前端渲染的简要工具状态)
+  tool_steps_json: string;
+  // 展示时间
+  time: string;
+  // 模型
+  model?: string | null;
+  // 创建时间
+  created_at: string;
+  // 更新时间
+  updated_at: string;
+  // 是否已被用户主动取消（0 = 否，1 = 是）
+  cancelled: number;
+};
+
+// 提示词 AI Agent 运行记录行 (记录每次大模型请求)
+export type PromptAiAgentRunRow = {
+  // 自增主键
+  id: number;
+  // 运行唯一标识 (UUID)
+  external_id: string;
+  // 所属会话标识
+  session_id: string;
+  // 关联的 AI 助手消息标识
+  assistant_message_id: string;
+  // 提供商 (如 anthropic, openai)
+  provider: string | null;
+  // 模型名称
+  model: string | null;
+  // 运行状态 ("running" | "completed" | "failed")
+  status: string;
+  // 错误信息
+  error: string | null;
+  // 开始时间
+  started_at: string;
+  // 结束时间
+  finished_at: string | null;
+};
+
+// 提示词 AI 工具调用详情行 (存储工具的原始出入参和完整数据)
+export type PromptAiAgentToolCallRow = {
+  // 自增主键
+  id: number;
+  // 外部唯一标识 (UUID)
+  external_id: string;
+  // 关联的运行 ID
+  run_id: string;
+  // 关联的消息 ID
+  message_id: string;
+  // AI SDK 自动生成的工具调用 ID
+  tool_call_id: string;
+  // 工具名称 (如 "read_document")
+  name: string;
+  // 工具状态 ("running" | "done" | "failed")
+  status: string;
+  // 入参 JSON
+  input_json: string;
+  // 面向用户的执行观察摘要
+  observation: string;
+  // 原始返回数据 JSON (如完整文件内容)
+  data_json: string;
+  // 错误信息
+  error: string | null;
+  // 创建时间
+  created_at: string;
+  // 更新时间
+  updated_at: string;
+};
+
+// 提示词 AI 上下文快照行 (例如用户 @ 了一个文件，记录这个文件的内容快照)
+export type PromptAiAgentContextSnapshotRow = {
+  // 自增主键
+  id: number;
+  // 关联的运行 ID
+  run_id: string;
+  // 上下文唯一键
+  context_key: string;
+  // 类型 ("file" | "design_data" 等)
+  kind: string;
+  // 标题/文件名
+  title: string;
+  // 来源 ID / 路径
+  source_id: string | null;
+  // 上下文具体内容
+  content: string;
+  // Token 估算量
+  tokens: number | null;
+  // 注入顺序
+  created_order: number;
+  // 元数据 JSON
+  meta_json: string;
+};
+
 // AI 工具步骤类型。
 export type AiToolStep = {
   // 工具步骤唯一标识。

@@ -995,6 +995,105 @@ export const createPromptDesignTables = (database: Database.Database): void => {
 }
 
 /**
+ * 创建提示词 AI Agent 持久化表与索引。
+ */
+export const createPromptAiPersistenceTables = (database: Database.Database): void => {
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS prompt_ai_chat_sessions (
+      id TEXT PRIMARY KEY,
+      design_item_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      last_message_at TIMESTAMP NOT NULL,
+      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_chat_sessions_item_id
+    ON prompt_ai_chat_sessions(design_item_id);
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_chat_sessions_updated_at
+    ON prompt_ai_chat_sessions(updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS prompt_ai_chat_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      answer TEXT,
+      parts_json TEXT NOT NULL,
+      tool_steps_json TEXT NOT NULL,
+      time TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      cancelled INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_chat_messages_session_created_at
+    ON prompt_ai_chat_messages(session_id, created_at ASC);
+
+    CREATE TABLE IF NOT EXISTS prompt_ai_agent_runs (
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      session_id TEXT NOT NULL,
+      assistant_message_id TEXT NOT NULL UNIQUE,
+      provider TEXT,
+      model TEXT,
+      status TEXT NOT NULL,
+      error TEXT,
+      started_at TIMESTAMP NOT NULL,
+      finished_at TIMESTAMP,
+      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_runs_session_started_at
+    ON prompt_ai_agent_runs(session_id, started_at DESC);
+
+    CREATE TABLE IF NOT EXISTS prompt_ai_agent_tool_calls (
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      run_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      tool_call_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      status TEXT NOT NULL,
+      input_json TEXT NOT NULL,
+      observation TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      error TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      UNIQUE(run_id, tool_call_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_tool_calls_run_created_at
+    ON prompt_ai_agent_tool_calls(run_id, created_at ASC);
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_tool_calls_message_id
+    ON prompt_ai_agent_tool_calls(message_id);
+
+    CREATE TABLE IF NOT EXISTS prompt_ai_agent_context_snapshots (
+      id INTEGER PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      context_key TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL,
+      source_id TEXT,
+      content TEXT NOT NULL,
+      tokens INTEGER,
+      created_order INTEGER NOT NULL,
+      meta_json TEXT NOT NULL,
+      UNIQUE(run_id, context_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_context_snapshots_run_order
+    ON prompt_ai_agent_context_snapshots(run_id, created_order ASC);
+  `)
+}
+
+/**
  * 初始化本地 SQLite 数据库。
  */
 export const initDatabase = (): Database.Database => {
@@ -1018,6 +1117,7 @@ export const initDatabase = (): Database.Database => {
   createThemeItemsTable(sqlite)
   createBillsTable(sqlite)
   createPromptDesignTables(sqlite)
+  createPromptAiPersistenceTables(sqlite)
 
   return sqlite
 }
