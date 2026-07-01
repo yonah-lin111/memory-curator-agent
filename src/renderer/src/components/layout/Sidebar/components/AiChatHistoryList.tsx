@@ -626,7 +626,7 @@ export const AiChatHistoryList = ({
             <div
               key={session.id}
               aria-current={isActive ? "true" : undefined}
-              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${itemStyleClass} ${isEditing ? "" : "cursor-pointer"}`}
+              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${itemStyleClass} ${isEditing ? "" : "cursor-pointer"}`}
               role={isEditing ? undefined : "button"}
               tabIndex={isEditing ? undefined : 0}
               onClick={() => {
@@ -711,7 +711,7 @@ export const AiChatHistoryList = ({
                   </div>
                 ) : (
                   <div className="min-w-0 flex-1">
-                    <span className={`block truncate text-xs font-bold leading-none transition-colors ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
+                    <span className={`block truncate text-xs font-bold leading-none ${isActive ? 'text-white' : 'group-hover:text-white'}`}>
                       {session.title}
                     </span>
                     <span

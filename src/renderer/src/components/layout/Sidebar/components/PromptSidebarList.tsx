@@ -512,7 +512,7 @@ export const PromptSidebarList = ({
                       onContextMenu={(e) => handleContextMenu(e, "project", proj)}
                     >
                       <Tooltip 
-                        content={proj.path ? `${proj.name}\n${proj.path}` : proj.name} 
+                        content={proj.path || ""} 
                         placement="right" 
                         contentClassName="whitespace-pre-wrap"
                       >

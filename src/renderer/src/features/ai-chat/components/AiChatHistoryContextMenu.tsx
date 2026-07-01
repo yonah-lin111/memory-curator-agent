@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Edit3, Trash2 } from "lucide-react";
 
 // 右键菜单组件属性类型。
@@ -68,10 +69,10 @@ export const AiChatHistoryContextMenu = ({
     onDeleteChat();
   };
 
-  return (
+  const menuContent = (
     <div
       aria-label={`${sessionTitle} action menu`}
-      className="fixed z-50 w-[156px] rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+      className="fixed z-[9999] w-[156px] rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
       role="menu"
       onClick={(event) => event.stopPropagation()}
       style={{
@@ -107,4 +108,6 @@ export const AiChatHistoryContextMenu = ({
       </button>
     </div>
   );
+
+  return createPortal(menuContent, document.body);
 };
