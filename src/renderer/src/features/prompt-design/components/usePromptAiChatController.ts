@@ -65,6 +65,20 @@ export function usePromptAiChatController(designItemId: string) {
 
       if (event.type === "run_started") {
         setIsGenerating(true);
+        if (event.model) {
+          setMessages((prev) => {
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg && lastMsg.role === "assistant") {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = {
+                ...lastMsg,
+                model: event.model,
+              };
+              return newMessages;
+            }
+            return prev;
+          });
+        }
       } else if (event.type === "text_delta") {
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
@@ -103,8 +117,10 @@ export function usePromptAiChatController(designItemId: string) {
   }, [isGenerating, loadSession]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, selectedModel?: string) => {
       if (isGenerating || !text.trim() || !sessionInitialized) return;
+
+      const [providerId, modelId] = selectedModel?.split("::") ?? [];
 
       const newMsg: PromptAiMessage = {
         id: `msg-${Date.now()}`,
@@ -124,6 +140,7 @@ export function usePromptAiChatController(designItemId: string) {
           id: `msg-${Date.now()}-ai`,
           role: "assistant",
           content: "",
+          model: modelId,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -139,6 +156,8 @@ export function usePromptAiChatController(designItemId: string) {
           sessionId,
           designItemId,
           message: text,
+          provider: providerId,
+          model: modelId,
         });
         await fetchSessions(); // Update session list to reflect new titles etc.
       } catch (err) {

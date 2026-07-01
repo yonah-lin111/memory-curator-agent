@@ -8,7 +8,7 @@ export const PromptAiChatInput = ({
   onSend,
   disabled,
 }: {
-  onSend?: (text: string) => void;
+  onSend?: (text: string, selectedModel?: string) => void;
   disabled?: boolean;
 }) => {
   const [inputText, setInputText] = useState("");
@@ -29,7 +29,7 @@ export const PromptAiChatInput = ({
   const handleSend = () => {
     if (disabled) return;
     if (inputText.trim() && onSend) {
-      onSend(inputText.trim());
+      onSend(inputText.trim(), selectedModel || undefined);
       setInputText("");
     }
   };

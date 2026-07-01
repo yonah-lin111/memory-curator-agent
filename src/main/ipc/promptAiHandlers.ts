@@ -148,6 +148,7 @@ async function runPromptAiChat(
           type: "run_started",
           runId,
           sessionId: payload.sessionId,
+          model: modelId,
         });
       } else if (event.type === "text_delta") {
         finalContent += event.delta;

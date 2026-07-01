@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
 import { usePromptAiChatController } from "./usePromptAiChatController";
@@ -10,17 +10,40 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const latestUserMessageRef = useRef<HTMLDivElement>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
-  const [topPinnedUserId, setTopPinnedUserId] = useState<string | null>(null);
 
-  const handleSend = (text: string) => {
-    sendMessage(text);
-    // Find the new message ID after sending, though we might not have it synchronously here
-    // But we can approximate the pinning behavior
-    setTopPinnedUserId(`msg-${Date.now()}`); // We'll just rely on scrolling to bottom for now or update it in a better way
+  const latestUserMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === "user") {
+        return message.id;
+      }
+    }
+
+    return null;
+  }, [messages]);
+
+  const handleSend = (text: string, selectedModel?: string) => {
+    sendMessage(text, selectedModel);
+  };
+
+  const getUserMessageTargetTop = (
+    container: HTMLDivElement,
+    userMessage: HTMLDivElement,
+  ): number => {
+    const containerRect = container.getBoundingClientRect();
+    const userMessageRect = userMessage.getBoundingClientRect();
+
+    return Math.max(
+      container.scrollTop +
+        userMessageRect.top -
+        containerRect.top -
+        LATEST_ASSISTANT_TOP_OFFSET,
+      0,
+    );
   };
 
   useLayoutEffect(() => {
-    if (!topPinnedUserId) {
+    if (!latestUserMessageId) {
       setBottomSpacerHeight(0);
       return;
     }
@@ -31,9 +54,9 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
     if (container && userMessage) {
       setBottomSpacerHeight((prev) => {
         const viewportHeight = container.clientHeight;
-        const targetScrollTop = Math.max(
-          userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
-          0,
+        const targetScrollTop = getUserMessageTargetTop(
+          container,
+          userMessage,
         );
         const requiredSpacer = Math.round(
           Math.max(
@@ -45,17 +68,17 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
         return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
       });
     }
-  }, [topPinnedUserId, messages.length]);
+  }, [latestUserMessageId, messages, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useLayoutEffect(() => {
     if (
-      topPinnedUserId &&
+      latestUserMessageId &&
       latestUserMessageRef.current &&
       scrollContainerRef.current
     ) {
-      const targetTop = Math.max(
-        latestUserMessageRef.current.offsetTop - LATEST_ASSISTANT_TOP_OFFSET,
-        0,
+      const targetTop = getUserMessageTargetTop(
+        scrollContainerRef.current,
+        latestUserMessageRef.current,
       );
       scrollContainerRef.current.scrollTo({
         top: targetTop,
@@ -65,7 +88,12 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
       // scroll to bottom if no pinned message
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [topPinnedUserId, messages.length, bottomSpacerHeight]);
+  }, [
+    latestUserMessageId,
+    messages.length,
+    bottomSpacerHeight,
+    LATEST_ASSISTANT_TOP_OFFSET,
+  ]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -85,7 +113,8 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
             <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
               {messages.map((message) => {
                 const isLatestUser =
-                  message.role === "user" && message.id === topPinnedUserId;
+                  message.role === "user" &&
+                  message.id === latestUserMessageId;
                 const isGeneratingMessage =
                   isGenerating &&
                   message.role !== "user" &&

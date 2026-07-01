@@ -109,8 +109,8 @@ export class PromptAiPersistenceService {
 
   public appendMessage(input: AppendPromptAiMessageInput): void {
     const insertStmt = this.db.prepare(`
-      INSERT INTO prompt_ai_chat_messages (id, session_id, role, content, parts_json, tool_steps_json, time, created_at, updated_at, cancelled)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO prompt_ai_chat_messages (id, session_id, role, content, parts_json, tool_steps_json, time, model, created_at, updated_at, cancelled)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     insertStmt.run(
       input.id,
@@ -120,6 +120,7 @@ export class PromptAiPersistenceService {
       "[]",
       "[]",
       input.timestamp,
+      input.model ?? null,
       input.timestamp,
       input.timestamp,
       0,
@@ -164,6 +165,7 @@ export class PromptAiPersistenceService {
         parts: parts.length > 0 ? parts : undefined,
         toolSteps: toolSteps.length > 0 ? toolSteps : undefined,
         answer: row.answer ?? undefined,
+        model: row.model ?? undefined,
         createdAt: row.created_at,
       };
     });
