@@ -895,6 +895,25 @@ const api = {
       update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:designs:update', id, input),
       delete: (id: string) => ipcRenderer.invoke('prompt-design:designs:delete', id)
     }
+  },
+  promptAi: {
+    listSessions: (designItemId: string): Promise<any[]> =>
+      ipcRenderer.invoke('prompt-ai:sessions:list', designItemId),
+    getSession: (sessionId: string): Promise<any | null> =>
+      ipcRenderer.invoke('prompt-ai:session:get', sessionId),
+    startChat: (payload: any): Promise<{ runId: string }> =>
+      ipcRenderer.invoke('prompt-ai:chat:start', payload),
+    cancelChat: (runId: string): Promise<void> =>
+      ipcRenderer.invoke('prompt-ai:chat:cancel', runId),
+    onChatEvent: (listener: (event: any) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, event: any): void => {
+        listener(event)
+      }
+      ipcRenderer.on('prompt-ai:chat:event', wrappedListener)
+      return () => {
+        ipcRenderer.removeListener('prompt-ai:chat:event', wrappedListener)
+      }
+    }
   }
 }
 

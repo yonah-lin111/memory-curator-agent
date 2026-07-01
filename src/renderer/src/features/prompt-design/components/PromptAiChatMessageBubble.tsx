@@ -4,39 +4,34 @@ import "md-editor-rt/lib/preview.css";
 import { AiToolCallBlock } from "@/features/ai-chat/components/AiToolCallBlock";
 import type { AiToolStep } from "@/features/ai-chat/types";
 import { Tag } from "@/components/ui/Tag";
+import type { PromptAiMessage } from "./usePromptAiChatController";
 
-// 这是一个纯静态 mock 气泡组件
 export const PromptAiChatMessageBubble = ({
-  message
+  message,
+  isGenerating = false,
 }: {
-  message: {
-    id: string;
-    role: "user" | "assistant";
-    content: string;
+  message: PromptAiMessage & {
     reasoning?: string;
-    toolCall?: { name: string; args: string; result?: string; status: "success" | "running" };
-    time: string;
-    model?: string;
+    toolSteps?: AiToolStep[];
   };
+  isGenerating?: boolean;
 }) => {
   const isUser = message.role === "user";
-  
-  const toolSteps: AiToolStep[] | undefined = message.toolCall ? [{
-    id: "mock-tool-call",
-    title: `Using tool: ${message.toolCall.name}`,
-    status: message.toolCall.status === "success" ? "done" : "running",
-    tool: message.toolCall.name,
-    input: message.toolCall.args,
-    observation: message.toolCall.result || (message.toolCall.status === "running" ? "Running..." : "Done.")
-  }] : undefined;
+
+  const toolSteps = message.toolSteps;
 
   return (
-    <div className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
-      
-      <div className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}>
+    <div
+      className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
+    >
+      <div
+        className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}
+      >
         <div
           className={`rounded-[6px] px-1 py-1 text-sm leading-relaxed break-words w-fit max-w-full ${
-            isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "text-white/80"
+            isUser
+              ? "bg-transparent text-white font-medium whitespace-pre-wrap"
+              : "text-white/80"
           }`}
         >
           {isUser ? (
@@ -48,11 +43,11 @@ export const PromptAiChatMessageBubble = ({
               {message.reasoning && (
                 <AiChatThinkingBlock content={message.reasoning} />
               )}
-              
+
               {toolSteps && toolSteps.length > 0 && (
                 <AiToolCallBlock steps={toolSteps} />
               )}
-              
+
               {message.content && (
                 <div className="markdown-preview-container ai-chat-markdown-preview select-text max-w-full">
                   <MdPreview
@@ -68,16 +63,27 @@ export const PromptAiChatMessageBubble = ({
             </div>
           )}
         </div>
-        
+
         <div
           className={`text-xs font-mono mt-0.5 px-1 text-white/30 flex items-center gap-1.5 min-h-[1.25rem] ${
             isUser ? "justify-end text-right" : "justify-start text-left"
           }`}
         >
           <span>
-            {message.time.includes("T") 
-              ? new Date(message.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
-              : message.time}
+            {isGenerating ? (
+              <span className="relative flex h-1.5 w-1.5 my-1 ml-0.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/40 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/50"></span>
+              </span>
+            ) : (
+              message.time.includes("T")
+                ? new Date(message.time).toLocaleTimeString("zh-CN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })
+                : message.time.slice(11, 16) || message.time
+            )}
           </span>
           {!isUser && message.model && (
             <Tag

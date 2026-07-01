@@ -1023,6 +1023,13 @@ type AppAPI = {
     /** 指定日期账单摘要，不传则取今日 */
     todaySummary: (date?: string) => Promise<BillTodaySummary>
   }
+  promptAi?: {
+    listSessions: (designItemId: string) => Promise<any[]>
+    getSession: (sessionId: string) => Promise<any | null>
+    startChat: (payload: any) => Promise<{ runId: string }>
+    cancelChat: (runId: string) => Promise<void>
+    onChatEvent: (listener: (event: any) => void) => () => void
+  }
 }
 
 declare global {

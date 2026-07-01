@@ -4,16 +4,18 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
 
-export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void }) => {
+export const PromptAiChatInput = ({
+  onSend,
+  disabled,
+}: {
+  onSend?: (text: string) => void;
+  disabled?: boolean;
+}) => {
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const {
-    selectedModel,
-    hasModelOptions,
-    selectOptions,
-    handleModelChange,
-  } = useActiveAiModels();
+  const { selectedModel, hasModelOptions, selectOptions, handleModelChange } =
+    useActiveAiModels();
 
   const TEXTAREA_MIN_ROWS = 2;
 
@@ -25,6 +27,7 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
   };
 
   const handleSend = () => {
+    if (disabled) return;
     if (inputText.trim() && onSend) {
       onSend(inputText.trim());
       setInputText("");
@@ -34,24 +37,29 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      const minHeight = TEXTAREA_MIN_ROWS * 20; 
-      const newHeight = inputText.length === 0 
-        ? minHeight 
-        : Math.max(minHeight, Math.min(textareaRef.current.scrollHeight, 180));
-        
+      const minHeight = TEXTAREA_MIN_ROWS * 20;
+      const newHeight =
+        inputText.length === 0
+          ? minHeight
+          : Math.max(
+              minHeight,
+              Math.min(textareaRef.current.scrollHeight, 180),
+            );
+
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [inputText]);
 
   return (
     <div className="flex-shrink-0 p-3">
-      <div 
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
+      <div
+        className={`relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text ${disabled ? "opacity-50 pointer-events-none" : ""}`}
         onClick={handleContainerClick}
       >
         {/* 输入框 */}
         <textarea
           ref={textareaRef}
+          disabled={disabled}
           rows={TEXTAREA_MIN_ROWS}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -79,7 +87,7 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
               disabled={!hasModelOptions}
               className="!w-fit max-w-[220px]"
             />
-            
+
             <IconButton
               aria-label="Add attachment"
               className="text-white/30 hover:text-white/50"
