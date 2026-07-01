@@ -66,6 +66,7 @@ export const Select = <T extends string>({
 }: SelectProps<T>): React.JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const listboxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     /**
@@ -85,6 +86,18 @@ export const Select = <T extends string>({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // 展开时，滚动到选中的选项使其在容器中间显示
+  useEffect(() => {
+    if (isOpen && listboxRef.current) {
+      const selectedEl = listboxRef.current.querySelector('[aria-selected="true"]') as HTMLElement;
+      if (selectedEl) {
+        const listbox = listboxRef.current;
+        const scrollTop = selectedEl.offsetTop - listbox.clientHeight / 2 + selectedEl.clientHeight / 2;
+        listbox.scrollTop = scrollTop;
+      }
+    }
+  }, [isOpen, value]);
 
   // 查找当前选中的选项。
   const findSelectedOption = (
@@ -170,6 +183,7 @@ export const Select = <T extends string>({
       </IconButton>
       {isOpen && (
         <div
+          ref={listboxRef}
           role="listbox"
           className={`absolute left-0 z-50 min-w-full w-max rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-lg max-h-60 overflow-y-auto custom-scrollbar animate-card-modal-in ${positionStyles}`}
         >

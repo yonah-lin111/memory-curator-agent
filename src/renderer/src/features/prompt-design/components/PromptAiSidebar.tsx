@@ -115,9 +115,27 @@ export const PromptAiSidebar = ({
               )}
             </IconButton>
           </Tooltip>
-          <Tooltip
-            placement="bottom"
-            trigger="click"
+          <div className="flex items-center gap-1">
+            <Tooltip title="Tokens 使用量：1,250 / 200,000 (0.6%)" placement="bottom">
+              <div className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-[6px] hover:bg-white/5 transition-colors flex-shrink-0 group/context-circle">
+                <svg className="h-[16px] w-[16px] -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" strokeWidth="10" className="stroke-white/10" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    strokeWidth="10"
+                    className="stroke-[#3B82F6]"
+                    strokeDasharray="282.7"
+                    strokeDashoffset={282.7 - (282.7 * 0.6) / 100}
+                  />
+                </svg>
+              </div>
+            </Tooltip>
+            <Tooltip
+              placement="bottom"
+              trigger="click"
             contentClassName="p-1 min-w-[200px]"
             content={
               <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -144,6 +162,7 @@ export const PromptAiSidebar = ({
               <History className="h-4 w-4" />
             </IconButton>
           </Tooltip>
+          </div>
         </div>
       )}
       {isOpen && <PromptAiChatWorkspace />}

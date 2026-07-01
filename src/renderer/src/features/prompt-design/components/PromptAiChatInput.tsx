@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
 
 export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void }) => {
@@ -80,24 +79,6 @@ export const PromptAiChatInput = ({ onSend }: { onSend?: (text: string) => void 
               disabled={!hasModelOptions}
               className="!w-fit max-w-[220px]"
             />
-            
-            <Tooltip title="Tokens 使用量：1,250 / 200,000 (0.6%)" placement="top">
-              <div className="relative flex h-[18px] w-[18px] cursor-pointer items-center justify-center rounded-full flex-shrink-0 group/context-circle">
-                <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" strokeWidth="10" className="stroke-white/10" />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    strokeWidth="10"
-                    className="stroke-[#3B82F6]"
-                    strokeDasharray="282.7"
-                    strokeDashoffset={282.7 - (282.7 * 0.6) / 100}
-                  />
-                </svg>
-              </div>
-            </Tooltip>
             
             <IconButton
               aria-label="Add attachment"
