@@ -22,6 +22,8 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel";
+import { MdPreview } from "md-editor-rt";
+import "md-editor-rt/lib/preview.css";
 
 // 单日聚合并格式化后的数据接口
 interface DayDataAggregated {
@@ -981,8 +983,15 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                                 </span>
                               </div>
                               {hasJournal ? (
-                                <div className="text-sm text-white/80 leading-relaxed font-normal bg-black/40 p-3.5 rounded-[6px] border border-white/5 whitespace-pre-wrap">
-                                  {day.journal.content}
+                                <div className="text-sm text-white/80 leading-relaxed font-normal bg-black/40 p-3.5 rounded-[6px] border border-white/5 markdown-preview-container journal-markdown-preview">
+                                  <MdPreview
+                                    theme="dark"
+                                    modelValue={day.journal.content}
+                                    previewTheme="default"
+                                    codeTheme="atom"
+                                    style={{ backgroundColor: "transparent", padding: 0 }}
+                                    showCodeRowNumber={false}
+                                  />
                                 </div>
                               ) : (
                                 <div className="text-xs text-white/20 font-mono py-6 bg-black/20 rounded-[6px] text-center border border-dashed border-white/5">

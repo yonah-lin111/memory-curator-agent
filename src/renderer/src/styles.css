@@ -323,6 +323,18 @@ html:hover::-webkit-scrollbar-thumb,
   font-size: 13px !important;
 }
 
+/* 时间溪流内 Journal 的 Markdown 预览必须整体压到 13px（当前内容的字号），包含所有标题 */
+.journal-markdown-preview.markdown-preview-container,
+.journal-markdown-preview.markdown-preview-container * {
+  font-size: 13px !important;
+}
+.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:first-child {
+  margin-top: 0 !important;
+}
+.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:last-child {
+  margin-bottom: 0 !important;
+}
+
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
 @keyframes modal-backdrop-in {
   from {
