@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Paperclip, RotateCcw, SendHorizontal, FileText } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
+import { useToast } from "@/components/ui/Toast";
 import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
 import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
 import { INTERACTIVE_SELECTOR } from "@/features/ai-chat/components/AiChatInput/constants";
@@ -16,6 +17,7 @@ export const PromptAiChatInput = ({
   onSend?: (text: string, selectedModel?: string) => void;
   disabled?: boolean;
 }) => {
+  const toast = useToast();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -23,7 +25,7 @@ export const PromptAiChatInput = ({
     useActiveAiModels();
 
   const TEXTAREA_MIN_ROWS = 2;
-  
+
   const adjustTextareaHeight = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -72,13 +74,18 @@ export const PromptAiChatInput = ({
   };
 
   const handleSend = () => {
-    if (disabled) return;
+    if (disabled) {
+      toast.warning("请等待 AI 输出完成");
+      return;
+    }
     if (inputText.trim() && onSend) {
       // 发送前清理无用的前缀
-      const cleanedText = inputText.replace(FILE_MENTION_PATTERN, (match, prefix, token) => {
-        return `${prefix}${token}`;
-      }).trim();
-      
+      const cleanedText = inputText
+        .replace(FILE_MENTION_PATTERN, (match, prefix, token) => {
+          return `${prefix}${token}`;
+        })
+        .trim();
+
       onSend(cleanedText, selectedModel || undefined);
       setInputText("");
       closeFileMentionPanel();
@@ -92,13 +99,13 @@ export const PromptAiChatInput = ({
   return (
     <div className="flex-shrink-0 p-3">
       <div
-        className={`relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
         onClick={handleContainerClick}
       >
         <CommandPanel
           isOpen={isFilePanelOpen}
           ariaLabel="File Mentions"
-          items={matchedFiles.map(path => ({ id: path, path }))}
+          items={matchedFiles.map((path) => ({ id: path, path }))}
           activeIndex={activeFileIndex}
           onActiveIndexChange={setActiveFileIndex}
           onItemSelect={(item) => selectFileMention(item.path)}
@@ -114,7 +121,6 @@ export const PromptAiChatInput = ({
         {/* 输入框 */}
         <textarea
           ref={textareaRef}
-          disabled={disabled}
           rows={TEXTAREA_MIN_ROWS}
           value={inputText}
           onChange={(e) => {
@@ -123,9 +129,7 @@ export const PromptAiChatInput = ({
           }}
           onClick={handleTextareaCursorMove}
           onKeyUp={(e) => {
-            if (
-              ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
-            ) {
+            if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
               handleTextareaCursorMove();
             }
           }}
