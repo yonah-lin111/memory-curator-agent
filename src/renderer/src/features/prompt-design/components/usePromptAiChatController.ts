@@ -94,6 +94,9 @@ export function usePromptAiChatController(designItemId: string) {
         });
       } else if (event.type === "turn_finished" || event.type === "done") {
         setIsGenerating(false);
+      } else if (event.type === "session_title_updated") {
+        // 后台标题总结完成后刷新会话列表
+        void fetchSessions();
       } else if (event.type === "error") {
         setIsGenerating(false);
         console.error("AI chat error:", event.message);

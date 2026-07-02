@@ -5,6 +5,7 @@ import { createModelProvider } from "@/agent/providers/providerFactory";
 import { runReactAgent } from "@/agent/core/reactAgent";
 import { PromptAiPersistenceService } from "@/services/promptAiPersistenceService";
 import { getDatabase } from "@/db";
+import { createSessionTitle } from "./ai/helpers";
 
 export type PromptAiChatStartPayload = {
   runId?: string;
@@ -105,10 +106,15 @@ async function runPromptAiChat(
   }
   const provider = await createModelProvider(providerConfigObj);
 
+  // 检查是否需要生成标题：该会话为首次发送消息
+  const existingSession = db.getSession(payload.sessionId);
+  const shouldCreateTitle =
+    !existingSession || existingSession.messages.length === 0;
+
   db.ensureSession({
     id: payload.sessionId,
     designItemId: payload.designItemId,
-    title: "Prompt Design Session",
+    title: shouldCreateTitle ? "新建对话" : existingSession!.title,
     status: "running",
     timestamp: now,
   });
@@ -133,6 +139,21 @@ async function runPromptAiChat(
   });
 
   db.recordAgentRun(runId, payload.sessionId, assistantMessageId, now);
+
+  // 后台异步生成会话标题
+  if (shouldCreateTitle) {
+    void (async () => {
+      const title = await createSessionTitle(providerConfig, payload.message);
+      db.updateSessionTitle(payload.sessionId, title);
+      if (sender.isDestroyed?.()) return;
+      sender.send("prompt-ai:chat:event", {
+        type: "session_title_updated",
+        runId,
+        sessionId: payload.sessionId,
+        title,
+      });
+    })();
+  }
 
   // Reconstruct messages for context
   const session = db.getSession(payload.sessionId);
