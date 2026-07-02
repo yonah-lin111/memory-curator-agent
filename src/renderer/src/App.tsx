@@ -19,7 +19,7 @@ import {
 } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { TodayPage } from "@/pages/today/TodayPage";
-import { ToastProvider } from "@/components/ui/Toast";
+import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
 import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
@@ -147,7 +147,8 @@ const AppContent = (): React.JSX.Element => {
   const [activePage, setActivePage] =
     useState<SidebarPageId>(getPageFromPathname);
 
-  const { requestExport, projectName, itemName } = usePromptDesignStore();
+  const { requestExport, projectName, itemName, activeDesignId } = usePromptDesignStore();
+  const { warning } = useToast();
 
   // 主内容页面切换时的 Loading 状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);
@@ -225,6 +226,11 @@ const AppContent = (): React.JSX.Element => {
   }, []);
 
   const handlePromptAiToggle = () => {
+    if (!activeDesignId) {
+      warning("请先在侧边栏选中一个提示词设计项");
+      setIsSidebarCollapsed(false);
+      return;
+    }
     const nextState = !isPromptAiSidebarOpen;
     setIsPromptAiSidebarOpen(nextState);
     if (nextState) {

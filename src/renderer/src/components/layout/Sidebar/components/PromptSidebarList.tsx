@@ -33,7 +33,7 @@ export const PromptSidebarList = ({
 }: PromptSidebarProps): React.JSX.Element => {
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"components" | "projects">(
-    "components",
+    "projects",
   );
   
   const [projects, setProjects] = useState<any[]>([]);
@@ -80,6 +80,12 @@ export const PromptSidebarList = ({
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
+
+  useEffect(() => {
+    if (!isCollapsed && !activeDesignId) {
+      setActiveTab("projects");
+    }
+  }, [isCollapsed, activeDesignId]);
 
   const handleContextMenu = (
     e: React.MouseEvent,
