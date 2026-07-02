@@ -516,6 +516,11 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
     database.exec('ALTER TABLE ai_chat_messages ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0;')
   }
 
+  // 为已存在的 prompt_ai_chat_messages 表补加 model 列。
+  if (tableExists(database, 'prompt_ai_chat_messages') && !columnExists(database, 'prompt_ai_chat_messages', 'model')) {
+    database.exec('ALTER TABLE prompt_ai_chat_messages ADD COLUMN model TEXT;')
+  }
+
   // 为已存在的 weekly_summaries 表补加 type 列并迁移旧 curator 后缀数据。
   if (tableExists(database, 'weekly_summaries') && !columnExists(database, 'weekly_summaries', 'type')) {
     database.exec(`
@@ -1025,6 +1030,7 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
       parts_json TEXT NOT NULL,
       tool_steps_json TEXT NOT NULL,
       time TIMESTAMP NOT NULL,
+      model TEXT,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       cancelled INTEGER NOT NULL DEFAULT 0,
