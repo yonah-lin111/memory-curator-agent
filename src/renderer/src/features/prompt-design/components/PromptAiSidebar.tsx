@@ -267,6 +267,7 @@ export const PromptAiSidebar = ({
                 aria-label="New chat"
                 preset="add"
                 onClick={controller.handleNewChat}
+                disabled={controller.messages.length === 0 || controller.isGenerating}
               />
             </Tooltip>
           </div>

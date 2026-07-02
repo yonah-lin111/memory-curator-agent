@@ -65,6 +65,8 @@ type SidebarProps = {
   hasMoreChatSessions: boolean;
   // AI 历史是否正在加载下一页。
   isLoadingMoreChatSessions: boolean;
+  // 选择 Prompt Design 的回调
+  onPromptDesignSelected?: () => void;
 };
 
 /**
@@ -88,6 +90,7 @@ export const Sidebar = ({
   onLoadMoreChatSessions,
   hasMoreChatSessions,
   isLoadingMoreChatSessions,
+  onPromptDesignSelected,
 }: SidebarProps): React.JSX.Element => {
   // 统一的折叠布局判定，主导航与 AI 历史均支持折叠。
   const shouldUseCollapsedLayout = isCollapsed;
@@ -156,6 +159,7 @@ export const Sidebar = ({
             isCollapsed={isCollapsed}
             onCollapsedChange={onCollapsedChange}
             aria-hidden={mode !== "prompts"}
+            onDesignSelected={onPromptDesignSelected}
           />
         </div>
       </aside>

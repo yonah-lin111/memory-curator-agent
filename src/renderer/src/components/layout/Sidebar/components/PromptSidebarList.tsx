@@ -24,12 +24,14 @@ type PromptSidebarProps = {
   isCollapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   "aria-hidden"?: boolean;
+  onDesignSelected?: () => void;
 };
 
 export const PromptSidebarList = ({
   isCollapsed = false,
   onCollapsedChange,
   "aria-hidden": ariaHidden,
+  onDesignSelected,
 }: PromptSidebarProps): React.JSX.Element => {
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"components" | "projects">(
@@ -553,11 +555,20 @@ export const PromptSidebarList = ({
                             <div
                               key={prompt.id}
                               className={`w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 cursor-pointer group ${activeDesignId === prompt.id ? 'bg-white/10 text-white' : 'hover:bg-white/[0.02] text-white/70'}`}
-                              onClick={() => {
+                              onClick={async () => {
+                                try {
+                                  const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
+                                  if (!sessions || sessions.length === 0) {
+                                    await (window.api as any).promptAi.createSession(prompt.id);
+                                  }
+                                } catch (err) {
+                                  console.error("Failed to check or create session:", err);
+                                }
                                 setActiveProjectId(proj.id);
                                 setActiveDesignId(prompt.id);
                                 setProjectName(proj.name);
                                 setItemName(prompt.name);
+                                onDesignSelected?.();
                               }}
                               onContextMenu={(e) =>
                                 handleContextMenu(e, "prompt", prompt, proj.id)

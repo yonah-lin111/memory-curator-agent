@@ -894,11 +894,15 @@ const api = {
       rename: (id: string, name: string) => ipcRenderer.invoke('prompt-design:designs:rename', id, name),
       update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:designs:update', id, input),
       delete: (id: string) => ipcRenderer.invoke('prompt-design:designs:delete', id)
-    }
+    },
+    searchFiles: (directory: string, query: string): Promise<string[]> =>
+      ipcRenderer.invoke('prompt-design:files:search', { directory, query })
   },
   promptAi: {
     listSessions: (designItemId: string): Promise<any[]> =>
       ipcRenderer.invoke('prompt-ai:sessions:list', designItemId),
+    createSession: (designItemId: string): Promise<any> =>
+      ipcRenderer.invoke('prompt-ai:session:create', designItemId),
     getSession: (sessionId: string): Promise<any | null> =>
       ipcRenderer.invoke('prompt-ai:session:get', sessionId),
     updateSessionTitle: (sessionId: string, title: string): Promise<void> =>

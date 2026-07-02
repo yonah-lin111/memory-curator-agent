@@ -65,6 +65,18 @@ export function registerPromptAiHandlers(): void {
     return getPersistence().getSession(sessionId);
   });
 
+  ipcMain.handle("prompt-ai:session:create", (_, designItemId: string) => {
+    const sessionId = createCompactUuid();
+    getPersistence().ensureSession({
+      id: sessionId,
+      designItemId,
+      title: "新建对话",
+      status: "idle",
+      timestamp: new Date().toISOString()
+    });
+    return getPersistence().getSession(sessionId);
+  });
+
   ipcMain.handle("prompt-ai:session:title:update", (_, sessionId: string, title: string) => {
     return getPersistence().updateSessionTitle(sessionId, title);
   });

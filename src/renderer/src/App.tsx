@@ -279,6 +279,9 @@ const AppContent = (): React.JSX.Element => {
         onLoadMoreChatSessions={handleLoadMoreChatSessions}
         hasMoreChatSessions={hasMoreChatSessions}
         isLoadingMoreChatSessions={isLoadingMoreChatSessions}
+        onPromptDesignSelected={() => {
+          setIsPromptAiSidebarOpen(true);
+        }}
       />
 
       {/* 中间主工作区 */}
