@@ -259,7 +259,7 @@ export const AiToolChangePreview = ({ toolName, input, isGenerating = false }: A
 
   return (
     <div className="flex flex-col min-w-0">
-      {/* Header */}
+      {/* 头部 */}
       <div
         className="flex items-start gap-1 text-xs leading-relaxed text-white/45 cursor-pointer hover:text-white/60 transition-colors select-none group"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -298,7 +298,7 @@ export const AiToolChangePreview = ({ toolName, input, isGenerating = false }: A
         </div>
       </div>
 
-      {/* Content */}
+      {/* 内容 */}
       <div
         style={{
           maxHeight: isExpanded ? "40vh" : "0px",

@@ -154,7 +154,7 @@ export const ShowcasePage = (): React.JSX.Element => {
 
       {/* 右侧展示内容区 */}
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4 pr-1">
-        {/* Section: Toast */}
+        {/* 章节：Toast */}
         {isVisible("toast") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -200,7 +200,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: Tag */}
+        {/* 章节：Tag */}
         {isVisible("tag") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -301,7 +301,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: PageDateNavigator */}
+        {/* 章节：PageDateNavigator */}
         {isVisible("date") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -331,7 +331,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: Select */}
+        {/* 章节：Select */}
         {isVisible("select") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -378,7 +378,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: MarkdownEditor */}
+        {/* 章节：MarkdownEditor */}
         {isVisible("editor") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -405,7 +405,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: IconButton */}
+        {/* 章节：IconButton */}
         {isVisible("button") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -608,7 +608,7 @@ export const ShowcasePage = (): React.JSX.Element => {
           </section>
         )}
 
-        {/* Section: Tooltip */}
+        {/* 章节：Tooltip */}
         {isVisible("tooltip") && (
           <section className="bg-[#212121] border border-white/5 rounded-[6px] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -626,7 +626,7 @@ export const ShowcasePage = (): React.JSX.Element => {
             </p>
 
             <div className="flex flex-col gap-5 mt-2">
-              {/* Placement options */}
+              {/* 位置选项 */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-mono text-white/45">
                   Placements (Hover to Trigger):
@@ -674,7 +674,7 @@ export const ShowcasePage = (): React.JSX.Element => {
                 </div>
               </div>
 
-              {/* Trigger options */}
+              {/* 触发选项 */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-mono text-white/45">
                   Triggers (Modes):
@@ -721,7 +721,7 @@ export const ShowcasePage = (): React.JSX.Element => {
                 </div>
               </div>
 
-              {/* ConfirmTooltip showcase */}
+              {/* ConfirmTooltip 展示 */}
               <div className="flex flex-col gap-2 border-t border-white/5 pt-4 mt-2">
                 <span className="text-xs font-mono text-white/45">
                   Tooltip 行为二次确认 (Popconfirm):

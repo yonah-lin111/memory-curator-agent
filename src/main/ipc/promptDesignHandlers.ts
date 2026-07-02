@@ -16,7 +16,7 @@ const IGNORE_DIRS = new Set([
 ])
 
 export const registerPromptDesignHandlers = (): void => {
-  // Files
+  // 文件
   ipcMain.handle("prompt-design:files:search", (_, { directory, query }: { directory: string, query: string }) => {
     const results: string[] = []
     const maxResults = 50
@@ -60,7 +60,7 @@ export const registerPromptDesignHandlers = (): void => {
     return results
   })
 
-  // Projects
+  // 项目
   ipcMain.handle("prompt-design:projects:list", () => {
     return promptDesignService.listProjects()
   })
@@ -81,7 +81,7 @@ export const registerPromptDesignHandlers = (): void => {
     promptDesignService.deleteProject(id)
   })
 
-  // Designs
+  // 设计
   ipcMain.handle("prompt-design:designs:list", (_, projectId) => {
     return promptDesignService.listDesigns(projectId)
   })

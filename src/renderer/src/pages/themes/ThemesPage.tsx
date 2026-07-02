@@ -578,7 +578,7 @@ export const ThemesPage = (): React.JSX.Element => {
                       <span className="text-sm font-bold text-white/90 truncate mr-2">
                         {theme.name}
                       </span>
-                      {/* Hover Actions */}
+                      {/* 悬停操作 */}
                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity pl-2">
                         <Tooltip
                           placement="bottom"
@@ -711,9 +711,9 @@ export const ThemesPage = (): React.JSX.Element => {
             <>
               {/* Bento Grid 上半部分: 主题档案与脉搏 */}
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 min-h-[220px] flex-shrink-0">
-                {/* Theme Profile (Col Span 2) */}
+                {/* 主题档案（跨 2 列） */}
                 <div className="xl:col-span-2 bg-[#1a1a1a] rounded-[6px] border border-white/5 p-6 flex flex-col justify-between relative group overflow-hidden">
-                  {/* Subtle Background Accent */}
+                  {/* 微妙背景强调 */}
                   <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 blur-3xl rounded-full pointer-events-none" />
 
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10 bg-[#1a1a1a]/80 backdrop-blur-sm rounded-[6px] p-1 border border-white/5">
@@ -842,7 +842,7 @@ export const ThemesPage = (): React.JSX.Element => {
                   </div>
                 </div>
 
-                {/* Timeline Pulse (Col Span 1) */}
+                {/* 时间线脉冲（跨 1 列） */}
                 <div className="xl:col-span-1 bg-[#1a1a1a] rounded-[6px] border border-white/5 p-5 flex flex-col relative overflow-hidden">
                   <div className="flex items-center gap-2 mb-2 z-10">
                     <Activity className="w-3.5 h-3.5 text-white/30" />

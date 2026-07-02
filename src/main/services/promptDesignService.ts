@@ -12,7 +12,7 @@ import {
 } from "../db/schema"
 
 export const promptDesignService = {
-  // ==================== Projects ====================
+  // ==================== 项目 ====================
 
   listProjects: (): PromptDesignProject[] => {
     const db = getDatabase()
@@ -85,11 +85,11 @@ export const promptDesignService = {
 
   deleteProject: (id: string): void => {
     const db = getDatabase()
-    // FOREIGN KEY ON DELETE CASCADE will handle the designs
+    // 外键 ON DELETE CASCADE 会自动处理关联设计
     db.prepare("DELETE FROM prompt_design_projects WHERE id = ?").run(id)
   },
 
-  // ==================== Designs ====================
+  // ==================== 设计 ====================
 
   listDesigns: (projectId?: string): PromptDesign[] => {
     const db = getDatabase()

@@ -873,7 +873,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                           : "flex-[1] border-white/5 bg-[#212121] hover:bg-[#2a2a2a] hover:border-white/10 cursor-pointer"
                       }`}
                     >
-                      {/* UNEXPANDED */}
+                      {/* 未展开 */}
                       <div
                         className={`absolute inset-0 flex flex-col items-center py-4 transition-opacity duration-300 ${
                           isActive
@@ -917,7 +917,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                         </div>
                       </div>
 
-                      {/* EXPANDED */}
+                      {/* 已展开 */}
                       <div
                         className={`absolute inset-0 p-5 flex flex-col transition-all duration-700 delay-100 ${
                           isActive
@@ -926,7 +926,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                         }`}
                       >
                         <div className="w-full h-full flex flex-col min-w-0">
-                          {/* Header */}
+                          {/* 头部 */}
                           <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5 flex-shrink-0">
                             <div className="flex flex-col gap-0.5 overflow-hidden">
                               <span className="text-sm font-bold text-white/90 tracking-wide flex-shrink-0">
@@ -972,9 +972,9 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                             </div>
                           </div>
 
-                          {/* Content Stream */}
+                           {/* 内容流 */}
                            <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] pr-2 pb-2">
-                            {/* Journal */}
+                            {/* 日记 */}
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-1.5">
                                 <BookOpen className="h-3.5 w-3.5 text-[#c084fc]/70" />
@@ -1000,7 +1000,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                               )}
                             </div>
 
-                            {/* Todos */}
+                            {/* 待办 */}
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-1.5">
                                 <CheckSquare className="h-3.5 w-3.5 text-[#fb923c]/70" />
@@ -1035,7 +1035,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                               )}
                             </div>
 
-                            {/* Snippets */}
+                            {/* 碎片 */}
                             {snippetsCount > 0 && (
                               <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-1.5">
@@ -1062,7 +1062,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                               </div>
                             )}
 
-                            {/* Bills */}
+                            {/* 账单 */}
                             {billsCount > 0 && (
                               <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-1.5">

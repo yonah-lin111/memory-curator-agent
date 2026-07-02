@@ -61,7 +61,7 @@ export const useFileMention = (
     useState<AgentMentionPanelState | null>(null);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [matchedFiles, setMatchedFiles] = useState<string[]>([]);
-  // We use this ref to track whether the selection is occurring by an IME composition
+  // 使用此 ref 追踪选择是否发生在 IME 组合输入期间
   const isComposingRef = useRef(false);
   
   const activeProjectId = usePromptDesignStore((state) => state.activeProjectId);

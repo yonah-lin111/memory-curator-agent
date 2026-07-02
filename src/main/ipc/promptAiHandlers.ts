@@ -25,7 +25,7 @@ function getPersistence(): PromptAiPersistenceService {
   return persistenceService;
 }
 
-// Store active runs to allow cancellation
+// 存储活跃运行会话以支持取消
 const activePromptAiRuns = new Map<
   string,
   { abortController: AbortController }
@@ -39,7 +39,7 @@ export function registerPromptAiHandlers(): void {
       const abortController = new AbortController();
       activePromptAiRuns.set(runId, { abortController });
 
-      // Start background process
+      // 启动后台进程
       Promise.resolve()
         .then(() =>
           runPromptAiChat(event.sender, payload, runId, abortController.signal),
@@ -155,7 +155,7 @@ async function runPromptAiChat(
     })();
   }
 
-  // Reconstruct messages for context
+  // 重建消息用于上下文
   const session = db.getSession(payload.sessionId);
   const agentMessages =
     session?.messages.map((m) => ({
@@ -163,7 +163,7 @@ async function runPromptAiChat(
       content: m.content,
     })) || [];
 
-  // Prepend system message for Prompt Design context
+  // 前置系统消息作为 Prompt Design 上下文
   agentMessages.unshift({
     role: "system",
     content:
@@ -177,7 +177,7 @@ async function runPromptAiChat(
       provider,
       model: modelId,
       messages: agentMessages,
-      tools: [], // No tools for now
+      tools: [], // 暂未启用工具
       signal,
     });
 

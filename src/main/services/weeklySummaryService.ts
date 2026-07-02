@@ -7,12 +7,12 @@ type DatabaseStatement = {
   run: (...values: unknown[]) => { lastInsertRowid?: number | bigint } | unknown
 }
 
-// Weekly summary service 依赖的最小数据库接口。
+// 周报服务依赖的最小数据库接口。
 export type DatabaseConnection = {
   prepare: (sql: string) => DatabaseStatement
 }
 
-// Weekly summary service 方法集合。
+// 周报服务方法集合。
 export type WeeklySummaryService = {
   // 按周起始日期查询总结，不存在返回 null，可选按 type 过滤。
   getByWeekStart: (weekStartDate: string, type?: string) => WeeklySummaryItem | null

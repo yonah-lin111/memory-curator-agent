@@ -312,7 +312,7 @@ export const PeoplePage = (): React.JSX.Element => {
          * 右侧面板：主展示区 / 编辑区
          * ========================================== */}
         <div className="min-h-0 flex flex-col rounded-[6px] border border-white/6 bg-[#212121] overflow-hidden">
-          {/* A. 详情展示模式 (View Mode) */}
+          {/* A. 详情展示模式 */}
           {mode === "view" && (
             <div className="flex-1 flex flex-col min-h-0">
               {currentPerson ? (
@@ -495,7 +495,7 @@ export const PeoplePage = (): React.JSX.Element => {
             </div>
           )}
 
-          {/* B. 表单编辑模式 (Edit or Create Mode) */}
+          {/* B. 表单编辑模式 */}
           {(mode === "edit" || mode === "create") && (
             <PeopleProfileForm
               mode={mode}

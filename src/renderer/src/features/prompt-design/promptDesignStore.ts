@@ -33,7 +33,7 @@ export const usePromptDesignStore = create<PromptDesignState>()((set, get) => ({
       const newProject = await (window.api as any).promptDesign.projects.create(projectInfo);
       const { projects } = get();
       set({
-        projects: [newProject, ...projects], // Newest first
+        projects: [newProject, ...projects], // 最新在前
         activeProjectId: newProject.id
       });
       return newProject;

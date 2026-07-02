@@ -42,7 +42,7 @@ export function usePromptAiChatController(designItemId: string) {
     }
   }, []);
 
-  // Initialize a session
+  // 初始化会话
   useEffect(() => {
     const init = async () => {
       const items = await fetchSessions();
@@ -56,7 +56,7 @@ export function usePromptAiChatController(designItemId: string) {
     init();
   }, [fetchSessions, loadSession]);
 
-  // Handle incoming events
+  // 处理传入事件
   useEffect(() => {
     if (!sessionId) return;
 
@@ -187,7 +187,7 @@ export function usePromptAiChatController(designItemId: string) {
           provider: providerId,
           model: modelId,
         });
-        await fetchSessions(); // Update session list to reflect new titles etc.
+        await fetchSessions(); // 更新会话列表以反映新标题等变化
       } catch (err) {
         console.error("Failed to send message", err);
         setIsGenerating(false);

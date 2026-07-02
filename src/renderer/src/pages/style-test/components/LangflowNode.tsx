@@ -76,7 +76,7 @@ export const LangflowNode = memo(
 
         {/* 输入与输出参数区 */}
         <div className="relative cursor-auto pointer-events-auto">
-          {/* Inputs */}
+          {/* 输入 */}
           {data.inputs?.map((input) => (
             <div
               key={input.id}
@@ -102,7 +102,7 @@ export const LangflowNode = memo(
             </div>
           ))}
 
-          {/* Outputs */}
+          {/* 输出 */}
           {data.outputs?.map((output, idx) => {
             const isLast = idx === data.outputs!.length - 1;
             return (

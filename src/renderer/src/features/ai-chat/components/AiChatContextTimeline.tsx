@@ -373,7 +373,7 @@ export const AiChatContextTimeline = ({
                                   turn.userMessage.meta.parts as string,
                                 );
                               } catch {
-                                // Ignore
+                                // 忽略
                               }
                             }
 
