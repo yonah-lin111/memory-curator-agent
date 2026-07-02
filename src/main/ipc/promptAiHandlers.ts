@@ -4,8 +4,25 @@ import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
 import { runReactAgent } from "@/agent/core/reactAgent";
 import { PromptAiPersistenceService } from "@/services/promptAiPersistenceService";
+import { promptDesignService } from "@/services/promptDesignService";
 import { getDatabase } from "@/db";
 import { createSessionTitle } from "./ai/helpers";
+import { createPromptFileTools } from "@/agent/tools/promptFileTools";
+import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
+import type { AgentMessage, AgentMessageRole, AgentStreamEvent } from "@/agent/types";
+
+// 文件工具 UI 显示名称映射。
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  prompt_file_read: "Read",
+  prompt_glob: "Glob",
+  prompt_grep: "Grep",
+};
+
+/**
+ * 获取工具的 UI 显示名称，未映射时回退到原始工具名。
+ */
+const getToolDisplayName = (name: string): string =>
+  TOOL_DISPLAY_NAMES[name] || name;
 
 export type PromptAiChatStartPayload = {
   runId?: string;
@@ -144,6 +161,14 @@ async function runPromptAiChat(
 
   db.recordAgentRun(runId, payload.sessionId, assistantMessageId, now);
 
+  // 解析项目路径，创建文件工具集
+  const projectRoot = promptDesignService.getProjectPathByDesignItemId(payload.designItemId);
+  const tools = createPromptFileTools(projectRoot || "");
+
+  // 工具步骤和片段累积（流式写入结束后持久化）
+  const assistantToolSteps: AiToolStep[] = [];
+  const assistantParts: AiChatMessagePart[] = [];
+
   // 后台异步生成会话标题
   if (shouldCreateTitle) {
     void (async () => {
@@ -159,13 +184,38 @@ async function runPromptAiChat(
     })();
   }
 
-  // 重建消息用于上下文
+  // 重建消息用于上下文（含工具调用历史）
   const session = db.getSession(payload.sessionId);
-  const agentMessages =
-    session?.messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    })) || [];
+  const agentMessages: AgentMessage[] = [];
+
+  if (session?.messages) {
+    for (const m of session.messages) {
+      const role = m.role as AgentMessageRole;
+
+      if (role === "assistant" && m.toolSteps && m.toolSteps.length > 0) {
+        // 带工具调用的 assistant 消息：先输出 assistant + toolCalls，再输出 tool 结果
+        const toolCalls = m.toolSteps.map((step) => ({
+          type: "tool_call_done" as const,
+          id: step.id,
+          name: step.name,
+          argumentsText: JSON.stringify(step.input ?? {}),
+        }));
+        agentMessages.push({ role: "assistant", content: m.content || "", toolCalls });
+        for (const step of m.toolSteps) {
+          if (step.status === "done") {
+            agentMessages.push({
+              role: "tool",
+              toolCallId: step.id,
+              name: step.name,
+              content: typeof step.data === "string" ? step.data : JSON.stringify(step.data ?? {}),
+            });
+          }
+        }
+      } else {
+        agentMessages.push({ role, content: m.content });
+      }
+    }
+  }
 
   // 前置系统消息作为 Prompt Design 上下文
   agentMessages.unshift({
@@ -181,7 +231,7 @@ async function runPromptAiChat(
       provider,
       model: modelId,
       messages: agentMessages,
-      tools: [], // 暂未启用工具
+      tools,
       signal,
     });
 
@@ -202,6 +252,82 @@ async function runPromptAiChat(
           runId,
           sessionId: payload.sessionId,
           delta: event.delta,
+        });
+      } else if (event.type === "tool_started") {
+        const step: AiToolStep = {
+          id: event.id,
+          name: event.name,
+          status: "running",
+          input: event.input,
+          createdAt: new Date().toISOString(),
+        };
+        assistantToolSteps.push(step);
+        assistantParts.push({ type: "tool_call", toolCall: step });
+        db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
+        const displayName = getToolDisplayName(event.name);
+        sender.send("prompt-ai:chat:event", {
+          type: "tool_started",
+          runId,
+          sessionId: payload.sessionId,
+          toolStep: {
+            id: event.id,
+            title: `Tool result: ${displayName}`,
+            status: "running",
+            tool: displayName,
+            input: event.input,
+            observation: "Tool is running.",
+          },
+        });
+      } else if (event.type === "tool_finished") {
+        const step = assistantToolSteps.find((s) => s.id === event.id);
+        if (step) {
+          step.status = "done";
+          step.observation = event.observation;
+          step.data = event.data;
+          step.endedAt = new Date().toISOString();
+        }
+        const part = assistantParts.find(
+          (p) => p.type === "tool_call" && p.toolCall?.id === event.id,
+        );
+        if (part?.toolCall) {
+          part.toolCall.status = "done";
+          part.toolCall.observation = event.observation;
+          part.toolCall.data = event.data;
+          part.toolCall.endedAt = step?.endedAt;
+        }
+        db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
+        sender.send("prompt-ai:chat:event", {
+          type: "tool_finished",
+          runId,
+          sessionId: payload.sessionId,
+          toolStepId: event.id,
+          tool: getToolDisplayName(event.name),
+          observation: event.observation,
+          data: event.data,
+        });
+      } else if (event.type === "tool_failed") {
+        const step = assistantToolSteps.find((s) => s.id === event.id);
+        if (step) {
+          step.status = "failed";
+          step.error = event.error;
+          step.endedAt = new Date().toISOString();
+        }
+        const part = assistantParts.find(
+          (p) => p.type === "tool_call" && p.toolCall?.id === event.id,
+        );
+        if (part?.toolCall) {
+          part.toolCall.status = "failed";
+          part.toolCall.error = event.error;
+          part.toolCall.endedAt = step?.endedAt;
+        }
+        db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
+        sender.send("prompt-ai:chat:event", {
+          type: "tool_failed",
+          runId,
+          sessionId: payload.sessionId,
+          toolStepId: event.id,
+          tool: getToolDisplayName(event.name),
+          error: event.error,
         });
       } else if (event.type === "turn_finished") {
         sender.send("prompt-ai:chat:event", {

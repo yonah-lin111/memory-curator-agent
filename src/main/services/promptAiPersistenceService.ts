@@ -270,6 +270,29 @@ export class PromptAiPersistenceService {
     stmt.run(runId, sessionId, messageId, timestamp);
   }
 
+  /**
+   * 更新消息的工具步骤和片段数据。
+   * 用于流式写入过程中累积工具步骤后批量持久化。
+   */
+  public upsertToolSteps(
+    messageId: string,
+    toolSteps: AiToolStep[],
+    parts: AiChatMessagePart[],
+  ): void {
+    const timestamp = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      UPDATE prompt_ai_chat_messages
+      SET tool_steps_json = ?, parts_json = ?, updated_at = ?
+      WHERE id = ?
+    `);
+    stmt.run(
+      JSON.stringify(toolSteps),
+      JSON.stringify(parts),
+      timestamp,
+      messageId,
+    );
+  }
+
   public updateAgentRunStatus(
     runId: string,
     status: AiAgentRunStatus,

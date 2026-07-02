@@ -91,6 +91,40 @@ const getStatusConfig = (
 };
 
 /**
+ * 检测文件工具的 data 结构，返回简洁摘要。
+ * 文件工具 data: { type, path } | { pattern, totalFound }
+ */
+const formatFileToolSummary = (
+  data: unknown,
+  observation: string,
+): string | null => {
+  if (!data || typeof data !== "object") return null;
+
+  const d = data as Record<string, unknown>;
+
+  // read 工具：{ type: "file"|"directory"|"binary", path }
+  if (d.type === "file" || d.type === "directory" || d.type === "binary") {
+    const filePath = typeof d.path === "string" ? d.path : "";
+    const fileName = filePath.split("/").pop() || filePath;
+    if (d.type === "binary") return `Binary file: ${fileName}`;
+    if (d.type === "directory") return `Listed directory: ${fileName}/`;
+    return `Read file: ${fileName}`;
+  }
+
+  // glob 工具：{ pattern, totalFound }
+  if (d.pattern && typeof d.totalFound === "number") {
+    return `${d.totalFound} file${d.totalFound === 1 ? "" : "s"} matching "${d.pattern}"`;
+  }
+
+  // grep 工具：{ pattern, totalFound, files? }
+  if (d.pattern && typeof d.totalFound === "number" && typeof d.files === "number") {
+    return `${d.totalFound} match${d.totalFound === 1 ? "" : "es"} in ${d.files} file${d.files === 1 ? "" : "s"} for "${d.pattern}"`;
+  }
+
+  return null;
+};
+
+/**
  * formatToolObservation - 将工具原始观察压缩成用户可读摘要。
  */
 const formatToolObservation = (step: AiToolStep): string => {
@@ -98,7 +132,11 @@ const formatToolObservation = (step: AiToolStep): string => {
     return ASK_ANSWER_OBSERVATION;
   }
 
-  const normalizedObservation = step.observation.trim();
+  // 优先通过 data 结构生成文件工具摘要
+  const fileSummary = formatFileToolSummary(step.data, step.observation ?? "");
+  if (fileSummary) return fileSummary;
+
+  const normalizedObservation = (step.observation ?? "").trim();
   const sqlRowsMatch = normalizedObservation.match(
     SQL_RAW_ROWS_OBSERVATION_PATTERN,
   );

@@ -171,4 +171,22 @@ export const promptDesignService = {
     const db = getDatabase()
     db.prepare("DELETE FROM prompt_design_items WHERE id = ?").run(id)
   },
+
+  // ==================== 文件工具支持 ====================
+
+  /**
+   * 根据 designItemId 查询关联项目的文件系统路径。
+   * 仅返回 type='filesystem' 且 path 非空的项目路径，否则返回 null（虚拟项目）。
+   */
+  getProjectPathByDesignItemId: (designItemId: string): string | null => {
+    const db = getDatabase()
+    const row = db.prepare(
+      `SELECT p.path
+       FROM prompt_design_items di
+       JOIN prompt_design_projects p ON p.id = di.project_id
+       WHERE di.id = ? AND p.type = 'filesystem' AND p.path IS NOT NULL AND p.path != ''`
+    ).get(designItemId) as { path: string } | undefined
+
+    return row?.path ?? null
+  },
 }

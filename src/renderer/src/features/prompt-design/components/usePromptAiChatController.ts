@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import type { AiToolStep } from "@/features/ai-chat/types";
 
 export type PromptAiMessage = {
   id: string;
@@ -6,7 +7,35 @@ export type PromptAiMessage = {
   content: string;
   time: string;
   model?: string;
+  /** 推理思考内容 */
+  reasoning?: string;
+  /** 工具调用步骤列表 */
+  toolSteps?: AiToolStep[];
 };
+
+/**
+ * 文件工具 UI 显示名称映射。
+ */
+const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  prompt_file_read: "Read",
+  prompt_glob: "Glob",
+  prompt_grep: "Grep",
+};
+
+/**
+ * 将后端持久化的工具步骤格式转换为前端 AiToolStep 格式。
+ * 后端 schema: { id, name, status, input, observation?, data?, createdAt?, endedAt? }
+ * 前端类型:    { id, title, status, tool, input?, observation, data? }
+ */
+const mapBackendToolStep = (raw: any): AiToolStep => ({
+  id: raw.id,
+  title: `Tool result: ${TOOL_DISPLAY_NAMES[raw.name] || raw.name}`,
+  status: raw.status,
+  tool: TOOL_DISPLAY_NAMES[raw.name] || raw.name,
+  input: raw.input,
+  observation: raw.observation ?? "",
+  data: raw.data,
+});
 
 export function usePromptAiChatController(designItemId: string) {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
@@ -37,6 +66,7 @@ export function usePromptAiChatController(designItemId: string) {
             hour12: false,
           }),
           model: m.model,
+          toolSteps: m.toolSteps?.map(mapBackendToolStep) || undefined,
         })),
       );
     }
@@ -87,6 +117,67 @@ export function usePromptAiChatController(designItemId: string) {
             newMessages[newMessages.length - 1] = {
               ...lastMsg,
               content: lastMsg.content + event.delta,
+            };
+            return newMessages;
+          }
+          return prev;
+        });
+      } else if (event.type === "tool_started") {
+        const step: AiToolStep = event.toolStep;
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === "assistant") {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = {
+              ...lastMsg,
+              toolSteps: [...(lastMsg.toolSteps || []), step],
+            };
+            return newMessages;
+          }
+          return prev;
+        });
+      } else if (event.type === "tool_finished") {
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === "assistant" && lastMsg.toolSteps) {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = {
+              ...lastMsg,
+              toolSteps: lastMsg.toolSteps.map((s) =>
+                s.id === event.toolStepId
+                  ? { ...s, status: "done" as const, observation: event.observation ?? "", data: event.data }
+                  : s
+              ),
+            };
+            return newMessages;
+          }
+          return prev;
+        });
+      } else if (event.type === "tool_failed") {
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === "assistant" && lastMsg.toolSteps) {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = {
+              ...lastMsg,
+              toolSteps: lastMsg.toolSteps.map((s) =>
+                s.id === event.toolStepId
+                  ? { ...s, status: "failed" as const, observation: event.error ?? "" }
+                  : s
+              ),
+            };
+            return newMessages;
+          }
+          return prev;
+        });
+      } else if (event.type === "reasoning_delta") {
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === "assistant") {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1] = {
+              ...lastMsg,
+              reasoning: (lastMsg.reasoning || "") + event.delta,
             };
             return newMessages;
           }
