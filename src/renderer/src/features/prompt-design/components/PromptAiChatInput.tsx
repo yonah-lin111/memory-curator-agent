@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useLayoutEffect, useCallback } from "react";
 import { Paperclip, RotateCcw, SendHorizontal, FileText } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
 import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
-import { INTERACTIVE_SELECTOR } from "@/features/ai-chat/components/AiChatInput/constants";
+import {
+  FALLBACK_LINE_HEIGHT,
+  INTERACTIVE_SELECTOR,
+  TEXTAREA_MAX_ROWS,
+  TEXTAREA_MIN_ROWS,
+} from "@/features/ai-chat/components/AiChatInput/constants";
 import { useFileMention } from "../hooks/useFileMention";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
@@ -24,22 +29,29 @@ export const PromptAiChatInput = ({
   const { selectedModel, hasModelOptions, selectOptions, handleModelChange } =
     useActiveAiModels();
 
-  const TEXTAREA_MIN_ROWS = 2;
-
   const adjustTextareaHeight = useCallback(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      const minHeight = TEXTAREA_MIN_ROWS * 20;
-      const newHeight =
-        inputText.length === 0
-          ? minHeight
-          : Math.max(
-              minHeight,
-              Math.min(textareaRef.current.scrollHeight, 180),
-            );
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-      textareaRef.current.style.height = `${newHeight}px`;
-    }
+    const computedStyle = window.getComputedStyle(textarea);
+    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight);
+    const lineHeight = Number.isNaN(parsedLineHeight)
+      ? FALLBACK_LINE_HEIGHT
+      : parsedLineHeight;
+    const verticalPadding =
+      Number.parseFloat(computedStyle.paddingTop || "0") +
+      Number.parseFloat(computedStyle.paddingBottom || "0");
+    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding;
+    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding;
+
+    textarea.style.height = "auto";
+    const nextHeight =
+      inputText.length === 0
+        ? minHeight
+        : Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [inputText]);
 
   const {
@@ -91,9 +103,9 @@ export const PromptAiChatInput = ({
     }
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     adjustTextareaHeight();
-  }, [adjustTextareaHeight]);
+  }, [adjustTextareaHeight, inputText]);
 
   return (
     <div className="flex-shrink-0 p-3">
