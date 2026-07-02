@@ -215,6 +215,48 @@ export class PromptAiPersistenceService {
     stmt.run(sessionId);
   }
 
+  public undoLastTurn(sessionId: string): PromptAiChatSessionItem | null {
+    const undoTx = this.db.transaction(() => {
+      const messagesStmt = this.db.prepare(`
+        SELECT rowid AS row_order, id, role, created_at 
+        FROM prompt_ai_chat_messages 
+        WHERE session_id = ? 
+        ORDER BY created_at ASC, rowid ASC
+      `);
+      const messages = messagesStmt.all(sessionId) as { row_order: number; id: string; role: string; created_at: string }[];
+
+      const turnStartIndex = [...messages].reverse().findIndex((m) => m.role === 'user');
+      if (turnStartIndex < 0) return;
+
+      const resolvedTurnStartIndex = messages.length - 1 - turnStartIndex;
+      const removedMessages = messages.slice(resolvedTurnStartIndex);
+      const removedMessageIds = removedMessages.map((m) => m.id);
+      const removedAssistantMessageIds = removedMessages
+        .filter((m) => m.role === 'assistant')
+        .map((m) => m.id);
+
+      if (removedAssistantMessageIds.length > 0) {
+        const placeholders = removedAssistantMessageIds.map(() => '?').join(', ');
+        this.db.prepare(`DELETE FROM prompt_ai_agent_runs WHERE session_id = ? AND assistant_message_id IN (${placeholders})`).run(sessionId, ...removedAssistantMessageIds);
+      }
+
+      if (removedMessageIds.length > 0) {
+        const placeholders = removedMessageIds.map(() => '?').join(', ');
+        this.db.prepare(`DELETE FROM prompt_ai_chat_messages WHERE id IN (${placeholders})`).run(...removedMessageIds);
+      }
+
+      const remainingMessages = messages.slice(0, resolvedTurnStartIndex);
+      const latestMessageAt = remainingMessages.length > 0 
+        ? remainingMessages[remainingMessages.length - 1].created_at 
+        : new Date().toISOString();
+
+      this.updateSessionTimestamp(sessionId, latestMessageAt);
+    });
+
+    undoTx();
+    return this.getSession(sessionId);
+  }
+
   public recordAgentRun(
     runId: string,
     sessionId: string,

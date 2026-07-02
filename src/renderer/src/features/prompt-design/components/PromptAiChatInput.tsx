@@ -1,5 +1,5 @@
-import { useState, useRef, useLayoutEffect, useCallback } from "react";
-import { Paperclip, RotateCcw, SendHorizontal, FileText } from "lucide-react";
+import { useState, useRef, useLayoutEffect, useCallback, useMemo } from "react";
+import { Paperclip, RotateCcw, SendHorizontal, FileText, Bot, MessageSquare } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
@@ -12,22 +12,75 @@ import {
   TEXTAREA_MIN_ROWS,
 } from "@/features/ai-chat/components/AiChatInput/constants";
 import { useFileMention } from "../hooks/useFileMention";
+import { getMatchedCommands, isCommandInput } from "@/features/ai-chat/components/AiChatInput/utils";
+import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatModels";
+import { useAiChatSessions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatSessions";
+import type { AiChatSession } from "@/features/ai-chat/types";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
 export const PromptAiChatInput = ({
   onSend,
   disabled,
+  onNewChat,
+  onUndo,
+  onSessionChange,
+  chatSessions,
 }: {
   onSend?: (text: string, selectedModel?: string) => void;
   disabled?: boolean;
+  onNewChat?: () => void;
+  onUndo?: () => void;
+  onSessionChange?: (sessionId: string) => void;
+  chatSessions?: AiChatSession[];
 }) => {
   const toast = useToast();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { selectedModel, hasModelOptions, selectOptions, handleModelChange } =
+  const { selectedModel, hasModelOptions, selectOptions, handleModelChange, modelOptions } =
     useActiveAiModels();
+
+  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+
+  const matchedCommands = useMemo(() => {
+    return getMatchedCommands(inputText).filter((cmd) => 
+      ["clear", "undo", "model", "session"].includes(cmd.id)
+    );
+  }, [inputText]);
+
+  const {
+    activeModelIndex,
+    matchedModels,
+    isModelMode,
+    setActiveModelIndex,
+    selectModel,
+    moveActiveModel,
+  } = useAiChatModels(
+    inputText,
+    setInputText,
+    modelOptions,
+    textareaRef,
+    () => {},
+    (selection) => handleModelChange(`${selection.provider}::${selection.model}`)
+  );
+
+  const {
+    activeSessionIndex,
+    matchedSessions,
+    isSessionMode,
+    setActiveSessionIndex,
+    selectSession,
+    moveActiveSession,
+  } = useAiChatSessions(
+    inputText,
+    setInputText,
+    chatSessions || [],
+    textareaRef,
+    () => {},
+    (sessionId) => onSessionChange?.(sessionId)
+  );
 
   const adjustTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -73,6 +126,64 @@ export const PromptAiChatInput = ({
     adjustTextareaHeight,
   );
 
+  const executeCommand = useCallback((commandId: string) => {
+    setIsCommandPanelOpen(false);
+    if (commandId === "clear") {
+      setInputText("");
+      onNewChat?.();
+    } else if (commandId === "undo") {
+      setInputText("");
+      onUndo?.();
+    } else if (commandId === "model") {
+      setInputText("/model ");
+    } else if (commandId === "session") {
+      setInputText("/session ");
+    }
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [onNewChat, onUndo]);
+
+  const moveActiveCommand = useCallback((direction: 1 | -1): void => {
+    setActiveCommandIndex((currentIndex) => {
+      if (matchedCommands.length === 0) {
+        return 0;
+      }
+      return (
+        (currentIndex + direction + matchedCommands.length) %
+        matchedCommands.length
+      );
+    });
+  }, [matchedCommands.length]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const nextValue = e.target.value;
+    setInputText(nextValue);
+    
+    // Commands check
+    const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
+    const isNextSessionMode = nextValue === "/session" || nextValue.startsWith("/session ") || nextValue === "/resume" || nextValue.startsWith("/resume ");
+    
+    if (isNextModelMode || isNextSessionMode) {
+      setIsCommandPanelOpen(false);
+      closeFileMentionPanel();
+      return;
+    }
+
+    const nextMatchedCommands = getMatchedCommands(nextValue).filter((cmd) => 
+      ["clear", "undo", "model", "session"].includes(cmd.id)
+    );
+
+    const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0;
+    setIsCommandPanelOpen(shouldOpenCommandPanel);
+    setActiveCommandIndex(0);
+    
+    if (shouldOpenCommandPanel) {
+      closeFileMentionPanel();
+      return;
+    }
+
+    syncFileMentionPanel(nextValue, e.target.selectionStart);
+  }, [closeFileMentionPanel, syncFileMentionPanel]);
+
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (
@@ -114,6 +225,55 @@ export const PromptAiChatInput = ({
         onClick={handleContainerClick}
       >
         <CommandPanel
+          isOpen={isCommandPanelOpen}
+          ariaLabel="Slash Commands"
+          items={matchedCommands}
+          activeIndex={activeCommandIndex}
+          onActiveIndexChange={setActiveCommandIndex}
+          onItemSelect={(cmd) => executeCommand(cmd.id)}
+          renderItem={(cmd) => (
+            <div className="flex items-center gap-3 w-full">
+              <span className="text-sm font-medium shrink-0">{cmd.name}</span>
+              <span className="text-xs text-white/50 truncate flex-1 text-left">{cmd.description}</span>
+            </div>
+          )}
+          idPrefix="prompt-slash-command"
+        />
+
+        <CommandPanel
+          isOpen={isModelMode}
+          ariaLabel="Model Selection"
+          items={matchedModels}
+          activeIndex={activeModelIndex}
+          onActiveIndexChange={setActiveModelIndex}
+          onItemSelect={selectModel}
+          renderItem={(model) => (
+            <div className="flex items-center gap-2 w-full">
+              <Bot className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate text-sm font-medium">{model.modelName}</span>
+              <span className="text-xs text-white/30 ml-auto shrink-0">{model.providerName}</span>
+            </div>
+          )}
+          idPrefix="prompt-model-select"
+        />
+
+        <CommandPanel
+          isOpen={isSessionMode}
+          ariaLabel="Session Selection"
+          items={matchedSessions}
+          activeIndex={activeSessionIndex}
+          onActiveIndexChange={setActiveSessionIndex}
+          onItemSelect={selectSession}
+          renderItem={(session) => (
+            <div className="flex items-center gap-2 w-full">
+              <MessageSquare className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate text-sm font-medium flex-1 text-left">{session.title}</span>
+            </div>
+          )}
+          idPrefix="prompt-session-select"
+        />
+
+        <CommandPanel
           isOpen={isFilePanelOpen}
           ariaLabel="File Mentions"
           items={matchedFiles.map((path) => ({ id: path, path }))}
@@ -134,10 +294,7 @@ export const PromptAiChatInput = ({
           ref={textareaRef}
           rows={TEXTAREA_MIN_ROWS}
           value={inputText}
-          onChange={(e) => {
-            setInputText(e.target.value);
-            syncFileMentionPanel(e.target.value, e.target.selectionStart);
-          }}
+          onChange={handleInputChange}
           onClick={handleTextareaCursorMove}
           onKeyUp={(e) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
@@ -145,6 +302,45 @@ export const PromptAiChatInput = ({
             }
           }}
           onKeyDown={(e) => {
+            if (isSessionMode && matchedSessions.length > 0) {
+              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveSession(1); return; }
+              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveSession(-1); return; }
+              if (e.key === "Escape") { e.preventDefault(); setInputText(""); return; }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0];
+                if (activeSession) selectSession(activeSession);
+                return;
+              }
+            }
+        
+            if (isModelMode && matchedModels.length > 0) {
+              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveModel(1); return; }
+              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveModel(-1); return; }
+              if (e.key === "Escape") { e.preventDefault(); setInputText(""); return; }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+                if (activeModel) selectModel(activeModel);
+                return;
+              }
+            }
+        
+            if (isCommandPanelOpen) {
+              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveCommand(1); return; }
+              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveCommand(-1); return; }
+              if (e.key === "Escape") { e.preventDefault(); setIsCommandPanelOpen(false); return; }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                const cmd = matchedCommands[activeCommandIndex] ?? matchedCommands[0];
+                if (cmd) executeCommand(cmd.id);
+                return;
+              }
+            }
+
             handleFileMentionKeyDown(e);
             if (e.defaultPrevented) return;
 

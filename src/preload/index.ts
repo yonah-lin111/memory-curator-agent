@@ -909,6 +909,8 @@ const api = {
       ipcRenderer.invoke('prompt-ai:session:title:update', sessionId, title),
     deleteSession: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:session:delete', sessionId),
+    undoLastTurn: (sessionId: string): Promise<any | null> =>
+      ipcRenderer.invoke('prompt-ai:session:undo', sessionId),
     startChat: (payload: any): Promise<{ runId: string }> =>
       ipcRenderer.invoke('prompt-ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>

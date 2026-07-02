@@ -247,7 +247,14 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
           </div>
 
           {/* 输入区域 */}
-          <PromptAiChatInput onSend={handleSend} disabled={isGenerating} />
+          <PromptAiChatInput 
+            onSend={handleSend} 
+            disabled={isGenerating}
+            onNewChat={controller.handleNewChat}
+            onUndo={controller.handleUndo}
+            onSessionChange={controller.handleSessionChange}
+            chatSessions={controller.sessions}
+          />
         </div>
       </div>
     </div>

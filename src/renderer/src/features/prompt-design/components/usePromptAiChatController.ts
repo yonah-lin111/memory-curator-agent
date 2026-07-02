@@ -130,6 +130,14 @@ export function usePromptAiChatController(designItemId: string) {
     }
   }, [fetchSessions]);
 
+  const handleUndo = useCallback(async () => {
+    if (isGenerating) return;
+    const updated = await window.api.promptAi!.undoLastTurn(sessionId);
+    if (updated) {
+      await loadSession(sessionId);
+    }
+  }, [isGenerating, sessionId, loadSession]);
+
   const handleDeleteChat = useCallback(async (sid: string) => {
     try {
       await window.api.promptAi!.deleteSession(sid);
@@ -205,6 +213,7 @@ export function usePromptAiChatController(designItemId: string) {
     handleSessionChange,
     handleRenameChat,
     handleDeleteChat,
+    handleUndo,
     isGenerating,
     LATEST_ASSISTANT_TOP_OFFSET,
   };
