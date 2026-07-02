@@ -68,7 +68,7 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
         return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
       });
     }
-  }, [latestUserMessageId, messages, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestUserMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useLayoutEffect(() => {
     if (

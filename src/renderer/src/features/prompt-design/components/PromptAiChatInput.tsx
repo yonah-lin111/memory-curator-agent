@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Paperclip, RotateCcw, SendHorizontal, FileText } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
@@ -43,7 +43,6 @@ export const PromptAiChatInput = ({
   }, [inputText]);
 
   const {
-    fileMentionPanelState,
     activeFileIndex,
     matchedFiles,
     isFilePanelOpen,
@@ -81,7 +80,7 @@ export const PromptAiChatInput = ({
     if (inputText.trim() && onSend) {
       // 发送前清理无用的前缀
       const cleanedText = inputText
-        .replace(FILE_MENTION_PATTERN, (match, prefix, token) => {
+        .replace(FILE_MENTION_PATTERN, (_match, prefix, token) => {
           return `${prefix}${token}`;
         })
         .trim();
