@@ -84,9 +84,6 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
         top: targetTop,
         behavior: "smooth",
       });
-    } else if (messagesEndRef.current) {
-      // scroll to bottom if no pinned message
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [
     latestUserMessageId,
