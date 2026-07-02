@@ -1,7 +1,38 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
 import { usePromptAiChatController } from "./usePromptAiChatController";
+
+// 底部占位计算所需的 DOM 参数。
+type BottomSpacerParams = {
+  container: HTMLDivElement;
+  userMessage: HTMLDivElement;
+  currentSpacerHeight: number;
+  topOffset: number;
+};
+
+/**
+ * calculateBottomSpacerHeight - 计算用户消息置顶时需要保留的底部空间。
+ */
+const calculateBottomSpacerHeight = ({
+  container,
+  userMessage,
+  currentSpacerHeight,
+  topOffset,
+}: BottomSpacerParams): number => {
+  const viewportHeight = container.clientHeight;
+  const targetScrollTop = Math.max(userMessage.offsetTop - topOffset, 0);
+
+  return Math.round(
+    Math.max(
+      0,
+      targetScrollTop +
+        viewportHeight -
+        container.scrollHeight +
+        currentSpacerHeight,
+    ),
+  );
+};
 
 export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<typeof usePromptAiChatController> }) => {
   const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } = controller;
@@ -9,6 +40,7 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const latestUserMessageRef = useRef<HTMLDivElement>(null);
+  const prevScrolledUserMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
 
   const latestUserMessageId = useMemo(() => {
@@ -26,25 +58,14 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
     sendMessage(text, selectedModel);
   };
 
-  const getUserMessageTargetTop = (
-    container: HTMLDivElement,
-    userMessage: HTMLDivElement,
-  ): number => {
-    const containerRect = container.getBoundingClientRect();
-    const userMessageRect = userMessage.getBoundingClientRect();
-
-    return Math.max(
-      container.scrollTop +
-        userMessageRect.top -
-        containerRect.top -
-        LATEST_ASSISTANT_TOP_OFFSET,
-      0,
-    );
+  const getUserMessageTargetTop = (userMessage: HTMLDivElement): number => {
+    return Math.max(userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
   };
 
   useLayoutEffect(() => {
     if (!latestUserMessageId) {
       setBottomSpacerHeight(0);
+      prevScrolledUserMessageIdRef.current = null;
       return;
     }
 
@@ -53,22 +74,97 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
 
     if (container && userMessage) {
       setBottomSpacerHeight((prev) => {
-        const viewportHeight = container.clientHeight;
-        const targetScrollTop = getUserMessageTargetTop(
+        const requiredSpacer = calculateBottomSpacerHeight({
           container,
           userMessage,
-        );
-        const requiredSpacer = Math.round(
-          Math.max(
-            0,
-            targetScrollTop + viewportHeight - container.scrollHeight + prev,
-          ),
-        );
+          currentSpacerHeight: prev,
+          topOffset: LATEST_ASSISTANT_TOP_OFFSET,
+        });
 
         return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
       });
     }
   }, [latestUserMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const container = scrollContainerRef.current;
+      const userMessage = latestUserMessageRef.current;
+
+      if (container && userMessage && latestUserMessageId) {
+        setBottomSpacerHeight((prev) =>
+          calculateBottomSpacerHeight({
+            container,
+            userMessage,
+            currentSpacerHeight: prev,
+            topOffset: LATEST_ASSISTANT_TOP_OFFSET,
+          }),
+        );
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [latestUserMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const userMessage = latestUserMessageRef.current;
+
+    if (
+      !latestUserMessageId ||
+      !container ||
+      !userMessage ||
+      typeof window.ResizeObserver === "undefined"
+    ) {
+      return undefined;
+    }
+
+    let pendingRafId: number | null = null;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (pendingRafId !== null) {
+        return;
+      }
+
+      pendingRafId = requestAnimationFrame(() => {
+        pendingRafId = null;
+        setBottomSpacerHeight((prev) => {
+          const requiredSpacer = calculateBottomSpacerHeight({
+            container,
+            userMessage,
+            currentSpacerHeight: prev,
+            topOffset: LATEST_ASSISTANT_TOP_OFFSET,
+          });
+
+          return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
+        });
+      });
+    });
+
+    const wrapper = container.firstElementChild;
+    const elementsToObserve = wrapper
+      ? Array.from(wrapper.children)
+      : Array.from(container.children);
+
+    for (const child of elementsToObserve) {
+      if (
+        child instanceof HTMLElement &&
+        child.dataset.aiChatBottomSpacer !== "true"
+      ) {
+        resizeObserver.observe(child);
+      }
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      if (pendingRafId !== null) {
+        cancelAnimationFrame(pendingRafId);
+      }
+    };
+  }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useLayoutEffect(() => {
     if (
@@ -76,19 +172,29 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
       latestUserMessageRef.current &&
       scrollContainerRef.current
     ) {
-      const targetTop = getUserMessageTargetTop(
-        scrollContainerRef.current,
-        latestUserMessageRef.current,
-      );
-      scrollContainerRef.current.scrollTo({
-        top: targetTop,
-        behavior: "smooth",
+      if (prevScrolledUserMessageIdRef.current === latestUserMessageId) {
+        return;
+      }
+
+      const targetTop = getUserMessageTargetTop(latestUserMessageRef.current);
+      const animationFrame = requestAnimationFrame(() => {
+        scrollContainerRef.current?.scrollTo({
+          top: targetTop,
+          behavior: "smooth",
+        });
       });
+
+      prevScrolledUserMessageIdRef.current = latestUserMessageId;
+
+      return () => {
+        cancelAnimationFrame(animationFrame);
+      };
     }
+
+    return undefined;
   }, [
     latestUserMessageId,
     messages.length,
-    bottomSpacerHeight,
     LATEST_ASSISTANT_TOP_OFFSET,
   ]);
 
