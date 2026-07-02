@@ -201,6 +201,13 @@ export class PromptAiPersistenceService {
     }));
   }
 
+  public updateSessionTitle(sessionId: string, title: string): void {
+    const stmt = this.db.prepare(
+      "UPDATE prompt_ai_chat_sessions SET title = ?, updated_at = ? WHERE id = ?"
+    );
+    stmt.run(title, new Date().toISOString(), sessionId);
+  }
+
   public deleteSession(sessionId: string): void {
     const stmt = this.db.prepare(
       "DELETE FROM prompt_ai_chat_sessions WHERE id = ?",

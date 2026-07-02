@@ -116,6 +116,31 @@ export function usePromptAiChatController(designItemId: string) {
     loadSession(sid);
   }, [isGenerating, loadSession]);
 
+  const handleRenameChat = useCallback(async (sid: string, title: string) => {
+    try {
+      await window.api.promptAi!.updateSessionTitle(sid, title);
+      await fetchSessions();
+      return true;
+    } catch (error) {
+      console.error("Failed to rename chat:", error);
+      return false;
+    }
+  }, [fetchSessions]);
+
+  const handleDeleteChat = useCallback(async (sid: string) => {
+    try {
+      await window.api.promptAi!.deleteSession(sid);
+      await fetchSessions();
+      if (sessionId === sid) {
+        handleNewChat();
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+      return false;
+    }
+  }, [fetchSessions, sessionId, handleNewChat]);
+
   const sendMessage = useCallback(
     async (text: string, selectedModel?: string) => {
       if (isGenerating || !text.trim() || !sessionInitialized) return;
@@ -169,11 +194,14 @@ export function usePromptAiChatController(designItemId: string) {
   );
 
   return {
+    activeSessionId: sessionId,
     messages,
     sessions,
     sendMessage,
     handleNewChat,
     handleSessionChange,
+    handleRenameChat,
+    handleDeleteChat,
     isGenerating,
     LATEST_ASSISTANT_TOP_OFFSET,
   };

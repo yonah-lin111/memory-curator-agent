@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronRight, ChevronLeft, History } from "lucide-react";
+import { ChevronRight, ChevronLeft, History, Trash2 } from "lucide-react";
 import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Input } from "@/components/ui/Input";
 import { usePromptAiChatController } from "./usePromptAiChatController";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 
@@ -23,6 +24,27 @@ export const PromptAiSidebar = ({
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
   const designItemId = activeDesignId || "default-design-item-id";
   const controller = usePromptAiChatController(designItemId);
+
+  const [editingTitle, setEditingTitle] = useState<{ id: string; title: string } | null>(null);
+
+  const activeSession = controller.sessions.find(s => s.id === controller.activeSessionId);
+
+  const handleStartEditTitle = (session: any) => {
+    setEditingTitle({ id: session.id, title: session.title });
+  };
+
+  const handleCommitEditTitle = async (session: any) => {
+    if (!editingTitle) return;
+    const nextTitle = editingTitle.title.trim();
+    if (!nextTitle || nextTitle === session.title) {
+      setEditingTitle(null);
+      return;
+    }
+    const isUpdated = await controller.handleRenameChat(session.id, nextTitle);
+    if (isUpdated) {
+      setEditingTitle(null);
+    }
+  };
 
   useEffect(() => {
     isDraggingRef.current = isDragging;
@@ -95,7 +117,7 @@ export const PromptAiSidebar = ({
         />
       )}
       {isOpen && (
-        <div className="flex items-center justify-between p-2 shrink-0 h-9 border-b border-white/5">
+        <div className="flex items-center p-2 shrink-0 h-9 border-b border-white/5 gap-2">
           <Tooltip
             content={isExpanded ? "恢复默认宽度" : "展开最大宽度"}
             placement="bottom"
@@ -108,7 +130,56 @@ export const PromptAiSidebar = ({
               )}
             </IconButton>
           </Tooltip>
-          <div className="flex items-center gap-1">
+          
+          <div className="flex items-center flex-1 min-w-0 gap-1.5">
+            {activeSession && (
+              <Tooltip
+                content="重命名对话"
+                placement="bottom"
+              >
+                <Tooltip
+                  trigger="click"
+                  placement="bottom"
+                  contentClassName="!w-[240px] !p-3 !whitespace-normal flex flex-col"
+                  onConfirm={() => handleCommitEditTitle(activeSession)}
+                  onCancel={() => setEditingTitle(null)}
+                  form={
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex flex-col gap-1 text-left">
+                        <span className="text-[11px] font-semibold text-white/40">
+                          对话名称
+                        </span>
+                        <Input
+                          autoFocus
+                          type="text"
+                          value={editingTitle?.title ?? activeSession.title}
+                          onChange={(e) => setEditingTitle(prev => prev ? { ...prev, title: e.target.value } : { id: activeSession.id, title: e.target.value })}
+                          placeholder="请输入对话名称"
+                          size="xs"
+                          className="!h-[28px]"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleCommitEditTitle(activeSession);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  }
+                >
+                  <span 
+                    className="block truncate text-xs font-bold leading-none cursor-pointer hover:text-white/80 transition-colors"
+                    onClick={() => handleStartEditTitle(activeSession)}
+                  >
+                    {activeSession.title}
+                  </span>
+                </Tooltip>
+              </Tooltip>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Tooltip
               title="Tokens 使用量：1,250 / 200,000 (0.6%)"
               placement="bottom"
@@ -139,42 +210,58 @@ export const PromptAiSidebar = ({
                 </svg>
               </div>
             </Tooltip>
-            <Tooltip
-              placement="bottom"
-              trigger="click"
-              contentClassName="p-1 min-w-[200px]"
-              content={
-              <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                {controller.sessions.length > 0 ? (
-                  controller.sessions.map((item) => (
-                    <div
-                      key={item.id}
-                      className="relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 hover:bg-white/[0.02] text-white/70 group cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => controller.handleSessionChange(item.id)}
-                    >
-                      <div className="flex items-start justify-between gap-2 w-full">
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-bold leading-none group-hover:text-white">
-                            {item.title}
-                          </span>
+            <Tooltip content="历史记录" placement="bottom">
+              <Tooltip
+                placement="bottom"
+                trigger="click"
+                contentClassName="p-1 min-w-[200px]"
+                content={
+                <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {controller.sessions.length > 0 ? (
+                    controller.sessions.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 hover:bg-white/[0.02] text-white/70 group cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => controller.handleSessionChange(item.id)}
+                      >
+                        <div className="flex items-start justify-between gap-2 w-full">
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-bold leading-none group-hover:text-white">
+                              {item.title}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-xs text-white/35">
+                      无对话历史
                     </div>
-                  ))
-                ) : (
-                  <div className="px-3 py-4 text-center text-xs text-white/35">
-                    无对话历史
-                  </div>
-                )}
-              </div>
-              }
-            >
-              <IconButton>
-                <History className="h-4 w-4" />
-              </IconButton>
+                  )}
+                </div>
+                }
+              >
+                <IconButton>
+                  <History className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
             </Tooltip>
+            {activeSession && (
+              <Tooltip content="删除对话" placement="bottom">
+                <Tooltip
+                  title="确定删除此对话吗？"
+                  placement="bottom"
+                  onConfirm={() => controller.handleDeleteChat(activeSession.id)}
+                  variant="primary"
+                >
+                  <IconButton className="flex-shrink-0">
+                    <Trash2 className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+              </Tooltip>
+            )}
             <Tooltip content="新建对话" placement="bottom">
               <IconButton
                 aria-label="New chat"

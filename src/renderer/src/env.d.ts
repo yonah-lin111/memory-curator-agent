@@ -1026,6 +1026,8 @@ type AppAPI = {
   promptAi?: {
     listSessions: (designItemId: string) => Promise<any[]>
     getSession: (sessionId: string) => Promise<any | null>
+    updateSessionTitle: (sessionId: string, title: string) => Promise<void>
+    deleteSession: (sessionId: string) => Promise<void>
     startChat: (payload: any) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
     onChatEvent: (listener: (event: any) => void) => () => void
