@@ -623,7 +623,7 @@ export const PromptSidebarList = ({
           y={contextMenu.y}
           onAddDesign={async () => {
             try {
-              await (window.api as any).promptDesign.designs.create({
+              const created = await (window.api as any).promptDesign.designs.create({
                 projectId: contextMenu.id,
                 name: "新提示词设计",
               });
@@ -632,6 +632,11 @@ export const PromptSidebarList = ({
                 ...prev,
                 [contextMenu.id]: false,
               }));
+              // 新建后自动进入编辑名称状态
+              if (created?.id) {
+                setEditingId(created.id);
+                setEditingName(created.name || "新提示词设计");
+              }
             } catch (error) {
               console.error("Add design failed", error);
             }

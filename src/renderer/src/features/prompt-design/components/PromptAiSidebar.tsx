@@ -1,11 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { ChevronRight, ChevronLeft, History, Trash2 } from "lucide-react";
 import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Input } from "@/components/ui/Input";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { usePromptAiChatController } from "./usePromptAiChatController";
 import { usePromptDesignStore } from "../store/promptDesignStore";
+
+// 会话切换 loading 最短展示时长（ms），避免闪烁。
+const MIN_SWITCH_LOADING_MS = 500;
 
 type PromptAiSidebarProps = {
   isOpen?: boolean;
@@ -25,9 +29,64 @@ export const PromptAiSidebar = ({
   const designItemId = activeDesignId || "default-design-item-id";
   const controller = usePromptAiChatController(designItemId);
 
+  // 会话切换 loading 状态
+  const [isSwitching, setIsSwitching] = useState(false);
+  const isSwitchingRef = useRef(false);
+  const loadingStartTimeRef = useRef(0);
+  const switchCounterRef = useRef(0);
+
   const [editingTitle, setEditingTitle] = useState<{ id: string; title: string } | null>(null);
 
   const activeSession = controller.sessions.find(s => s.id === controller.activeSessionId);
+
+  /**
+   * 执行会话切换，loading 由 useLayoutEffect 监听 activeSessionId 统一驱动。
+   */
+  const handleSessionSwitch = (sid: string): void => {
+    controller.handleSessionChange(sid);
+  };
+
+  /**
+   * 执行新建对话，loading 由 useLayoutEffect 监听 activeSessionId 统一驱动。
+   */
+  const handleNewChatWithLoading = (): void => {
+    controller.handleNewChat();
+  };
+
+  /**
+   * 结束会话切换 loading，确保最少展示 MIN_SWITCH_LOADING_MS。
+   */
+  const finishSessionSwitch = (): void => {
+    if (!isSwitchingRef.current) return;
+    const counter = switchCounterRef.current;
+    const elapsed = Date.now() - loadingStartTimeRef.current;
+    const remaining = Math.max(0, MIN_SWITCH_LOADING_MS - elapsed);
+
+    setTimeout(() => {
+      if (switchCounterRef.current === counter) {
+        setIsSwitching(false);
+        isSwitchingRef.current = false;
+      }
+    }, remaining);
+  };
+
+  // 会话切换时统一驱动 loading（useLayoutEffect 确保在浏览器绘制前完成）。
+  useLayoutEffect(() => {
+    const activeId = controller.activeSessionId;
+
+    // 无有效会话时跳过 loading
+    if (!activeId) {
+      return;
+    }
+
+    setIsSwitching(true);
+    isSwitchingRef.current = true;
+    loadingStartTimeRef.current = Date.now();
+    switchCounterRef.current += 1;
+
+    // 同步数据完成后结束 loading
+    finishSessionSwitch();
+  }, [controller.activeSessionId]);
 
   const handleStartEditTitle = (session: any) => {
     setEditingTitle({ id: session.id, title: session.title });
@@ -218,23 +277,34 @@ export const PromptAiSidebar = ({
                 content={
                 <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
                   {controller.sessions.length > 0 ? (
-                    controller.sessions.map((item) => (
-                      <div
-                        key={item.id}
-                        className="relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 hover:bg-white/[0.02] text-white/70 group cursor-pointer"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => controller.handleSessionChange(item.id)}
-                      >
-                        <div className="flex items-start justify-between gap-2 w-full">
-                          <div className="min-w-0 flex-1">
-                            <span className="block truncate text-xs font-bold leading-none group-hover:text-white">
-                              {item.title}
-                            </span>
+                    controller.sessions.map((item) => {
+                      const isActive = item.id === controller.activeSessionId;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 cursor-pointer ${
+                            isActive
+                              ? "bg-white/10 text-white font-semibold"
+                              : "hover:bg-white/[0.02] text-white/70 group"
+                          }`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            if (!isActive) {
+                              handleSessionSwitch(item.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2 w-full">
+                            <div className="min-w-0 flex-1">
+                              <span className={`block truncate text-xs font-bold leading-none ${isActive ? "text-white" : "group-hover:text-white"}`}>
+                                {item.title}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="px-3 py-4 text-center text-xs text-white/35">
                       无对话历史
@@ -266,14 +336,24 @@ export const PromptAiSidebar = ({
               <IconButton
                 aria-label="New chat"
                 preset="add"
-                onClick={controller.handleNewChat}
+                onClick={handleNewChatWithLoading}
                 disabled={controller.messages.length === 0 || controller.isGenerating}
               />
             </Tooltip>
           </div>
         </div>
       )}
-      {isOpen && <PromptAiChatWorkspace controller={controller} />}
+      {isOpen && (
+        <div className="relative flex-1 min-h-0">
+          <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
+          <PromptAiChatWorkspace
+            controller={{
+              ...controller,
+              handleSessionChange: handleSessionSwitch,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
