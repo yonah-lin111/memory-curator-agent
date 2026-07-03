@@ -77,8 +77,19 @@ export const PromptAiSidebar = ({
   useLayoutEffect(() => {
     const activeId = controller.activeSessionId;
 
-    // 无有效会话时跳过 loading
-    if (!activeId) {
+    // 如果还没有初始化完成或者无有效会话时跳过 loading
+    if (!activeId || !controller.sessionInitialized) {
+      if (!controller.sessionInitialized) {
+        setIsSwitching(true);
+        isSwitchingRef.current = true;
+      }
+      return;
+    }
+
+    // 当会话为空（例如切换到新建对话）时，无需展示 loading 动画
+    if (controller.messages.length === 0) {
+      setIsSwitching(false);
+      isSwitchingRef.current = false;
       return;
     }
 
@@ -106,6 +117,18 @@ export const PromptAiSidebar = ({
       });
     }
   }, [controller.messages.length]);
+
+  // 修复第一次打开侧边栏时，由于 width 从 0 到 30vw 动画（300ms），导致文本重排，
+  // 此时 scrollLatestUserToTop 获取的 offsetTop 不准确，导致滚动不到指定位置的问题。
+  useEffect(() => {
+    let timer: number;
+    if (isOpen && workspaceRef.current && controller.messages.length > 0) {
+      timer = window.setTimeout(() => {
+        workspaceRef.current?.scrollLatestUserToTop("auto");
+      }, 350);
+    }
+    return () => clearTimeout(timer);
+  }, [isOpen, controller.activeSessionId, controller.messages.length]);
 
 
   const handleStartEditTitle = (session: any) => {

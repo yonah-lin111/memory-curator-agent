@@ -75,6 +75,7 @@ export function usePromptAiChatController(designItemId: string) {
   // 初始化会话
   useEffect(() => {
     const init = async () => {
+      setSessionInitialized(false);
       const items = await fetchSessions();
       if (items && items.length > 0) {
         await loadSession(items[0].id);
@@ -306,6 +307,7 @@ export function usePromptAiChatController(designItemId: string) {
     handleDeleteChat,
     handleUndo,
     isGenerating,
+    sessionInitialized,
     LATEST_ASSISTANT_TOP_OFFSET,
   };
 }
