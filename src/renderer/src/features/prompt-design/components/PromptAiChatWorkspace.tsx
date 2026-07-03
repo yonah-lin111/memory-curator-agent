@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
 import { usePromptAiChatController } from "./usePromptAiChatController";
@@ -34,8 +34,18 @@ const calculateBottomSpacerHeight = ({
   );
 };
 
-export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<typeof usePromptAiChatController> }) => {
-  const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } = controller;
+export type PromptAiChatWorkspaceHandle = {
+  scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void;
+};
+
+export const PromptAiChatWorkspace = forwardRef<
+  PromptAiChatWorkspaceHandle,
+  {
+    controller: ReturnType<typeof usePromptAiChatController>;
+  }
+>(({ controller }, ref) => {
+  const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } =
+    controller;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -61,6 +71,54 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
   const getUserMessageTargetTop = (userMessage: HTMLDivElement): number => {
     return Math.max(userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
   };
+
+  const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void) => {
+    const container = scrollContainerRef.current;
+    const userMessage = latestUserMessageRef.current;
+    if (!container || !userMessage) {
+      onComplete?.();
+      return;
+    }
+
+    const targetTop = getUserMessageTargetTop(userMessage);
+    
+    // 如果需要底部留白才能滚到该位置，先计算
+    const requiredSpacer = calculateBottomSpacerHeight({
+      container,
+      userMessage,
+      currentSpacerHeight: bottomSpacerHeight,
+      topOffset: LATEST_ASSISTANT_TOP_OFFSET,
+    });
+    
+    if (Math.abs(bottomSpacerHeight - requiredSpacer) > 3) {
+      setBottomSpacerHeight(requiredSpacer);
+      // Wait for next frame to scroll after spacer is updated
+      requestAnimationFrame(() => {
+        container.scrollTo({ top: targetTop, behavior });
+        // Use a small timeout to let smooth scroll finish before onComplete
+        if (onComplete) {
+          if (behavior === 'smooth') {
+             setTimeout(onComplete, 300);
+          } else {
+             requestAnimationFrame(onComplete);
+          }
+        }
+      });
+    } else {
+      container.scrollTo({ top: targetTop, behavior });
+      if (onComplete) {
+        if (behavior === 'smooth') {
+           setTimeout(onComplete, 300);
+        } else {
+           requestAnimationFrame(onComplete);
+        }
+      }
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    scrollLatestUserToTop,
+  }));
 
   useLayoutEffect(() => {
     if (!latestUserMessageId) {
@@ -192,11 +250,7 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
     }
 
     return undefined;
-  }, [
-    latestUserMessageId,
-    messages.length,
-    LATEST_ASSISTANT_TOP_OFFSET,
-  ]);
+  }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -213,11 +267,10 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
             }}
             className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0"
           >
-            <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
+            <div className="max-w-[860px] mx-auto w-full flex flex-col  flex-1">
               {messages.map((message) => {
                 const isLatestUser =
-                  message.role === "user" &&
-                  message.id === latestUserMessageId;
+                  message.role === "user" && message.id === latestUserMessageId;
                 const isGeneratingMessage =
                   isGenerating &&
                   message.role !== "user" &&
@@ -247,8 +300,8 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
           </div>
 
           {/* 输入区域 */}
-          <PromptAiChatInput 
-            onSend={handleSend} 
+          <PromptAiChatInput
+            onSend={handleSend}
             disabled={isGenerating}
             onNewChat={controller.handleNewChat}
             onUndo={controller.handleUndo}
@@ -259,4 +312,6 @@ export const PromptAiChatWorkspace = ({ controller }: { controller: ReturnType<t
       </div>
     </div>
   );
-};
+});
+
+PromptAiChatWorkspace.displayName = "PromptAiChatWorkspace";

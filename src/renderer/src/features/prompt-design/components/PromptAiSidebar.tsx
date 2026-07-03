@@ -39,6 +39,26 @@ export const PromptAiSidebar = ({
 
   const activeSession = controller.sessions.find(s => s.id === controller.activeSessionId);
 
+  // workspace 的引用，用于调用滚动方法
+  const workspaceRef = useRef<{ scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void }>(null);
+
+  /**
+   * 结束会话切换 loading，确保最少展示 MIN_SWITCH_LOADING_MS。
+   */
+  const finishSessionSwitchScroll = (): void => {
+    if (!isSwitchingRef.current) return;
+    const counter = switchCounterRef.current;
+    const elapsed = Date.now() - loadingStartTimeRef.current;
+    const remaining = Math.max(0, MIN_SWITCH_LOADING_MS - elapsed);
+
+    setTimeout(() => {
+      if (switchCounterRef.current === counter) {
+        setIsSwitching(false);
+        isSwitchingRef.current = false;
+      }
+    }, remaining);
+  };
+
   /**
    * 执行会话切换，loading 由 useLayoutEffect 监听 activeSessionId 统一驱动。
    */
@@ -51,23 +71,6 @@ export const PromptAiSidebar = ({
    */
   const handleNewChatWithLoading = (): void => {
     controller.handleNewChat();
-  };
-
-  /**
-   * 结束会话切换 loading，确保最少展示 MIN_SWITCH_LOADING_MS。
-   */
-  const finishSessionSwitch = (): void => {
-    if (!isSwitchingRef.current) return;
-    const counter = switchCounterRef.current;
-    const elapsed = Date.now() - loadingStartTimeRef.current;
-    const remaining = Math.max(0, MIN_SWITCH_LOADING_MS - elapsed);
-
-    setTimeout(() => {
-      if (switchCounterRef.current === counter) {
-        setIsSwitching(false);
-        isSwitchingRef.current = false;
-      }
-    }, remaining);
   };
 
   // 会话切换时统一驱动 loading（useLayoutEffect 确保在浏览器绘制前完成）。
@@ -84,9 +87,26 @@ export const PromptAiSidebar = ({
     loadingStartTimeRef.current = Date.now();
     switchCounterRef.current += 1;
 
-    // 同步数据完成后结束 loading
-    finishSessionSwitch();
-  }, [controller.activeSessionId]);
+    // 如果 workspace 存在滚动方法，则调用滚动到底部或指定的最新用户提问处
+    if (workspaceRef.current?.scrollLatestUserToTop && controller.messages.length > 0) {
+      workspaceRef.current.scrollLatestUserToTop("auto", () => {
+        finishSessionSwitchScroll();
+      });
+    } else {
+      finishSessionSwitchScroll();
+    }
+  }, [controller.activeSessionId]); // 依赖 activeSessionId 发生变化
+
+  // 当会话中的消息数量在初始加载后变得有效时，或者依赖项就绪时
+  // 此处我们需要在消息重新渲染到 DOM 后立即执行滚动
+  useLayoutEffect(() => {
+    if (isSwitchingRef.current && workspaceRef.current?.scrollLatestUserToTop && controller.messages.length > 0) {
+      workspaceRef.current.scrollLatestUserToTop("auto", () => {
+        finishSessionSwitchScroll();
+      });
+    }
+  }, [controller.messages.length]);
+
 
   const handleStartEditTitle = (session: any) => {
     setEditingTitle({ id: session.id, title: session.title });
@@ -347,6 +367,7 @@ export const PromptAiSidebar = ({
         <div className="relative flex-1 min-h-0">
           <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
           <PromptAiChatWorkspace
+            ref={workspaceRef}
             controller={{
               ...controller,
               handleSessionChange: handleSessionSwitch,
