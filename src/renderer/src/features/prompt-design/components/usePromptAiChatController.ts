@@ -222,14 +222,6 @@ export function usePromptAiChatController(designItemId: string) {
     }
   }, [fetchSessions]);
 
-  const handleUndo = useCallback(async () => {
-    if (isGenerating) return;
-    const updated = await window.api.promptAi!.undoLastTurn(sessionId);
-    if (updated) {
-      await loadSession(sessionId);
-    }
-  }, [isGenerating, sessionId, loadSession]);
-
   const handleDeleteChat = useCallback(async (sid: string) => {
     try {
       await window.api.promptAi!.deleteSession(sid);
@@ -243,6 +235,18 @@ export function usePromptAiChatController(designItemId: string) {
       return false;
     }
   }, [fetchSessions, sessionId, handleNewChat]);
+
+  const handleUndo = useCallback(async () => {
+    if (isGenerating) return;
+    const updated = await window.api.promptAi!.undoLastTurn(sessionId);
+    if (updated) {
+      if (updated.messages.length === 0) {
+        await handleDeleteChat(sessionId);
+      } else {
+        await loadSession(sessionId);
+      }
+    }
+  }, [isGenerating, sessionId, loadSession, handleDeleteChat]);
 
   const sendMessage = useCallback(
     async (text: string, selectedModel?: string) => {

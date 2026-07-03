@@ -340,10 +340,12 @@ async function runPromptAiChat(
 
     db.updateMessageContent(assistantMessageId, finalContent);
     db.updateAgentRunStatus(runId, "completed");
+
+    const completedSession = db.getSession(payload.sessionId);
     db.ensureSession({
       id: payload.sessionId,
       designItemId: payload.designItemId,
-      title: "Prompt Design Session",
+      title: completedSession?.title || "Prompt Design Session",
       status: "idle",
       timestamp: new Date().toISOString(),
     });
@@ -367,10 +369,12 @@ async function runPromptAiChat(
         message: err.message,
       });
     }
+
+    const failedSession = db.getSession(payload.sessionId);
     db.ensureSession({
       id: payload.sessionId,
       designItemId: payload.designItemId,
-      title: "Prompt Design Session",
+      title: failedSession?.title || "Prompt Design Session",
       status: "failed",
       timestamp: new Date().toISOString(),
     });
