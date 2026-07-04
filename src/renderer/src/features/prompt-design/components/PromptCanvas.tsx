@@ -76,7 +76,7 @@ const getEdgeColor = (nodeType?: string): string => {
 };
 
 // ── 用户要求的结构化 MOCK 数据 ──
-const rawInitialNodes = [
+const rawInitialNodes: Node[] = [
   /* ── a组: 全局配置输入节点 ── */
   {
     id: "a-role",
@@ -89,7 +89,7 @@ const rawInitialNodes = [
       content: "你是一个资深的前端 React 架构师。请使用 TypeScript 和 Tailwind CSS 设计并生成高质量的、符合企业级规范的 React 组件。",
       outputs: [{ id: "out-role", name: "Output", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "a-obj",
     type: "promptNode",
@@ -101,7 +101,7 @@ const rawInitialNodes = [
       content: "分析用户的业务任务，输出高内聚、高响应性、零缺陷的前端 React 完整源码实现。",
       outputs: [{ id: "out-obj", name: "Output", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "a-const",
     type: "promptNode",
@@ -113,7 +113,7 @@ const rawInitialNodes = [
       content: "- 严禁使用任何外部全局状态库\n- 必须实现 100% 的 TypeScript 强类型声明",
       outputs: [{ id: "out-const", name: "Output", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
 
   /* ── a-组装卡片 (Global Assembler) ── */
   {
@@ -131,89 +131,143 @@ const rawInitialNodes = [
       ],
       outputs: [{ id: "out-global", name: "打包输出", type: "global_config" }],
     } as PromptNodeData,
-  },
+  } as Node,
 
   /* ── b1组: 任务1 (Task 1 Container + Fields) ── */
   {
     id: "b1-container",
     type: "promptNode",
-    position: { x: 1040, y: 10 },
+    position: { x: 800, y: 10 },
+    style: { width: 400, height: 600 },
     data: {
       title: "b1 任务: 表格架构搭建",
-      description: "聚合子属性，受 a全局配置 约束",
+      description: "拖入子属性卡片到此区域中",
       nodeType: "task",
       taskId: "1",
-      inputs: [
-        { id: "in-global", name: "A全局配置 (Global Config)", type: "global_config" },
-        { id: "in-title", name: "任务名称 (Title)", type: "text" },
-        { id: "in-goal", name: "任务目标 (Goal)", type: "text" },
-      ],
-      outputs: [{ id: "out-task", name: "任务整合", type: "task" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "b1-title",
     type: "promptNode",
-    position: { x: 740, y: 10 },
+    position: { x: 20, y: 80 },
+    parentId: "b1-container",
+    extent: "parent",
     data: {
       title: "任务1 名称",
       nodeType: "task_title",
       content: "数据表格核心骨架实现",
-      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "b1-goal",
     type: "promptNode",
-    position: { x: 740, y: 120 },
+    position: { x: 20, y: 220 },
+    parentId: "b1-container",
+    extent: "parent",
     data: {
       title: "任务1 目标",
       nodeType: "task_goal",
       content: "创建自适应表格布局，保证加载中与无数据状态交互连贯。",
-      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
+  {
+    id: "b1-instructions",
+    type: "promptNode",
+    position: { x: 20, y: 360 },
+    parentId: "b1-container",
+    extent: "parent",
+    data: {
+      title: "执行步骤 (Instructions)",
+      nodeType: "task_instructions",
+      content: "1. 拆分 Table Header 和 Body\n2. 注入 Mock 数据渲染\n3. 添加 Loading 骨架屏",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-rules",
+    type: "promptNode",
+    position: { x: 20, y: 500 },
+    parentId: "b1-container",
+    extent: "parent",
+    data: {
+      title: "任务规则 (Rules)",
+      nodeType: "task_rules",
+      content: "组件必须使用 forwardRef，确保父级可获取 table 实例。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-output",
+    type: "promptNode",
+    position: { x: 20, y: 640 },
+    parentId: "b1-container",
+    extent: "parent",
+    data: {
+      title: "输出要求 (Output)",
+      nodeType: "task_output",
+      content: "只返回 DataTable.tsx 的源码，无需解释。",
+    } as PromptNodeData,
+  } as Node,
 
   /* ── b2组: 任务2 (Task 2 Container + Fields) ── */
   {
     id: "b2-container",
     type: "promptNode",
-    position: { x: 1040, y: 280 },
+    position: { x: 800, y: 650 },
+    style: { width: 400, height: 600 },
     data: {
       title: "b2 任务: 搜索与分页逻辑",
-      description: "聚合子属性，受 a全局配置 约束",
+      description: "拖入子属性卡片到此区域中",
       nodeType: "task",
       taskId: "2",
-      inputs: [
-        { id: "in-global", name: "A全局配置 (Global Config)", type: "global_config" },
-        { id: "in-title", name: "任务名称 (Title)", type: "text" },
-        { id: "in-goal", name: "任务目标 (Goal)", type: "text" },
-      ],
-      outputs: [{ id: "out-task", name: "任务整合", type: "task" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "b2-title",
     type: "promptNode",
-    position: { x: 740, y: 280 },
+    position: { x: 20, y: 80 },
+    parentId: "b2-container",
+    extent: "parent",
     data: {
       title: "任务2 名称",
       nodeType: "task_title",
       content: "数据流控制与分页核心",
-      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "b2-goal",
     type: "promptNode",
-    position: { x: 740, y: 390 },
+    position: { x: 20, y: 220 },
+    parentId: "b2-container",
+    extent: "parent",
     data: {
       title: "任务2 目标",
       nodeType: "task_goal",
       content: "提供每页数量切换以及防抖过滤检索，空态无缝重置。",
-      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
+  {
+    id: "b2-depends",
+    type: "promptNode",
+    position: { x: 20, y: 360 },
+    parentId: "b2-container",
+    extent: "parent",
+    data: {
+      title: "任务依赖 (Depends On)",
+      nodeType: "task_depends_on",
+      content: "依赖 任务1 (数据表格核心骨架实现) 的完成。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b2-instructions",
+    type: "promptNode",
+    position: { x: 20, y: 500 },
+    parentId: "b2-container",
+    extent: "parent",
+    data: {
+      title: "执行步骤 (Instructions)",
+      nodeType: "task_instructions",
+      content: "1. 接入 useDebounce hook\n2. 实现 usePagination\n3. 将状态下发至 DataTable",
+    } as PromptNodeData,
+  } as Node,
 
   /* ── c组: 后置全局配置输入节点 ── */
   {
@@ -227,7 +281,7 @@ const rawInitialNodes = [
       content: "提供用 ```tsx 标记包裹的单文件完整代码，尾部必须提供 Jest 单元测试示范用例。",
       outputs: [{ id: "out-format", name: "Output", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
   {
     id: "c-validation",
     type: "promptNode",
@@ -239,7 +293,7 @@ const rawInitialNodes = [
       content: "检查所有任务是否圆满完成，并确认完全符合开发约束。",
       outputs: [{ id: "out-validation", name: "Output", type: "text" }],
     } as PromptNodeData,
-  },
+  } as Node,
 
   /* ── c最终导出卡片 (Compiler Terminal) ── */
   {
@@ -256,7 +310,7 @@ const rawInitialNodes = [
         { id: "in-validation", name: "全局校验 (Validation)", type: "text" },
       ],
     } as PromptNodeData,
-  },
+  } as Node,
 ];
 
 const initialNodeTypesMap = new Map<string, string>(
@@ -272,14 +326,6 @@ const rawInitialEdges: Edge[] = [
   /* ── a组装卡片 -> b1 & b2 任务输入 ── */
   { id: "e-assemble-b1", source: "a-assembler", target: "b1-container", sourceHandle: "out-global", targetHandle: "in-global" },
   { id: "e-assemble-b2", source: "a-assembler", target: "b2-container", sourceHandle: "out-global", targetHandle: "in-global" },
-
-  /* ── b1 任务属性输入 ── */
-  { id: "e-b1-title", source: "b1-title", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-title" },
-  { id: "e-b1-goal", source: "b1-goal", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-goal" },
-
-  /* ── b2 任务属性输入 ── */
-  { id: "e-b2-title", source: "b2-title", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-title" },
-  { id: "e-b2-goal", source: "b2-goal", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-goal" },
 
   /* ── b1 & b2 任务整合 -> c (最终编译端) ── */
   { id: "e-b1-final", source: "b1-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
@@ -329,6 +375,27 @@ export const PromptCanvas = () => {
     );
   }, [edgeType, setEdges]);
 
+  const updateNodeData = useCallback((nodeId: string, newData: any) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...newData,
+            },
+          };
+        }
+        return node;
+      })
+    );
+  }, [setNodes]);
+
+  useEffect(() => {
+    usePromptDesignStore.getState().setUpdateNodeData(updateNodeData);
+  }, [updateNodeData]);
+
   // ── XML 提示词多维度整合引擎 ──
   const handleExport = useCallback(async () => {
     if (nodes.length === 0) {
@@ -369,7 +436,7 @@ export const PromptCanvas = () => {
     };
 
     // 寻找根节点 compiler_c (c 最终导出)
-    const rootNodes = nodes.filter(n => n.data.nodeType === "compiler_c");
+    const rootNodes = nodes.filter(n => (n.data as PromptNodeData).nodeType === "compiler_c");
     const rootNode = rootNodes[0];
 
     // 如果找不到 c 导出卡片，退化为全局卡片搜集
@@ -388,8 +455,8 @@ export const PromptCanvas = () => {
 
     const variablesSet = new Set<string>();
     for (const n of nodes) {
-      if (n.data.variables) {
-        n.data.variables.forEach(v => variablesSet.add(v));
+      if ((n.data as PromptNodeData).variables) {
+        (n.data as PromptNodeData).variables!.forEach(v => variablesSet.add(v));
       }
     }
 
@@ -404,12 +471,14 @@ export const PromptCanvas = () => {
 
       // ── b 任务列表 ──
       const taskSources = rootConns["in-tasks"] || [];
-      const taskNodesOnCanvas = nodes.filter(n => n.data.nodeType === "task" && taskSources.includes(n.id));
+      const taskNodesOnCanvas = nodes.filter(n => (n.data as PromptNodeData).nodeType === "task" && taskSources.includes(n.id));
 
       // 按 TaskID 排序以保持逻辑结构
       const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => {
-        const idA = a.data.taskId || "";
-        const idB = b.data.taskId || "";
+        const dataA = a.data as PromptNodeData;
+        const dataB = b.data as PromptNodeData;
+        const idA = dataA.taskId || "";
+        const idB = dataB.taskId || "";
         return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
       });
 
@@ -426,19 +495,26 @@ export const PromptCanvas = () => {
           firstGlobalAssemblerId = globalSources[0];
         }
 
-        // 解析 Task 各自子属性卡片
-        const titleContent        = getSingleNodeValue(tId, "in-title");
-        const goalContent         = getSingleNodeValue(tId, "in-goal");
-        const instructionsContent = getSingleNodeValue(tId, "in-instructions");
-        const rulesContent        = getSingleNodeValue(tId, "in-rules");
-        const priorityContent     = getSingleNodeValue(tId, "in-priority");
-        const dependsOnContent    = getSingleNodeValue(tId, "in-depends_on");
-        const variablesContent    = getSingleNodeValue(tId, "in-variables");
-        const resourcesContent    = getSingleNodeValue(tId, "in-resources");
-        const exampleContent      = getSingleNodeValue(tId, "in-example");
-        const outputContent       = getSingleNodeValue(tId, "in-output");
-        const taskValContent      = getSingleNodeValue(tId, "in-validation");
-        const notesContent        = getSingleNodeValue(tId, "in-notes");
+        // 解析 Task 各自子属性卡片 (现在它们是子节点，不在连线里找，而是通过 parentId 找)
+        const childNodes = nodes.filter(n => n.parentId === tId);
+        
+        const getChildValue = (type: PromptCardType) => {
+           const n = childNodes.find(c => c.data.nodeType === type);
+           return n ? (n.data as PromptNodeData).content || "" : "";
+        };
+
+        const titleContent        = getChildValue("task_title");
+        const goalContent         = getChildValue("task_goal");
+        const instructionsContent = getChildValue("task_instructions");
+        const rulesContent        = getChildValue("task_rules");
+        const priorityContent     = getChildValue("task_priority");
+        const dependsOnContent    = getChildValue("task_depends_on");
+        const variablesContent    = getChildValue("task_variables");
+        const resourcesContent    = getChildValue("task_resources");
+        const exampleContent      = getChildValue("task_example");
+        const outputContent       = getChildValue("task_output");
+        const taskValContent      = getChildValue("task_validation");
+        const notesContent        = getChildValue("task_notes");
 
         const taskInner: string[] = [];
         if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
@@ -454,7 +530,7 @@ export const PromptCanvas = () => {
         if (taskValContent)      taskInner.push(wrapTag("validation", taskValContent, "        "));
         if (notesContent)        taskInner.push(wrapTag("notes", notesContent, "        "));
 
-        const taskXML = `        <task id="${task.data.taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`;
+        const taskXML = `        <task id="${(task.data as PromptNodeData).taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`;
         taskBlocks.push(taskXML);
       }
 
@@ -463,7 +539,7 @@ export const PromptCanvas = () => {
       }
 
       // ── a 前置全局 (从组装卡片中解析) ──
-      const globalId = firstGlobalAssemblerId || nodes.find(n => n.data.nodeType === "assemble_a")?.id;
+      const globalId = firstGlobalAssemblerId || nodes.find(n => (n.data as PromptNodeData).nodeType === "assemble_a")?.id;
       if (globalId) {
         systemRoleXML  = getSingleNodeValue(globalId, "in-system_role");
         objectiveXML   = getSingleNodeValue(globalId, "in-objective");
@@ -476,27 +552,35 @@ export const PromptCanvas = () => {
       }
     } else {
       // 退化模式：若无 C 卡片连线，则按之前的方式全局提取
-      systemRoleXML  = nodes.filter(n => n.data.nodeType === "system_role").map(m => m.data.content || "").join("\n\n");
-      objectiveXML   = nodes.filter(n => n.data.nodeType === "objective").map(m => m.data.content || "").join("\n\n");
-      contextXML     = nodes.filter(n => n.data.nodeType === "context").map(m => m.data.content || "").join("\n\n");
-      assumptionsXML = nodes.filter(n => n.data.nodeType === "assumptions").map(m => m.data.content || "").join("\n\n");
-      constraintsXML = nodes.filter(n => n.data.nodeType === "constraints").map(m => m.data.content || "").join("\n\n");
-      definitionsXML = nodes.filter(n => n.data.nodeType === "definitions").map(m => m.data.content || "").join("\n\n");
-      resourcesXML   = nodes.filter(n => n.data.nodeType === "resources").map(m => m.data.content || "").join("\n\n");
-      outputFormatXML= nodes.filter(n => n.data.nodeType === "output_format").map(m => m.data.content || "").join("\n\n");
-      validationXML  = nodes.filter(n => n.data.nodeType === "validation").map(m => m.data.content || "").join("\n\n");
-      inputDataXML   = nodes.filter(n => n.data.nodeType === "input_data").map(m => m.data.content || "").join("\n\n");
+      systemRoleXML  = nodes.filter(n => (n.data as PromptNodeData).nodeType === "system_role").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      objectiveXML   = nodes.filter(n => (n.data as PromptNodeData).nodeType === "objective").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      contextXML     = nodes.filter(n => (n.data as PromptNodeData).nodeType === "context").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      assumptionsXML = nodes.filter(n => (n.data as PromptNodeData).nodeType === "assumptions").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      constraintsXML = nodes.filter(n => (n.data as PromptNodeData).nodeType === "constraints").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      definitionsXML = nodes.filter(n => (n.data as PromptNodeData).nodeType === "definitions").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      resourcesXML   = nodes.filter(n => (n.data as PromptNodeData).nodeType === "resources").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      outputFormatXML= nodes.filter(n => (n.data as PromptNodeData).nodeType === "output_format").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      validationXML  = nodes.filter(n => (n.data as PromptNodeData).nodeType === "validation").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
+      inputDataXML   = nodes.filter(n => (n.data as PromptNodeData).nodeType === "input_data").map(m => (m.data as PromptNodeData).content || "").join("\n\n");
 
       // 提取任务列表
       const taskBlocks: string[] = [];
-      const taskNodesOnCanvas = nodes.filter(n => n.data.nodeType === "task");
-      const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => (a.data.taskId || "").localeCompare(b.data.taskId || "", undefined, { numeric: true }));
+      const taskNodesOnCanvas = nodes.filter(n => (n.data as PromptNodeData).nodeType === "task");
+      const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => ((a.data as PromptNodeData).taskId || "").localeCompare((b.data as PromptNodeData).taskId || "", undefined, { numeric: true }));
       for (const t of sortedTaskNodes) {
         const tId = t.id;
-        const titleContent        = getSingleNodeValue(tId, "in-title");
-        const goalContent         = getSingleNodeValue(tId, "in-goal");
-        const instructionsContent = getSingleNodeValue(tId, "in-instructions");
-        const outputContent       = getSingleNodeValue(tId, "in-output");
+        
+        // 退化模式下也需要从子节点读取
+        const childNodes = nodes.filter(n => n.parentId === tId);
+        const getChildValue = (type: PromptCardType) => {
+           const n = childNodes.find(c => c.data.nodeType === type);
+           return n ? (n.data as PromptNodeData).content || "" : "";
+        };
+
+        const titleContent        = getChildValue("task_title");
+        const goalContent         = getChildValue("task_goal");
+        const instructionsContent = getChildValue("task_instructions");
+        const outputContent       = getChildValue("task_output");
 
         const taskInner: string[] = [];
         if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
@@ -504,7 +588,7 @@ export const PromptCanvas = () => {
         if (instructionsContent) taskInner.push(wrapTag("instructions", instructionsContent, "        "));
         if (outputContent)       taskInner.push(wrapTag("output", outputContent, "        "));
 
-        taskBlocks.push(`        <task id="${t.data.taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`);
+        taskBlocks.push(`        <task id="${(t.data as PromptNodeData).taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`);
       }
       if (taskBlocks.length > 0) {
         taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
@@ -591,7 +675,7 @@ export const PromptCanvas = () => {
     event.dataTransfer.dropEffect = "move";
   }, []);
 
-  const createNewNode = useCallback((type: PromptCardType, position: { x: number; y: number }) => {
+  const createNewNode = useCallback((type: PromptCardType, position: { x: number; y: number }): Node => {
     let initialInputs: any[] = [];
     let initialOutputs: any[] = [];
 
@@ -652,7 +736,7 @@ export const PromptCanvas = () => {
         outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
         content: type === "task" || type === "assemble_a" || type === "compiler_c" ? undefined : "",
       } as PromptNodeData,
-    };
+    } as Node;
   }, []);
 
   const onDrop = useCallback(
@@ -674,12 +758,54 @@ export const PromptCanvas = () => {
         y: event.clientY,
       });
 
-      takeSnapshot();
+      // 检查是否落入 Task 容器中
+      const elementBelow = document.elementFromPoint(event.clientX, event.clientY);
+      let targetTaskNodeId: string | undefined;
 
-      const newNode = createNewNode(type as PromptCardType, position);
-      setNodes((nds) => nds.concat(newNode));
+      if (elementBelow) {
+        // 向上寻找是否有 class 包含 "react-flow__node-promptNode" 的元素
+        const nodeEl = elementBelow.closest('.react-flow__node-promptNode');
+        if (nodeEl) {
+          const nodeId = nodeEl.getAttribute('data-id');
+          if (nodeId) {
+            const targetNode = nodes.find(n => n.id === nodeId);
+            if (targetNode && targetNode.data.nodeType === "task") {
+              targetTaskNodeId = nodeId;
+            }
+          }
+        }
+      }
+
+      takeSnapshot();
+      
+      const meta = cardTypeMeta[type as PromptCardType];
+      // 如果拖拽的是 task 属性卡片，并且拖到了某个 Task 容器中
+      if (targetTaskNodeId && meta && meta.category === "task_field") {
+        // 作为子节点加入
+        const newNode = createNewNode(type as PromptCardType, position) as Node;
+        newNode.parentId = targetTaskNodeId;
+        newNode.extent = "parent";
+        // 相对坐标计算：可以基于目前鼠标落点。这里简化为居中或者直接用 Flow position减去父节点position (暂用 0, 0 会被容器自动排版或手动拖动)
+        const parentNode = nodes.find(n => n.id === targetTaskNodeId);
+        if (parentNode) {
+          newNode.position = {
+            x: position.x - parentNode.position.x,
+            y: position.y - parentNode.position.y
+          };
+        }
+
+        setNodes((nds) => nds.concat(newNode));
+        toast.success(`已添加到容器 ${parentNode?.data.title}`);
+      } else {
+         const newNode = createNewNode(type as PromptCardType, position) as Node;
+         if (type === "task") {
+           // 对于容器，赋予它足够的宽高，并设置独立样式或在渲染端控制
+           newNode.style = { width: 400, height: 600 };
+         }
+         setNodes((nds) => nds.concat(newNode));
+      }
     },
-    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode, isLocked, toast],
+    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode, isLocked, toast, nodes],
   );
 
   const onConnect = useCallback(
@@ -787,7 +913,7 @@ export const PromptCanvas = () => {
       position,
       selected: false,
       data: newData,
-    };
+    } as Node;
 
     setNodes((nds) => nds.concat(newNode));
     toast.success("节点已粘贴");
@@ -845,7 +971,7 @@ export const PromptCanvas = () => {
         />
         <MiniMap
           nodeColor={(n) => {
-            const t = n.data?.nodeType as string;
+            const t = (n.data as PromptNodeData)?.nodeType as string;
             return minimapColors[t] || "#6366f1";
           }}
           maskColor="rgba(0, 0, 0, 0.7)"

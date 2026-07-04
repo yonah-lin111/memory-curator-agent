@@ -16,6 +16,9 @@ interface PromptDesignState {
   setActiveProjectId: (id: string | null) => void;
   activeDesignId: string | null;
   setActiveDesignId: (id: string | null) => void;
+  // 添加一个可选的 updateNodeData 方法，供内部节点在画布外层缺失上下文时安全调用更新
+  updateNodeData?: (nodeId: string, newData: any) => void;
+  setUpdateNodeData: (fn: (nodeId: string, newData: any) => void) => void;
 }
 
 export const usePromptDesignStore = create<PromptDesignState>((set) => ({
@@ -34,4 +37,6 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
   activeDesignId: null,
   setActiveDesignId: (id: string | null) => set({ activeDesignId: id }),
+  updateNodeData: undefined,
+  setUpdateNodeData: (fn) => set({ updateNodeData: fn }),
 }));

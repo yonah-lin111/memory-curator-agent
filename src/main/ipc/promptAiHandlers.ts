@@ -9,7 +9,7 @@ import { getDatabase } from "@/db";
 import { createSessionTitle } from "./ai/helpers";
 import { createPromptFileTools } from "@/agent/tools/promptFileTools";
 import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
-import type { AgentMessage, AgentMessageRole, AgentStreamEvent } from "@/agent/types";
+import type { AgentMessage, AgentMessageRole } from "@/agent/types";
 
 // 文件工具 UI 显示名称映射。
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -197,7 +197,7 @@ async function runPromptAiChat(
         const toolCalls = m.toolSteps.map((step) => ({
           type: "tool_call_done" as const,
           id: step.id,
-          name: step.name,
+          name: step.tool,
           argumentsText: JSON.stringify(step.input ?? {}),
         }));
         agentMessages.push({ role: "assistant", content: m.content || "", toolCalls });
@@ -206,7 +206,7 @@ async function runPromptAiChat(
             agentMessages.push({
               role: "tool",
               toolCallId: step.id,
-              name: step.name,
+              name: step.tool,
               content: typeof step.data === "string" ? step.data : JSON.stringify(step.data ?? {}),
             });
           }
@@ -256,13 +256,14 @@ async function runPromptAiChat(
       } else if (event.type === "tool_started") {
         const step: AiToolStep = {
           id: event.id,
-          name: event.name,
+          title: TOOL_DISPLAY_NAMES[event.name] || event.name,
+          tool: event.name,
           status: "running",
           input: event.input,
-          createdAt: new Date().toISOString(),
+          observation: "Starting...",
         };
         assistantToolSteps.push(step);
-        assistantParts.push({ type: "tool_call", toolCall: step });
+        // assistantParts.push({ type: "tool_call", toolCall: step }); // FIXME: tool_call structure in AiChatMessagePart
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         const displayName = getToolDisplayName(event.name);
         sender.send("prompt-ai:chat:event", {
@@ -284,17 +285,12 @@ async function runPromptAiChat(
           step.status = "done";
           step.observation = event.observation;
           step.data = event.data;
-          step.endedAt = new Date().toISOString();
         }
-        const part = assistantParts.find(
-          (p) => p.type === "tool_call" && p.toolCall?.id === event.id,
-        );
-        if (part?.toolCall) {
-          part.toolCall.status = "done";
-          part.toolCall.observation = event.observation;
-          part.toolCall.data = event.data;
-          part.toolCall.endedAt = step?.endedAt;
-        }
+        
+        // 我们在 AiChatMessagePart 中如果是工具片段，其数据结构可能不同
+        // 目前 schema 中 tool_call 的 part 类型还未完善，我们先忽略对 part 的更新
+        // const part = assistantParts.find(p => p.kind === "tool_call" && p.toolCall?.id === event.id); ...
+        
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "tool_finished",
@@ -309,17 +305,8 @@ async function runPromptAiChat(
         const step = assistantToolSteps.find((s) => s.id === event.id);
         if (step) {
           step.status = "failed";
-          step.error = event.error;
-          step.endedAt = new Date().toISOString();
         }
-        const part = assistantParts.find(
-          (p) => p.type === "tool_call" && p.toolCall?.id === event.id,
-        );
-        if (part?.toolCall) {
-          part.toolCall.status = "failed";
-          part.toolCall.error = event.error;
-          part.toolCall.endedAt = step?.endedAt;
-        }
+        
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "tool_failed",

@@ -320,6 +320,9 @@ export const PromptNode = memo(
     const meta = cardTypeMeta[data.nodeType];
     const iconName = data.icon || meta.defaultIcon;
     const hasOutputs = data.outputs && data.outputs.length > 0;
+    
+    // 任务容器样式：更大、背景更深、不显示输入连线口（被内部替代或只提供极少连线口）
+    const isTaskContainer = data.nodeType === "task";
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -327,6 +330,90 @@ export const PromptNode = memo(
       deleteElements({ nodes: [{ id }] });
       toast.info("节点已删除");
     };
+
+    if (isTaskContainer) {
+      const borderColor = selected && !isLocked ? "border-fuchsia-500/50" : "border-fuchsia-500/20";
+      const shadowStyle = selected && !isLocked ? "drop-shadow-[0_0_15px_rgba(217,70,239,0.2)]" : "";
+
+      return (
+        <div
+          className={`group/node relative w-full h-full min-w-[360px] min-h-[300px] transition-all duration-200 ${shadowStyle}`}
+        >
+          {/* Main Drop Zone (The node's actual bounding box for extent="parent") */}
+          <div
+            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}
+          >
+            {/* DROP ZONE 背景 */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+              <span className="text-white/5 font-bold text-4xl tracking-widest select-none">
+                  DROP ZONE
+              </span>
+            </div>
+          </div>
+
+          {/* 容器头部区域 & 左侧输入 (Positioned ABOVE the main node box) */}
+          <div className={`absolute bottom-full left-0 right-0 flex flex-col rounded-t-[8px] border-2 border-b-0 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}>
+            {!isLocked && (
+              <button
+                type="button"
+                aria-label="Delete container"
+                onClick={handleDelete}
+                className={`absolute -top-2 -right-2 z-10 h-5 w-5 items-center justify-center rounded-full bg-white text-[#1C1C1C] shadow-md hover:bg-gray-200 transition-colors ${
+                  selected ? "flex" : "hidden group-hover/node:flex"
+                }`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            
+            {/* 容器头部 */}
+            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-fuchsia-500/20 bg-fuchsia-500/5 rounded-t-[8px]">
+              <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] ${meta.color}`}>
+                {iconMap[iconName] || baseIcon}
+              </div>
+              <div className="flex flex-1 items-center overflow-hidden">
+                <span className="truncate text-sm font-bold text-white/90">
+                  {data.title}
+                </span>
+              </div>
+              
+              <span className={`ml-auto flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-fuchsia-500/30 text-fuchsia-400 font-mono`}>
+                Container
+              </span>
+            </div>
+
+            {/* 顶部左侧输入端口 */}
+            <div className="relative flex items-center justify-start px-4 py-3 w-full border-b border-white/5 bg-black/20">
+              <Handle
+                type="target"
+                position={Position.Left}
+                id="in-global"
+                className="!w-3.5 !h-3.5 !border-2 !border-[#1C1C1C] !bg-orange-400 !-left-[9px] pointer-events-auto transition-transform hover:scale-125"
+              />
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-white/85">A全局配置 (Global)</span>
+                <span className="text-[10px] text-orange-400/80 font-mono px-1.5 py-0.5 bg-orange-400/10 rounded border border-orange-400/20">global_config</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 底部右侧输出端口 (Positioned BELOW the main node box) */}
+          <div className={`absolute top-full left-0 right-0 flex items-center justify-end px-4 py-3 w-full rounded-b-[8px] border-2 border-t-0 bg-fuchsia-500/[0.02] backdrop-blur-md transition-all duration-200 ${borderColor}`}>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] text-fuchsia-400/80 font-mono px-1.5 py-0.5 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded">task</span>
+              <span className="text-xs font-medium text-white/85">任务整合输出 (Task Output)</span>
+            </div>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id="out-task"
+              className="!w-3.5 !h-3.5 !border-2 !border-[#1C1C1C] !bg-fuchsia-500 !-right-[9px] pointer-events-auto transition-transform hover:scale-125"
+            />
+          </div>
+
+        </div>
+      );
+    }
 
     return (
       <div
@@ -336,7 +423,7 @@ export const PromptNode = memo(
             : selected && !isLocked
               ? "border-white"
               : "border-transparent"
-        } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""}`}
+        } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""} ${meta.category === 'task_field' ? 'shadow-lg border-white/10 bg-[#252525]' : ''}`}
         style={{ borderRadius: "6px" }}
       >
         {!isLocked && (
@@ -374,28 +461,10 @@ export const PromptNode = memo(
           </div>
         )}
 
-        {/* 任务专属 ID 输入 */}
-        {data.nodeType === "task" && (
-          <div className="px-2.5 pb-2 pt-1 flex items-center gap-2">
-            <span className="text-[10px] text-white/40">Task ID:</span>
-            <input
-              type="text"
-              placeholder="e.g. 1"
-              value={data.taskId || ""}
-              disabled={isLocked}
-              onChange={(e) => {
-                const val = e.target.value;
-                usePromptDesignStore.getState().updateNodeData?.(id, { taskId: val });
-              }}
-              className="bg-black/40 border border-white/5 rounded px-1.5 py-0.5 text-[10px] font-mono text-white/80 outline-none focus:border-white/10 w-16"
-            />
-          </div>
-        )}
-
         {/* 提示词正文 */}
         {data.content !== undefined && (
-          <div className="px-2.5 py-1.5 mx-2 mb-2 bg-black/20 border border-white/5 rounded text-[10px] font-mono text-white/60 line-clamp-2">
-            {data.content || <span className="text-white/20">双击输入内容...</span>}
+          <div className="px-2.5 py-1.5 mx-2 mb-2 mt-2 bg-black/40 border border-white/5 rounded text-[10px] font-mono text-white/80 whitespace-pre-wrap">
+            {data.content || <span className="text-white/20 italic">双击输入内容...</span>}
           </div>
         )}
 
@@ -413,8 +482,8 @@ export const PromptNode = memo(
           </div>
         )}
 
-        {/* 输入输出端口（仅连线型卡片） */}
-        {!meta.isIndependent && (
+        {/* 输入输出端口（仅连线型卡片，容器内部的子卡片不需要连线） */}
+        {!meta.isIndependent && meta.category !== "task_field" && (
           <div className="relative cursor-auto pointer-events-auto">
             {data.inputs?.map((input) => (
               <div

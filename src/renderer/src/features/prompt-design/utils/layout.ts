@@ -3,30 +3,79 @@ import type { Node, Edge } from "@xyflow/react";
 /**
  * 极简、方正的矩形拓扑布局算法
  * 
- * 放弃默认 Dagre 的不规则排版，采用标准的最长路径分层（Columnar Grid Layout）算法：
- * 1. 自动计算各连线节点在拓扑流中的最长路径作为其列索引（Layer）。
- * 2. 自动对无入边的输入节点进行反向对齐（如把只连向 Layer 4 的节点，自动拉回至 Layer 3），防止在 Column 0 产生孤岛。
- * 3. 每一列内部的卡片纵向均分对齐，保证整体布局整齐划一、极其方正美观。
- * 4. 独立卡片（变量、注释等）统一收纳在左侧侧边，不干扰主流程。
+ * 包含：
+ * 1. 自动根据子卡片数量计算容器 (Task) 的自适应高度。
+ * 2. 自动布局容器内部的子卡片。
+ * 3. 对全局流采用 Sugiyama 启发式重心对齐 (Right-to-Left Heuristic)，保证连线顺畅。
  */
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "LR") => {
   const independentTypes = ["comment", "variable", "group"];
   
-  // 1. 区分流程节点与独立节点
-  const flowNodes = nodes.filter(n => !independentTypes.includes(n.data?.nodeType as string));
-  const independentNodes = nodes.filter(n => independentTypes.includes(n.data?.nodeType as string));
+  // 1. 区分流程节点、独立节点与子节点
+  const childNodes = nodes.filter(n => n.parentId);
+  const rootNodes = nodes.filter(n => !n.parentId);
+  
+  const flowNodes = rootNodes.filter(n => !independentTypes.includes(n.data?.nodeType as string));
+  const independentNodes = rootNodes.filter(n => independentTypes.includes(n.data?.nodeType as string));
 
   if (flowNodes.length === 0) {
     return { nodes, edges };
   }
 
-  // 2. 建立邻接表与入度表
-  const flowNodeIds = new Set(flowNodes.map(n => n.id));
+  // --- 1. 子节点内部布局 (Task Container Auto-sizing) ---
+  const parentMap = new Map<string, Node[]>();
+  childNodes.forEach(n => {
+    if (!parentMap.has(n.parentId!)) parentMap.set(n.parentId!, []);
+    parentMap.get(n.parentId!)!.push(n);
+  });
+
+  const layoutedChildNodes: Node[] = [];
+  const parentSizes = new Map<string, { w: number, h: number }>();
+  
+  const CHILD_WIDTH = 240;
+  const CHILD_HEIGHT_ESTIMATE = 110; // 卡片加上间距的估算高度
+  const CONTAINER_WIDTH = 340; // 稍微加宽一点，让内部空间更充裕
+  const EXTRA_CONTAINER_MARGIN = 60; // 额外给容器四周预留避免因为阴影或附属组件溢出导致的遮挡
+
+  for (const [pId, children] of parentMap.entries()) {
+    // 保证子属性有稳定的显示顺序
+    children.sort((a, b) => (a.data?.nodeType as string).localeCompare(b.data?.nodeType as string));
+    
+    let currentY = 90; // 头部留白 (Task标题栏) + 顶部输入端口栏
+    const childX = (CONTAINER_WIDTH - CHILD_WIDTH) / 2;
+    
+    children.forEach(child => {
+       layoutedChildNodes.push({
+         ...child,
+         position: { x: childX, y: currentY }
+       });
+       currentY += CHILD_HEIGHT_ESTIMATE;
+    });
+
+    // 高度包含内容加上底部输出栏的高度
+    const containerHeight = Math.max(200, currentY + 50); 
+    // 在这里我们把容器尺寸设置大一点，但传给外部防重叠算法的高度加上一个安全 margin
+    parentSizes.set(pId, { w: CONTAINER_WIDTH, h: containerHeight + EXTRA_CONTAINER_MARGIN });
+  }
+
+  // 覆盖更新包含子节点的容器宽高
+  const flowNodesWithSize = flowNodes.map(n => {
+    if (parentSizes.has(n.id)) {
+       return {
+         ...n,
+         style: { ...n.style, width: parentSizes.get(n.id)!.w, height: parentSizes.get(n.id)!.h }
+       };
+    }
+    return n;
+  });
+
+  // --- 2. 建立邻接表与入度表 (基于更新后包含 size 的根节点) ---
+  const flowNodeIds = new Set(flowNodesWithSize.map(n => n.id));
   const adj = new Map<string, string[]>();
   const revAdj = new Map<string, string[]>();
   const inDegree = new Map<string, number>();
 
-  for (const n of flowNodes) {
+  for (const n of flowNodesWithSize) {
     adj.set(n.id, []);
     revAdj.set(n.id, []);
     inDegree.set(n.id, 0);
@@ -40,11 +89,11 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     }
   }
 
-  // 3. 计算前向最长路径层级
+  // --- 3. 计算前向最长路径层级 ---
   const layers = new Map<string, number>();
   const queue: string[] = [];
   
-  for (const n of flowNodes) {
+  for (const n of flowNodesWithSize) {
     if (inDegree.get(n.id) === 0) {
       layers.set(n.id, 0);
       queue.push(n.id);
@@ -67,15 +116,14 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     }
   }
 
-  // 补全由于循环或异常未分层的节点
-  for (const n of flowNodes) {
+  for (const n of flowNodesWithSize) {
     if (!layers.has(n.id)) {
       layers.set(n.id, 0);
     }
   }
 
-  // 4. 反向推导，对齐无入边的叶子/输入节点，使其向右靠拢贴近目标节点
-  for (const n of flowNodes) {
+  // --- 4. 反向推导，对齐无入边的叶子节点 ---
+  for (const n of flowNodesWithSize) {
     if (inDegree.get(n.id) === 0) {
       const targets = adj.get(n.id) || [];
       if (targets.length > 0) {
@@ -87,7 +135,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     }
   }
 
-  // 5. 按层级对节点进行分组
+  // --- 5. 按层级对节点进行分组 ---
   const layerGroups = new Map<number, string[]>();
   for (const [id, layer] of layers.entries()) {
     if (!layerGroups.has(layer)) {
@@ -98,16 +146,13 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
   const sortedLayers = Array.from(layerGroups.keys()).sort((a, b) => a - b);
 
-  // 预处理边信息，用于后续精确排序（如把连接到特定 targetHandle 的节点排在前面）
   const edgeInfoMap = new Map<string, Edge>();
   for (const e of edges) {
-    // 假设一个节点主要只有一个前向输出边
     if (!edgeInfoMap.has(e.source)) {
       edgeInfoMap.set(e.source, e);
     }
   }
 
-  // 端口定义的默认顺序（如果在 task_container 中）
   const handleOrder = [
     "in-global",
     "in-title",
@@ -124,56 +169,58 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     "in-notes"
   ];
 
-  // 6. 规整网格坐标分配 (Sugiyama-style Right-to-Left Heuristic)
-  const colWidth = 400;   // 横向列宽（增大一点，避免文字和连线拥挤）
-  const minSpace = 250;   // 纵向节点之间的最小间距（保证卡片不重叠）
+  // --- 6. 规整网格坐标分配 (考虑节点实际高度) ---
+  const colWidth = 450;   // 横向列宽
+  const minGap = 160;      // 显著增大纵向节点之间的最小视觉间距，防止重叠
   
   const positionedNodesMap = new Map<string, { x: number; y: number }>();
   const nodeDesiredY = new Map<string, number>();
 
+  const getNodeHeight = (id: string) => {
+    if (parentSizes.has(id)) return parentSizes.get(id)!.h; // 这个 h 已经包含了 EXTRA_CONTAINER_MARGIN
+    return 150; // 普通节点默认估算高度
+  };
+
   if (sortedLayers.length > 0) {
     const maxLayer = sortedLayers[sortedLayers.length - 1];
     
-    // 从右向左遍历计算 desiredY，并分配无重叠的实际 Y
     for (let i = sortedLayers.length - 1; i >= 0; i--) {
       const layer = sortedLayers[i];
       const nodesInLayer = layerGroups.get(layer)!;
 
-      // 6.1 根据其在 layer+1 目标的实际 Y 来计算 desiredY
+      // 6.1 计算 desiredY
       nodesInLayer.forEach(id => {
         if (layer === maxLayer) {
-          nodeDesiredY.set(id, 0); // 最右侧层初始化
+          nodeDesiredY.set(id, 0);
           return;
         }
         const targets = adj.get(id) || [];
         if (targets.length === 0) {
           nodeDesiredY.set(id, 0);
         } else {
-          // 计算目标节点 Y 的平均值
           let sum = 0;
           let count = 0;
           for (const t of targets) {
             const tPos = positionedNodesMap.get(t);
             if (tPos) {
-              sum += tPos.y;
+              // 计算连线目标的中心点 Y 坐标作为重心
+              const tHeight = getNodeHeight(t);
+              sum += tPos.y + tHeight / 2;
               count++;
             }
           }
-          // 对于目标 Y 可以加入一个微小的偏移，确保连接到靠上 handle 的节点 desiredY 稍微偏小
           let y = count > 0 ? sum / count : 0;
           const edge = edgeInfoMap.get(id);
           if (edge && edge.targetHandle) {
              const hIdx = handleOrder.indexOf(edge.targetHandle);
              if (hIdx !== -1) {
-                // 微调 Y 值，使靠上的 handle 具有较小的 desiredY
                 y += (hIdx - handleOrder.length / 2) * 10;
              }
           }
-          nodeDesiredY.set(id, y);
+          nodeDesiredY.set(id, y - getNodeHeight(id) / 2); // 转回 top Y
         }
       });
 
-      // 6.2 将本层节点按照 desiredY 排序。如果 desiredY 相同，则根据节点 ID 保证稳定排序。
       nodesInLayer.sort((a, b) => {
         const dyA = nodeDesiredY.get(a) || 0;
         const dyB = nodeDesiredY.get(b) || 0;
@@ -183,38 +230,51 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
         return a.localeCompare(b);
       });
 
-      // 6.3 分配无重叠的实际 Y 坐标 (1D collision resolution)
+      // 6.2 分配实际 Y 坐标 (1D 防重叠推挤算法)
       const currentYPositions: number[] = nodesInLayer.map(id => nodeDesiredY.get(id) || 0);
 
-      // 如果最右侧，直接按照间距展开
       if (layer === maxLayer) {
-        const totalHeight = (nodesInLayer.length - 1) * minSpace;
-        let startY = -totalHeight / 2;
+        let startY = 0;
         for (let j = 0; j < nodesInLayer.length; j++) {
           currentYPositions[j] = startY;
-          startY += minSpace;
+          startY += getNodeHeight(nodesInLayer[j]) + minGap;
+        }
+        const totalHeight = startY - minGap;
+        for (let j = 0; j < nodesInLayer.length; j++) {
+          currentYPositions[j] -= totalHeight / 2;
         }
       } else {
-        // 迭代推挤直到没有冲突
         let hasConflict = true;
         let maxIters = 200;
+        // 先按当前想要的 Y 从上到下排序再推挤，防止乱序交叉
+        const sortedIndices = nodesInLayer.map((_, i) => i).sort((a, b) => currentYPositions[a] - currentYPositions[b]);
+        
         while (hasConflict && maxIters > 0) {
           hasConflict = false;
-          for (let j = 0; j < nodesInLayer.length - 1; j++) {
-            const diff = currentYPositions[j + 1] - currentYPositions[j];
-            if (diff < minSpace) {
+          for (let k = 0; k < sortedIndices.length - 1; k++) {
+            const j = sortedIndices[k];
+            const jNext = sortedIndices[k + 1];
+            
+            const h1 = getNodeHeight(nodesInLayer[j]);
+            const requiredSpace = (h1 + getNodeHeight(nodesInLayer[jNext])) / 2 + minGap;
+            
+            // 比较中心点距离
+            const center1 = currentYPositions[j] + h1 / 2;
+            const center2 = currentYPositions[jNext] + getNodeHeight(nodesInLayer[jNext]) / 2;
+            const diff = center2 - center1;
+
+            if (diff < requiredSpace) {
               hasConflict = true;
-              const overlap = minSpace - diff;
-              // 按照权重推挤，如果想要保持整体重心不变，各推一半
+              const overlap = requiredSpace - diff;
+              // 严格保证相对顺序：上面的往上走，下面的往下走
               currentYPositions[j] -= overlap / 2;
-              currentYPositions[j + 1] += overlap / 2;
+              currentYPositions[jNext] += overlap / 2;
             }
           }
           maxIters--;
         }
       }
 
-      // 将计算好的实际 Y 存入
       nodesInLayer.forEach((id, j) => {
         const x = layer * colWidth;
         positionedNodesMap.set(id, { x, y: currentYPositions[j] });
@@ -222,7 +282,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     }
   }
 
-  // 居中对齐整体视图
+  // --- 7. 收尾：整体居中与独立节点排列 ---
   let minX = Infinity, minY = Infinity;
   positionedNodesMap.forEach(pos => {
     if (pos.x < minX) minX = pos.x;
@@ -231,7 +291,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
   if (minX === Infinity) minX = 0;
   if (minY === Infinity) minY = 0;
 
-  const layoutedFlowNodes = flowNodes.map((node) => {
+  const layoutedFlowNodes = flowNodesWithSize.map((node) => {
     const pos = positionedNodesMap.get(node.id) || { x: 0, y: 0 };
     return {
       ...node,
@@ -239,7 +299,6 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     };
   });
 
-  // 7. 独立卡片（注释、变量等）在最左侧靠拢整齐排列
   const indepStartX = minX - 320;
   let currentY = minY;
   const indepNodeHeight = 120;
@@ -256,7 +315,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
     return positionedNode;
   });
 
-  const layoutedNodes = [...layoutedIndepNodes, ...layoutedFlowNodes];
+  const layoutedNodes = [...layoutedIndepNodes, ...layoutedFlowNodes, ...layoutedChildNodes];
 
   return { nodes: layoutedNodes, edges };
 };

@@ -99,8 +99,8 @@ export const PromptCanvasContextMenu = ({
   else if (menuState.type === "edge") menuHeight = 44;
 
   const entries = Object.entries(cardTypeMeta) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
-  const globalTypes = entries.filter(([_, meta]) => meta.category === "global");
-  const containerTypes = entries.filter(([_, meta]) => meta.category === "task_container");
+  const globalTypes = entries.filter(([_, meta]) => meta.category === "global_a" || meta.category === "global_c" || meta.category === "assemble");
+  const containerTypes = entries.filter(([_, meta]) => meta.category === "task_b");
   const fieldTypes = entries.filter(([_, meta]) => meta.category === "task_field");
 
   const itemsCount = entries.length;

@@ -96,7 +96,6 @@ const getStatusConfig = (
  */
 const formatFileToolSummary = (
   data: unknown,
-  observation: string,
 ): string | null => {
   if (!data || typeof data !== "object") return null;
 
@@ -133,7 +132,7 @@ const formatToolObservation = (step: AiToolStep): string => {
   }
 
   // 优先通过 data 结构生成文件工具摘要
-  const fileSummary = formatFileToolSummary(step.data, step.observation ?? "");
+  const fileSummary = formatFileToolSummary(step.data);
   if (fileSummary) return fileSummary;
 
   const normalizedObservation = (step.observation ?? "").trim();
