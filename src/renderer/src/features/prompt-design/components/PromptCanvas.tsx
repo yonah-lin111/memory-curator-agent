@@ -67,6 +67,7 @@ const getEdgeColor = (nodeType?: string): string => {
     variables:         "#facc15",
     resources:         "#fbbf24",
     assemble_a:        "#fb923c",
+    compiler_c:        "#a3e635",
     task:              "#e879f9",
     output_format:     "#818cf8",
     validation:        "#34d399",
@@ -138,7 +139,7 @@ const rawInitialNodes: Node[] = [
     id: "b1-container",
     type: "promptNode",
     position: { x: 800, y: 10 },
-    style: { width: 400, height: 600 },
+    style: { width: 500, height: 600 },
     data: {
       title: "b1 任务: 表格架构搭建",
       description: "拖入子属性卡片到此区域中",
@@ -212,7 +213,7 @@ const rawInitialNodes: Node[] = [
     id: "b2-container",
     type: "promptNode",
     position: { x: 800, y: 650 },
-    style: { width: 400, height: 600 },
+    style: { width: 500, height: 600 },
     data: {
       title: "b2 任务: 搜索与分页逻辑",
       description: "拖入子属性卡片到此区域中",
@@ -269,32 +270,6 @@ const rawInitialNodes: Node[] = [
     } as PromptNodeData,
   } as Node,
 
-  /* ── c组: 后置全局配置输入节点 ── */
-  {
-    id: "c-format",
-    type: "promptNode",
-    position: { x: 1040, y: 550 },
-    data: {
-      title: "输出格式 (Output Format)",
-      description: "严格约束最终的代码交付标准",
-      nodeType: "output_format",
-      content: "提供用 ```tsx 标记包裹的单文件完整代码，尾部必须提供 Jest 单元测试示范用例。",
-      outputs: [{ id: "out-format", name: "Output", type: "text" }],
-    } as PromptNodeData,
-  } as Node,
-  {
-    id: "c-validation",
-    type: "promptNode",
-    position: { x: 1040, y: 690 },
-    data: {
-      title: "全局校验 (Validation)",
-      description: "定义大模型交付前自检清单",
-      nodeType: "validation",
-      content: "检查所有任务是否圆满完成，并确认完全符合开发约束。",
-      outputs: [{ id: "out-validation", name: "Output", type: "text" }],
-    } as PromptNodeData,
-  } as Node,
-
   /* ── c最终导出卡片 (Compiler Terminal) ── */
   {
     id: "c-compiler",
@@ -306,9 +281,35 @@ const rawInitialNodes: Node[] = [
       nodeType: "compiler_c",
       inputs: [
         { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
-        { id: "in-format", name: "输出格式 (Format)", type: "text" },
-        { id: "in-validation", name: "全局校验 (Validation)", type: "text" },
+        { id: "in-format", name: "输出格式 (Format)", type: "text", handlePosition: "right" },
+        { id: "in-validation", name: "全局校验 (Validation)", type: "text", handlePosition: "right" },
       ],
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── c组: 后置全局配置节点 ── */
+  {
+    id: "c-format",
+    type: "promptNode",
+    position: { x: 1750, y: 150 },
+    data: {
+      title: "输出格式 (Output Format)",
+      description: "严格约束最终的代码交付标准",
+      nodeType: "output_format",
+      content: "提供用 ```tsx 标记包裹的单文件完整代码，尾部必须提供 Jest 单元测试示范用例。",
+      outputs: [{ id: "out-format", name: "Output", type: "text", handlePosition: "left" }],
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "c-validation",
+    type: "promptNode",
+    position: { x: 1750, y: 350 },
+    data: {
+      title: "全局校验 (Validation)",
+      description: "定义大模型交付前自检清单",
+      nodeType: "validation",
+      content: "检查所有任务是否圆满完成，并确认完全符合开发约束。",
+      outputs: [{ id: "out-validation", name: "Output", type: "text", handlePosition: "left" }],
     } as PromptNodeData,
   } as Node,
 ];
@@ -331,9 +332,9 @@ const rawInitialEdges: Edge[] = [
   { id: "e-b1-final", source: "b1-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
   { id: "e-b2-final", source: "b2-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
 
-  /* ── c (后置输入) -> c组装卡片 ── */
-  { id: "e-c-format", source: "c-format", target: "c-compiler", sourceHandle: "out-format", targetHandle: "in-format" },
-  { id: "e-c-validation", source: "c-validation", target: "c-compiler", sourceHandle: "out-validation", targetHandle: "in-validation" },
+  /* ── c (后置输入) -> c组装卡片 (但为了排版，设置为反向边 isBackward) ── */
+  { id: "e-c-format", source: "c-format", target: "c-compiler", sourceHandle: "out-format", targetHandle: "in-format", data: { isBackward: true } },
+  { id: "e-c-validation", source: "c-validation", target: "c-compiler", sourceHandle: "out-validation", targetHandle: "in-validation", data: { isBackward: true } },
 ].map((e) => {
   const sourceType = initialNodeTypesMap.get(e.source);
   const strokeColor = getEdgeColor(sourceType);
@@ -696,9 +697,9 @@ export const PromptCanvas = () => {
     } else if (type === "compiler_c") {
       initialInputs = [
         { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
-        { id: "in-format", name: "输出格式 (Format)", type: "text" },
-        { id: "in-validation", name: "全局校验 (Validation)", type: "text" },
-        { id: "in-input_data", name: "输入数据 (Input Data)", type: "text" },
+        { id: "in-format", name: "输出格式 (Format)", type: "text", handlePosition: "right" },
+        { id: "in-validation", name: "全局校验 (Validation)", type: "text", handlePosition: "right" },
+        { id: "in-input_data", name: "输入数据 (Input Data)", type: "text", handlePosition: "right" },
       ];
     } else if (type === "task") {
       initialInputs = [
@@ -720,7 +721,7 @@ export const PromptCanvas = () => {
     } else if (meta && meta.category === "global_a") {
       initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
     } else if (meta && meta.category === "global_c") {
-      initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
+      initialOutputs = [{ id: "out-val", name: "属性输出", type: "text", handlePosition: "left" }];
     } else if (meta && meta.category === "task_field") {
       initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
     }
@@ -800,7 +801,7 @@ export const PromptCanvas = () => {
          const newNode = createNewNode(type as PromptCardType, position) as Node;
          if (type === "task") {
            // 对于容器，赋予它足够的宽高，并设置独立样式或在渲染端控制
-           newNode.style = { width: 400, height: 600 };
+           newNode.style = { width: 500, height: 600 };
          }
          setNodes((nds) => nds.concat(newNode));
       }

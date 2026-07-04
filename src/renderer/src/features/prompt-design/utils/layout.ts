@@ -32,29 +32,82 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
   const layoutedChildNodes: Node[] = [];
   const parentSizes = new Map<string, { w: number, h: number }>();
   
-  const CHILD_WIDTH = 240;
-  const CHILD_HEIGHT_ESTIMATE = 110; // 卡片加上间距的估算高度
-  const CONTAINER_WIDTH = 340; // 稍微加宽一点，让内部空间更充裕
-  const EXTRA_CONTAINER_MARGIN = 60; // 额外给容器四周预留避免因为阴影或附属组件溢出导致的遮挡
+  const CHILD_WIDTH = 210; // 卡片宽
+  const COL_GAP = 24; // 列间距
+  const CONTAINER_WIDTH = 500; // 容器宽度
+  const EXTRA_CONTAINER_MARGIN = 60; // 容器底部留白
+
+  // 任务卡片标准排序
+  const taskFieldOrder = [
+    "task_title",
+    "task_goal",
+    "task_priority",
+    "task_depends_on",
+    "task_instructions",
+    "task_rules",
+    "task_variables",
+    "task_resources",
+    "task_example",
+    "task_output",
+    "task_validation",
+    "task_notes"
+  ];
+
+  // 动态估算子卡片高度
+  const getChildHeightEstimate = (child: Node) => {
+    let baseHeight = 85; // 标题与边距基础高度
+    if (child.data?.content) {
+      const text = child.data.content as string;
+      const lines = text.split('\n').length;
+      const chars = text.length;
+      // 假设 210px 宽度约能容纳 15 个中文字符
+      const wrappedLines = Math.ceil(chars / 15);
+      const totalLines = Math.max(lines, wrappedLines);
+      baseHeight += totalLines * 18 + 24; // 文本行高估算
+    }
+    return Math.max(130, baseHeight);
+  };
 
   for (const [pId, children] of parentMap.entries()) {
-    // 保证子属性有稳定的显示顺序
-    children.sort((a, b) => (a.data?.nodeType as string).localeCompare(b.data?.nodeType as string));
+    // 按照指定逻辑顺序排列
+    children.sort((a, b) => {
+      const typeA = a.data?.nodeType as string;
+      const typeB = b.data?.nodeType as string;
+      let idxA = taskFieldOrder.indexOf(typeA);
+      let idxB = taskFieldOrder.indexOf(typeB);
+      if (idxA === -1) idxA = 99;
+      if (idxB === -1) idxB = 99;
+      return idxA - idxB;
+    });
     
-    let currentY = 90; // 头部留白 (Task标题栏) + 顶部输入端口栏
-    const childX = (CONTAINER_WIDTH - CHILD_WIDTH) / 2;
+    // 双列瀑布流布局算法
+    const leftColX = (CONTAINER_WIDTH - (CHILD_WIDTH * 2 + COL_GAP)) / 2;
+    const rightColX = leftColX + CHILD_WIDTH + COL_GAP;
     
-    children.forEach(child => {
+    let leftY = 80;
+    let rightY = 80;
+    
+    children.forEach((child) => {
+       // 瀑布流：总是放入当前高度较小的一列
+       const isLeft = leftY <= rightY;
+       const x = isLeft ? leftColX : rightColX;
+       const y = isLeft ? leftY : rightY;
+       
        layoutedChildNodes.push({
          ...child,
-         position: { x: childX, y: currentY }
+         position: { x, y }
        });
-       currentY += CHILD_HEIGHT_ESTIMATE;
+       
+       const childH = getChildHeightEstimate(child) + COL_GAP;
+       if (isLeft) {
+         leftY += childH;
+       } else {
+         rightY += childH;
+       }
     });
 
-    // 高度包含内容加上底部输出栏的高度
-    const containerHeight = Math.max(200, currentY + 50); 
-    // 在这里我们把容器尺寸设置大一点，但传给外部防重叠算法的高度加上一个安全 margin
+    const maxColY = Math.max(leftY, rightY);
+    const containerHeight = Math.max(200, maxColY); 
     parentSizes.set(pId, { w: CONTAINER_WIDTH, h: containerHeight + EXTRA_CONTAINER_MARGIN });
   }
 
@@ -83,9 +136,16 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
   for (const e of edges) {
     if (flowNodeIds.has(e.source) && flowNodeIds.has(e.target)) {
-      adj.get(e.source)!.push(e.target);
-      revAdj.get(e.target)!.push(e.source);
-      inDegree.set(e.target, inDegree.get(e.target)! + 1);
+      // 允许反向连线（如 c-format 传递给 c-compiler 但希望 c-format 排在后面）
+      if (e.data && e.data.isBackward) {
+        adj.get(e.target)!.push(e.source);
+        revAdj.get(e.source)!.push(e.target);
+        inDegree.set(e.source, inDegree.get(e.source)! + 1);
+      } else {
+        adj.get(e.source)!.push(e.target);
+        revAdj.get(e.target)!.push(e.source);
+        inDegree.set(e.target, inDegree.get(e.target)! + 1);
+      }
     }
   }
 
@@ -170,7 +230,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
   ];
 
   // --- 6. 规整网格坐标分配 (考虑节点实际高度) ---
-  const colWidth = 450;   // 横向列宽
+  const colWidth = 560;   // 横向列宽 (增大防止容器与下一列重叠)
   const minGap = 160;      // 显著增大纵向节点之间的最小视觉间距，防止重叠
   
   const positionedNodesMap = new Map<string, { x: number; y: number }>();
@@ -178,7 +238,18 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
   const getNodeHeight = (id: string) => {
     if (parentSizes.has(id)) return parentSizes.get(id)!.h; // 这个 h 已经包含了 EXTRA_CONTAINER_MARGIN
-    return 150; // 普通节点默认估算高度
+    
+    // 如果是普通节点，根据其内部的 input / output 数量做一个动态估算
+    const node = flowNodesWithSize.find(n => n.id === id);
+    let estimatedH = 200;
+    if (node && node.data) {
+      const data = node.data as any;
+      const portsCount = (data.inputs?.length || 0) + (data.outputs?.length || 0);
+      if (portsCount > 0) {
+        estimatedH = Math.max(200, 100 + portsCount * 40);
+      }
+    }
+    return estimatedH;
   };
 
   if (sortedLayers.length > 0) {
@@ -301,7 +372,7 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
   const indepStartX = minX - 320;
   let currentY = minY;
-  const indepNodeHeight = 120;
+  const indepNodeHeight = 150;
 
   const layoutedIndepNodes = independentNodes.map((node) => {
     const positionedNode = {

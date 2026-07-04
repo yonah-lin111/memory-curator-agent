@@ -299,8 +299,8 @@ export type PromptNodeData = {
   description?: string;
   nodeType: PromptCardType;
   icon?: string;
-  inputs?: Array<{ id: string; name: string; type: string }>;
-  outputs?: Array<{ id: string; name: string; type: string }>;
+  inputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>;
+  outputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>;
   content?: string;
   variables?: string[];
   taskId?: string; // 用于 task 容器卡片的 ID 编号
@@ -417,13 +417,13 @@ export const PromptNode = memo(
 
     return (
       <div
-        className={`group/node relative w-[240px] rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${
+        className={`group/node relative rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${
           meta.isIndependent
             ? "border-dashed border-white/10"
             : selected && !isLocked
               ? "border-white"
               : "border-transparent"
-        } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""} ${meta.category === 'task_field' ? 'shadow-lg border-white/10 bg-[#252525]' : ''}`}
+        } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""} ${meta.category === 'task_field' ? 'shadow-lg border-white/10 bg-[#252525] w-[210px]' : 'w-[240px]'}`}
         style={{ borderRadius: "6px" }}
       >
         {!isLocked && (
@@ -485,56 +485,78 @@ export const PromptNode = memo(
         {/* 输入输出端口（仅连线型卡片，容器内部的子卡片不需要连线） */}
         {!meta.isIndependent && meta.category !== "task_field" && (
           <div className="relative cursor-auto pointer-events-auto">
-            {data.inputs?.map((input) => (
-              <div
-                key={input.id}
-                className="relative flex min-h-8 w-full flex-wrap items-center justify-between px-3 py-1 hover:bg-white/[0.02] transition-colors"
-              >
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={input.id}
-                  className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-left-1.5 transition-transform hover:scale-125"
-                />
-                <div className="flex w-full items-center justify-between text-xs">
-                  <div className="flex w-full items-center truncate">
-                    <span className="text-[11px] font-medium text-white/85">
-                      {input.name}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-black/20 rounded">
-                    {input.type}
-                  </span>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const allPorts = [
+                ...(data.inputs || []).map((p) => ({ ...p, kind: "input" as const })),
+                ...(data.outputs || []).map((p) => ({ ...p, kind: "output" as const })),
+              ];
 
-            {data.outputs?.map((output, idx) => {
-              const isLast = idx === data.outputs!.length - 1;
-              return (
-                <div
-                  key={output.id}
-                  className={`relative flex min-h-8 w-full flex-wrap items-center justify-between px-3 py-1 transition-colors ${
-                    isLast ? "rounded-b-[6px]" : "border-b border-white/5"
-                  }`}
-                >
-                  <div className="flex w-full items-center justify-end truncate text-xs">
-                    <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-white/5 rounded mr-1.5">
-                      {output.type}
-                    </span>
-                    <span className="text-[11px] font-medium text-white/85">
-                      {output.name}
-                    </span>
-                  </div>
-                  <Handle
-                    type="source"
-                    position={Position.Right}
-                    id={output.id}
-                    className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-right-1.5 transition-transform hover:scale-125"
-                  />
-                </div>
-              );
-            })}
+              // 将 c最终导出 (compiler_c) 的右侧端口排在上方，左侧的排在底部
+              if (data.nodeType === "compiler_c") {
+                const rightPorts = allPorts.filter((p) => p.handlePosition === "right");
+                const leftPorts = allPorts.filter((p) => p.handlePosition !== "right");
+                allPorts.length = 0;
+                allPorts.push(...rightPorts, ...leftPorts);
+              }
+
+              return allPorts.map((port, idx) => {
+                const isLast = idx === allPorts.length - 1;
+                const borderClass = isLast
+                  ? "rounded-b-[6px]"
+                  : "border-b border-white/5";
+
+                // 对于 input，默认 handle 在左边；但如果指定了 right，则渲染在右边，文字靠右（类似传统的 output 样式）
+                const isHandleLeft = port.kind === "input" ? port.handlePosition !== "right" : port.handlePosition === "left";
+
+                if (isHandleLeft) {
+                  return (
+                    <div
+                      key={port.id}
+                      className={`relative flex min-h-8 w-full flex-wrap items-center justify-between px-3 py-1 hover:bg-white/[0.02] transition-colors ${borderClass}`}
+                    >
+                      <Handle
+                        type={port.kind === "input" ? "target" : "source"}
+                        position={Position.Left}
+                        id={port.id}
+                        className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-left-1.5 transition-transform hover:scale-125"
+                      />
+                      <div className="flex w-full items-center justify-between text-xs">
+                        <div className="flex w-full items-center truncate">
+                          <span className="text-[11px] font-medium text-white/85">
+                            {port.name}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-black/20 rounded">
+                          {port.type}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div
+                      key={port.id}
+                      className={`relative flex min-h-8 w-full flex-wrap items-center justify-between px-3 py-1 hover:bg-white/[0.02] transition-colors ${borderClass}`}
+                    >
+                      <div className="flex w-full items-center justify-end truncate text-xs">
+                        <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-white/5 rounded mr-1.5">
+                          {port.type}
+                        </span>
+                        <span className="text-[11px] font-medium text-white/85">
+                          {port.name}
+                        </span>
+                      </div>
+                      <Handle
+                        type={port.kind === "input" ? "target" : "source"}
+                        position={Position.Right}
+                        id={port.id}
+                        className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-right-1.5 transition-transform hover:scale-125"
+                      />
+                    </div>
+                  );
+                }
+              });
+            })()}
           </div>
         )}
       </div>
