@@ -19,87 +19,279 @@ import {
   Braces,
   Ban,
   Target,
+  BookOpen,
+  HelpCircle,
+  FileCode,
+  CheckSquare,
+  Workflow,
+  Layers,
+  Sliders,
+  Send,
 } from "lucide-react";
 
-/** 提示词卡片类型 */
+/** 提示词卡片类型 - 完全映射自企业级 XML 规范 */
 export type PromptCardType =
-  | "template"
-  | "context"
-  | "condition"
-  | "loop"
-  | "output"
-  | "variable"
-  | "comment"
-  | "requirement"
-  | "role"
-  | "fewshot"
-  | "format"
-  | "constraint"
-  | "audience";
+  // ── 全局配置类 (a) ──
+  | "system_role"     // <system_role>
+  | "objective"       // <objective>
+  | "context"         // <context>
+  | "assumptions"     // <assumptions>
+  | "constraints"     // <constraints>
+  | "definitions"     // <definitions>
+  | "variables"       // <variables>
+  | "resources"       // <resources>
+  // ── 组装与终点 ──
+  | "assemble_a"      // a组装卡片
+  | "compiler_c"      // c最终导出
+  // ── 任务容器 (b) ──
+  | "task"            // <task id="...">
+  // ── 任务属性类 ──
+  | "task_title"       // <title>
+  | "task_goal"        // <goal>
+  | "task_instructions"// <instructions>
+  | "task_rules"       // <rules>
+  | "task_priority"    // <priority>
+  | "task_depends_on"  // <depends_on>
+  | "task_variables"   // <variables>
+  | "task_resources"   // <resources>
+  | "task_example"     // <example>
+  | "task_output"      // <output>
+  | "task_validation"  // <validation>
+  | "task_notes"       // <notes>
+  // ── 后置全局配置类 (c) ──
+  | "output_format"   // <output_format>
+  | "validation"      // <validation>
+  | "input_data";     // <input_data>
 
-/** 
- * 卡片类型元数据 
- * 
- * 卡片设计定位及使用场景：
- * 
- * 1. 内容定义类（构建提示词的主体）：
- * - role (角色设定): 流程起点，设定 AI 的人设、技能栈和语气 (如："你是一个资深 React 架构师")。
- * - context (上下文注入): 提供 AI 完成任务所需的背景知识、前置规则或参考文档 (如：API文档、设计规范)。
- * - requirement (业务需求): 清晰描述具体要 AI 执行的任务目标 (如："实现一个带分页的数据表格")。
- * - template (模板片段): 通用的内容组装块，用于格式要求、补充说明等 (如："请只输出代码，不带解释")。
- * - fewshot (示例示范): 提供输入与输出的配对示范，让大模型学习模式，提升复杂任务的稳定度。
- * - format (输出格式): 严格约束 AI 的返回格式，如 JSON Schema、Markdown 的具体结构等。
- * - constraint (约束限制): 明确禁止或强制要求的边界条件（如：“不要引入外部依赖”、“代码不得多于 100 行”）。
- * - audience (目标受众): 限定生成内容的最终阅读者或消费者（如：“写给 React 初学者的文档”），从而调整语气和深度。
- * 
- * 2. 逻辑控制类（让提示词具备动态变化能力）：
- * - condition (条件分支): 根据前置条件决定提示词的拼接走向 (如："是否生成测试"，True 拼接测试要求，False 拼接 Mock 数据)。
- * - loop (循环迭代): 指示 AI 对一组数据执行重复操作的指令包装。
- * 
- * 3. 终点类：
- * - output (输出终点): 所有连线的归宿，负责将连入的碎片合并成最终发送给大模型的完整提示词。
- * 
- * 4. 变量与辅助类（独立存在，isIndependent: true）：
- * - variable (变量定义): 定义运行时动态传入的占位符 (如：{{framework}}).
- * - comment (注释说明): 仅供设计者阅读的便签，不参与最终提示词生成。
+/**
+ * 卡片类型元数据
  */
 export type CardTypeMeta = {
   label: string;
   defaultIcon: string;
   color: string;
   isIndependent: boolean;
+  category: "global_a" | "assemble" | "task_b" | "task_field" | "global_c";
 };
 
 export const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
-  template:     { label: "模板片段",    defaultIcon: "FileText",         color: "text-amber-400 bg-amber-500/20",      isIndependent: false },
-  context:      { label: "上下文注入",  defaultIcon: "Database",         color: "text-purple-400 bg-purple-500/20",    isIndependent: false },
-  condition:    { label: "条件分支",    defaultIcon: "GitBranch",        color: "text-orange-400 bg-orange-500/20",    isIndependent: false },
-  loop:         { label: "循环迭代",    defaultIcon: "RefreshCw",        color: "text-cyan-400 bg-cyan-500/20",        isIndependent: false },
-  output:       { label: "输出终点",    defaultIcon: "CornerDownRight",  color: "text-lime-400 bg-lime-500/20",        isIndependent: false },
-  variable:     { label: "变量定义",    defaultIcon: "Hash",             color: "text-yellow-400 bg-yellow-500/20",    isIndependent: true },
-  comment:      { label: "注释说明",    defaultIcon: "StickyNote",       color: "text-gray-400 bg-gray-500/20",        isIndependent: true },
-  requirement:  { label: "业务需求",    defaultIcon: "FolderOpen",       color: "text-blue-400 bg-blue-500/20",        isIndependent: false },
-  role:         { label: "角色设定",    defaultIcon: "User",             color: "text-pink-400 bg-pink-500/20",        isIndependent: false },
-  fewshot:      { label: "示例示范",    defaultIcon: "Sparkles",         color: "text-fuchsia-400 bg-fuchsia-500/20",  isIndependent: false },
-  format:       { label: "输出格式",    defaultIcon: "Braces",           color: "text-indigo-400 bg-indigo-500/20",    isIndependent: false },
-  constraint:   { label: "约束限制",    defaultIcon: "Ban",              color: "text-rose-400 bg-rose-500/20",        isIndependent: false },
-  audience:     { label: "目标受众",    defaultIcon: "Target",           color: "text-teal-400 bg-teal-500/20",        isIndependent: false },
+  // ── 全局配置类 (a) ──
+  system_role: {
+    label: "系统角色",
+    defaultIcon: "User",
+    color: "text-pink-400 bg-pink-500/10 border-pink-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  objective: {
+    label: "整体目标",
+    defaultIcon: "Target",
+    color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  context: {
+    label: "背景上下文",
+    defaultIcon: "Database",
+    color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  assumptions: {
+    label: "默认假设",
+    defaultIcon: "HelpCircle",
+    color: "text-sky-400 bg-sky-500/10 border-sky-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  constraints: {
+    label: "全局约束",
+    defaultIcon: "Ban",
+    color: "text-red-400 bg-red-500/10 border-red-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  definitions: {
+    label: "术语定义",
+    defaultIcon: "BookOpen",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+  variables: {
+    label: "参数变量",
+    defaultIcon: "Hash",
+    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
+    isIndependent: true,
+    category: "global_a",
+  },
+  resources: {
+    label: "参考资料",
+    defaultIcon: "FileText",
+    color: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    isIndependent: false,
+    category: "global_a",
+  },
+
+  // ── 组装与终点 ──
+  assemble_a: {
+    label: "a全局组装",
+    defaultIcon: "Sliders",
+    color: "text-orange-400 bg-orange-500/15 border-orange-500/30",
+    isIndependent: false,
+    category: "assemble",
+  },
+  compiler_c: {
+    label: "c最终导出",
+    defaultIcon: "Send",
+    color: "text-lime-400 bg-lime-500/15 border-lime-500/30",
+    isIndependent: false,
+    category: "assemble",
+  },
+
+  // ── 任务容器 (b) ──
+  task: {
+    label: "任务容器",
+    defaultIcon: "Workflow",
+    color: "text-fuchsia-400 bg-fuchsia-500/15 border-fuchsia-500/30",
+    isIndependent: false,
+    category: "task_b",
+  },
+
+  // ── 任务属性类 ──
+  task_title: {
+    label: "任务名称",
+    defaultIcon: "Layers",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_goal: {
+    label: "任务目标",
+    defaultIcon: "Target",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_instructions: {
+    label: "执行步骤",
+    defaultIcon: "FileText",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_rules: {
+    label: "任务规则",
+    defaultIcon: "Ban",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_priority: {
+    label: "优先级",
+    defaultIcon: "Info",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_depends_on: {
+    label: "任务依赖",
+    defaultIcon: "GitBranch",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_variables: {
+    label: "任务参数",
+    defaultIcon: "Hash",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_resources: {
+    label: "任务参考",
+    defaultIcon: "BookOpen",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_example: {
+    label: "示例(Fewshot)",
+    defaultIcon: "Sparkles",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_output: {
+    label: "输出要求",
+    defaultIcon: "CornerDownRight",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_validation: {
+    label: "任务检查",
+    defaultIcon: "CheckSquare",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+  task_notes: {
+    label: "补充说明",
+    defaultIcon: "StickyNote",
+    color: "text-slate-300 bg-slate-500/10 border-slate-500/20",
+    isIndependent: false,
+    category: "task_field",
+  },
+
+  // ── 后置全局配置类 (c) ──
+  output_format: {
+    label: "输出格式",
+    defaultIcon: "Braces",
+    color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+    isIndependent: false,
+    category: "global_c",
+  },
+  validation: {
+    label: "全局校验",
+    defaultIcon: "CheckSquare",
+    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    isIndependent: false,
+    category: "global_c",
+  },
+  input_data: {
+    label: "输入数据",
+    defaultIcon: "FileCode",
+    color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    isIndependent: false,
+    category: "global_c",
+  },
 };
 
 export const iconMap: Record<string, React.ReactNode> = {
-  FileText:         <FileText className="w-4 h-4" />,
-  Database:         <Database className="w-4 h-4" />,
-  GitBranch:        <GitBranch className="w-4 h-4" />,
-  RefreshCw:        <RefreshCw className="w-4 h-4" />,
-  CornerDownRight:  <CornerDownRight className="w-4 h-4" />,
-  Hash:             <Hash className="w-4 h-4" />,
-  StickyNote:       <StickyNote className="w-4 h-4" />,
-  FolderOpen:       <FolderOpen className="w-4 h-4" />,
-  User:             <User className="w-4 h-4" />,
-  Sparkles:         <Sparkles className="w-4 h-4" />,
-  Braces:           <Braces className="w-4 h-4" />,
-  Ban:              <Ban className="w-4 h-4" />,
-  Target:           <Target className="w-4 h-4" />,
+  User: <User className="w-4 h-4" />,
+  FileText: <FileText className="w-4 h-4" />,
+  Settings: <Settings className="w-4 h-4" />,
+  Database: <Database className="w-4 h-4" />,
+  Info: <Info className="w-4 h-4" />,
+  GitBranch: <GitBranch className="w-4 h-4" />,
+  RefreshCw: <RefreshCw className="w-4 h-4" />,
+  CornerDownRight: <CornerDownRight className="w-4 h-4" />,
+  Hash: <Hash className="w-4 h-4" />,
+  StickyNote: <StickyNote className="w-4 h-4" />,
+  FolderOpen: <FolderOpen className="w-4 h-4" />,
+  Sparkles: <Sparkles className="w-4 h-4" />,
+  Braces: <Braces className="w-4 h-4" />,
+  Ban: <Ban className="w-4 h-4" />,
+  Target: <Target className="w-4 h-4" />,
+  BookOpen: <BookOpen className="w-4 h-4" />,
+  HelpCircle: <HelpCircle className="w-4 h-4" />,
+  FileCode: <FileCode className="w-4 h-4" />,
+  CheckSquare: <CheckSquare className="w-4 h-4" />,
+  Workflow: <Workflow className="w-4 h-4" />,
+  Layers: <Layers className="w-4 h-4" />,
+  Sliders: <Sliders className="w-4 h-4" />,
+  Send: <Send className="w-4 h-4" />,
 };
 
 export type PromptNodeData = {
@@ -111,6 +303,7 @@ export type PromptNodeData = {
   outputs?: Array<{ id: string; name: string; type: string }>;
   content?: string;
   variables?: string[];
+  taskId?: string; // 用于 task 容器卡片的 ID 编号
 };
 
 /** @see cardTypeMeta */
@@ -137,13 +330,14 @@ export const PromptNode = memo(
 
     return (
       <div
-        className={`group/node relative w-[240px] rounded-xl border bg-[#1C1C1C] transition-all duration-200 ${
+        className={`group/node relative w-[240px] rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${
           meta.isIndependent
             ? "border-dashed border-white/10"
             : selected && !isLocked
               ? "border-white"
               : "border-transparent"
         } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""}`}
+        style={{ borderRadius: "6px" }}
       >
         {!isLocked && (
           <button
@@ -180,10 +374,28 @@ export const PromptNode = memo(
           </div>
         )}
 
+        {/* 任务专属 ID 输入 */}
+        {data.nodeType === "task" && (
+          <div className="px-2.5 pb-2 pt-1 flex items-center gap-2">
+            <span className="text-[10px] text-white/40">Task ID:</span>
+            <input
+              type="text"
+              placeholder="e.g. 1"
+              value={data.taskId || ""}
+              disabled={isLocked}
+              onChange={(e) => {
+                const val = e.target.value;
+                usePromptDesignStore.getState().updateNodeData?.(id, { taskId: val });
+              }}
+              className="bg-black/40 border border-white/5 rounded px-1.5 py-0.5 text-[10px] font-mono text-white/80 outline-none focus:border-white/10 w-16"
+            />
+          </div>
+        )}
+
         {/* 提示词正文 */}
-        {data.content && (
+        {data.content !== undefined && (
           <div className="px-2.5 py-1.5 mx-2 mb-2 bg-black/20 border border-white/5 rounded text-[10px] font-mono text-white/60 line-clamp-2">
-            {data.content}
+            {data.content || <span className="text-white/20">双击输入内容...</span>}
           </div>
         )}
 
@@ -217,10 +429,9 @@ export const PromptNode = memo(
                 />
                 <div className="flex w-full items-center justify-between text-xs">
                   <div className="flex w-full items-center truncate">
-                    <span className="text-xs font-medium text-white/80">
+                    <span className="text-[11px] font-medium text-white/85">
                       {input.name}
                     </span>
-                    <Info className="ml-1 h-2.5 w-2.5 text-white/30 cursor-help" />
                   </div>
                   <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-black/20 rounded">
                     {input.type}
@@ -231,25 +442,18 @@ export const PromptNode = memo(
 
             {data.outputs?.map((output, idx) => {
               const isLast = idx === data.outputs!.length - 1;
-              // 条件节点的输出分别给 True(绿色) 和 False(红色) 的特殊样式
-              let handleColor = "!bg-indigo-400";
-              if (data.nodeType === "condition") {
-                if (output.id === "out-true") handleColor = "!bg-emerald-400";
-                if (output.id === "out-false") handleColor = "!bg-rose-400";
-              }
-
               return (
                 <div
                   key={output.id}
                   className={`relative flex min-h-8 w-full flex-wrap items-center justify-between px-3 py-1 transition-colors ${
-                    isLast ? "rounded-b-xl" : "border-b border-white/5"
+                    isLast ? "rounded-b-[6px]" : "border-b border-white/5"
                   }`}
                 >
                   <div className="flex w-full items-center justify-end truncate text-xs">
                     <span className="text-[9px] text-white/30 font-mono px-1 py-0.5 bg-white/5 rounded mr-1.5">
                       {output.type}
                     </span>
-                    <span className="text-xs font-medium text-white/80">
+                    <span className="text-[11px] font-medium text-white/85">
                       {output.name}
                     </span>
                   </div>
@@ -257,7 +461,7 @@ export const PromptNode = memo(
                     type="source"
                     position={Position.Right}
                     id={output.id}
-                    className={`!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] ${handleColor} !-right-1.5 transition-transform hover:scale-125`}
+                    className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-right-1.5 transition-transform hover:scale-125"
                   />
                 </div>
               );

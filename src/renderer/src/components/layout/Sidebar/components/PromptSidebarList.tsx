@@ -37,7 +37,7 @@ export const PromptSidebarList = ({
   const [activeTab, setActiveTab] = useState<"components" | "projects">(
     "projects",
   );
-  
+
   const [projects, setProjects] = useState<any[]>([]);
   const [designs, setDesigns] = useState<any[]>([]);
 
@@ -142,15 +142,10 @@ export const PromptSidebarList = ({
     event.dataTransfer.effectAllowed = "move";
   };
 
+  // 全部分类节点定义
+  const allCardTypes = Object.entries(cardTypeMeta) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+
   if (isCollapsed) {
-    const connectedTypesAll = Object.entries(cardTypeMeta).filter(
-      ([_, meta]) => !meta.isIndependent,
-    ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
-
-    const independentTypesAll = Object.entries(cardTypeMeta).filter(
-      ([_, meta]) => meta.isIndependent,
-    ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
-
     return (
       <div
         className="flex h-full w-full flex-col items-center gap-4 py-1"
@@ -167,34 +162,10 @@ export const PromptSidebarList = ({
         </Tooltip>
 
         <div
-          className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-3 pb-4 [&::-webkit-scrollbar]:hidden"
+          className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-2 pb-4 [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {connectedTypesAll.map(([type, meta]) => (
-            <Tooltip key={type} content={meta.label} placement="right">
-              <div
-                className={`w-9 h-9 flex-shrink-0 rounded-[6px] transition-colors ${
-                  isLocked
-                    ? "opacity-50 cursor-not-allowed grayscale"
-                    : "cursor-grab active:cursor-grabbing hover:bg-white/[0.02]"
-                }`}
-                draggable={!isLocked}
-                onDragStart={(e) => onDragStart(e, type)}
-              >
-                <div
-                  className={`w-full h-full ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
-                >
-                  {iconMap[meta.defaultIcon] || (
-                    <div className="w-4 h-4 bg-white/20 rounded-full" />
-                  )}
-                </div>
-              </div>
-            </Tooltip>
-          ))}
-
-          <div className="w-4 h-[1px] bg-white/10 my-1 flex-shrink-0" />
-
-          {independentTypesAll.map(([type, meta]) => (
+          {allCardTypes.map(([type, meta]) => (
             <Tooltip key={type} content={meta.label} placement="right">
               <div
                 className={`w-9 h-9 flex-shrink-0 rounded-[6px] transition-colors ${
@@ -223,19 +194,17 @@ export const PromptSidebarList = ({
   // 按类型和搜索关键字过滤显示
   const keyword = searchKeyword.trim().toLowerCase();
 
-  const connectedTypes = Object.entries(cardTypeMeta).filter(
-    ([_, meta]) =>
-      !meta.isIndependent &&
-      (meta.label.toLowerCase().includes(keyword) ||
-        _.toLowerCase().includes(keyword)),
-  ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+  const filteredCardTypes = allCardTypes.filter(
+    ([type, meta]) =>
+      meta.label.toLowerCase().includes(keyword) ||
+      type.toLowerCase().includes(keyword)
+  );
 
-  const independentTypes = Object.entries(cardTypeMeta).filter(
-    ([_, meta]) =>
-      meta.isIndependent &&
-      (meta.label.toLowerCase().includes(keyword) ||
-        _.toLowerCase().includes(keyword)),
-  ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+  const globalATypes = filteredCardTypes.filter(([_, meta]) => meta.category === "global_a");
+  const assembleTypes = filteredCardTypes.filter(([_, meta]) => meta.category === "assemble");
+  const taskBTypes = filteredCardTypes.filter(([_, meta]) => meta.category === "task_b");
+  const fieldTypes = filteredCardTypes.filter(([_, meta]) => meta.category === "task_field");
+  const globalCTypes = filteredCardTypes.filter(([_, meta]) => meta.category === "global_c");
 
   const mergedProjects = projects.map(proj => ({
     ...proj,
@@ -330,6 +299,50 @@ export const PromptSidebarList = ({
     </div>
   );
 
+  const renderTypeCategory = (title: string, items: typeof filteredCardTypes) => {
+    if (items.length === 0) return null;
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-0.5">
+          {title}
+        </div>
+        <div className="grid grid-cols-1 gap-1.5">
+          {items.map(([type, meta]) => (
+            <div
+              key={type}
+              className={`w-full text-left flex items-center gap-3 p-2 rounded-[6px] transition-all duration-150 group border border-transparent ${
+                isLocked
+                  ? "opacity-50 cursor-not-allowed grayscale"
+                  : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
+              }`}
+              draggable={!isLocked}
+              onDragStart={(e) => onDragStart(e, type)}
+            >
+              <div className="relative flex-shrink-0">
+                <div
+                  className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
+                >
+                  {iconMap[meta.defaultIcon] || (
+                    <div className="w-4 h-4 bg-white/20 rounded-full" />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span className="text-[11px] font-bold truncate text-white/90 group-hover:text-white">
+                  {meta.label}
+                </span>
+                <span className="text-[10px] text-white/40 truncate group-hover:text-white/65 font-mono">
+                  {type}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -402,7 +415,7 @@ export const PromptSidebarList = ({
         <input
           type="text"
           placeholder={
-            activeTab === "components" ? "搜索组件..." : "搜索项目..."
+            activeTab === "components" ? "搜索标签..." : "搜索项目..."
           }
           value={searchKeyword}
           onChange={(event) => setSearchKeyword(event.target.value)}
@@ -413,91 +426,13 @@ export const PromptSidebarList = ({
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4 flex flex-col gap-6 px-1">
         {activeTab === "components" ? (
           <>
-            {/* 连线组件 */}
-            {connectedTypes.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
-                  流程卡片
-                </div>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {connectedTypes.map(([type, meta]) => (
-                    <div
-                      key={type}
-                      className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
-                        isLocked
-                          ? "opacity-50 cursor-not-allowed grayscale"
-                          : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
-                      }`}
-                      draggable={!isLocked}
-                      onDragStart={(e) => onDragStart(e, type)}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div
-                          className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
-                        >
-                          {iconMap[meta.defaultIcon] || (
-                            <div className="w-4 h-4 bg-white/20 rounded-full" />
-                          )}
-                        </div>
-                      </div>
+            {renderTypeCategory("全局配置标签 (a)", globalATypes)}
+            {renderTypeCategory("组装与终点", assembleTypes)}
+            {renderTypeCategory("任务容器标签 (b)", taskBTypes)}
+            {renderTypeCategory("任务子属性标签", fieldTypes)}
+            {renderTypeCategory("后置全局配置 (c)", globalCTypes)}
 
-                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                        <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
-                          {meta.label}
-                        </span>
-                        <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
-                          {type}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 独立组件 */}
-            {independentTypes.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <div className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-1">
-                  独立卡片
-                </div>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {independentTypes.map(([type, meta]) => (
-                    <div
-                      key={type}
-                      className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group border border-transparent ${
-                        isLocked
-                          ? "opacity-50 cursor-not-allowed grayscale"
-                          : "hover:bg-white/[0.02] text-white/70 cursor-grab active:cursor-grabbing"
-                      }`}
-                      draggable={!isLocked}
-                      onDragStart={(e) => onDragStart(e, type)}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div
-                          className={`w-9 h-9 ${meta.color} bg-opacity-10 border border-white/10 rounded-[6px] flex items-center justify-center`}
-                        >
-                          {iconMap[meta.defaultIcon] || (
-                            <div className="w-4 h-4 bg-white/20 rounded-full" />
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                        <span className="text-xs font-bold truncate text-white/90 group-hover:text-white">
-                          {meta.label}
-                        </span>
-                        <span className="text-xs text-white/40 truncate group-hover:text-white/65 font-mono">
-                          {type}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {connectedTypes.length === 0 && independentTypes.length === 0 && (
+            {filteredCardTypes.length === 0 && (
               <div className="rounded-[6px] border border-white/5 px-3 py-4 text-center text-xs text-white/35 mx-1">
                 没有匹配的组件
               </div>
@@ -519,9 +454,9 @@ export const PromptSidebarList = ({
                       }}
                       onContextMenu={(e) => handleContextMenu(e, "project", proj)}
                     >
-                      <Tooltip 
-                        content={proj.path || ""} 
-                        placement="right" 
+                      <Tooltip
+                        content={proj.path || ""}
+                        placement="right"
                         contentClassName="whitespace-pre-wrap"
                       >
                         <div className={`flex-1 min-w-0 text-xs font-semibold uppercase tracking-wider transition-colors truncate pr-2 ${activeProjectId === proj.id ? 'text-white/90' : 'text-white/40 group-hover:text-white/60'}`}>

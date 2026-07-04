@@ -27,286 +27,233 @@ const nodeTypes: NodeTypes = {
 
 /** minimap 颜色映射 */
 const minimapColors: Record<string, string> = {
-  system:       "#fb7185",
-  user:         "#38bdf8",
-  assistant:    "#34d399",
-  tool_message: "#60a5fa",
-  template:     "#fbbf24",
-  context:      "#c084fc",
-  assemble:     "#2dd4bf",
-  condition:    "#fb923c",
-  loop:         "#22d3ee",
-  output:       "#a3e635",
-  variable:     "#facc15",
-  comment:      "#9ca3af",
-  group:        "#a1a1aa",
-  fewshot:      "#e879f9",
-  format:       "#818cf8",
-  constraint:   "#f43f5e",
-  audience:     "#2dd4bf",
+  system_role:       "#fb7185", // 玫瑰红
+  objective:         "#f43f5e", // 深红
+  context:           "#c084fc", // 紫色
+  assumptions:       "#38bdf8", // 天蓝
+  constraints:       "#ef4444", // 红色
+  definitions:       "#2dd4bf", // 蒂芙尼蓝
+  variables:         "#facc15", // 黄色
+  resources:         "#fbbf24", // 琥珀黄
+  assemble_a:        "#fb923c", // 橙色
+  compiler_c:        "#a3e635", // 莱姆绿
+  task:              "#e879f9", // 紫罗兰
+  task_title:        "#9ca3af", // 灰色
+  task_goal:         "#9ca3af",
+  task_instructions: "#9ca3af",
+  task_rules:        "#9ca3af",
+  task_priority:     "#9ca3af",
+  task_depends_on:   "#9ca3af",
+  task_variables:    "#9ca3af",
+  task_resources:    "#9ca3af",
+  task_example:      "#9ca3af",
+  task_output:       "#9ca3af",
+  task_validation:   "#9ca3af",
+  task_notes:        "#9ca3af",
+  output_format:     "#818cf8", // 靛蓝
+  validation:        "#34d399", // 绿色
+  input_data:        "#60a5fa", // 蓝色
 };
 
 /** 获取连接线的颜色 */
-const getEdgeColor = (nodeType?: string, sourceHandle?: string | null): string => {
-  if (nodeType === "condition") {
-    if (sourceHandle === "out-true") return "#10b981"; // 绿色 (emerald-500)
-    if (sourceHandle === "out-false") return "#ef4444"; // 红色 (rose-500)
-    return "#fb923c"; // 橘色 (orange-400)
-  }
-  
+const getEdgeColor = (nodeType?: string): string => {
   const colors: Record<string, string> = {
-    role:         "#f472b6", // 粉色 (pink-400)
-    context:      "#c084fc", // 紫色 (purple-400)
-    audience:     "#2dd4bf", // 蒂芙尼蓝 (teal-400)
-    fewshot:      "#e879f9", // 紫罗兰/洋红色 (fuchsia-400)
-    format:       "#818cf8", // 靛蓝色 (indigo-400)
-    constraint:   "#f43f5e", // 玫瑰红 (rose-400)
-    template:     "#fbbf24", // 琥珀黄 (amber-400)
-    requirement:  "#60a5fa", // 亮蓝色 (blue-400)
-    loop:         "#22d3ee", // 青色 (cyan-400)
-    output:       "#a3e635", // 莱姆绿 (lime-400)
+    system_role:       "#fb7185",
+    objective:         "#f43f5e",
+    context:           "#c084fc",
+    assumptions:       "#38bdf8",
+    constraints:       "#ef4444",
+    definitions:       "#2dd4bf",
+    variables:         "#facc15",
+    resources:         "#fbbf24",
+    assemble_a:        "#fb923c",
+    task:              "#e879f9",
+    output_format:     "#818cf8",
+    validation:        "#34d399",
+    input_data:        "#60a5fa",
   };
-
-  return colors[nodeType || ""] || "#818cf8"; // 默认 indigo-400
+  return colors[nodeType || ""] || "#9ca3af";
 };
 
+// ── 用户要求的结构化 MOCK 数据 ──
 const rawInitialNodes = [
-  /* ── 独立卡片 ── */
+  /* ── a组: 全局配置输入节点 ── */
   {
-    id: "var-1",
+    id: "a-role",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 50, y: 50 },
     data: {
-      title: "{{component}}",
-      description: "组件名称",
-      nodeType: "variable",
-      variables: ["component"],
+      title: "系统角色 (System Role)",
+      description: "定义 AI 前端架构专家的人设",
+      nodeType: "system_role",
+      content: "你是一个资深的前端 React 架构师。请使用 TypeScript 和 Tailwind CSS 设计并生成高质量的、符合企业级规范的 React 组件。",
+      outputs: [{ id: "out-role", name: "Output", type: "text" }],
     } as PromptNodeData,
   },
   {
-    id: "var-2",
+    id: "a-obj",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 50, y: 190 },
     data: {
-      title: "{{theme}}",
-      description: "UI 主题风格",
-      nodeType: "variable",
-      variables: ["theme"],
+      title: "整体目标 (Objective)",
+      description: "设定 AI 最终交付的目标",
+      nodeType: "objective",
+      content: "分析用户的业务任务，输出高内聚、高响应性、零缺陷的前端 React 完整源码实现。",
+      outputs: [{ id: "out-obj", name: "Output", type: "text" }],
     } as PromptNodeData,
   },
   {
-    id: "cmt-1",
+    id: "a-const",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 50, y: 330 },
     data: {
-      title: "需求与规约设计",
-      nodeType: "comment",
-      content: "这是一个生成复杂 React 数据表格的工程流。\n我们加入了：\n- 目标受众：规定生成代码的解释颗粒度\n- 示例示范：指导 API 数据获取规范 (SWR)\n- 约束限制：定义核心开发的红线准则\n- 输出格式：控制最终代码交付标准",
+      title: "全局约束 (Constraints)",
+      description: "开发必须严格遵守的红线",
+      nodeType: "constraints",
+      content: "- 严禁使用任何外部全局状态库\n- 必须实现 100% 的 TypeScript 强类型声明",
+      outputs: [{ id: "out-const", name: "Output", type: "text" }],
     } as PromptNodeData,
   },
 
-  /* ── 连线卡片 ── */
+  /* ── a-组装卡片 (Global Assembler) ── */
   {
-    id: "tpl-role",
+    id: "a-assembler",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 380, y: 150 },
     data: {
-      title: "角色设定",
-      description: "定义 AI 前端专家身份",
-      nodeType: "role",
-      content: "你是一个资深的 React 架构师。请使用 TypeScript 和 Tailwind CSS 为我实现一个高质量的 {{component}} 组件。\n请遵循当前项目的 {{theme}} 主题规范。",
-      variables: ["component", "theme"],
-      outputs: [
-        { id: "out-role", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "aud-junior",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "受众: 初级开发者",
-      description: "限定代码解释的详细度",
-      nodeType: "audience",
-      content: "【目标受众】团队中的初级开发者。\n要求：代码中需要包含详尽的 TypeScript 类型解释以及 React Hooks (如 useMemo, useCallback) 的原理解析注释，帮助初学者快速理解核心逻辑。",
-      outputs: [
-        { id: "out-aud", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "ctx-api",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "UI 规范上下文",
-      description: "注入项目设计 system 文档",
-      nodeType: "context",
-      content: "【设计规范】\n- 按钮圆角：rounded-md\n- 主色调：bg-indigo-600 hover:bg-indigo-700\n- 阴影：shadow-sm\n- 字体：font-sans text-sm\n所有交互元素必须包含焦点状态 (focus-visible)。",
-      outputs: [
-        { id: "out-ctx-api", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "tpl-task-1",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "需求: 基础框架",
-      description: "描述组件的核心骨架",
-      nodeType: "template",
-      content: "该组件需要展示一个数据表格的整体布局骨架，包括表头、表格主体区域，并支持基础响应式。",
+      title: "A-全局组装 (Global Config)",
+      description: "收集并打包所有全局前置标签 (a)",
+      nodeType: "assemble_a",
       inputs: [
-        { id: "in-task1-role", name: "角色设定", type: "text" },
-        { id: "in-task1-ctx", name: "UI 规范", type: "text" },
-        { id: "in-task1-aud", name: "目标受众", type: "text" },
+        { id: "in-system_role", name: "系统角色 (System Role)", type: "text" },
+        { id: "in-objective", name: "整体目标 (Objective)", type: "text" },
+        { id: "in-constraints", name: "全局约束 (Constraints)", type: "text" },
       ],
-      outputs: [
-        { id: "out-task-1", name: "基础要求", type: "text" },
-      ],
+      outputs: [{ id: "out-global", name: "打包输出", type: "global_config" }],
     } as PromptNodeData,
   },
+
+  /* ── b1组: 任务1 (Task 1 Container + Fields) ── */
   {
-    id: "tpl-task-2",
+    id: "b1-container",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 1040, y: 10 },
     data: {
-      title: "需求: 分页功能",
-      description: "描述分页组件逻辑",
-      nodeType: "requirement",
-      content: "在表格底部增加分页控制器，包含上一页、下一页和页码快速跳转。支持每页展示数量切换。",
+      title: "b1 任务: 表格架构搭建",
+      description: "聚合子属性，受 a全局配置 约束",
+      nodeType: "task",
+      taskId: "1",
       inputs: [
-        { id: "in-task2-base", name: "依赖骨架", type: "text" },
+        { id: "in-global", name: "A全局配置 (Global Config)", type: "global_config" },
+        { id: "in-title", name: "任务名称 (Title)", type: "text" },
+        { id: "in-goal", name: "任务目标 (Goal)", type: "text" },
       ],
-      outputs: [
-        { id: "out-task-2", name: "分页要求", type: "text" },
-      ],
+      outputs: [{ id: "out-task", name: "任务整合", type: "task" }],
     } as PromptNodeData,
   },
   {
-    id: "tpl-task-3",
+    id: "b1-title",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 740, y: 10 },
     data: {
-      title: "需求: 搜索与过滤",
-      description: "描述表头搜索逻辑",
-      nodeType: "requirement",
-      content: "在表格顶部增加搜索框和列过滤器。要求实现搜索防抖，并且清空搜索时重置回第一页。",
+      title: "任务1 名称",
+      nodeType: "task_title",
+      content: "数据表格核心骨架实现",
+      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
+    } as PromptNodeData,
+  },
+  {
+    id: "b1-goal",
+    type: "promptNode",
+    position: { x: 740, y: 120 },
+    data: {
+      title: "任务1 目标",
+      nodeType: "task_goal",
+      content: "创建自适应表格布局，保证加载中与无数据状态交互连贯。",
+      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
+    } as PromptNodeData,
+  },
+
+  /* ── b2组: 任务2 (Task 2 Container + Fields) ── */
+  {
+    id: "b2-container",
+    type: "promptNode",
+    position: { x: 1040, y: 280 },
+    data: {
+      title: "b2 任务: 搜索与分页逻辑",
+      description: "聚合子属性，受 a全局配置 约束",
+      nodeType: "task",
+      taskId: "2",
       inputs: [
-        { id: "in-task3-base", name: "依赖骨架", type: "text" },
+        { id: "in-global", name: "A全局配置 (Global Config)", type: "global_config" },
+        { id: "in-title", name: "任务名称 (Title)", type: "text" },
+        { id: "in-goal", name: "任务目标 (Goal)", type: "text" },
       ],
-      outputs: [
-        { id: "out-task-3", name: "搜索要求", type: "text" },
-      ],
+      outputs: [{ id: "out-task", name: "任务整合", type: "task" }],
     } as PromptNodeData,
   },
   {
-    id: "cond-test",
+    id: "b2-title",
     type: "promptNode",
-    position: { x: 0, y: 0 },
+    position: { x: 740, y: 280 },
     data: {
-      title: "数据源类型?",
-      description: "根据数据获取方式分支",
-      nodeType: "condition",
+      title: "任务2 名称",
+      nodeType: "task_title",
+      content: "数据流控制与分页核心",
+      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
+    } as PromptNodeData,
+  },
+  {
+    id: "b2-goal",
+    type: "promptNode",
+    position: { x: 740, y: 390 },
+    data: {
+      title: "任务2 目标",
+      nodeType: "task_goal",
+      content: "提供每页数量切换以及防抖过滤检索，空态无缝重置。",
+      outputs: [{ id: "out-val", name: "属性输出", type: "text" }],
+    } as PromptNodeData,
+  },
+
+  /* ── c组: 后置全局配置输入节点 ── */
+  {
+    id: "c-format",
+    type: "promptNode",
+    position: { x: 1040, y: 550 },
+    data: {
+      title: "输出格式 (Output Format)",
+      description: "严格约束最终的代码交付标准",
+      nodeType: "output_format",
+      content: "提供用 ```tsx 标记包裹的单文件完整代码，尾部必须提供 Jest 单元测试示范用例。",
+      outputs: [{ id: "out-format", name: "Output", type: "text" }],
+    } as PromptNodeData,
+  },
+  {
+    id: "c-validation",
+    type: "promptNode",
+    position: { x: 1040, y: 690 },
+    data: {
+      title: "全局校验 (Validation)",
+      description: "定义大模型交付前自检清单",
+      nodeType: "validation",
+      content: "检查所有任务是否圆满完成，并确认完全符合开发约束。",
+      outputs: [{ id: "out-validation", name: "Output", type: "text" }],
+    } as PromptNodeData,
+  },
+
+  /* ── c最终导出卡片 (Compiler Terminal) ── */
+  {
+    id: "c-compiler",
+    type: "promptNode",
+    position: { x: 1420, y: 250 },
+    data: {
+      title: "C-最终导出 (Compiler Terminal)",
+      description: "汇聚 A全局配置、B任务列表及 C后置配置 以进行一键编译",
+      nodeType: "compiler_c",
       inputs: [
-        { id: "in-cond", name: "集成所有需求", type: "text" },
-      ],
-      outputs: [
-        { id: "out-true", name: "API 联调", type: "text" },
-        { id: "out-false", name: "纯前端 Mock", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "few-swr",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "示例: SWR 获取标准",
-      description: "API 数据流处理示例",
-      nodeType: "fewshot",
-      content: "【示范代码】\n```typescript\nconst { data, error, isLoading } = useSWR('/api/list', fetcher, {\n  revalidateOnFocus: false,\n  dedupingInterval: 5000\n});\n```\n必须使用 useSWR 代替普通的 useEffect 进行异步状态抓取。",
-      outputs: [
-        { id: "out-few", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "tpl-api",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "请求逻辑生成",
-      nodeType: "template",
-      content: "请使用 SWR 或 React Query 编写数据请求钩子。处理 isLoading 和 error 状态，实现接口请求参数与分页、搜索状态的双向绑定。",
-      inputs: [
-        { id: "in-api", name: "前置需求", type: "text" },
-        { id: "in-api-few", name: "API 示范", type: "text" },
-      ],
-      outputs: [
-        { id: "out-api", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "loop-mock",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "生成 Mock 数据",
-      description: "为表格列生成测试数据",
-      nodeType: "loop",
-      content: "对于表格中的每一列，生成 20 条符合字段类型的随机 mock 数据。实现一个本地的假分页 and 搜索过滤逻辑。",
-      inputs: [
-        { id: "in-loop", name: "前置需求", type: "text" },
-      ],
-      outputs: [
-        { id: "out-loop", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "const-rules",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "开发规范与红线",
-      description: "严格执行的代码边界",
-      nodeType: "constraint",
-      content: "【严禁规则】\n1. 禁止引入除 lucide-react 以外的第三方图标库。\n2. 代码必须完全通过 TypeScript 严格类型检查，绝不能使用 any 类型。\n3. 不要添加任何额外的第三方状态管理库 (如 Redux)。",
-      outputs: [
-        { id: "out-const", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "fmt-json",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "输出格式约束",
-      description: "约束最终的代码交付标准",
-      nodeType: "format",
-      content: "【最终交付格式】\n1. 顶层给出组件的设计思路概览 (30字以内)。\n2. 接下来是用 ```tsx 标记包裹的单文件完整代码。\n3. 尾部提供一个该组件的 Jest 单体测试示范用例。",
-      outputs: [
-        { id: "out-fmt", name: "Output", type: "text" },
-      ],
-    } as PromptNodeData,
-  },
-  {
-    id: "out-final",
-    type: "promptNode",
-    position: { x: 0, y: 0 },
-    data: {
-      title: "最终代码生成",
-      nodeType: "output",
-      inputs: [
-        { id: "in-out-api", name: "API版代码", type: "text" },
-        { id: "in-out-mock", name: "Mock版代码", type: "text" },
-        { id: "in-out-const", name: "开发约束", type: "text" },
-        { id: "in-out-fmt", name: "格式约束", type: "text" },
+        { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
+        { id: "in-format", name: "输出格式 (Format)", type: "text" },
+        { id: "in-validation", name: "全局校验 (Validation)", type: "text" },
       ],
     } as PromptNodeData,
   },
@@ -317,37 +264,33 @@ const initialNodeTypesMap = new Map<string, string>(
 );
 
 const rawInitialEdges: Edge[] = [
-  // 角色、受众和规范 -> 需求1（骨架）
-  { id: "e-role-task1", source: "tpl-role", target: "tpl-task-1", sourceHandle: "out-role", targetHandle: "in-task1-role" },
-  { id: "e-ctx-task1", source: "ctx-api", target: "tpl-task-1", sourceHandle: "out-ctx-api", targetHandle: "in-task1-ctx" },
-  { id: "e-aud-task1", source: "aud-junior", target: "tpl-task-1", sourceHandle: "out-aud", targetHandle: "in-task1-aud" },
-  
-  // 需求1（骨架）-> 需求2 和 需求3 (并行拆解功能)
-  { id: "e-task1-task2", source: "tpl-task-1", target: "tpl-task-2", sourceHandle: "out-task-1", targetHandle: "in-task2-base" },
-  { id: "e-task1-task3", source: "tpl-task-1", target: "tpl-task-3", sourceHandle: "out-task-1", targetHandle: "in-task3-base" },
+  /* ── a (全局输入) -> a组装卡片 ── */
+  { id: "e-a-role", source: "a-role", target: "a-assembler", sourceHandle: "out-role", targetHandle: "in-system_role" },
+  { id: "e-a-obj", source: "a-obj", target: "a-assembler", sourceHandle: "out-obj", targetHandle: "in-objective" },
+  { id: "e-a-const", source: "a-const", target: "a-assembler", sourceHandle: "out-const", targetHandle: "in-constraints" },
 
-  // 需求2 和 需求3 -> 汇聚到条件判断
-  { id: "e-task2-cond", source: "tpl-task-2", target: "cond-test", sourceHandle: "out-task-2", targetHandle: "in-cond" },
-  { id: "e-task3-cond", source: "tpl-task-3", target: "cond-test", sourceHandle: "out-task-3", targetHandle: "in-cond" },
-  
-  // 条件 -> 真实API请求模块 (True 分支)
-  { id: "e-cond-api", source: "cond-test", target: "tpl-api", sourceHandle: "out-true", targetHandle: "in-api" },
-  // 示例示范 -> 真实API请求模块
-  { id: "e-few-api", source: "few-swr", target: "tpl-api", sourceHandle: "out-few", targetHandle: "in-api-few" },
+  /* ── a组装卡片 -> b1 & b2 任务输入 ── */
+  { id: "e-assemble-b1", source: "a-assembler", target: "b1-container", sourceHandle: "out-global", targetHandle: "in-global" },
+  { id: "e-assemble-b2", source: "a-assembler", target: "b2-container", sourceHandle: "out-global", targetHandle: "in-global" },
 
-  // 条件 -> Mock生成模块 (False 分支)
-  { id: "e-cond-mock", source: "cond-test", target: "loop-mock", sourceHandle: "out-false", targetHandle: "in-loop" },
-  
-  // 分支模块 -> 最终输出
-  { id: "e-api-out", source: "tpl-api", target: "out-final", sourceHandle: "out-api", targetHandle: "in-out-api" },
-  { id: "e-mock-out", source: "loop-mock", target: "out-final", sourceHandle: "out-loop", targetHandle: "in-out-mock" },
+  /* ── b1 任务属性输入 ── */
+  { id: "e-b1-title", source: "b1-title", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-title" },
+  { id: "e-b1-goal", source: "b1-goal", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-goal" },
 
-  // 约束限制和输出格式 -> 最终输出
-  { id: "e-const-out", source: "const-rules", target: "out-final", sourceHandle: "out-const", targetHandle: "in-out-const" },
-  { id: "e-fmt-out", source: "fmt-json", target: "out-final", sourceHandle: "out-fmt", targetHandle: "in-out-fmt" },
+  /* ── b2 任务属性输入 ── */
+  { id: "e-b2-title", source: "b2-title", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-title" },
+  { id: "e-b2-goal", source: "b2-goal", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-goal" },
+
+  /* ── b1 & b2 任务整合 -> c (最终编译端) ── */
+  { id: "e-b1-final", source: "b1-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
+  { id: "e-b2-final", source: "b2-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
+
+  /* ── c (后置输入) -> c组装卡片 ── */
+  { id: "e-c-format", source: "c-format", target: "c-compiler", sourceHandle: "out-format", targetHandle: "in-format" },
+  { id: "e-c-validation", source: "c-validation", target: "c-compiler", sourceHandle: "out-validation", targetHandle: "in-validation" },
 ].map((e) => {
   const sourceType = initialNodeTypesMap.get(e.source);
-  const strokeColor = getEdgeColor(sourceType, e.sourceHandle);
+  const strokeColor = getEdgeColor(sourceType);
   return {
     ...e,
     type: "default",
@@ -356,7 +299,7 @@ const rawInitialEdges: Edge[] = [
   };
 });
 
-// 初始化时即进行一次排版
+// 初始化排版元素
 const { nodes: initialNodes, edges: initialEdges } = getLayoutedElements(
   rawInitialNodes,
   rawInitialEdges,
@@ -386,202 +329,231 @@ export const PromptCanvas = () => {
     );
   }, [edgeType, setEdges]);
 
+  // ── XML 提示词多维度整合引擎 ──
   const handleExport = useCallback(async () => {
     if (nodes.length === 0) {
       toast.warning("画布为空，没有可导出的内容");
       return;
     }
 
-    // ── 数据结构准备 ──
     const dataMap = new Map(nodes.map((n) => [n.id, n.data as PromptNodeData]));
 
-    const outgoing = new Map<string, Edge[]>();
+    // 映射所有入边连接
+    // targetNodeId -> Record<targetHandleId, string[]>
+    const incomingConnections: Record<string, Record<string, string[]>> = {};
     for (const e of edges) {
-      if (!outgoing.has(e.source)) outgoing.set(e.source, []);
-      outgoing.get(e.source)!.push(e);
-    }
-
-    // ── 从 Output 节点反向 BFS 找出连通子图 ──
-    const outputIds = nodes
-      .filter((n) => dataMap.get(n.id)?.nodeType === "output")
-      .map((n) => n.id);
-    
-    // 如果没有 output 节点，提示用户
-    if (outputIds.length === 0) {
-      toast.warning("请添加至少一个「输出终点」卡片");
-      return;
-    }
-
-    const connected = new Set<string>();
-    const bfsQueue: string[] = [...outputIds];
-    const incomingReverse = new Map<string, string[]>();
-    for (const e of edges) {
-      if (!incomingReverse.has(e.target)) incomingReverse.set(e.target, []);
-      incomingReverse.get(e.target)!.push(e.source);
-    }
-
-    while (bfsQueue.length) {
-      const curr = bfsQueue.shift()!;
-      if (!connected.has(curr)) {
-        connected.add(curr);
-        const prevNodes = incomingReverse.get(curr) || [];
-        for (const p of prevNodes) {
-          if (!connected.has(p)) bfsQueue.push(p);
-        }
+      if (!incomingConnections[e.target]) {
+        incomingConnections[e.target] = {};
       }
+      if (!incomingConnections[e.target][e.targetHandle || ""]) {
+        incomingConnections[e.target][e.targetHandle || ""] = [];
+      }
+      incomingConnections[e.target][e.targetHandle || ""].push(e.source);
     }
 
-    // 将独立的变量节点也加入（只要存在就导出到变量表）
-    const allVariables = new Set<string>();
+    // 辅助：获取连接到某句柄的单个节点内容
+    const getSingleNodeValue = (targetId: string, handleId: string): string => {
+      const sources = incomingConnections[targetId]?.[handleId] || [];
+      if (sources.length === 0) return "";
+      return dataMap.get(sources[0])?.content || "";
+    };
+
+    // 辅助：包装 XML 标签
+    const wrapTag = (tag: string, content: string, indent = ""): string => {
+      const trimmed = content.trim();
+      if (!trimmed) return "";
+      if (trimmed.includes("\n")) {
+        return `${indent}<${tag}>\n\n${trimmed.split("\n").map(l => `${indent}    ${l}`).join("\n")}\n\n${indent}</${tag}>`;
+      }
+      return `${indent}<${tag}>${trimmed}</${tag}>`;
+    };
+
+    // 寻找根节点 compiler_c (c 最终导出)
+    const rootNodes = nodes.filter(n => n.data.nodeType === "compiler_c");
+    const rootNode = rootNodes[0];
+
+    // 如果找不到 c 导出卡片，退化为全局卡片搜集
+    let systemRoleXML = "";
+    let objectiveXML = "";
+    let contextXML = "";
+    let assumptionsXML = "";
+    let constraintsXML = "";
+    let definitionsXML = "";
+    let variablesXML = "";
+    let resourcesXML = "";
+    let taskListXML = "";
+    let outputFormatXML = "";
+    let validationXML = "";
+    let inputDataXML = "";
+
+    const variablesSet = new Set<string>();
     for (const n of nodes) {
-      const data = dataMap.get(n.id);
-      if (data?.nodeType === "variable" && data.variables?.length) {
-        data.variables.forEach(v => allVariables.add(v));
-      }
-      if (connected.has(n.id) && data?.variables) {
-        data.variables.forEach(v => allVariables.add(v));
+      if (n.data.variables) {
+        n.data.variables.forEach(v => variablesSet.add(v));
       }
     }
 
-    // ── 拓扑排序 (Kahn's algorithm) ──
-    const inDegree = new Map<string, number>();
-    for (const id of connected) {
-      inDegree.set(id, 0);
-    }
-    for (const e of edges) {
-      if (connected.has(e.source) && connected.has(e.target)) {
-        inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
-      }
-    }
+    if (rootNode) {
+      const rootId = rootNode.id;
+      const rootConns = incomingConnections[rootId] || {};
 
-    const queue: string[] = [];
-    for (const [id, deg] of inDegree.entries()) {
-      if (deg === 0) queue.push(id);
-    }
+      // ── c 后置全局 ──
+      outputFormatXML = getSingleNodeValue(rootId, "in-format");
+      validationXML   = getSingleNodeValue(rootId, "in-validation");
+      inputDataXML     = getSingleNodeValue(rootId, "in-input_data");
 
-    const sortedIds: string[] = [];
-    while (queue.length) {
-      const curr = queue.shift()!;
-      sortedIds.push(curr);
-      const outEdges = outgoing.get(curr) || [];
-      for (const e of outEdges) {
-        if (connected.has(e.target)) {
-          const deg = (inDegree.get(e.target) || 0) - 1;
-          inDegree.set(e.target, deg);
-          if (deg === 0) queue.push(e.target);
+      // ── b 任务列表 ──
+      const taskSources = rootConns["in-tasks"] || [];
+      const taskNodesOnCanvas = nodes.filter(n => n.data.nodeType === "task" && taskSources.includes(n.id));
+
+      // 按 TaskID 排序以保持逻辑结构
+      const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => {
+        const idA = a.data.taskId || "";
+        const idB = b.data.taskId || "";
+        return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      const taskBlocks: string[] = [];
+      let firstGlobalAssemblerId = "";
+
+      for (const task of sortedTaskNodes) {
+        const tId = task.id;
+        const taskConns = incomingConnections[tId] || {};
+
+        // 寻找相连的 a 组装卡片
+        const globalSources = taskConns["in-global"] || [];
+        if (globalSources.length > 0) {
+          firstGlobalAssemblerId = globalSources[0];
         }
+
+        // 解析 Task 各自子属性卡片
+        const titleContent        = getSingleNodeValue(tId, "in-title");
+        const goalContent         = getSingleNodeValue(tId, "in-goal");
+        const instructionsContent = getSingleNodeValue(tId, "in-instructions");
+        const rulesContent        = getSingleNodeValue(tId, "in-rules");
+        const priorityContent     = getSingleNodeValue(tId, "in-priority");
+        const dependsOnContent    = getSingleNodeValue(tId, "in-depends_on");
+        const variablesContent    = getSingleNodeValue(tId, "in-variables");
+        const resourcesContent    = getSingleNodeValue(tId, "in-resources");
+        const exampleContent      = getSingleNodeValue(tId, "in-example");
+        const outputContent       = getSingleNodeValue(tId, "in-output");
+        const taskValContent      = getSingleNodeValue(tId, "in-validation");
+        const notesContent        = getSingleNodeValue(tId, "in-notes");
+
+        const taskInner: string[] = [];
+        if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
+        if (goalContent)         taskInner.push(wrapTag("goal", goalContent, "        "));
+        if (instructionsContent) taskInner.push(wrapTag("instructions", instructionsContent, "        "));
+        if (rulesContent)        taskInner.push(wrapTag("rules", rulesContent, "        "));
+        if (priorityContent)     taskInner.push(wrapTag("priority", priorityContent, "        "));
+        if (dependsOnContent)    taskInner.push(wrapTag("depends_on", dependsOnContent, "        "));
+        if (variablesContent)    taskInner.push(wrapTag("variables", variablesContent, "        "));
+        if (resourcesContent)    taskInner.push(wrapTag("resources", resourcesContent, "        "));
+        if (exampleContent)      taskInner.push(wrapTag("example", exampleContent, "        "));
+        if (outputContent)       taskInner.push(wrapTag("output", outputContent, "        "));
+        if (taskValContent)      taskInner.push(wrapTag("validation", taskValContent, "        "));
+        if (notesContent)        taskInner.push(wrapTag("notes", notesContent, "        "));
+
+        const taskXML = `        <task id="${task.data.taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`;
+        taskBlocks.push(taskXML);
+      }
+
+      if (taskBlocks.length > 0) {
+        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+      }
+
+      // ── a 前置全局 (从组装卡片中解析) ──
+      const globalId = firstGlobalAssemblerId || nodes.find(n => n.data.nodeType === "assemble_a")?.id;
+      if (globalId) {
+        systemRoleXML  = getSingleNodeValue(globalId, "in-system_role");
+        objectiveXML   = getSingleNodeValue(globalId, "in-objective");
+        contextXML     = getSingleNodeValue(globalId, "in-context");
+        assumptionsXML = getSingleNodeValue(globalId, "in-assumptions");
+        constraintsXML = getSingleNodeValue(globalId, "in-constraints");
+        definitionsXML = getSingleNodeValue(globalId, "in-definitions");
+        variablesXML   = getSingleNodeValue(globalId, "in-variables");
+        resourcesXML   = getSingleNodeValue(globalId, "in-resources");
+      }
+    } else {
+      // 退化模式：若无 C 卡片连线，则按之前的方式全局提取
+      systemRoleXML  = nodes.filter(n => n.data.nodeType === "system_role").map(m => m.data.content || "").join("\n\n");
+      objectiveXML   = nodes.filter(n => n.data.nodeType === "objective").map(m => m.data.content || "").join("\n\n");
+      contextXML     = nodes.filter(n => n.data.nodeType === "context").map(m => m.data.content || "").join("\n\n");
+      assumptionsXML = nodes.filter(n => n.data.nodeType === "assumptions").map(m => m.data.content || "").join("\n\n");
+      constraintsXML = nodes.filter(n => n.data.nodeType === "constraints").map(m => m.data.content || "").join("\n\n");
+      definitionsXML = nodes.filter(n => n.data.nodeType === "definitions").map(m => m.data.content || "").join("\n\n");
+      resourcesXML   = nodes.filter(n => n.data.nodeType === "resources").map(m => m.data.content || "").join("\n\n");
+      outputFormatXML= nodes.filter(n => n.data.nodeType === "output_format").map(m => m.data.content || "").join("\n\n");
+      validationXML  = nodes.filter(n => n.data.nodeType === "validation").map(m => m.data.content || "").join("\n\n");
+      inputDataXML   = nodes.filter(n => n.data.nodeType === "input_data").map(m => m.data.content || "").join("\n\n");
+
+      // 提取任务列表
+      const taskBlocks: string[] = [];
+      const taskNodesOnCanvas = nodes.filter(n => n.data.nodeType === "task");
+      const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => (a.data.taskId || "").localeCompare(b.data.taskId || "", undefined, { numeric: true }));
+      for (const t of sortedTaskNodes) {
+        const tId = t.id;
+        const titleContent        = getSingleNodeValue(tId, "in-title");
+        const goalContent         = getSingleNodeValue(tId, "in-goal");
+        const instructionsContent = getSingleNodeValue(tId, "in-instructions");
+        const outputContent       = getSingleNodeValue(tId, "in-output");
+
+        const taskInner: string[] = [];
+        if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
+        if (goalContent)         taskInner.push(wrapTag("goal", goalContent, "        "));
+        if (instructionsContent) taskInner.push(wrapTag("instructions", instructionsContent, "        "));
+        if (outputContent)       taskInner.push(wrapTag("output", outputContent, "        "));
+
+        taskBlocks.push(`        <task id="${t.data.taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`);
+      }
+      if (taskBlocks.length > 0) {
+        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
       }
     }
 
-    if (sortedIds.length !== connected.size) {
-      toast.warning("检测到循环依赖，导出结果可能不准确");
+    // ── 4. 合成完整的 XML 代码 ──
+    const globalTags: string[] = [];
+    if (systemRoleXML)  globalTags.push(wrapTag("system_role", systemRoleXML, "    "));
+    if (objectiveXML)   globalTags.push(wrapTag("objective", objectiveXML, "    "));
+    if (contextXML)     globalTags.push(wrapTag("context", contextXML, "    "));
+    if (assumptionsXML) globalTags.push(wrapTag("assumptions", assumptionsXML, "    "));
+    if (constraintsXML) globalTags.push(wrapTag("constraints", constraintsXML, "    "));
+    if (definitionsXML) globalTags.push(wrapTag("definitions", definitionsXML, "    "));
+
+    // 变量
+    if (variablesSet.size > 0 || variablesXML) {
+      let varInner = variablesXML;
+      if (!varInner && variablesSet.size > 0) {
+        varInner = Array.from(variablesSet).map(v => `${v} = [请输入 ${v} 的实际定义]`).join("\n");
+      }
+      if (varInner) globalTags.push(wrapTag("variables", varInner, "    "));
     }
 
-    // ── 组装 Markdown ──
+    if (resourcesXML)   globalTags.push(wrapTag("resources", resourcesXML, "    "));
+    if (taskListXML)    globalTags.push(taskListXML);
+    if (outputFormatXML)globalTags.push(wrapTag("output_format", outputFormatXML, "    "));
+    if (validationXML)  globalTags.push(wrapTag("validation", validationXML, "    "));
+    if (inputDataXML)    globalTags.push(wrapTag("input_data", inputDataXML, "    "));
+
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    let md = `# 提示词导出\n> ${dateStr} | ${sortedIds.length} 节点\n\n`;
-
-    // 1. Mermaid 架构图
-    md += `## 架构图\n\`\`\`mermaid\nflowchart LR\n`;
-    const safeName = (id: string) => {
-      const title = dataMap.get(id)?.title || id;
-      return title.replace(/["\[\]\(\)\{\}]/g, ''); // 移除在 Mermaid 中可能引起语法错误的特殊字符
-    };
-    
-    for (const e of edges) {
-      if (connected.has(e.source) && connected.has(e.target)) {
-        const sourceData = dataMap.get(e.source);
-        let linkLabel = "";
-        if (sourceData?.nodeType === "condition") {
-          if (e.sourceHandle === "out-true") linkLabel = " -- True --> ";
-          else if (e.sourceHandle === "out-false") linkLabel = " -- False --> ";
-          else linkLabel = " --> ";
-        } else {
-          linkLabel = " --> ";
-        }
-        
-        let targetShape = `[${safeName(e.target)}]`;
-        if (dataMap.get(e.target)?.nodeType === "output") {
-          targetShape = `((${safeName(e.target)}))`;
-        } else if (dataMap.get(e.target)?.nodeType === "condition") {
-          targetShape = `{${safeName(e.target)}}`;
-        }
-
-        let sourceShape = `[${safeName(e.source)}]`;
-        if (sourceData?.nodeType === "condition") {
-           sourceShape = `{${safeName(e.source)}}`;
-        }
-        
-        md += `  ${e.source.replace(/-/g, '_')}${sourceShape}${linkLabel}${e.target.replace(/-/g, '_')}${targetShape}\n`;
-      }
-    }
-    md += `\`\`\`\n\n`;
-
-    // 2. 流程内容
-    md += `## 流程\n\n`;
-    for (const id of sortedIds) {
-      const data = dataMap.get(id);
-      if (!data) continue;
-
-      if (data.nodeType === "comment" || data.nodeType === "variable") continue; // 跳过
-
-      md += `### ${data.title}`;
-      if (data.nodeType === "condition") md += ` \`[条件]\``;
-      if (data.nodeType === "output") md += ` \`[输出]\``;
-      md += `\n`;
-
-      if (data.nodeType === "condition") {
-        md += `**分支**:\n`;
-        const outs = outgoing.get(id) || [];
-        const trueTarget = outs.find(e => e.sourceHandle === "out-true")?.target;
-        const falseTarget = outs.find(e => e.sourceHandle === "out-false")?.target;
-        
-        if (trueTarget) md += `- ✅ True → 输出到 **${dataMap.get(trueTarget)?.title || trueTarget}**\n`;
-        if (falseTarget) md += `- ❌ False → 输出到 **${dataMap.get(falseTarget)?.title || falseTarget}**\n`;
-      } else {
-        if (data.description) {
-           md += `*${data.description}*\n\n`;
-        }
-        if (data.content) {
-          if (data.content.includes('\n')) {
-             md += `\`\`\`\n${data.content}\n\`\`\`\n`;
-          } else {
-             md += `${data.content}\n`;
-          }
-        }
-      }
-      md += `\n`;
-    }
-
-    md += `---\n\n`;
-
-    // 3. 变量表
-    if (allVariables.size > 0) {
-      md += `### 变量\n| 变量 | 占位符 |\n|------|--------|\n`;
-      for (const v of allVariables) {
-        md += `| \`{{${v}}}\` | ${v} |\n`;
-      }
-    } else {
-      md += `*无变量定义*\n`;
-    }
+    let md = `# 企业级 XML 提示词集 (Prompts Document)\n`;
+    md += `> **创建时间**: ${dateStr} | **配置树结构**: a -> a组装 -> b (Tasks) -> c final\n\n`;
+    md += `本文件由 Prompt Flow 画布编译生成，完全遵循结构化 XML 段落的隔离语义。\n\n`;
+    md += `## XML Prompt 源码\n\n`;
+    md += `\`\`\`xml\n<prompt>\n\n${globalTags.join("\n\n")}\n\n</prompt>\n\`\`\`\n`;
 
     try {
       if (window.api && (window.api as any).dialog) {
         const result = await (window.api as any).dialog.showSaveDialog(
           {
-            title: "导出提示词流程",
-            defaultPath: `prompt_flow_${Date.now()}.md`,
+            title: "导出 XML 提示词",
+            defaultPath: `prompt_xml_${Date.now()}.md`,
             filters: [{ name: "Markdown Files", extensions: ["md"] }],
           }
         );
         if (result && !result.canceled && result.filePath) {
-          // 这里可以使用 files 模块的 API 或者是增加一个 writeFile API
-          // 暂时使用 Blob 下载的方式来作为 fallback，或者我们增加一个 writeFile API
-          // 比较正规的做法是增加 api.files.writeFile
-          
-          // 我们先修改调用方式，这里直接调用 ipcRenderer 如果是在 preload 中暴露的话
           await (window.api as any).fs.writeFile(
             result.filePath,
             md
@@ -593,7 +565,7 @@ export const PromptCanvas = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `prompt_flow_${Date.now()}.md`;
+        a.download = `prompt_xml_${Date.now()}.md`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -623,23 +595,50 @@ export const PromptCanvas = () => {
     let initialInputs: any[] = [];
     let initialOutputs: any[] = [];
 
-    const meta = cardTypeMeta[type as PromptCardType];
-    if (meta && !meta.isIndependent) {
-      if (type === "condition") {
-        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-        initialOutputs = [
-          { id: "out-true", name: "True", type: "branch" },
-          { id: "out-false", name: "False", type: "branch" },
-        ];
-      } else if (type === "context" || type === "template") {
-        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
-      } else if (type === "output") {
-        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-      } else {
-        initialInputs = [{ id: `in_${Date.now()}`, name: "Input", type: "any" }];
-        initialOutputs = [{ id: `out_${Date.now()}`, name: "Output", type: "any" }];
-      }
+    const meta = cardTypeMeta[type];
+
+    if (type === "assemble_a") {
+      initialInputs = [
+        { id: "in-system_role", name: "系统角色 (System Role)", type: "text" },
+        { id: "in-objective", name: "整体目标 (Objective)", type: "text" },
+        { id: "in-context", name: "背景上下文 (Context)", type: "text" },
+        { id: "in-assumptions", name: "默认假设 (Assumptions)", type: "text" },
+        { id: "in-constraints", name: "全局约束 (Constraints)", type: "text" },
+        { id: "in-definitions", name: "术语定义 (Definitions)", type: "text" },
+        { id: "in-variables", name: "参数变量 (Variables)", type: "text" },
+        { id: "in-resources", name: "参考资料 (Resources)", type: "text" },
+      ];
+      initialOutputs = [{ id: "out-global", name: "打包输出 (Global)", type: "global_config" }];
+    } else if (type === "compiler_c") {
+      initialInputs = [
+        { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
+        { id: "in-format", name: "输出格式 (Format)", type: "text" },
+        { id: "in-validation", name: "全局校验 (Validation)", type: "text" },
+        { id: "in-input_data", name: "输入数据 (Input Data)", type: "text" },
+      ];
+    } else if (type === "task") {
+      initialInputs = [
+        { id: "in-global", name: "A全局配置 (Global Config)", type: "global_config" },
+        { id: "in-title", name: "任务名称 (Title)", type: "text" },
+        { id: "in-goal", name: "任务目标 (Goal)", type: "text" },
+        { id: "in-instructions", name: "执行步骤 (Instructions)", type: "text" },
+        { id: "in-rules", name: "任务规则 (Rules)", type: "text" },
+        { id: "in-priority", name: "优先级 (Priority)", type: "text" },
+        { id: "in-depends_on", name: "任务依赖 (Depends On)", type: "text" },
+        { id: "in-variables", name: "任务参数 (Variables)", type: "text" },
+        { id: "in-resources", name: "任务参考 (Resources)", type: "text" },
+        { id: "in-example", name: "示例 (Example)", type: "text" },
+        { id: "in-output", name: "输出要求 (Output)", type: "text" },
+        { id: "in-validation", name: "任务检查 (Validation)", type: "text" },
+        { id: "in-notes", name: "补充说明 (Notes)", type: "text" }
+      ];
+      initialOutputs = [{ id: "out-task", name: "任务整合", type: "task" }];
+    } else if (meta && meta.category === "global_a") {
+      initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
+    } else if (meta && meta.category === "global_c") {
+      initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
+    } else if (meta && meta.category === "task_field") {
+      initialOutputs = [{ id: "out-val", name: "属性输出", type: "text" }];
     }
 
     return {
@@ -647,13 +646,15 @@ export const PromptCanvas = () => {
       type: "promptNode",
       position,
       data: {
-        title: meta?.label || "新卡片",
+        title: meta?.label || "新标签卡片",
         nodeType: type,
         inputs: initialInputs.length > 0 ? initialInputs : undefined,
         outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
+        content: type === "task" || type === "assemble_a" || type === "compiler_c" ? undefined : "",
       } as PromptNodeData,
     };
   }, []);
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
@@ -688,7 +689,7 @@ export const PromptCanvas = () => {
       setEdges((eds) => {
         const sourceNode = nodes.find((n) => n.id === params.source);
         const sourceType = sourceNode?.data?.nodeType;
-        const strokeColor = getEdgeColor(sourceType as string, params.sourceHandle);
+        const strokeColor = getEdgeColor(sourceType as string);
         return addEdge(
           {
             ...params,
@@ -770,7 +771,7 @@ export const PromptCanvas = () => {
     if (!copiedNode) return;
     takeSnapshot();
     const position = screenToFlowPosition({ x: clientX, y: clientY });
-    
+
     // 复制输入和输出的 ID 使其唯一
     const newData = { ...(copiedNode.data as PromptNodeData) };
     if (newData.inputs) {
@@ -807,7 +808,7 @@ export const PromptCanvas = () => {
   }, [setEdges, takeSnapshot, toast]);
 
   return (
-    <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden">
+    <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden" style={{ borderRadius: "6px" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

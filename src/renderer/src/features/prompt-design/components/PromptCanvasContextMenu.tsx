@@ -25,9 +25,9 @@ export interface PromptCanvasContextMenuProps {
 }
 
 const MENU_WIDTH = 156;
-const SUB_MENU_WIDTH = 160;
+const SUB_MENU_WIDTH = 180;
 const VIEWPORT_PADDING = 8;
-const SUB_MENU_MAX_HEIGHT = 300;
+const SUB_MENU_MAX_HEIGHT = 450;
 
 const getMenuPosition = (
   x: number,
@@ -46,9 +46,8 @@ const getMenuPosition = (
   if (subLeft + SUB_MENU_WIDTH > window.innerWidth - VIEWPORT_PADDING) {
     subLeft = left - SUB_MENU_WIDTH - 4;
   }
-  
+
   // 子菜单的基础垂直偏移：让子菜单与“添加卡片”按钮水平对齐
-  // 主菜单的“添加卡片”按钮大概是第二项，顶部往下约 36px (4px padding + 32px 第一项的高度)
   const buttonOffsetTop = 36;
   const initialSubTop = top + buttonOffsetTop;
 
@@ -57,7 +56,7 @@ const getMenuPosition = (
   if (subTop + subMenuHeight > window.innerHeight - VIEWPORT_PADDING) {
     subTop = Math.max(VIEWPORT_PADDING, window.innerHeight - subMenuHeight - VIEWPORT_PADDING);
   }
-  
+
   return { left, top, subLeft, subTop };
 };
 
@@ -94,21 +93,18 @@ export const PromptCanvasContextMenu = ({
   if (!menuState.type) return null;
 
   // 根据类型估算高度
-  let menuHeight = 82; 
+  let menuHeight = 82;
   if (menuState.type === "node") menuHeight = 82;
   else if (menuState.type === "pane") menuHeight = 82;
   else if (menuState.type === "edge") menuHeight = 44;
 
-  const connectedTypesAll = Object.entries(cardTypeMeta).filter(
-    ([_, meta]) => !meta.isIndependent
-  ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+  const entries = Object.entries(cardTypeMeta) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
+  const globalTypes = entries.filter(([_, meta]) => meta.category === "global");
+  const containerTypes = entries.filter(([_, meta]) => meta.category === "task_container");
+  const fieldTypes = entries.filter(([_, meta]) => meta.category === "task_field");
 
-  const independentTypesAll = Object.entries(cardTypeMeta).filter(
-    ([_, meta]) => meta.isIndependent
-  ) as [PromptCardType, (typeof cardTypeMeta)[PromptCardType]][];
-
-  const itemsCount = Object.keys(cardTypeMeta).length;
-  const estimatedSubMenuHeight = itemsCount * 32 + 8 + 32; // 估算子菜单内容原始高度，加上两个分隔标题的高度
+  const itemsCount = entries.length;
+  const estimatedSubMenuHeight = itemsCount * 28 + 8 + 64; // 估算子菜单内容原始高度加三个分组标题的高
   const subMenuHeight = Math.min(SUB_MENU_MAX_HEIGHT, estimatedSubMenuHeight);
 
   const position = getMenuPosition(menuState.x, menuState.y, menuHeight, subMenuHeight);
@@ -132,7 +128,7 @@ export const PromptCanvasContextMenu = ({
   const handleMouseLeaveAddMenu = () => {
     subMenuTimeoutRef.current = setTimeout(() => {
       setShowAddMenu(false);
-    }, 150); // 增加一点延迟，方便鼠标平移到子菜单上
+    }, 150);
   };
 
   const menuContent = (
@@ -196,7 +192,7 @@ export const PromptCanvasContextMenu = ({
             <ClipboardPaste className="h-3.5 w-3.5 text-white/45" />
             <span>粘贴</span>
           </button>
-          
+
           <div
             className="relative"
             onMouseEnter={handleMouseEnterAddMenu}
@@ -209,10 +205,10 @@ export const PromptCanvasContextMenu = ({
               </div>
               <ChevronRight className={`h-3.5 w-3.5 ${showAddMenu ? "text-white/75" : "text-white/45"}`} />
             </button>
-            
+
             {showAddMenu && (
-              <div 
-                className="fixed z-[999999] w-[160px] overflow-y-auto rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)] custom-scrollbar"
+              <div
+                className="fixed z-[999999] w-[180px] overflow-y-auto rounded-[6px] border border-white/10 bg-[#303030] p-1 shadow-[0_10px_28px_rgba(0,0,0,0.45)] custom-scrollbar"
                 style={{
                   maxHeight: SUB_MENU_MAX_HEIGHT,
                   left: position.subLeft,
@@ -221,40 +217,63 @@ export const PromptCanvasContextMenu = ({
                 onMouseEnter={handleMouseEnterAddMenu}
                 onMouseLeave={handleMouseLeaveAddMenu}
               >
-                <div className="px-2 py-1 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
-                  流程卡片
+                {/* ── 全局配置 ── */}
+                <div className="px-2 py-1 text-[9px] font-bold text-white/30 uppercase tracking-wider">
+                  全局配置标签
                 </div>
-                {connectedTypesAll.map(([type, meta]) => (
+                {globalTypes.map(([type, meta]) => (
                   <button
                     key={type}
-                    className="flex w-full items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white"
+                    className="flex w-full items-center gap-2 rounded-[4px] px-2 py-1 text-left text-[11px] text-white/75 transition-colors hover:bg-white/8 hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
                       onAddNode(type, menuState.x, menuState.y);
                       onClose();
                     }}
                   >
-                    <div className={`w-2 h-2 rounded-full ${meta.color.split(' ')[1]}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${meta.color.split(' ')[1]}`} />
                     <span>{meta.label}</span>
                   </button>
                 ))}
-                
-                <div className="h-[1px] bg-white/10 my-1 mx-2" />
-                
-                <div className="px-2 py-1 text-[10px] font-semibold text-white/40 uppercase tracking-wider">
-                  独立卡片
+
+                <div className="h-[1px] bg-white/10 my-1.5 mx-2" />
+
+                {/* ── 任务容器 ── */}
+                <div className="px-2 py-1 text-[9px] font-bold text-white/30 uppercase tracking-wider">
+                  任务容器标签
                 </div>
-                {independentTypesAll.map(([type, meta]) => (
+                {containerTypes.map(([type, meta]) => (
                   <button
                     key={type}
-                    className="flex w-full items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white"
+                    className="flex w-full items-center gap-2 rounded-[4px] px-2 py-1 text-left text-[11px] text-white/75 transition-colors hover:bg-white/8 hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
                       onAddNode(type, menuState.x, menuState.y);
                       onClose();
                     }}
                   >
-                    <div className={`w-2 h-2 rounded-full ${meta.color.split(' ')[1]}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${meta.color.split(' ')[1]}`} />
+                    <span>{meta.label}</span>
+                  </button>
+                ))}
+
+                <div className="h-[1px] bg-white/10 my-1.5 mx-2" />
+
+                {/* ── 任务字段 ── */}
+                <div className="px-2 py-1 text-[9px] font-bold text-white/30 uppercase tracking-wider">
+                  任务子属性标签
+                </div>
+                {fieldTypes.map(([type, meta]) => (
+                  <button
+                    key={type}
+                    className="flex w-full items-center gap-2 rounded-[4px] px-2 py-1 text-left text-[11px] text-white/75 transition-colors hover:bg-white/8 hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddNode(type, menuState.x, menuState.y);
+                      onClose();
+                    }}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full ${meta.color.split(' ')[1]}`} />
                     <span>{meta.label}</span>
                   </button>
                 ))}
