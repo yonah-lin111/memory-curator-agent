@@ -55,31 +55,31 @@ export class PromptAiPersistenceService {
 
   public ensureSession(input: EnsurePromptAiSessionInput): void {
     if (input.designItemId === 'default-design-item-id') {
-      const checkProject = this.db.prepare("SELECT id FROM prompt_design_projects WHERE id = 'default-project-id'").get();
+      const checkProject = this.db.prepare("SELECT id FROM prompt_design_projects WHERE external_id = 'default-project-id'").get();
       if (!checkProject) {
         this.db.prepare(`
-          INSERT INTO prompt_design_projects (id, name, type, created_at, updated_at)
+          INSERT INTO prompt_design_projects (external_id, name, type, created_at, updated_at)
           VALUES ('default-project-id', 'Default Project', 'virtual', ?, ?)
         `).run(input.timestamp, input.timestamp);
       }
       
-      const checkDesign = this.db.prepare("SELECT id FROM prompt_design_items WHERE id = 'default-design-item-id'").get();
+      const checkDesign = this.db.prepare("SELECT id FROM prompt_design_items WHERE external_id = 'default-design-item-id'").get();
       if (!checkDesign) {
         this.db.prepare(`
-          INSERT INTO prompt_design_items (id, project_id, name, created_at, updated_at)
+          INSERT INTO prompt_design_items (external_id, project_id, name, created_at, updated_at)
           VALUES ('default-design-item-id', 'default-project-id', 'Default Design', ?, ?)
         `).run(input.timestamp, input.timestamp);
       }
     }
 
     const checkStmt = this.db.prepare(
-      "SELECT id FROM prompt_ai_chat_sessions WHERE id = ?",
+      "SELECT id FROM prompt_ai_chat_sessions WHERE external_id = ?",
     );
     const existing = checkStmt.get(input.id);
 
     if (!existing) {
       const insertStmt = this.db.prepare(`
-        INSERT INTO prompt_ai_chat_sessions (id, design_item_id, title, status, created_at, updated_at, last_message_at)
+        INSERT INTO prompt_ai_chat_sessions (external_id, design_item_id, title, status, created_at, updated_at, last_message_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       insertStmt.run(
@@ -95,7 +95,7 @@ export class PromptAiPersistenceService {
       const updateStmt = this.db.prepare(`
         UPDATE prompt_ai_chat_sessions
         SET title = ?, status = ?, updated_at = ?, last_message_at = ?
-        WHERE id = ?
+        WHERE external_id = ?
       `);
       updateStmt.run(
         input.title,
@@ -109,7 +109,7 @@ export class PromptAiPersistenceService {
 
   public appendMessage(input: AppendPromptAiMessageInput): void {
     const insertStmt = this.db.prepare(`
-      INSERT INTO prompt_ai_chat_messages (id, session_id, role, content, parts_json, tool_steps_json, time, model, created_at, updated_at, cancelled)
+      INSERT INTO prompt_ai_chat_messages (external_id, session_id, role, content, parts_json, tool_steps_json, time, model, created_at, updated_at, cancelled)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     insertStmt.run(
@@ -132,14 +132,14 @@ export class PromptAiPersistenceService {
     const stmt = this.db.prepare(`
       UPDATE prompt_ai_chat_messages
       SET content = ?
-      WHERE id = ?
+      WHERE external_id = ?
     `);
     stmt.run(content, messageId);
   }
 
   public getSession(sessionId: string): PromptAiChatSessionItem | null {
     const sessionStmt = this.db.prepare(`
-      SELECT * FROM prompt_ai_chat_sessions WHERE id = ?
+      SELECT * FROM prompt_ai_chat_sessions WHERE external_id = ?
     `);
     const sessionRow = sessionStmt.get(sessionId) as
       PromptAiChatSessionRow | undefined;
@@ -158,7 +158,7 @@ export class PromptAiPersistenceService {
         ? (JSON.parse(row.tool_steps_json) as AiToolStep[])
         : [];
       return {
-        id: row.id,
+        id: row.external_id,
         sessionId: row.session_id,
         role: row.role as AiChatMessageRole,
         content: row.content,
@@ -171,7 +171,7 @@ export class PromptAiPersistenceService {
     });
 
     return {
-      id: sessionRow.id,
+      id: sessionRow.external_id,
       designItemId: sessionRow.design_item_id,
       title: sessionRow.title,
       status: sessionRow.status,
@@ -190,7 +190,7 @@ export class PromptAiPersistenceService {
     `);
     const rows = stmt.all(designItemId) as PromptAiChatSessionRow[];
     return rows.map((row) => ({
-      id: row.id,
+      id: row.external_id,
       designItemId: row.design_item_id,
       title: row.title,
       status: row.status,
@@ -203,14 +203,14 @@ export class PromptAiPersistenceService {
 
   public updateSessionTitle(sessionId: string, title: string): void {
     const stmt = this.db.prepare(
-      "UPDATE prompt_ai_chat_sessions SET title = ?, updated_at = ? WHERE id = ?"
+      "UPDATE prompt_ai_chat_sessions SET title = ?, updated_at = ? WHERE external_id = ?"
     );
     stmt.run(title, new Date().toISOString(), sessionId);
   }
 
   public deleteSession(sessionId: string): void {
     const stmt = this.db.prepare(
-      "DELETE FROM prompt_ai_chat_sessions WHERE id = ?",
+      "DELETE FROM prompt_ai_chat_sessions WHERE external_id = ?",
     );
     stmt.run(sessionId);
   }
@@ -218,22 +218,22 @@ export class PromptAiPersistenceService {
   public undoLastTurn(sessionId: string): PromptAiChatSessionItem | null {
     const undoTx = this.db.transaction(() => {
       const messagesStmt = this.db.prepare(`
-        SELECT rowid AS row_order, id, role, created_at 
+        SELECT rowid AS row_order, external_id, role, created_at 
         FROM prompt_ai_chat_messages 
         WHERE session_id = ? 
         ORDER BY created_at ASC, rowid ASC
       `);
-      const messages = messagesStmt.all(sessionId) as { row_order: number; id: string; role: string; created_at: string }[];
+      const messages = messagesStmt.all(sessionId) as { row_order: number; external_id: string; role: string; created_at: string }[];
 
       const turnStartIndex = [...messages].reverse().findIndex((m) => m.role === 'user');
       if (turnStartIndex < 0) return;
 
       const resolvedTurnStartIndex = messages.length - 1 - turnStartIndex;
       const removedMessages = messages.slice(resolvedTurnStartIndex);
-      const removedMessageIds = removedMessages.map((m) => m.id);
+      const removedMessageIds = removedMessages.map((m) => m.external_id);
       const removedAssistantMessageIds = removedMessages
         .filter((m) => m.role === 'assistant')
-        .map((m) => m.id);
+        .map((m) => m.external_id);
 
       if (removedAssistantMessageIds.length > 0) {
         const placeholders = removedAssistantMessageIds.map(() => '?').join(', ');
@@ -242,7 +242,7 @@ export class PromptAiPersistenceService {
 
       if (removedMessageIds.length > 0) {
         const placeholders = removedMessageIds.map(() => '?').join(', ');
-        this.db.prepare(`DELETE FROM prompt_ai_chat_messages WHERE id IN (${placeholders})`).run(...removedMessageIds);
+        this.db.prepare(`DELETE FROM prompt_ai_chat_messages WHERE external_id IN (${placeholders})`).run(...removedMessageIds);
       }
 
       const remainingMessages = messages.slice(0, resolvedTurnStartIndex);
@@ -283,7 +283,7 @@ export class PromptAiPersistenceService {
     const stmt = this.db.prepare(`
       UPDATE prompt_ai_chat_messages
       SET tool_steps_json = ?, parts_json = ?, updated_at = ?
-      WHERE id = ?
+      WHERE external_id = ?
     `);
     stmt.run(
       JSON.stringify(toolSteps),
@@ -316,7 +316,7 @@ export class PromptAiPersistenceService {
     const stmt = this.db.prepare(`
       UPDATE prompt_ai_chat_sessions
       SET last_message_at = ?, updated_at = ?
-      WHERE id = ?
+      WHERE external_id = ?
     `);
     stmt.run(timestamp, timestamp, sessionId);
   }

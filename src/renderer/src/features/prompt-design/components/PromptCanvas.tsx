@@ -713,6 +713,34 @@ export const PromptCanvas = () => {
     }
   }, [exportRequest, handleExport]);
 
+  const validateNodePlacement = useCallback((type: PromptCardType, targetTaskNodeId?: string) => {
+    const meta = cardTypeMeta[type];
+    if (!meta) return null;
+    
+    if (meta.category === "task_field") {
+      if (!targetTaskNodeId) {
+        return "任务属性卡片只能添加到任务容器中";
+      }
+      const existingChild = nodes.find(n => n.parentId === targetTaskNodeId && n.data.nodeType === type);
+      if (existingChild) {
+        return `该任务容器中已存在 [${meta.label}]`;
+      }
+    } else {
+      if (targetTaskNodeId) {
+        return "全局卡片或任务容器不能嵌套在任务容器中";
+      }
+      
+      const repeatableGlobalTypes = ["variables", "resources", "task"];
+      if (!repeatableGlobalTypes.includes(type)) {
+        const existingGlobal = nodes.find(n => n.data.nodeType === type);
+        if (existingGlobal) {
+          return `画布中已存在 [${meta.label}]`;
+        }
+      }
+    }
+    return null;
+  }, [nodes]);
+
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -821,6 +849,12 @@ export const PromptCanvas = () => {
         }
       }
 
+      const errorMsg = validateNodePlacement(type as PromptCardType, targetTaskNodeId);
+      if (errorMsg) {
+        toast.warning(errorMsg);
+        return;
+      }
+
       takeSnapshot();
       
       const meta = cardTypeMeta[type as PromptCardType];
@@ -853,7 +887,7 @@ export const PromptCanvas = () => {
          setNodes((nds) => nds.concat(newNode));
       }
     },
-    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode, isLocked, toast, nodes],
+    [screenToFlowPosition, setNodes, takeSnapshot, createNewNode, isLocked, toast, nodes, validateNodePlacement],
   );
 
   const onConnect = useCallback(
@@ -1036,6 +1070,30 @@ export const PromptCanvas = () => {
 
   const handlePasteNode = useCallback((clientX: number, clientY: number) => {
     if (!copiedNode) return;
+
+    const elementBelow = document.elementFromPoint(clientX, clientY);
+    let targetTaskNodeId: string | undefined;
+
+    if (elementBelow) {
+      const nodeEl = elementBelow.closest('.react-flow__node-promptNode');
+      if (nodeEl) {
+        const nodeId = nodeEl.getAttribute('data-id');
+        if (nodeId) {
+          const targetNode = nodes.find(n => n.id === nodeId);
+          if (targetNode && targetNode.data.nodeType === "task") {
+            targetTaskNodeId = nodeId;
+          }
+        }
+      }
+    }
+
+    const type = copiedNode.data.nodeType as PromptCardType;
+    const errorMsg = validateNodePlacement(type, targetTaskNodeId);
+    if (errorMsg) {
+      toast.warning(errorMsg);
+      return;
+    }
+
     takeSnapshot();
     const position = screenToFlowPosition({ x: clientX, y: clientY });
 
@@ -1056,17 +1114,44 @@ export const PromptCanvas = () => {
       data: newData,
     } as Node;
 
+    if (targetTaskNodeId && cardTypeMeta[type]?.category === "task_field") {
+      newNode.parentId = targetTaskNodeId;
+      newNode.extent = "parent";
+      const parentNode = nodes.find(n => n.id === targetTaskNodeId);
+      if (parentNode) {
+        newNode.position = {
+          x: position.x - parentNode.position.x,
+          y: position.y - parentNode.position.y
+        };
+        if (parentNode.data.isCollapsed) {
+          newNode.hidden = true;
+        }
+      }
+    } else {
+      // 确保粘贴到画布的节点没有不应该有的 parentId 和 extent
+      delete newNode.parentId;
+      delete newNode.extent;
+      delete newNode.hidden;
+    }
+
     setNodes((nds) => nds.concat(newNode));
     toast.success("节点已粘贴");
-  }, [copiedNode, screenToFlowPosition, setNodes, takeSnapshot, toast]);
+  }, [copiedNode, screenToFlowPosition, setNodes, takeSnapshot, toast, nodes, validateNodePlacement]);
 
   const handleAddNodeFromMenu = useCallback((type: PromptCardType, clientX: number, clientY: number) => {
+    // 右键菜单添加节点，假设 targetTaskNodeId 始终为 undefined（因为目前菜单在画布空白处触发）
+    const errorMsg = validateNodePlacement(type, undefined);
+    if (errorMsg) {
+      toast.warning(errorMsg);
+      return;
+    }
+
     takeSnapshot();
     const position = screenToFlowPosition({ x: clientX, y: clientY });
     const newNode = createNewNode(type, position);
     setNodes((nds) => nds.concat(newNode));
     toast.success("卡片已添加");
-  }, [screenToFlowPosition, createNewNode, setNodes, takeSnapshot, toast]);
+  }, [screenToFlowPosition, createNewNode, setNodes, takeSnapshot, toast, validateNodePlacement]);
 
   const handleDeleteEdge = useCallback((edgeId: string) => {
     takeSnapshot();

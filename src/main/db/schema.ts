@@ -312,7 +312,8 @@ export type PromptProjectType = "filesystem" | "virtual";
 
 /** 提示词设计项目数据库行 */
 export type PromptDesignProjectRow = {
-  id: string;
+  id: number;
+  external_id: string;
   name: string;
   type: string;
   path: string | null;
@@ -346,7 +347,8 @@ export type PromptDesignProjectUpdateInput = {
 
 /** 提示词设计数据库行 */
 export type PromptDesignRow = {
-  id: string;
+  id: number;
+  external_id: string;
   project_id: string;
   name: string;
   design_data: string;
@@ -382,8 +384,10 @@ export type PromptDesignUpdateInput = {
 
 // 提示词 AI 对话会话数据库行
 export type PromptAiChatSessionRow = {
+  // 自增主键
+  id: number;
   // 会话唯一标识 (UUID)
-  id: string;
+  external_id: string;
   // 关联的提示词设计项 ID (关联 prompt_design_items 表)
   design_item_id: string;
   // 会话标题
@@ -400,8 +404,10 @@ export type PromptAiChatSessionRow = {
 
 // 提示词 AI 对话消息数据库行
 export type PromptAiChatMessageRow = {
+  // 自增主键
+  id: number;
   // 消息唯一标识 (UUID)
-  id: string;
+  external_id: string;
   // 所属会话标识
   session_id: string;
   // 消息角色 ("user" | "assistant")

@@ -238,6 +238,7 @@ export const PromptAiSidebar = ({
               <Tooltip
                 content="重命名对话"
                 placement="bottom"
+                className="!flex min-w-0 items-center"
               >
                 <Tooltip
                   trigger="click"
@@ -245,6 +246,7 @@ export const PromptAiSidebar = ({
                   contentClassName="!w-[240px] !p-3 !whitespace-normal flex flex-col"
                   onConfirm={() => handleCommitEditTitle(activeSession)}
                   onCancel={() => setEditingTitle(null)}
+                  className="!flex min-w-0 items-center"
                   form={
                     <div className="flex flex-col gap-2.5">
                       <div className="flex flex-col gap-1 text-left">
@@ -271,7 +273,7 @@ export const PromptAiSidebar = ({
                   }
                 >
                   <span 
-                    className="block truncate text-xs font-bold leading-none cursor-pointer hover:text-white/80 transition-colors"
+                    className="block truncate text-xs font-bold cursor-pointer hover:text-white/80 transition-colors"
                     onClick={() => handleStartEditTitle(activeSession)}
                   >
                     {activeSession.title}

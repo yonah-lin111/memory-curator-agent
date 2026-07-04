@@ -18,6 +18,10 @@ type MigratableTableName =
   | 'ai_agent_runs'
   | 'ai_agent_tool_calls'
   | 'note_categories'
+  | 'prompt_design_projects'
+  | 'prompt_design_items'
+  | 'prompt_ai_chat_sessions'
+  | 'prompt_ai_chat_messages'
 
 // 重建表配置。
 type RebuildTableConfig = {
@@ -447,6 +451,77 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
     timestampColumns: ['started_at', 'finished_at'],
     requiredColumns: ['external_id'],
     requiredUniqueColumns: ['assistant_message_id']
+  })
+  rebuildTable(database, {
+    tableName: 'prompt_design_projects',
+    columnsSql: `
+      external_id TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'virtual',
+      path TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    `.trim(),
+    insertColumns: ['external_id', 'name', 'type', 'path', 'created_at', 'updated_at'],
+    selectColumns: ['external_id', 'name', 'type', 'path', 'created_at', 'updated_at'],
+    orderByClause: 'created_at ASC, id ASC',
+    timestampColumns: ['created_at', 'updated_at'],
+    requiredColumns: ['external_id']
+  })
+  rebuildTable(database, {
+    tableName: 'prompt_design_items',
+    columnsSql: `
+      external_id TEXT NOT NULL UNIQUE,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      design_data TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    `.trim(),
+    insertColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
+    selectColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
+    orderByClause: 'created_at ASC, id ASC',
+    timestampColumns: ['created_at', 'updated_at'],
+    requiredColumns: ['external_id']
+  })
+  rebuildTable(database, {
+    tableName: 'prompt_ai_chat_sessions',
+    columnsSql: `
+      external_id TEXT NOT NULL UNIQUE,
+      design_item_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      last_message_at TIMESTAMP NOT NULL
+    `.trim(),
+    insertColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
+    selectColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
+    orderByClause: 'updated_at ASC, id ASC',
+    timestampColumns: ['created_at', 'updated_at', 'last_message_at'],
+    requiredColumns: ['external_id']
+  })
+  rebuildTable(database, {
+    tableName: 'prompt_ai_chat_messages',
+    columnsSql: `
+      external_id TEXT NOT NULL UNIQUE,
+      session_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      answer TEXT,
+      parts_json TEXT NOT NULL,
+      tool_steps_json TEXT NOT NULL,
+      time TIMESTAMP NOT NULL,
+      model TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      cancelled INTEGER NOT NULL DEFAULT 0
+    `.trim(),
+    insertColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],
+    selectColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],
+    orderByClause: 'created_at ASC, id ASC',
+    timestampColumns: ['time', 'created_at', 'updated_at'],
+    requiredColumns: ['external_id']
   })
   rebuildTable(database, {
     tableName: 'ai_agent_tool_calls',
@@ -976,7 +1051,8 @@ export const createBillsTable = (database: Database.Database): void => {
 export const createPromptDesignTables = (database: Database.Database): void => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS prompt_design_projects (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       type TEXT NOT NULL DEFAULT 'virtual',
       path TEXT,
@@ -985,13 +1061,14 @@ export const createPromptDesignTables = (database: Database.Database): void => {
     );
 
     CREATE TABLE IF NOT EXISTS prompt_design_items (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
       project_id TEXT NOT NULL,
       name TEXT NOT NULL,
       design_data TEXT,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
-      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(id) ON DELETE CASCADE
+      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_design_items_project_id
@@ -1005,14 +1082,15 @@ export const createPromptDesignTables = (database: Database.Database): void => {
 export const createPromptAiPersistenceTables = (database: Database.Database): void => {
   database.exec(`
     CREATE TABLE IF NOT EXISTS prompt_ai_chat_sessions (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
       design_item_id TEXT NOT NULL,
       title TEXT NOT NULL,
       status TEXT NOT NULL,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       last_message_at TIMESTAMP NOT NULL,
-      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(id) ON DELETE CASCADE
+      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_ai_chat_sessions_item_id
@@ -1022,7 +1100,8 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
     ON prompt_ai_chat_sessions(updated_at DESC);
 
     CREATE TABLE IF NOT EXISTS prompt_ai_chat_messages (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
       session_id TEXT NOT NULL,
       role TEXT NOT NULL,
       content TEXT NOT NULL,
@@ -1034,7 +1113,7 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       cancelled INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(id) ON DELETE CASCADE
+      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_ai_chat_messages_session_created_at
@@ -1051,7 +1130,7 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
       error TEXT,
       started_at TIMESTAMP NOT NULL,
       finished_at TIMESTAMP,
-      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(id) ON DELETE CASCADE
+      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_runs_session_started_at
