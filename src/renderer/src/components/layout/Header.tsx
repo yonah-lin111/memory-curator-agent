@@ -1,5 +1,13 @@
 import type React from "react";
-import { MessageSquare, RotateCcw, Book, Bot, FileDown, Code, Type } from "lucide-react";
+import {
+  MessageSquare,
+  RotateCcw,
+  Book,
+  Bot,
+  FileDown,
+  Code,
+  Type,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
@@ -186,7 +194,7 @@ export const Header = ({
                       }}
                     >
                       <Code className="w-3.5 h-3.5" />
-                      <span>导出 XML (模型用)</span>
+                      <span>导出 XML</span>
                     </button>
                     <button
                       className="flex items-center gap-2 px-2 py-1.5 text-xs text-white/80 hover:text-white hover:bg-white/10 rounded-[4px] transition-colors text-left"
@@ -196,15 +204,12 @@ export const Header = ({
                       }}
                     >
                       <Type className="w-3.5 h-3.5" />
-                      <span>导出 Markdown (阅读用)</span>
+                      <span>导出 Markdown</span>
                     </button>
                   </div>
                 }
               >
-                <IconButton
-                  aria-label="导出提示词"
-                  title="导出结构化提示词"
-                >
+                <IconButton aria-label="导出提示词" title="导出结构化提示词">
                   <FileDown className="h-3.5 w-3.5" />
                 </IconButton>
               </Tooltip>
