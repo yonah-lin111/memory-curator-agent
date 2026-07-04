@@ -425,11 +425,10 @@ export const PromptNode = memo(
 
     if (isTaskContainer) {
       const borderColor = selected && !isLocked ? "border-white" : "border-white/20";
-      const shadowStyle = selected && !isLocked ? "drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" : "";
 
       return (
         <div
-          className={`group/node relative w-full h-full min-w-[360px] ${isCollapsed ? 'min-h-[10px]' : 'min-h-[300px]'} transition-all duration-200 ${shadowStyle}`}
+          className={`group/node relative w-full h-full min-w-[360px] ${isCollapsed ? 'min-h-[10px]' : 'min-h-[300px]'} transition-all duration-200`}
         >
           {/* Main Drop Zone (The node's actual bounding box for extent="parent") */}
           <div
@@ -516,7 +515,7 @@ export const PromptNode = memo(
     const nodeBorderColor = meta.isIndependent
       ? "border-dashed border-white/20"
       : selected && !isLocked
-        ? "border-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+        ? "border-white"
         : "border-white/20";
 
     return (
