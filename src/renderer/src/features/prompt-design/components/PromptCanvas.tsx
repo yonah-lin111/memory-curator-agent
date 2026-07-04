@@ -363,6 +363,7 @@ export const PromptCanvas = () => {
   const [copiedNode, setCopiedNode] = useState<Node | null>(null);
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
   const exportRequest = usePromptDesignStore((state) => state.exportRequest);
+  const exportFormat = usePromptDesignStore((state) => state.exportFormat);
   const resetExportRequest = usePromptDesignStore((state) => state.resetExportRequest);
   const edgeType = usePromptDesignStore((state) => state.edgeType);
   const toast = useToast();
@@ -426,14 +427,25 @@ export const PromptCanvas = () => {
       return dataMap.get(sources[0])?.content || "";
     };
 
-    // 辅助：包装 XML 标签
-    const wrapTag = (tag: string, content: string, indent = ""): string => {
+    // 辅助：通用包装区块
+    const wrapBlock = (type: PromptCardType, content: string, indent = "", mdLevel = 2): string => {
       const trimmed = content.trim();
       if (!trimmed) return "";
-      if (trimmed.includes("\n")) {
-        return `${indent}<${tag}>\n\n${trimmed.split("\n").map(l => `${indent}    ${l}`).join("\n")}\n\n${indent}</${tag}>`;
+      if (exportFormat === "markdown") {
+        const title = cardTypeMeta[type]?.label || type;
+        const prefix = "#".repeat(mdLevel);
+        return `${prefix} ${title}\n\n${trimmed}`;
+      } else {
+        // XML 模式
+        let tag = type as string;
+        if (tag.startsWith("task_")) {
+          tag = tag.replace("task_", "");
+        }
+        if (trimmed.includes("\n")) {
+          return `${indent}<${tag}>\n\n${trimmed.split("\n").map(l => `${indent}    ${l}`).join("\n")}\n\n${indent}</${tag}>`;
+        }
+        return `${indent}<${tag}>${trimmed}</${tag}>`;
       }
-      return `${indent}<${tag}>${trimmed}</${tag}>`;
     };
 
     // 寻找根节点 compiler_c (c 最终导出)
@@ -518,25 +530,35 @@ export const PromptCanvas = () => {
         const notesContent        = getChildValue("task_notes");
 
         const taskInner: string[] = [];
-        if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
-        if (goalContent)         taskInner.push(wrapTag("goal", goalContent, "        "));
-        if (instructionsContent) taskInner.push(wrapTag("instructions", instructionsContent, "        "));
-        if (rulesContent)        taskInner.push(wrapTag("rules", rulesContent, "        "));
-        if (priorityContent)     taskInner.push(wrapTag("priority", priorityContent, "        "));
-        if (dependsOnContent)    taskInner.push(wrapTag("depends_on", dependsOnContent, "        "));
-        if (variablesContent)    taskInner.push(wrapTag("variables", variablesContent, "        "));
-        if (resourcesContent)    taskInner.push(wrapTag("resources", resourcesContent, "        "));
-        if (exampleContent)      taskInner.push(wrapTag("example", exampleContent, "        "));
-        if (outputContent)       taskInner.push(wrapTag("output", outputContent, "        "));
-        if (taskValContent)      taskInner.push(wrapTag("validation", taskValContent, "        "));
-        if (notesContent)        taskInner.push(wrapTag("notes", notesContent, "        "));
+        if (titleContent)        taskInner.push(wrapBlock("task_title", titleContent, "        ", 3));
+        if (goalContent)         taskInner.push(wrapBlock("task_goal", goalContent, "        ", 3));
+        if (instructionsContent) taskInner.push(wrapBlock("task_instructions", instructionsContent, "        ", 3));
+        if (rulesContent)        taskInner.push(wrapBlock("task_rules", rulesContent, "        ", 3));
+        if (priorityContent)     taskInner.push(wrapBlock("task_priority", priorityContent, "        ", 3));
+        if (dependsOnContent)    taskInner.push(wrapBlock("task_depends_on", dependsOnContent, "        ", 3));
+        if (variablesContent)    taskInner.push(wrapBlock("task_variables", variablesContent, "        ", 3));
+        if (resourcesContent)    taskInner.push(wrapBlock("task_resources", resourcesContent, "        ", 3));
+        if (exampleContent)      taskInner.push(wrapBlock("task_example", exampleContent, "        ", 3));
+        if (outputContent)       taskInner.push(wrapBlock("task_output", outputContent, "        ", 3));
+        if (taskValContent)      taskInner.push(wrapBlock("task_validation", taskValContent, "        ", 3));
+        if (notesContent)        taskInner.push(wrapBlock("task_notes", notesContent, "        ", 3));
 
-        const taskXML = `        <task id="${(task.data as PromptNodeData).taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`;
-        taskBlocks.push(taskXML);
+        const taskId = (task.data as PromptNodeData).taskId || "1";
+        if (exportFormat === "markdown") {
+          const taskMD = `## 任务 ${taskId}\n\n${taskInner.filter(Boolean).join("\n\n")}`;
+          taskBlocks.push(taskMD);
+        } else {
+          const taskXML = `        <task id="${taskId}">\n${taskInner.filter(Boolean).join("\n\n")}\n        </task>`;
+          taskBlocks.push(taskXML);
+        }
       }
 
       if (taskBlocks.length > 0) {
-        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        if (exportFormat === "markdown") {
+          taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`;
+        } else {
+          taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        }
       }
 
       // ── a 前置全局 (从组装卡片中解析) ──
@@ -584,26 +606,35 @@ export const PromptCanvas = () => {
         const outputContent       = getChildValue("task_output");
 
         const taskInner: string[] = [];
-        if (titleContent)        taskInner.push(wrapTag("title", titleContent, "        "));
-        if (goalContent)         taskInner.push(wrapTag("goal", goalContent, "        "));
-        if (instructionsContent) taskInner.push(wrapTag("instructions", instructionsContent, "        "));
-        if (outputContent)       taskInner.push(wrapTag("output", outputContent, "        "));
+        if (titleContent)        taskInner.push(wrapBlock("task_title", titleContent, "        ", 3));
+        if (goalContent)         taskInner.push(wrapBlock("task_goal", goalContent, "        ", 3));
+        if (instructionsContent) taskInner.push(wrapBlock("task_instructions", instructionsContent, "        ", 3));
+        if (outputContent)       taskInner.push(wrapBlock("task_output", outputContent, "        ", 3));
 
-        taskBlocks.push(`        <task id="${(t.data as PromptNodeData).taskId || "1"}">\n${taskInner.join("\n\n")}\n        </task>`);
+        const taskId = (t.data as PromptNodeData).taskId || "1";
+        if (exportFormat === "markdown") {
+          taskBlocks.push(`## 任务 ${taskId}\n\n${taskInner.filter(Boolean).join("\n\n")}`);
+        } else {
+          taskBlocks.push(`        <task id="${taskId}">\n${taskInner.filter(Boolean).join("\n\n")}\n        </task>`);
+        }
       }
       if (taskBlocks.length > 0) {
-        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        if (exportFormat === "markdown") {
+          taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`;
+        } else {
+          taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        }
       }
     }
 
-    // ── 4. 合成完整的 XML 代码 ──
+    // ── 4. 合成完整的代码 ──
     const globalTags: string[] = [];
-    if (systemRoleXML)  globalTags.push(wrapTag("system_role", systemRoleXML, "    "));
-    if (objectiveXML)   globalTags.push(wrapTag("objective", objectiveXML, "    "));
-    if (contextXML)     globalTags.push(wrapTag("context", contextXML, "    "));
-    if (assumptionsXML) globalTags.push(wrapTag("assumptions", assumptionsXML, "    "));
-    if (constraintsXML) globalTags.push(wrapTag("constraints", constraintsXML, "    "));
-    if (definitionsXML) globalTags.push(wrapTag("definitions", definitionsXML, "    "));
+    if (systemRoleXML)  globalTags.push(wrapBlock("system_role", systemRoleXML, "    "));
+    if (objectiveXML)   globalTags.push(wrapBlock("objective", objectiveXML, "    "));
+    if (contextXML)     globalTags.push(wrapBlock("context", contextXML, "    "));
+    if (assumptionsXML) globalTags.push(wrapBlock("assumptions", assumptionsXML, "    "));
+    if (constraintsXML) globalTags.push(wrapBlock("constraints", constraintsXML, "    "));
+    if (definitionsXML) globalTags.push(wrapBlock("definitions", definitionsXML, "    "));
 
     // 变量
     if (variablesSet.size > 0 || variablesXML) {
@@ -611,23 +642,28 @@ export const PromptCanvas = () => {
       if (!varInner && variablesSet.size > 0) {
         varInner = Array.from(variablesSet).map(v => `${v} = [请输入 ${v} 的实际定义]`).join("\n");
       }
-      if (varInner) globalTags.push(wrapTag("variables", varInner, "    "));
+      if (varInner) globalTags.push(wrapBlock("variables", varInner, "    "));
     }
 
-    if (resourcesXML)   globalTags.push(wrapTag("resources", resourcesXML, "    "));
+    if (resourcesXML)   globalTags.push(wrapBlock("resources", resourcesXML, "    "));
     if (taskListXML)    globalTags.push(taskListXML);
-    if (outputFormatXML)globalTags.push(wrapTag("output_format", outputFormatXML, "    "));
-    if (validationXML)  globalTags.push(wrapTag("validation", validationXML, "    "));
-    if (inputDataXML)    globalTags.push(wrapTag("input_data", inputDataXML, "    "));
+    if (outputFormatXML)globalTags.push(wrapBlock("output_format", outputFormatXML, "    "));
+    if (validationXML)  globalTags.push(wrapBlock("validation", validationXML, "    "));
+    if (inputDataXML)   globalTags.push(wrapBlock("input_data", inputDataXML, "    "));
 
-    const md = `\`\`\`xml\n<prompt>\n\n${globalTags.join("\n\n")}\n\n</prompt>\n\`\`\`\n`;
+    const md = exportFormat === "markdown"
+      ? globalTags.filter(Boolean).join("\n\n") + "\n"
+      : `\`\`\`xml\n<prompt>\n\n${globalTags.filter(Boolean).join("\n\n")}\n\n</prompt>\n\`\`\`\n`;
+
+    const fileExt = exportFormat === "markdown" ? "md" : "md"; // both save as .md, one contains raw markdown, another contains xml codeblock
+    const titleExt = exportFormat === "markdown" ? "Markdown" : "XML";
 
     try {
       if (window.api && (window.api as any).dialog) {
         const result = await (window.api as any).dialog.showSaveDialog(
           {
-            title: "导出 XML 提示词",
-            defaultPath: `prompt_xml_${Date.now()}.md`,
+            title: `导出 ${titleExt} 提示词`,
+            defaultPath: `prompt_${exportFormat}_${Date.now()}.${fileExt}`,
             filters: [{ name: "Markdown Files", extensions: ["md"] }],
           }
         );
@@ -643,7 +679,7 @@ export const PromptCanvas = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `prompt_xml_${Date.now()}.md`;
+        a.download = `prompt_${exportFormat}_${Date.now()}.${fileExt}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -656,7 +692,7 @@ export const PromptCanvas = () => {
     } finally {
       resetExportRequest();
     }
-  }, [nodes, edges, resetExportRequest, toast]);
+  }, [nodes, edges, resetExportRequest, toast, exportFormat]);
 
   useEffect(() => {
     if (exportRequest > 0) {

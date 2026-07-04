@@ -4,7 +4,8 @@ interface PromptDesignState {
   isCanvasLocked: boolean;
   setIsCanvasLocked: (locked: boolean) => void;
   exportRequest: number;
-  requestExport: () => void;
+  exportFormat: 'xml' | 'markdown';
+  requestExport: (format?: 'xml' | 'markdown') => void;
   resetExportRequest: () => void;
   edgeType: 'smoothstep' | 'default';
   setEdgeType: (type: 'smoothstep' | 'default') => void;
@@ -25,7 +26,8 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   isCanvasLocked: false,
   setIsCanvasLocked: (locked: boolean) => set({ isCanvasLocked: locked }),
   exportRequest: 0,
-  requestExport: () => set((state) => ({ exportRequest: state.exportRequest + 1 })),
+  exportFormat: 'xml',
+  requestExport: (format = 'xml') => set((state) => ({ exportRequest: state.exportRequest + 1, exportFormat: format })),
   resetExportRequest: () => set({ exportRequest: 0 }),
   edgeType: 'default',
   setEdgeType: (type: 'smoothstep' | 'default') => set({ edgeType: type }),
