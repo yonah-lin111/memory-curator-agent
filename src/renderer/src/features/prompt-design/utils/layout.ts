@@ -214,6 +214,12 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
   }
 
   const handleOrder = [
+    "in-system_role",
+    "in-objective",
+    "in-constraints",
+    "in-context",
+    "in-assumptions",
+    "in-definitions",
     "in-global",
     "in-title",
     "in-goal",

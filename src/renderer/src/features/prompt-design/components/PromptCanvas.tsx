@@ -686,9 +686,9 @@ export const PromptCanvas = () => {
       initialInputs = [
         { id: "in-system_role", name: "系统角色 (System Role)", type: "text" },
         { id: "in-objective", name: "整体目标 (Objective)", type: "text" },
+        { id: "in-constraints", name: "全局约束 (Constraints)", type: "text" },
         { id: "in-context", name: "背景上下文 (Context)", type: "text" },
         { id: "in-assumptions", name: "默认假设 (Assumptions)", type: "text" },
-        { id: "in-constraints", name: "全局约束 (Constraints)", type: "text" },
         { id: "in-definitions", name: "术语定义 (Definitions)", type: "text" },
         { id: "in-variables", name: "参数变量 (Variables)", type: "text" },
         { id: "in-resources", name: "参考资料 (Resources)", type: "text" },
