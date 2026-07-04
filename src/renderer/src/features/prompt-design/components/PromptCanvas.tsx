@@ -27,8 +27,8 @@ const nodeTypes: NodeTypes = {
 
 /** minimap 颜色映射 */
 const minimapColors: Record<string, string> = {
-  system_role:       "#fb7185", // 玫瑰红
-  objective:         "#f43f5e", // 深红
+  system_role:       "#22d3ee", // cyan-400
+  objective:         "#a78bfa", // violet-400
   context:           "#c084fc", // 紫色
   assumptions:       "#38bdf8", // 天蓝
   constraints:       "#ef4444", // 红色
@@ -58,8 +58,8 @@ const minimapColors: Record<string, string> = {
 /** 获取连接线的颜色 */
 const getEdgeColor = (nodeType?: string): string => {
   const colors: Record<string, string> = {
-    system_role:       "#fb7185",
-    objective:         "#f43f5e",
+    system_role:       "#22d3ee",
+    objective:         "#a78bfa",
     context:           "#c084fc",
     assumptions:       "#38bdf8",
     constraints:       "#ef4444",
@@ -882,6 +882,99 @@ export const PromptCanvas = () => {
     takeSnapshot();
   }, [takeSnapshot]);
 
+  // ── 卡片防重叠逻辑 (碰撞检测与自适应避让) ──
+  const onNodeDrag = useCallback(
+    (_: any, draggedNode: Node) => {
+      if (isLocked) return;
+
+      setNodes((nds) => {
+        const padding = 20; // 卡片之间的最小安全间距
+        let newNodes = [...nds];
+        
+        const getAABB = (n: Node) => {
+          const isTask = (n.data as PromptNodeData)?.nodeType === "task";
+          const baseWidth = n.measured?.width ?? (typeof n.style?.width === 'number' ? n.style.width : (isTask ? 500 : 300));
+          let baseHeight = n.measured?.height ?? (typeof n.style?.height === 'number' ? n.style.height : (isTask ? 10 : 150));
+          
+          if (isTask && typeof n.style?.height !== 'number' && typeof n.measured?.height !== 'number') {
+            baseHeight = (n.data as PromptNodeData).isCollapsed ? 10 : ((n.data as PromptNodeData).expandedHeight || 600);
+          }
+
+          // task 容器在 PromptNode 中有 absolute 定位的 header (上偏) 和 footer (下偏)，它们不包含在 ReactFlow 的 baseHeight 内。
+          // header 大约高 90px，footer 大约高 45px
+          const headerOffset = isTask ? 90 : 0;
+          const footerOffset = isTask ? 45 : 0;
+
+          const w = baseWidth;
+          const h = baseHeight + headerOffset + footerOffset;
+          const cx = n.position.x + w / 2;
+          const cy = n.position.y - headerOffset + h / 2;
+          
+          return { w, h, cx, cy };
+        };
+
+        // 迭代 3 次，处理“多米诺骨牌”式的链式碰撞 (例如 A推B，B又撞到C)
+        for (let iter = 0; iter < 3; iter++) {
+          let hasCollision = false;
+          
+          for (let i = 0; i < newNodes.length; i++) {
+            for (let j = i + 1; j < newNodes.length; j++) {
+              const nodeA = newNodes[i];
+              const nodeB = newNodes[j];
+              
+              // 忽略嵌套在容器内(Task)的子节点，或被隐藏的节点
+              if (nodeA.parentId || nodeB.parentId || nodeA.hidden || nodeB.hidden) continue;
+              
+              const aabbA = getAABB(nodeA);
+              const aabbB = getAABB(nodeB);
+
+              // 中心点距离
+              const dx = aabbB.cx - aabbA.cx;
+              const dy = aabbB.cy - aabbA.cy;
+              
+              // 最小安全距离
+              const minDistX = aabbA.w / 2 + aabbB.w / 2 + padding;
+              const minDistY = aabbA.h / 2 + aabbB.h / 2 + padding;
+
+              // AABB 碰撞检测
+              if (Math.abs(dx) < minDistX && Math.abs(dy) < minDistY) {
+                hasCollision = true;
+                const overlapX = minDistX - Math.abs(dx);
+                const overlapY = minDistY - Math.abs(dy);
+
+                // 权重计算：当前正被鼠标拖拽的节点不动(权重0)，受击节点避让(权重1)
+                // 如果是其他节点之间发生的次生碰撞，则各分担 50% 避让距离
+                let moveA = 0.5;
+                let moveB = 0.5;
+                
+                if (nodeA.id === draggedNode.id) {
+                  moveA = 0; moveB = 1;
+                } else if (nodeB.id === draggedNode.id) {
+                  moveA = 1; moveB = 0;
+                }
+
+                // 找出重叠量较小的轴，优先沿该轴推开，实现平滑的“滑开”效果
+                if (overlapX < overlapY) {
+                  const dirX = dx > 0 ? 1 : -1;
+                  newNodes[i] = { ...nodeA, position: { ...nodeA.position, x: nodeA.position.x - overlapX * dirX * moveA } };
+                  newNodes[j] = { ...nodeB, position: { ...nodeB.position, x: nodeB.position.x + overlapX * dirX * moveB } };
+                } else {
+                  const dirY = dy > 0 ? 1 : -1;
+                  newNodes[i] = { ...nodeA, position: { ...nodeA.position, y: nodeA.position.y - overlapY * dirY * moveA } };
+                  newNodes[j] = { ...nodeB, position: { ...nodeB.position, y: nodeB.position.y + overlapY * dirY * moveB } };
+                }
+              }
+            }
+          }
+          // 无碰撞则提前中断迭代，提升性能
+          if (!hasCollision) break;
+        }
+        return newNodes;
+      });
+    },
+    [isLocked, setNodes]
+  );
+
   const onNodesDelete = useCallback(() => {
     takeSnapshot();
   }, [takeSnapshot]);
@@ -992,6 +1085,7 @@ export const PromptCanvas = () => {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onNodeContextMenu={onNodeContextMenu}

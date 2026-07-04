@@ -81,14 +81,14 @@ export const cardTypeMeta: Record<PromptCardType, CardTypeMeta> = {
   system_role: {
     label: "系统角色",
     defaultIcon: "User",
-    color: "text-pink-400 bg-pink-500/10 border-pink-500/20",
+    color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
     isIndependent: false,
     category: "global_a",
   },
   objective: {
     label: "整体目标",
     defaultIcon: "Target",
-    color: "text-rose-400 bg-rose-500/10 border-rose-500/20",
+    color: "text-violet-400 bg-violet-500/10 border-violet-500/20",
     isIndependent: false,
     category: "global_a",
   },
@@ -325,6 +325,7 @@ export const PromptNode = memo(
     const meta = cardTypeMeta[data.nodeType];
     const iconName = data.icon || meta.defaultIcon;
     const hasOutputs = data.outputs && data.outputs.length > 0;
+    const handleColorClass = meta.color.split(' ').find(c => c.startsWith('text-'))?.replace('text-', '!bg-') || '!bg-indigo-400';
     
     // 任务容器样式：更大、背景更深、不显示输入连线口（被内部替代或只提供极少连线口）
     const isTaskContainer = data.nodeType === "task";
@@ -365,17 +366,27 @@ export const PromptNode = memo(
       if (isLocked) return;
       const newCollapsed = !isCollapsed;
 
-      setNodes((nds) =>
-        nds.map((n) => {
+      setNodes((nds) => {
+        const targetNode = nds.find(n => n.id === id);
+        if (!targetNode) return nds;
+
+        const currentHeight = (targetNode.style?.height as number) || (isCollapsed ? 10 : 600);
+        let expandedHeight = targetNode.data.expandedHeight as number | undefined;
+        if (!expandedHeight && currentHeight && currentHeight > 50) {
+          expandedHeight = currentHeight;
+        } else if (!expandedHeight) {
+          expandedHeight = 600;
+        }
+        
+        const newHeight = newCollapsed ? 10 : expandedHeight;
+        const deltaY = newHeight - currentHeight;
+        
+        const tX = targetNode.position.x;
+        const tWidth = targetNode.measured?.width ?? targetNode.width ?? 500;
+        const padding = 20;
+
+        return nds.map((n) => {
           if (n.id === id) {
-            const currentHeight = n.style?.height as number;
-            let expandedHeight = n.data.expandedHeight as number | undefined;
-            if (!expandedHeight && currentHeight && currentHeight > 50) {
-              expandedHeight = currentHeight;
-            } else if (!expandedHeight) {
-              expandedHeight = 600;
-            }
-            const newHeight = newCollapsed ? 10 : expandedHeight;
             return {
               ...n,
               data: { ...n.data, isCollapsed: newCollapsed, expandedHeight },
@@ -385,14 +396,36 @@ export const PromptNode = memo(
           if (n.parentId === id) {
             return { ...n, hidden: newCollapsed };
           }
+          
+          // ── 卡片展开/折叠自适应推拉下方的节点 ──
+          if (!n.parentId) { // 忽略子节点
+            const nX = n.position.x;
+            const nWidth = n.measured?.width ?? n.width ?? (n.data.nodeType === "task" ? 500 : 300);
+            
+            // 判断是否在当前容器的下方
+            const isBelow = n.position.y > targetNode.position.y + 10;
+            // 判断是否在水平方向上有交集（意味着在同一列）
+            const isHorizontallyOverlapping = (nX < tX + tWidth + padding) && (nX + nWidth + padding > tX);
+
+            if (isBelow && isHorizontallyOverlapping) {
+              return {
+                ...n,
+                position: {
+                  ...n.position,
+                  y: n.position.y + deltaY
+                }
+              };
+            }
+          }
+          
           return n;
-        })
-      );
+        });
+      });
     };
 
     if (isTaskContainer) {
-      const borderColor = selected && !isLocked ? "border-fuchsia-500/50" : "border-fuchsia-500/20";
-      const shadowStyle = selected && !isLocked ? "drop-shadow-[0_0_15px_rgba(217,70,239,0.2)]" : "";
+      const borderColor = selected && !isLocked ? "border-white" : "border-white/20";
+      const shadowStyle = selected && !isLocked ? "drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" : "";
 
       return (
         <div
@@ -400,10 +433,10 @@ export const PromptNode = memo(
         >
           {/* Main Drop Zone (The node's actual bounding box for extent="parent") */}
           <div
-            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor} ${isCollapsed ? 'hidden' : ''}`}
+            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}
           >
             {/* DROP ZONE 背景 */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
               <span className="text-white/5 font-bold text-4xl tracking-widest select-none">
                   DROP ZONE
               </span>
@@ -426,10 +459,10 @@ export const PromptNode = memo(
             )}
             
             {/* 容器头部 */}
-            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-fuchsia-500/20 bg-fuchsia-500/5 rounded-t-[8px] cursor-pointer" onClick={toggleCollapse}>
+            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-white/20 bg-white/5 rounded-t-[8px] cursor-pointer" onClick={toggleCollapse}>
               <button
                 type="button"
-                className="p-1 -ml-2 hover:bg-fuchsia-500/20 rounded transition-colors text-white/70 hover:text-white"
+                className="p-1 -ml-2 hover:bg-white/20 rounded transition-colors text-white/70 hover:text-white"
               >
                 {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
@@ -442,7 +475,7 @@ export const PromptNode = memo(
                 </span>
               </div>
               
-              <span className={`ml-auto flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-fuchsia-500/30 text-fuchsia-400 font-mono`}>
+              <span className={`ml-auto flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-white/30 text-white/70 font-mono`}>
                 Container
               </span>
             </div>
@@ -463,9 +496,9 @@ export const PromptNode = memo(
           </div>
 
           {/* 底部右侧输出端口 (Positioned BELOW the main node box) */}
-          <div className={`absolute top-full left-0 right-0 flex items-center justify-end px-4 py-3 w-full rounded-b-[8px] border-2 border-t-0 bg-fuchsia-500/[0.02] backdrop-blur-md transition-all duration-200 ${borderColor}`}>
+          <div className={`absolute top-full left-0 right-0 flex items-center justify-end px-4 py-3 w-full rounded-b-[8px] border-2 border-t-0 bg-white/[0.02] backdrop-blur-md transition-all duration-200 ${borderColor}`}>
             <div className="flex items-center gap-2 mr-2">
-              <span className="text-[10px] text-fuchsia-400/80 font-mono px-1.5 py-0.5 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded">task</span>
+              <span className="text-[10px] text-white/70 font-mono px-1.5 py-0.5 bg-white/10 border border-white/20 rounded">task</span>
               <span className="text-xs font-medium text-white/85">任务整合输出 (Task Output)</span>
             </div>
             <Handle
@@ -583,7 +616,7 @@ export const PromptNode = memo(
                         type={port.kind === "input" ? "target" : "source"}
                         position={Position.Left}
                         id={port.id}
-                        className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-left-1.5 transition-transform hover:scale-125"
+                        className={`!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] ${handleColorClass} !-left-1.5 transition-transform hover:scale-125`}
                       />
                       <div className="flex w-full items-center justify-between text-xs">
                         <div className="flex w-full items-center truncate">
@@ -615,7 +648,7 @@ export const PromptNode = memo(
                         type={port.kind === "input" ? "target" : "source"}
                         position={Position.Right}
                         id={port.id}
-                        className="!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] !bg-indigo-400 !-right-1.5 transition-transform hover:scale-125"
+                        className={`!w-2.5 !h-2.5 !border-2 !border-[#1C1C1C] ${handleColorClass} !-right-1.5 transition-transform hover:scale-125`}
                       />
                     </div>
                   );
