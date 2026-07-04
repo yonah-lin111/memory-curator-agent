@@ -24,13 +24,21 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
   // --- 1. 子节点内部布局 (Task Container Auto-sizing) ---
   const parentMap = new Map<string, Node[]>();
+  // 确保所有 task 容器都在 parentMap 中，即使没有子节点
+  flowNodes.forEach(n => {
+    if (n.data?.nodeType === "task") {
+      parentMap.set(n.id, []);
+    }
+  });
   childNodes.forEach(n => {
-    if (!parentMap.has(n.parentId!)) parentMap.set(n.parentId!, []);
-    parentMap.get(n.parentId!)!.push(n);
+    if (n.parentId) {
+      if (!parentMap.has(n.parentId)) parentMap.set(n.parentId, []);
+      parentMap.get(n.parentId)!.push(n);
+    }
   });
 
   const layoutedChildNodes: Node[] = [];
-  const parentSizes = new Map<string, { w: number, h: number }>();
+  const parentSizes = new Map<string, { w: number, h: number, expandedHeight: number }>();
   
   const CHILD_WIDTH = 210; // 卡片宽
   const COL_GAP = 24; // 列间距
@@ -108,15 +116,24 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
 
     const maxColY = Math.max(leftY, rightY);
     const containerHeight = Math.max(200, maxColY); 
-    parentSizes.set(pId, { w: CONTAINER_WIDTH, h: containerHeight + EXTRA_CONTAINER_MARGIN });
+    const parentNode = flowNodes.find(n => n.id === pId);
+    const isCollapsed = parentNode?.data?.isCollapsed ?? false;
+    
+    parentSizes.set(pId, { 
+      w: CONTAINER_WIDTH, 
+      h: isCollapsed ? 10 : (containerHeight + EXTRA_CONTAINER_MARGIN),
+      expandedHeight: containerHeight + EXTRA_CONTAINER_MARGIN
+    });
   }
 
   // 覆盖更新包含子节点的容器宽高
   const flowNodesWithSize = flowNodes.map(n => {
     if (parentSizes.has(n.id)) {
+       const size = parentSizes.get(n.id)!;
        return {
          ...n,
-         style: { ...n.style, width: parentSizes.get(n.id)!.w, height: parentSizes.get(n.id)!.h }
+         data: { ...n.data, expandedHeight: size.expandedHeight },
+         style: { ...n.style, width: size.w, height: size.h }
        };
     }
     return n;
@@ -314,7 +331,10 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
         let startY = 0;
         for (let j = 0; j < nodesInLayer.length; j++) {
           currentYPositions[j] = startY;
-          startY += getNodeHeight(nodesInLayer[j]) + minGap;
+          let currentGap = minGap;
+          const nodeType = flowNodesWithSize.find(n => n.id === nodesInLayer[j])?.data?.nodeType;
+          if (nodeType === 'task') currentGap = 240; // 为 task 卡片设置更大的间距
+          startY += getNodeHeight(nodesInLayer[j]) + currentGap;
         }
         const totalHeight = startY - minGap;
         for (let j = 0; j < nodesInLayer.length; j++) {
@@ -333,11 +353,20 @@ export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "
             const jNext = sortedIndices[k + 1];
             
             const h1 = getNodeHeight(nodesInLayer[j]);
-            const requiredSpace = (h1 + getNodeHeight(nodesInLayer[jNext])) / 2 + minGap;
+            const h2 = getNodeHeight(nodesInLayer[jNext]);
+            
+            let currentGap = minGap;
+            const node1Type = flowNodesWithSize.find(n => n.id === nodesInLayer[j])?.data?.nodeType;
+            const node2Type = flowNodesWithSize.find(n => n.id === nodesInLayer[jNext])?.data?.nodeType;
+            if (node1Type === 'task' || node2Type === 'task') {
+              currentGap = 240; // 为 task 卡片设置更大的间距
+            }
+
+            const requiredSpace = (h1 + h2) / 2 + currentGap;
             
             // 比较中心点距离
             const center1 = currentYPositions[j] + h1 / 2;
-            const center2 = currentYPositions[jNext] + getNodeHeight(nodesInLayer[jNext]) / 2;
+            const center2 = currentYPositions[jNext] + h2 / 2;
             const diff = center2 - center1;
 
             if (diff < requiredSpace) {

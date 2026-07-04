@@ -139,12 +139,14 @@ const rawInitialNodes: Node[] = [
     id: "b1-container",
     type: "promptNode",
     position: { x: 800, y: 10 },
-    style: { width: 500, height: 600 },
+    style: { width: 500, height: 10 },
     data: {
       title: "b1 任务: 表格架构搭建",
       description: "拖入子属性卡片到此区域中",
       nodeType: "task",
       taskId: "1",
+      isCollapsed: true,
+      expandedHeight: 600,
     } as PromptNodeData,
   } as Node,
   {
@@ -153,6 +155,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 80 },
     parentId: "b1-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务1 名称",
       nodeType: "task_title",
@@ -165,6 +168,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 220 },
     parentId: "b1-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务1 目标",
       nodeType: "task_goal",
@@ -177,6 +181,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 360 },
     parentId: "b1-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "执行步骤 (Instructions)",
       nodeType: "task_instructions",
@@ -189,6 +194,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 500 },
     parentId: "b1-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务规则 (Rules)",
       nodeType: "task_rules",
@@ -201,6 +207,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 640 },
     parentId: "b1-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "输出要求 (Output)",
       nodeType: "task_output",
@@ -213,12 +220,14 @@ const rawInitialNodes: Node[] = [
     id: "b2-container",
     type: "promptNode",
     position: { x: 800, y: 650 },
-    style: { width: 500, height: 600 },
+    style: { width: 500, height: 10 },
     data: {
       title: "b2 任务: 搜索与分页逻辑",
       description: "拖入子属性卡片到此区域中",
       nodeType: "task",
       taskId: "2",
+      isCollapsed: true,
+      expandedHeight: 600,
     } as PromptNodeData,
   } as Node,
   {
@@ -227,6 +236,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 80 },
     parentId: "b2-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务2 名称",
       nodeType: "task_title",
@@ -239,6 +249,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 220 },
     parentId: "b2-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务2 目标",
       nodeType: "task_goal",
@@ -251,6 +262,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 360 },
     parentId: "b2-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "任务依赖 (Depends On)",
       nodeType: "task_depends_on",
@@ -263,6 +275,7 @@ const rawInitialNodes: Node[] = [
     position: { x: 20, y: 500 },
     parentId: "b2-container",
     extent: "parent",
+    hidden: true,
     data: {
       title: "执行步骤 (Instructions)",
       nodeType: "task_instructions",
@@ -765,6 +778,8 @@ export const PromptCanvas = () => {
         inputs: initialInputs.length > 0 ? initialInputs : undefined,
         outputs: initialOutputs.length > 0 ? initialOutputs : undefined,
         content: type === "task" || type === "assemble_a" || type === "compiler_c" ? undefined : "",
+        isCollapsed: type === "task" ? true : undefined,
+        expandedHeight: type === "task" ? 600 : undefined,
       } as PromptNodeData,
     } as Node;
   }, []);
@@ -822,6 +837,9 @@ export const PromptCanvas = () => {
             x: position.x - parentNode.position.x,
             y: position.y - parentNode.position.y
           };
+          if (parentNode.data.isCollapsed) {
+            newNode.hidden = true;
+          }
         }
 
         setNodes((nds) => nds.concat(newNode));
@@ -830,7 +848,7 @@ export const PromptCanvas = () => {
          const newNode = createNewNode(type as PromptCardType, position) as Node;
          if (type === "task") {
            // 对于容器，赋予它足够的宽高，并设置独立样式或在渲染端控制
-           newNode.style = { width: 500, height: 600 };
+           newNode.style = { width: 500, height: 10 };
          }
          setNodes((nds) => nds.concat(newNode));
       }

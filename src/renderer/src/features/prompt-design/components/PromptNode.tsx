@@ -1,5 +1,5 @@
-import { memo } from "react";
-import { Handle, Position, useReactFlow } from "@xyflow/react";
+import { memo, useEffect } from "react";
+import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import { useToast } from "@/components/ui/Toast";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import {
@@ -27,6 +27,8 @@ import {
   Layers,
   Sliders,
   Send,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 /** 提示词卡片类型 - 完全映射自企业级 XML 规范 */
@@ -304,6 +306,8 @@ export type PromptNodeData = {
   content?: string;
   variables?: string[];
   taskId?: string; // 用于 task 容器卡片的 ID 编号
+  isCollapsed?: boolean;
+  expandedHeight?: number;
 };
 
 /** @see cardTypeMeta */
@@ -314,7 +318,8 @@ const baseIcon = <Settings className="w-4 h-4" />;
 
 export const PromptNode = memo(
   ({ id, data, selected }: { id: string; data: PromptNodeData; selected?: boolean }) => {
-    const { deleteElements } = useReactFlow();
+    const { deleteElements, setNodes } = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
     const toast = useToast();
     const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
     const meta = cardTypeMeta[data.nodeType];
@@ -323,6 +328,30 @@ export const PromptNode = memo(
     
     // 任务容器样式：更大、背景更深、不显示输入连线口（被内部替代或只提供极少连线口）
     const isTaskContainer = data.nodeType === "task";
+    const isCollapsed = data.isCollapsed ?? true;
+
+    useEffect(() => {
+      if (isTaskContainer) {
+        // 由于存在 200ms 的 transition-all 动画，手柄位置在动画期间会持续变化
+        // 使用 requestAnimationFrame 在整个动画生命周期内实时更新内部状态，确保连线严丝合缝跟随
+        let start = performance.now();
+        let frameId: number;
+
+        const tick = () => {
+          updateNodeInternals(id);
+          if (performance.now() - start < 300) { // 设定为 300ms 确保覆盖整个 200ms 动画和一点缓冲
+            frameId = requestAnimationFrame(tick);
+          }
+        };
+
+        frameId = requestAnimationFrame(tick);
+
+        return () => {
+          cancelAnimationFrame(frameId);
+        };
+      }
+      return undefined;
+    }, [isCollapsed, id, updateNodeInternals, isTaskContainer]);
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -331,17 +360,47 @@ export const PromptNode = memo(
       toast.info("节点已删除");
     };
 
+    const toggleCollapse = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isLocked) return;
+      const newCollapsed = !isCollapsed;
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === id) {
+            const currentHeight = n.style?.height as number;
+            let expandedHeight = n.data.expandedHeight as number | undefined;
+            if (!expandedHeight && currentHeight && currentHeight > 50) {
+              expandedHeight = currentHeight;
+            } else if (!expandedHeight) {
+              expandedHeight = 600;
+            }
+            const newHeight = newCollapsed ? 10 : expandedHeight;
+            return {
+              ...n,
+              data: { ...n.data, isCollapsed: newCollapsed, expandedHeight },
+              style: { ...n.style, height: newHeight },
+            };
+          }
+          if (n.parentId === id) {
+            return { ...n, hidden: newCollapsed };
+          }
+          return n;
+        })
+      );
+    };
+
     if (isTaskContainer) {
       const borderColor = selected && !isLocked ? "border-fuchsia-500/50" : "border-fuchsia-500/20";
       const shadowStyle = selected && !isLocked ? "drop-shadow-[0_0_15px_rgba(217,70,239,0.2)]" : "";
 
       return (
         <div
-          className={`group/node relative w-full h-full min-w-[360px] min-h-[300px] transition-all duration-200 ${shadowStyle}`}
+          className={`group/node relative w-full h-full min-w-[360px] ${isCollapsed ? 'min-h-[10px]' : 'min-h-[300px]'} transition-all duration-200 ${shadowStyle}`}
         >
           {/* Main Drop Zone (The node's actual bounding box for extent="parent") */}
           <div
-            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}
+            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor} ${isCollapsed ? 'hidden' : ''}`}
           >
             {/* DROP ZONE 背景 */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
@@ -367,7 +426,13 @@ export const PromptNode = memo(
             )}
             
             {/* 容器头部 */}
-            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-fuchsia-500/20 bg-fuchsia-500/5 rounded-t-[8px]">
+            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-fuchsia-500/20 bg-fuchsia-500/5 rounded-t-[8px] cursor-pointer" onClick={toggleCollapse}>
+              <button
+                type="button"
+                className="p-1 -ml-2 hover:bg-fuchsia-500/20 rounded transition-colors text-white/70 hover:text-white"
+              >
+                {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
               <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] ${meta.color}`}>
                 {iconMap[iconName] || baseIcon}
               </div>
