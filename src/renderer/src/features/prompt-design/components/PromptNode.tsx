@@ -513,15 +513,17 @@ export const PromptNode = memo(
       );
     }
 
+    const nodeBorderColor = meta.isIndependent
+      ? "border-dashed border-white/20"
+      : selected && !isLocked
+        ? "border-white drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+        : "border-white/20";
+
     return (
       <div
-        className={`group/node relative rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${
-          meta.isIndependent
-            ? "border-dashed border-white/10"
-            : selected && !isLocked
-              ? "border-white"
-              : "border-transparent"
-        } ${meta.isIndependent || !hasOutputs ? "pb-2" : ""} ${meta.category === 'task_field' ? 'shadow-lg border-white/10 bg-[#252525] w-[210px]' : 'w-[240px]'}`}
+        className={`group/node relative rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${nodeBorderColor} ${
+          meta.isIndependent || !hasOutputs ? "pb-2" : ""
+        } ${meta.category === 'task_field' ? 'shadow-lg bg-[#252525] w-[210px]' : 'w-[240px]'}`}
         style={{ borderRadius: "6px" }}
       >
         {!isLocked && (
