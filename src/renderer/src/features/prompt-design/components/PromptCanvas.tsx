@@ -620,14 +620,7 @@ export const PromptCanvas = () => {
     if (validationXML)  globalTags.push(wrapTag("validation", validationXML, "    "));
     if (inputDataXML)    globalTags.push(wrapTag("input_data", inputDataXML, "    "));
 
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-    let md = `# 企业级 XML 提示词集 (Prompts Document)\n`;
-    md += `> **创建时间**: ${dateStr} | **配置树结构**: a -> a组装 -> b (Tasks) -> c final\n\n`;
-    md += `本文件由 Prompt Flow 画布编译生成，完全遵循结构化 XML 段落的隔离语义。\n\n`;
-    md += `## XML Prompt 源码\n\n`;
-    md += `\`\`\`xml\n<prompt>\n\n${globalTags.join("\n\n")}\n\n</prompt>\n\`\`\`\n`;
+    const md = `\`\`\`xml\n<prompt>\n\n${globalTags.join("\n\n")}\n\n</prompt>\n\`\`\`\n`;
 
     try {
       if (window.api && (window.api as any).dialog) {
