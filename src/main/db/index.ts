@@ -184,6 +184,7 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
     ? ['id', ...resolveSelectColumns(database, config.tableName, config.selectColumns)]
     : resolveSelectColumns(database, config.tableName, config.selectColumns)
 
+  database.exec('PRAGMA legacy_alter_table = ON;');
   database.exec(`
     ALTER TABLE ${config.tableName} RENAME TO ${legacyTableName};
     CREATE TABLE ${config.tableName} (
@@ -196,6 +197,7 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
     ORDER BY ${config.orderByClause};
     DROP TABLE ${legacyTableName};
   `)
+  database.exec('PRAGMA legacy_alter_table = OFF;');
 }
 
 /**
@@ -476,7 +478,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       name TEXT NOT NULL,
       design_data TEXT,
       created_at TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP NOT NULL
+      updated_at TIMESTAMP NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     `.trim(),
     insertColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
     selectColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
@@ -493,7 +496,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       status TEXT NOT NULL,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
-      last_message_at TIMESTAMP NOT NULL
+      last_message_at TIMESTAMP NOT NULL,
+      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(external_id) ON DELETE CASCADE
     `.trim(),
     insertColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
     selectColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
@@ -515,7 +519,8 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       model TEXT,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
-      cancelled INTEGER NOT NULL DEFAULT 0
+      cancelled INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(external_id) ON DELETE CASCADE
     `.trim(),
     insertColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],
     selectColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],

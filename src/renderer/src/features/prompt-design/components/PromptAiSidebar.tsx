@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { ChevronRight, ChevronLeft, History, Trash2 } from "lucide-react";
 import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 import { IconButton } from "@/components/ui/IconButton";
@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/Input";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { usePromptAiChatController } from "./usePromptAiChatController";
 import { usePromptDesignStore } from "../store/promptDesignStore";
+import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
+import { resolveAiChatSelectedModelOption, estimateAiChatContextTokens } from "@/features/ai-chat/aiChatContextBuilder";
+import { ContextUsageCircle } from "@/features/ai-chat/components/AiChatInput/components/ContextUsageCircle";
 
 // 会话切换 loading 最短展示时长（ms），避免闪烁。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -28,6 +31,30 @@ export const PromptAiSidebar = ({
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
   const designItemId = activeDesignId || "default-design-item-id";
   const controller = usePromptAiChatController(designItemId);
+
+  const { selectedModel, modelOptions } = useActiveAiModels();
+
+  const contextTokens = useMemo(() => {
+    return controller.messages.reduce((sum, msg) => {
+      let tokens = estimateAiChatContextTokens(msg.content);
+      if (msg.reasoning) {
+        tokens += estimateAiChatContextTokens(msg.reasoning);
+      }
+      if (msg.toolSteps) {
+        tokens += msg.toolSteps.reduce((tSum, step) => tSum + estimateAiChatContextTokens(step.observation), 0);
+      }
+      return sum + tokens;
+    }, 0);
+  }, [controller.messages]);
+
+  const contextLimit = useMemo(() => {
+    if (!selectedModel) return undefined;
+    const [provider, model] = selectedModel.split("::");
+    const modelOption = resolveAiChatSelectedModelOption(modelOptions, { provider, model });
+    return modelOption?.limit?.context;
+  }, [selectedModel, modelOptions]);
+
+  const contextUsagePercent = contextLimit ? Math.round((contextTokens / contextLimit) * 100) : null;
 
   // 会话切换 loading 状态
   const [isSwitching, setIsSwitching] = useState(false);
@@ -284,36 +311,11 @@ export const PromptAiSidebar = ({
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Tooltip
-              title="Tokens 使用量：1,250 / 200,000 (0.6%)"
-              placement="bottom"
-            >
-              <div className="relative flex h-6 w-6 cursor-pointer items-center justify-center rounded-[6px] hover:bg-white/5 transition-colors flex-shrink-0 group/context-circle">
-                <svg
-                  className="h-[16px] w-[16px] -rotate-90 transform"
-                  viewBox="0 0 100 100"
-                >
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    strokeWidth="10"
-                    className="stroke-white/10"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    strokeWidth="10"
-                    className="stroke-[#3B82F6]"
-                    strokeDasharray="282.7"
-                    strokeDashoffset={282.7 - (282.7 * 0.6) / 100}
-                  />
-                </svg>
-              </div>
-            </Tooltip>
+            <ContextUsageCircle
+              contextUsagePercent={contextUsagePercent}
+              contextTokens={contextTokens}
+              contextLimit={contextLimit}
+            />
             <Tooltip content="历史记录" placement="bottom">
               <Tooltip
                 placement="bottom"
