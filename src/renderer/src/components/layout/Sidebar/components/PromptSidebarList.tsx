@@ -67,7 +67,7 @@ export const PromptSidebarList = ({
 
   const fetchData = async () => {
     try {
-      if (!window.api || !window.api.promptDesign) {
+      if (!window.api || !(window.api as any).promptDesign) {
         return;
       }
       const p = await (window.api as any).promptDesign.projects.list();
