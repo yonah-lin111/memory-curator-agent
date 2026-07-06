@@ -1155,7 +1155,8 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
       error TEXT,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
-      UNIQUE(run_id, tool_call_id)
+      UNIQUE(run_id, tool_call_id),
+      FOREIGN KEY (run_id) REFERENCES prompt_ai_agent_runs(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_tool_calls_run_created_at
@@ -1175,7 +1176,8 @@ export const createPromptAiPersistenceTables = (database: Database.Database): vo
       tokens INTEGER,
       created_order INTEGER NOT NULL,
       meta_json TEXT NOT NULL,
-      UNIQUE(run_id, context_key)
+      UNIQUE(run_id, context_key),
+      FOREIGN KEY (run_id) REFERENCES prompt_ai_agent_runs(external_id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_prompt_ai_agent_context_snapshots_run_order

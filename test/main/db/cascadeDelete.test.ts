@@ -52,4 +52,65 @@ describe('SQLite Cascade Delete', () => {
     expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_sessions").get()).toEqual({ count: 0 })
     expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_messages").get()).toEqual({ count: 0 })
   })
+
+  it('Cascades deletion from sessions to messages, runs, tool calls, and context snapshots when a session is deleted', () => {
+    const database = new Database(':memory:')
+    database.exec('PRAGMA foreign_keys = ON;')
+    
+    createPromptDesignTables(database)
+    createPromptAiPersistenceTables(database)
+    
+    // 1. Insert setup data
+    database.prepare(`
+      INSERT INTO prompt_design_projects (external_id, name, type, created_at, updated_at)
+      VALUES ('p-2', 'Project 2', 'virtual', '2026-05-31', '2026-05-31')
+    `).run()
+    
+    database.prepare(`
+      INSERT INTO prompt_design_items (external_id, project_id, name, created_at, updated_at)
+      VALUES ('d-2', 'p-2', 'Design 2', '2026-05-31', '2026-05-31')
+    `).run()
+    
+    database.prepare(`
+      INSERT INTO prompt_ai_chat_sessions (external_id, design_item_id, title, status, created_at, updated_at, last_message_at)
+      VALUES ('s-2', 'd-2', 'Session 2', 'idle', '2026-05-31', '2026-05-31', '2026-05-31')
+    `).run()
+    
+    database.prepare(`
+      INSERT INTO prompt_ai_chat_messages (external_id, session_id, role, content, parts_json, tool_steps_json, time, created_at, updated_at)
+      VALUES ('m-2', 's-2', 'user', 'Hello', '[]', '[]', '2026-05-31', '2026-05-31', '2026-05-31')
+    `).run()
+
+    database.prepare(`
+      INSERT INTO prompt_ai_agent_runs (external_id, session_id, assistant_message_id, status, started_at)
+      VALUES ('r-2', 's-2', 'm-ai-2', 'completed', '2026-05-31')
+    `).run()
+
+    database.prepare(`
+      INSERT INTO prompt_ai_agent_tool_calls (external_id, run_id, message_id, tool_call_id, name, status, input_json, observation, data_json, created_at, updated_at)
+      VALUES ('tc-2', 'r-2', 'm-ai-2', 'call-2', 'test_tool', 'done', '{}', '', '{}', '2026-05-31', '2026-05-31')
+    `).run()
+
+    database.prepare(`
+      INSERT INTO prompt_ai_agent_context_snapshots (run_id, context_key, kind, title, content, created_order, meta_json)
+      VALUES ('r-2', 'snapshot-2', 'test', 'Snapshot Title', 'content', 1, '{}')
+    `).run()
+
+    // Verify all rows exist
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_sessions").get()).toEqual({ count: 1 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_messages").get()).toEqual({ count: 1 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_runs").get()).toEqual({ count: 1 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_tool_calls").get()).toEqual({ count: 1 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_context_snapshots").get()).toEqual({ count: 1 })
+
+    // 2. Delete the session
+    database.prepare("DELETE FROM prompt_ai_chat_sessions WHERE external_id = 's-2'").run()
+
+    // 3. Verify they are all deleted via multi-level cascade
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_sessions").get()).toEqual({ count: 0 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_chat_messages").get()).toEqual({ count: 0 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_runs").get()).toEqual({ count: 0 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_tool_calls").get()).toEqual({ count: 0 })
+    expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_context_snapshots").get()).toEqual({ count: 0 })
+  })
 })
