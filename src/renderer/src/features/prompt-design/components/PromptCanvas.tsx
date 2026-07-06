@@ -421,6 +421,7 @@ export const PromptCanvas = () => {
   const [menuState, setMenuState] = useState<ContextMenuState>({ type: null, x: 0, y: 0 });
   const [copiedNode, setCopiedNode] = useState<Node | null>(null);
   const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
+  const isCollisionAvoidance = usePromptDesignStore((state) => state.isCollisionAvoidance);
   const exportRequest = usePromptDesignStore((state) => state.exportRequest);
   const exportFormat = usePromptDesignStore((state) => state.exportFormat);
   const resetExportRequest = usePromptDesignStore((state) => state.resetExportRequest);
@@ -893,7 +894,7 @@ export const PromptCanvas = () => {
   // ── 卡片防重叠逻辑 (碰撞检测与自适应避让) ──
   const onNodeDrag = useCallback(
     (_: any, draggedNode: Node) => {
-      if (isLocked) return;
+      if (isLocked || !isCollisionAvoidance) return;
 
       setNodes((nds) => {
         const padding = 20; // 卡片之间的最小安全间距
@@ -966,7 +967,7 @@ export const PromptCanvas = () => {
         return newNodes;
       });
     },
-    [isLocked, setNodes]
+    [isLocked, isCollisionAvoidance, setNodes]
   );
 
   const onNodesDelete = useCallback(() => {

@@ -11,6 +11,8 @@ import {
   Unlock,
   Spline,
   CornerDownRight,
+  Magnet,
+  Layers,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -40,6 +42,8 @@ export const CanvasControls = ({
   const setIsLocked = usePromptDesignStore((state) => state.setIsCanvasLocked);
   const edgeType = usePromptDesignStore((state) => state.edgeType);
   const setEdgeType = usePromptDesignStore((state) => state.setEdgeType);
+  const isCollisionAvoidance = usePromptDesignStore((state) => state.isCollisionAvoidance);
+  const setCollisionAvoidance = usePromptDesignStore((state) => state.setCollisionAvoidance);
 
   const onLayout = useCallback(() => {
     if (isLocked) {
@@ -115,6 +119,18 @@ export const CanvasControls = ({
           className={isLocked ? "text-rose-400 bg-white/5 hover:bg-white/10" : ""}
         >
           {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+        </IconButton>
+      </Tooltip>
+      <Tooltip content={isCollisionAvoidance ? "关闭碰撞偏移" : "开启碰撞偏移"} placement="top">
+        <IconButton
+          iconOnly
+          onClick={() => {
+            setCollisionAvoidance(!isCollisionAvoidance);
+            toast.info(isCollisionAvoidance ? "碰撞偏移已关闭，卡片可重叠" : "碰撞偏移已开启");
+          }}
+          className={isCollisionAvoidance ? "text-sky-400 bg-white/5 hover:bg-white/10" : ""}
+        >
+          {isCollisionAvoidance ? <Magnet className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
         </IconButton>
       </Tooltip>
 

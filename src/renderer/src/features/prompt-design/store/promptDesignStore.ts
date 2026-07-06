@@ -3,6 +3,9 @@ import { create } from 'zustand';
 interface PromptDesignState {
   isCanvasLocked: boolean;
   setIsCanvasLocked: (locked: boolean) => void;
+  /** 卡片碰撞偏移开关，默认关闭（允许重叠） */
+  isCollisionAvoidance: boolean;
+  setCollisionAvoidance: (enabled: boolean) => void;
   exportRequest: number;
   exportFormat: 'xml' | 'markdown';
   requestExport: (format?: 'xml' | 'markdown') => void;
@@ -25,6 +28,8 @@ interface PromptDesignState {
 export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   isCanvasLocked: false,
   setIsCanvasLocked: (locked: boolean) => set({ isCanvasLocked: locked }),
+  isCollisionAvoidance: false,
+  setCollisionAvoidance: (enabled: boolean) => set({ isCollisionAvoidance: enabled }),
   exportRequest: 0,
   exportFormat: 'xml',
   requestExport: (format = 'xml') => set((state) => ({ exportRequest: state.exportRequest + 1, exportFormat: format })),
