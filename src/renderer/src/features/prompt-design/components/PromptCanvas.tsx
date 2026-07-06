@@ -1204,6 +1204,32 @@ export const PromptCanvas = () => {
           maskColor="rgba(0, 0, 0, 0.7)"
           className="!bg-[#212121] !border-white/10"
           position="top-right"
+          nodeComponent={(props: any) => {
+            const { x, y, width, height, color, id } = props;
+            const node = nodes.find((n) => n.id === id);
+            const isTask = (node?.data as PromptNodeData)?.nodeType === "task";
+
+            let rectY = y;
+            let rectHeight = height;
+
+            if (isTask) {
+              rectY = y - 90;
+              rectHeight = height + 135;
+            }
+
+            return (
+              <rect
+                x={x}
+                y={rectY}
+                width={width}
+                height={rectHeight}
+                fill={color}
+                fillOpacity={1}
+                rx={6}
+                ry={6}
+              />
+            );
+          }}
         />
         <PromptCanvasContextMenu
           menuState={menuState}
