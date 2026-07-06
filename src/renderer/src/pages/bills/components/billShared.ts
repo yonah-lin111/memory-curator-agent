@@ -47,10 +47,31 @@ export const formatAmount = (amountInCents: number): string =>
   (amountInCents / 100).toFixed(2)
 
 /**
- * 格式化输入字符串金额为分（元 * 100，取整）。
+ * 评估基础数学表达式（支持加减乘除），返回计算结果
+ */
+export const evaluateMathExpression = (expr: string): number | null => {
+  try {
+    // 移除非法字符，只允许数字、小数点和基础运算符
+    const sanitized = expr.replace(/[^\d.+\-*/()]/g, '')
+    if (!sanitized) return null
+    // 为了安全，使用 new Function 而非直接 eval，仅解析基础数学公式
+    // 因为前端环境中我们只处理上面正则清洗过的字符串，没有安全风险
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const result = new Function(`return ${sanitized}`)()
+    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+      return result
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 格式化输入字符串金额为分（元 * 100，取整），支持简单四则运算。
  */
 export const parseAmountToCents = (input: string): number => {
-  const num = parseFloat(input)
-  if (isNaN(num) || num <= 0) return 0
+  const num = evaluateMathExpression(input)
+  if (num === null || num <= 0) return 0
   return Math.round(num * 100)
 }

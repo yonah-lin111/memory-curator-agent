@@ -13,6 +13,7 @@ import {
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Input } from "@/components/ui/Input";
+import { AmountInput } from "@/components/ui/AmountInput";
 
 /** 今日账单摘要（来自 preload todaySummary） */
 export type TodaySummary = {
@@ -301,24 +302,11 @@ export const TodayBillPanel = ({
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={draft.amount}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={draft.amount}
+          onChange={(val) => setDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
@@ -406,24 +394,11 @@ export const TodayBillPanel = ({
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={editDraft.amount}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={editDraft.amount}
+          onChange={(val) => setEditDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
