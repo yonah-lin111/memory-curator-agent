@@ -156,6 +156,10 @@ class MemoryMigrationDatabase {
           return
         }
 
+        if (statement.startsWith('PRAGMA')) {
+          return
+        }
+
         if (statement.startsWith('ALTER TABLE')) {
           this.alterTable(statement)
           return

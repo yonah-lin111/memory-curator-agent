@@ -1206,8 +1206,35 @@ export const initDatabase = (): Database.Database => {
   createThemesTable(sqlite)
   createThemeItemsTable(sqlite)
   createBillsTable(sqlite)
+
+  // 一次性彻底清空并重建所有提示词设计与 AI 相关的表数据（升级到数据库版本 1，强制应用正确的外键约束）
+  const currentVersion = sqlite.pragma('user_version', { simple: true }) as number
+  if (currentVersion < 1) {
+    const tablesToDrop = [
+      'prompt_ai_agent_context_snapshots',
+      'prompt_ai_agent_tool_calls',
+      'prompt_ai_agent_runs',
+      'prompt_ai_chat_messages',
+      'prompt_ai_chat_sessions',
+      'prompt_design_items',
+      'prompt_design_projects'
+    ]
+    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    for (const table of tablesToDrop) {
+      try {
+        sqlite.exec(`DROP TABLE IF EXISTS ${table};`)
+      } catch (e) {
+        console.warn(`Failed to drop table ${table} during migration:`, e)
+      }
+    }
+    sqlite.pragma('user_version = 1')
+  }
+
   createPromptDesignTables(sqlite)
   createPromptAiPersistenceTables(sqlite)
+
+  // 启用 SQLite 外键约束，以支持级联删除
+  sqlite.exec('PRAGMA foreign_keys = ON;')
 
   return sqlite
 }
