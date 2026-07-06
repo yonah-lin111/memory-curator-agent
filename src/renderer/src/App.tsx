@@ -358,7 +358,10 @@ const AppContent = (): React.JSX.Element => {
               />
             }
             promptsContent={
-              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} />
+              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} onClosePromptAiSidebar={() => {
+                setIsPromptAiSidebarOpen(false);
+                setIsSidebarCollapsed(false);
+              }} />
             }
           />
 </div>

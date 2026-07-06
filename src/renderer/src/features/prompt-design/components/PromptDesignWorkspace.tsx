@@ -6,9 +6,10 @@ import { PromptAiSidebar } from "./PromptAiSidebar";
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
   isPromptAiSidebarOpen?: boolean;
+  onClosePromptAiSidebar?: () => void;
 }
 
-export const PromptDesignWorkspace = ({ isOpen, isPromptAiSidebarOpen = false }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
+export const PromptDesignWorkspace = ({ isOpen, isPromptAiSidebarOpen = false, onClosePromptAiSidebar }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
   if (!isOpen) return null;
 
   return (
@@ -18,7 +19,7 @@ export const PromptDesignWorkspace = ({ isOpen, isPromptAiSidebarOpen = false }:
           <PromptCanvas />
         </ReactFlowProvider>
       </div>
-      <PromptAiSidebar isOpen={isPromptAiSidebarOpen} />
+      <PromptAiSidebar isOpen={isPromptAiSidebarOpen} onClose={onClosePromptAiSidebar} />
     </div>
   );
 };

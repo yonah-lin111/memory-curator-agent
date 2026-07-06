@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { ChevronRight, ChevronLeft, History, Trash2, Bot } from "lucide-react";
+import { ChevronRight, ChevronLeft, History, Trash2, Bot, X } from "lucide-react";
 import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -17,11 +17,13 @@ const MIN_SWITCH_LOADING_MS = 500;
 type PromptAiSidebarProps = {
   isOpen?: boolean;
   isTransitionEnabled?: boolean;
+  onClose?: () => void;
 };
 
 export const PromptAiSidebar = ({
   isOpen = false,
   isTransitionEnabled = true,
+  onClose,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
   const [isDragging, setIsDragging] = useState(false);
@@ -398,6 +400,11 @@ export const PromptAiSidebar = ({
                     onClick={handleNewChatWithLoading}
                     disabled={controller.messages.length === 0 || controller.isGenerating}
                   />
+                </Tooltip>
+                <Tooltip content="关闭侧边栏" placement="bottom">
+                  <IconButton onClick={onClose}>
+                    <X className="h-4 w-4" />
+                  </IconButton>
                 </Tooltip>
               </div>
             </div>

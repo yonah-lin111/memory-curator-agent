@@ -327,32 +327,7 @@ export const PromptNode = memo(
     const hasOutputs = data.outputs && data.outputs.length > 0;
     const handleColorClass = meta.color.split(' ').find(c => c.startsWith('text-'))?.replace('text-', '!bg-') || '!bg-indigo-400';
     
-    // 任务容器样式：更大、背景更深、不显示输入连线口（被内部替代或只提供极少连线口）
-    const isTaskContainer = data.nodeType === "task";
     const isCollapsed = data.isCollapsed ?? true;
-
-    useEffect(() => {
-      if (isTaskContainer) {
-        // 由于存在 200ms 的 transition-all 动画，手柄位置在动画期间会持续变化
-        // 使用 requestAnimationFrame 在整个动画生命周期内实时更新内部状态，确保连线严丝合缝跟随
-        let start = performance.now();
-        let frameId: number;
-
-        const tick = () => {
-          updateNodeInternals(id);
-          if (performance.now() - start < 300) { // 设定为 300ms 确保覆盖整个 200ms 动画和一点缓冲
-            frameId = requestAnimationFrame(tick);
-          }
-        };
-
-        frameId = requestAnimationFrame(tick);
-
-        return () => {
-          cancelAnimationFrame(frameId);
-        };
-      }
-      return undefined;
-    }, [isCollapsed, id, updateNodeInternals, isTaskContainer]);
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -367,150 +342,17 @@ export const PromptNode = memo(
       const newCollapsed = !isCollapsed;
 
       setNodes((nds) => {
-        const targetNode = nds.find(n => n.id === id);
-        if (!targetNode) return nds;
-
-        const currentHeight = (targetNode.style?.height as number) || (isCollapsed ? 10 : 600);
-        let expandedHeight = targetNode.data.expandedHeight as number | undefined;
-        if (!expandedHeight && currentHeight && currentHeight > 50) {
-          expandedHeight = currentHeight;
-        } else if (!expandedHeight) {
-          expandedHeight = 600;
-        }
-        
-        const newHeight = newCollapsed ? 10 : expandedHeight;
-        const deltaY = newHeight - currentHeight;
-        
-        const tX = targetNode.position.x;
-        const tWidth = targetNode.measured?.width ?? targetNode.width ?? 500;
-        const padding = 20;
-
         return nds.map((n) => {
           if (n.id === id) {
             return {
               ...n,
-              data: { ...n.data, isCollapsed: newCollapsed, expandedHeight },
-              style: { ...n.style, height: newHeight },
+              data: { ...n.data, isCollapsed: newCollapsed },
             };
           }
-          if (n.parentId === id) {
-            return { ...n, hidden: newCollapsed };
-          }
-          
-          // ── 卡片展开/折叠自适应推拉下方的节点 ──
-          if (!n.parentId) { // 忽略子节点
-            const nX = n.position.x;
-            const nWidth = n.measured?.width ?? n.width ?? (n.data.nodeType === "task" ? 500 : 300);
-            
-            // 判断是否在当前容器的下方
-            const isBelow = n.position.y > targetNode.position.y + 10;
-            // 判断是否在水平方向上有交集（意味着在同一列）
-            const isHorizontallyOverlapping = (nX < tX + tWidth + padding) && (nX + nWidth + padding > tX);
-
-            if (isBelow && isHorizontallyOverlapping) {
-              return {
-                ...n,
-                position: {
-                  ...n.position,
-                  y: n.position.y + deltaY
-                }
-              };
-            }
-          }
-          
           return n;
         });
       });
     };
-
-    if (isTaskContainer) {
-      const borderColor = selected && !isLocked ? "border-white" : "border-white/20";
-
-      return (
-        <div
-          className={`group/node relative w-full h-full min-w-[360px] ${isCollapsed ? 'min-h-[10px]' : 'min-h-[300px]'} transition-all duration-200`}
-        >
-          {/* Main Drop Zone (The node's actual bounding box for extent="parent") */}
-          <div
-            className={`absolute inset-0 border-x-2 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}
-          >
-            {/* DROP ZONE 背景 */}
-            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-              <span className="text-white/5 font-bold text-4xl tracking-widest select-none">
-                  DROP ZONE
-              </span>
-            </div>
-          </div>
-
-          {/* 容器头部区域 & 左侧输入 (Positioned ABOVE the main node box) */}
-          <div className={`absolute bottom-full left-0 right-0 flex flex-col rounded-t-[8px] border-2 border-b-0 bg-black/40 backdrop-blur-md transition-all duration-200 ${borderColor}`}>
-            {!isLocked && (
-              <button
-                type="button"
-                aria-label="Delete container"
-                onClick={handleDelete}
-                className={`absolute -top-2 -right-2 z-10 h-5 w-5 items-center justify-center rounded-full bg-white text-[#1C1C1C] shadow-md hover:bg-gray-200 transition-colors ${
-                  selected ? "flex" : "hidden group-hover/node:flex"
-                }`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-            
-            {/* 容器头部 */}
-            <div className="flex w-full items-center gap-2 overflow-hidden px-4 py-3 border-b border-white/20 bg-white/5 rounded-t-[8px] cursor-pointer" onClick={toggleCollapse}>
-              <button
-                type="button"
-                className="p-1 -ml-2 hover:bg-white/20 rounded transition-colors text-white/70 hover:text-white"
-              >
-                {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
-              <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[6px] ${meta.color}`}>
-                {iconMap[iconName] || baseIcon}
-              </div>
-              <div className="flex flex-1 items-center overflow-hidden">
-                <span className="truncate text-sm font-bold text-white/90">
-                  {data.title}
-                </span>
-              </div>
-              
-              <span className={`ml-auto flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded border border-white/30 text-white/70 font-mono`}>
-                Container
-              </span>
-            </div>
-
-            {/* 顶部左侧输入端口 */}
-            <div className="relative flex items-center justify-start px-4 py-3 w-full border-b border-white/5 bg-black/20">
-              <Handle
-                type="target"
-                position={Position.Left}
-                id="in-global"
-                className="!w-3.5 !h-3.5 !border-2 !border-[#1C1C1C] !bg-orange-400 !-left-[9px] pointer-events-auto transition-transform hover:scale-125"
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white/85">A全局配置 (Global)</span>
-                <span className="text-[10px] text-orange-400/80 font-mono px-1.5 py-0.5 bg-orange-400/10 rounded border border-orange-400/20">global_config</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 底部右侧输出端口 (Positioned BELOW the main node box) */}
-          <div className={`absolute top-full left-0 right-0 flex items-center justify-end px-4 py-3 w-full rounded-b-[8px] border-2 border-t-0 bg-white/[0.02] backdrop-blur-md transition-all duration-200 ${borderColor}`}>
-            <div className="flex items-center gap-2 mr-2">
-              <span className="text-[10px] text-white/70 font-mono px-1.5 py-0.5 bg-white/10 border border-white/20 rounded">task</span>
-              <span className="text-xs font-medium text-white/85">任务整合输出 (Task Output)</span>
-            </div>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="out-task"
-              className="!w-3.5 !h-3.5 !border-2 !border-[#1C1C1C] !bg-fuchsia-500 !-right-[9px] pointer-events-auto transition-transform hover:scale-125"
-            />
-          </div>
-
-        </div>
-      );
-    }
 
     const nodeBorderColor = meta.isIndependent
       ? "border-dashed border-white/20"
@@ -522,7 +364,7 @@ export const PromptNode = memo(
       <div
         className={`group/node relative rounded-[6px] border bg-[#1C1C1C] transition-all duration-200 ${nodeBorderColor} ${
           meta.isIndependent || !hasOutputs ? "pb-2" : ""
-        } ${meta.category === 'task_field' ? 'shadow-lg bg-[#252525] w-[210px]' : 'w-[240px]'}`}
+        } ${meta.category === 'task_field' ? 'shadow-lg bg-[#252525] w-[210px]' : data.nodeType === 'task' ? 'w-[280px]' : 'w-[240px]'}`}
         style={{ borderRadius: "6px" }}
       >
         {!isLocked && (
@@ -582,7 +424,7 @@ export const PromptNode = memo(
         )}
 
         {/* 输入输出端口（仅连线型卡片，容器内部的子卡片不需要连线） */}
-        {!meta.isIndependent && meta.category !== "task_field" && (
+        {!meta.isIndependent && (
           <div className="relative cursor-auto pointer-events-auto">
             {(() => {
               const allPorts = [
