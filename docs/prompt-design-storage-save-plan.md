@@ -288,3 +288,282 @@ Expected: 全绿通过。
 3. 观察右下角是否有 "画布保存成功" 的优雅 Toast。
 4. 退出该项目并重新进入，确认所有坐标、节点内文字、收折折叠状态以及连线完整复原。
 5. （通过本地 SQLite 工具查看）`prompt_active_nodes` 表，确认记录了干净的、按 `position.y` 严密排列好的提纯业务节点。
+
+---
+
+## 备份：删除的结构化 Mock 数据集
+
+以下是在重构 CRUD 动态加载时从 `PromptCanvas.tsx` 中移除的完整初始结构化画布测试数据集，供后续参考或数据测试：
+
+```typescript
+// ── 用户要求的结构化 MOCK 数据 ──
+const rawInitialNodes: Node[] = [
+  /* ── a组: 全局配置输入节点 ── */
+  {
+    id: "a-role",
+    type: "promptNode",
+    position: { x: 50, y: 50 },
+    data: {
+      title: "系统角色 (System Role)",
+      description: "定义 AI 前端架构专家的人设",
+      nodeType: "system_role",
+      content: "你是一个资深的前端 React 架构师。请使用 TypeScript 和 Tailwind CSS 设计并生成高质量的、符合企业级规范的 React 组件。",
+      outputs: [{ id: "out-role", name: "Output", type: "text" }],
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "a-obj",
+    type: "promptNode",
+    position: { x: 50, y: 190 },
+    data: {
+      title: "整体目标 (Objective)",
+      description: "设定 AI 最终交付的目标",
+      nodeType: "objective",
+      content: "分析用户的业务任务，输出高内聚、高响应性、零缺陷的前端 React 完整源码实现。",
+      outputs: [{ id: "out-obj", name: "Output", type: "text" }],
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "a-const",
+    type: "promptNode",
+    position: { x: 50, y: 330 },
+    data: {
+      title: "全局约束 (Constraints)",
+      description: "开发必须严格遵守的红线",
+      nodeType: "constraints",
+      content: "- 严禁使用任何外部全局状态库\n- 必须实现 100% 的 TypeScript 强类型声明",
+      outputs: [{ id: "out-const", name: "Output", type: "text" }],
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── a-组装卡片 (Global Assembler) ── */
+  {
+    id: "a-assembler",
+    type: "promptNode",
+    position: { x: 380, y: 150 },
+    data: {
+      title: "A-全局组装 (Global Config)",
+      description: "收集并打包所有全局前置标签 (a)",
+      nodeType: "assemble_a",
+      inputs: [
+        { id: "in-system_role", name: "系统角色 (System Role)", type: "text" },
+        { id: "in-objective", name: "整体目标 (Objective)", type: "text" },
+        { id: "in-constraints", name: "全局约束 (Constraints)", type: "text" },
+      ],
+      outputs: [{ id: "out-global", name: "打包输出", type: "global_config" }],
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── b1组: 任务1 (Task 1 Container + Fields) ── */
+  {
+    id: "b1-container",
+    type: "promptNode",
+    position: { x: 800, y: 10 },
+    style: { width: 500, height: 10 },
+    data: {
+      title: "b1 任务: 表格架构搭建",
+      description: "拖入子属性卡片到此区域中",
+      nodeType: "task",
+      taskId: "1",
+      isCollapsed: true,
+      expandedHeight: 600,
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-title",
+    type: "promptNode",
+    position: { x: 20, y: 80 },
+    parentId: "b1-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务1 名称",
+      nodeType: "task_title",
+      content: "数据表格核心骨架实现",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-goal",
+    type: "promptNode",
+    position: { x: 20, y: 220 },
+    parentId: "b1-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务1 目标",
+      nodeType: "task_goal",
+      content: "创建自适应表格布局，保证加载中与无数据状态交互连贯。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-instructions",
+    type: "promptNode",
+    position: { x: 20, y: 360 },
+    parentId: "b1-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "执行步骤 (Instructions)",
+      nodeType: "task_instructions",
+      content: "1. 拆分 Table Header 和 Body\n2. 注入 Mock 数据渲染\n3. 添加 Loading 骨架屏",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-rules",
+    type: "promptNode",
+    position: { x: 20, y: 500 },
+    parentId: "b1-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务规则 (Rules)",
+      nodeType: "task_rules",
+      content: "组件必须使用 forwardRef，确保父级可获取 table 实例。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b1-output",
+    type: "promptNode",
+    position: { x: 20, y: 640 },
+    parentId: "b1-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "输出要求 (Output)",
+      nodeType: "task_output",
+      content: "只返回 DataTable.tsx 的源码，无需解释。",
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── b2组: 任务2 (Task 2 Container + Fields) ── */
+  {
+    id: "b2-container",
+    type: "promptNode",
+    position: { x: 800, y: 650 },
+    style: { width: 500, height: 10 },
+    data: {
+      title: "b2 任务: 搜索与分页逻辑",
+      description: "拖入子属性卡片到此区域中",
+      nodeType: "task",
+      taskId: "2",
+      isCollapsed: true,
+      expandedHeight: 600,
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b2-title",
+    type: "promptNode",
+    position: { x: 20, y: 80 },
+    parentId: "b2-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务2 名称",
+      nodeType: "task_title",
+      content: "数据流控制与分页核心",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b2-goal",
+    type: "promptNode",
+    position: { x: 20, y: 220 },
+    parentId: "b2-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务2 目标",
+      nodeType: "task_goal",
+      content: "提供每页数量切换以及防抖过滤检索，空态无缝重置。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b2-depends",
+    type: "promptNode",
+    position: { x: 20, y: 360 },
+    parentId: "b2-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "任务依赖 (Depends On)",
+      nodeType: "task_depends_on",
+      content: "依赖 任务1 (数据表格核心骨架实现) 的完成。",
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "b2-instructions",
+    type: "promptNode",
+    position: { x: 20, y: 500 },
+    parentId: "b2-container",
+    extent: "parent",
+    hidden: true,
+    data: {
+      title: "执行步骤 (Instructions)",
+      nodeType: "task_instructions",
+      content: "1. 接入 useDebounce hook\n2. 实现 usePagination\n3. 将状态下发至 DataTable",
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── c最终导出卡片 (Compiler Terminal) ── */
+  {
+    id: "c-compiler",
+    type: "promptNode",
+    position: { x: 1420, y: 250 },
+    data: {
+      title: "C-最终导出 (Compiler Terminal)",
+      description: "汇聚 A全局配置、B任务列表及 C后置配置 以进行一键编译",
+      nodeType: "compiler_c",
+      inputs: [
+        { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
+        { id: "in-format", name: "输出格式 (Format)", type: "text", handlePosition: "right" },
+        { id: "in-validation", name: "全局校验 (Validation)", type: "text", handlePosition: "right" },
+      ],
+    } as PromptNodeData,
+  } as Node,
+
+  /* ── c组: 后置全局配置节点 ── */
+  {
+    id: "c-format",
+    type: "promptNode",
+    position: { x: 1750, y: 150 },
+    data: {
+      title: "输出格式 (Output Format)",
+      description: "严格约束最终的代码交付标准",
+      nodeType: "output_format",
+      content: "提供用 ```tsx 标记包裹的单文件完整代码，尾部必须提供 Jest 单元测试示范用例。",
+      outputs: [{ id: "out-format", name: "Output", type: "text", handlePosition: "left" }],
+    } as PromptNodeData,
+  } as Node,
+  {
+    id: "c-validation",
+    type: "promptNode",
+    position: { x: 1750, y: 350 },
+    data: {
+      title: "全局校验 (Validation)",
+      description: "定义大模型交付前自检清单",
+      nodeType: "validation",
+      content: "检查所有任务是否圆满完成，并确认完全符合开发约束。",
+      outputs: [{ id: "out-validation", name: "Output", type: "text", handlePosition: "left" }],
+    } as PromptNodeData,
+  } as Node,
+];
+
+const rawInitialEdges: Edge[] = [
+  /* ── a (全局输入) -> a组装卡片 ── */
+  { id: "e-a-role", source: "a-role", target: "a-assembler", sourceHandle: "out-role", targetHandle: "in-system_role" },
+  { id: "e-a-obj", source: "a-obj", target: "a-assembler", sourceHandle: "out-obj", targetHandle: "in-objective" },
+  { id: "e-a-const", source: "a-const", target: "a-assembler", sourceHandle: "out-const", targetHandle: "in-constraints" },
+
+  /* ── a组装卡片 -> b1 & b2 任务输入 ── */
+  { id: "e-assemble-b1", source: "a-assembler", target: "b1-container", sourceHandle: "out-global", targetHandle: "in-global" },
+  { id: "e-assemble-b2", source: "a-assembler", target: "b2-container", sourceHandle: "out-global", targetHandle: "in-global" },
+
+  /* ── b1 & b2 任务整合 -> c (最终编译端) ── */
+  { id: "e-b1-final", source: "b1-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
+  { id: "e-b2-final", source: "b2-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks" },
+
+  /* ── c (后置输入) -> c组装卡片 (但为了排版，设置为反向边 isBackward) ── */
+  { id: "e-c-format", source: "c-format", target: "c-compiler", sourceHandle: "out-format", targetHandle: "in-format", data: { isBackward: true } },
+  { id: "e-c-validation", source: "c-validation", target: "c-compiler", sourceHandle: "out-validation", targetHandle: "in-validation", data: { isBackward: true } },
+];
+```
+
