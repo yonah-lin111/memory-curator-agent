@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
-import { createPromptDesignTables, createPromptAiPersistenceTables } from '@/db/index'
+import { createPromptDesignTables, createPromptAiPersistenceTables, createPromptActiveNodesTable } from '@/db/index'
 
 describe('SQLite Cascade Delete', () => {
   it('Cascades deletion from projects to designs and from designs to AI sessions/messages when foreign keys are enabled', () => {
@@ -112,5 +112,40 @@ describe('SQLite Cascade Delete', () => {
     expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_runs").get()).toEqual({ count: 0 })
     expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_tool_calls").get()).toEqual({ count: 0 })
     expect(database.prepare("SELECT count(*) as count FROM prompt_ai_agent_context_snapshots").get()).toEqual({ count: 0 })
+  })
+
+  it('Cascades deletion from design items to prompt_active_nodes', () => {
+    const database = new Database(':memory:')
+    database.exec('PRAGMA foreign_keys = ON;')
+
+    createPromptDesignTables(database)
+    createPromptActiveNodesTable(database)
+
+    // Insert project
+    database.prepare(`
+      INSERT INTO prompt_design_projects (external_id, name, type, created_at, updated_at)
+      VALUES ('p-3', 'Project 3', 'virtual', '2026-05-31', '2026-05-31')
+    `).run()
+
+    // Insert design item
+    database.prepare(`
+      INSERT INTO prompt_design_items (external_id, project_id, name, created_at, updated_at)
+      VALUES ('d-3', 'p-3', 'Design 3', '2026-05-31', '2026-05-31')
+    `).run()
+
+    // Insert prompt active nodes
+    database.prepare(`
+      INSERT INTO prompt_active_nodes (external_id, design_item_id, node_type, title, content, sort_order, updated_at)
+      VALUES ('n-1', 'd-3', 'system_role', 'System Role', 'You are a coder', 0, '2026-05-31')
+    `).run()
+
+    // Verify rows exist
+    expect(database.prepare("SELECT count(*) as count FROM prompt_active_nodes").get()).toEqual({ count: 1 })
+
+    // Delete design item
+    database.prepare("DELETE FROM prompt_design_items WHERE external_id = 'd-3'").run()
+
+    // Verify active nodes are cascade-deleted
+    expect(database.prepare("SELECT count(*) as count FROM prompt_active_nodes").get()).toEqual({ count: 0 })
   })
 })

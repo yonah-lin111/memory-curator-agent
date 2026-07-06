@@ -144,27 +144,80 @@ export const promptDesignService = {
   updateDesign: (id: string, input: PromptDesignUpdateInput): void => {
     const db = getDatabase()
     const now = new Date().toISOString()
-    
-    if (input.name !== undefined && input.designData !== undefined) {
-      db.prepare("UPDATE prompt_design_items SET name = ?, design_data = ?, updated_at = ? WHERE external_id = ?").run(
-        input.name,
-        JSON.stringify(input.designData),
-        now,
-        id
-      )
-    } else if (input.name !== undefined) {
-      db.prepare("UPDATE prompt_design_items SET name = ?, updated_at = ? WHERE external_id = ?").run(
-        input.name,
-        now,
-        id
-      )
-    } else if (input.designData !== undefined) {
-      db.prepare("UPDATE prompt_design_items SET design_data = ?, updated_at = ? WHERE external_id = ?").run(
-        JSON.stringify(input.designData),
-        now,
-        id
-      )
-    }
+
+    // 采用 sqlite 事务，保证画布 JSON 状态和扁平化业务节点的强一致性
+    const transaction = db.transaction(() => {
+      // 1. 更新主设计项大 JSON
+      if (input.name !== undefined && input.designData !== undefined) {
+        db.prepare("UPDATE prompt_design_items SET name = ?, design_data = ?, updated_at = ? WHERE external_id = ?").run(
+          input.name,
+          JSON.stringify(input.designData),
+          now,
+          id
+        )
+      } else if (input.name !== undefined) {
+        db.prepare("UPDATE prompt_design_items SET name = ?, updated_at = ? WHERE external_id = ?").run(
+          input.name,
+          now,
+          id
+        )
+      } else if (input.designData !== undefined) {
+        db.prepare("UPDATE prompt_design_items SET design_data = ?, updated_at = ? WHERE external_id = ?").run(
+          JSON.stringify(input.designData),
+          now,
+          id
+        )
+      }
+
+      // 2. 方案二 CQRS：仅在 designData 实际发生更新时，才触发节点同步解析与落库
+      if (input.designData !== undefined && Array.isArray(input.designData.nodes)) {
+        // 先清理本设计项下的历史同步业务节点
+        db.prepare("DELETE FROM prompt_active_nodes WHERE design_item_id = ?").run(id)
+
+        const nodes = input.designData.nodes
+
+        // 计算 sort_order 的方式：按节点 Y 坐标升序，X 坐标为第二权重，使画布上看起来“从上到下、从左到右”的节点天然具备合理的顺序
+        const sortedNodes = [...nodes].sort((a, b) => {
+          const yA = a.position?.y ?? 0
+          const yB = b.position?.y ?? 0
+          if (yA !== yB) return yA - yB
+          return (a.position?.x ?? 0) - (b.position?.x ?? 0)
+        })
+
+        const insertStmt = db.prepare(`
+          INSERT INTO prompt_active_nodes (
+            external_id, design_item_id, parent_node_id, node_type, title, content, sort_order, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+
+        sortedNodes.forEach((node, index) => {
+          const nodeData = node.data || {}
+          // 仅记录核心业务节点，剔除没有任何提示词实体的容器、连接辅助板
+          const nodeType = nodeData.nodeType
+          if (!nodeType || nodeType === "assemble_a" || nodeType === "compiler_c") {
+            return
+          }
+
+          const externalId = node.id
+          const parentNodeId = node.parentId || null
+          const title = nodeData.title || ""
+          const content = nodeData.content !== undefined ? String(nodeData.content) : null
+
+          insertStmt.run(
+            externalId,
+            id,
+            parentNodeId,
+            nodeType,
+            title,
+            content,
+            index, // 排序序号
+            now
+          )
+        })
+      }
+    })
+
+    transaction()
   },
 
   deleteDesign: (id: string): void => {

@@ -380,6 +380,19 @@ export type PromptDesignUpdateInput = {
   designData?: any;
 };
 
+/** 提示词业务节点提纯数据库行（方案二 CQRS 核心表） */
+export type PromptActiveNodeRow = {
+  id: number;
+  external_id: string;      // 对应前端 ReactFlow 节点的唯一 id
+  design_item_id: string;   // 关联 prompt_design_items 的 external_id (UUID)
+  parent_node_id: string | null; // 嵌套父容器的 external_id (用于 Task Field 物理定位)
+  node_type: string;        // 节点业务类型 (system_role, task, output_format, 等)
+  title: string;            // 节点标题
+  content: string | null;   // 精华提示词正文
+  sort_order: number;       // 用于后端按顺序流式编译的序号
+  updated_at: string;
+};
+
 // ==================== Prompt Design AI Chat ====================
 
 // 提示词 AI 对话会话数据库行
