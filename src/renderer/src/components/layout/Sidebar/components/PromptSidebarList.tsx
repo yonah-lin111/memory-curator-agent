@@ -67,6 +67,9 @@ export const PromptSidebarList = ({
 
   const fetchData = async () => {
     try {
+      if (!window.api || !window.api.promptDesign) {
+        return;
+      }
       const p = await (window.api as any).promptDesign.projects.list();
       const d = await (window.api as any).promptDesign.designs.list();
       setProjects(p);
@@ -586,8 +589,15 @@ export const PromptSidebarList = ({
             try {
               if (contextMenu.type === "project") {
                 await (window.api as any).promptDesign.projects.delete(contextMenu.id);
+                if (activeProjectId === contextMenu.id) {
+                  setActiveProjectId(null);
+                  setActiveDesignId(null);
+                }
               } else {
                 await (window.api as any).promptDesign.designs.delete(contextMenu.id);
+                if (activeDesignId === contextMenu.id) {
+                  setActiveDesignId(null);
+                }
               }
               await fetchData();
             } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { ChevronRight, ChevronLeft, History, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, History, Trash2, Bot } from "lucide-react";
 import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -245,162 +245,176 @@ export const PromptAiSidebar = ({
           }}
         />
       )}
-      {isOpen && (
-        <div className="flex items-center p-2 shrink-0 h-9 border-b border-white/5 gap-2">
-          <Tooltip
-            content={isExpanded ? "恢复默认宽度" : "展开最大宽度"}
-            placement="bottom"
-          >
-            <IconButton onClick={toggleExpand}>
-              {isExpanded ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </IconButton>
-          </Tooltip>
-          
-          <div className="flex items-center flex-1 min-w-0 gap-1.5">
-            {activeSession && (
-              <Tooltip
-                content="重命名对话"
-                placement="bottom"
-                className="!flex min-w-0 items-center"
-              >
-                <Tooltip
-                  trigger="click"
-                  placement="bottom"
-                  contentClassName="!w-[240px] !p-3 !whitespace-normal flex flex-col"
-                  onConfirm={() => handleCommitEditTitle(activeSession)}
-                  onCancel={() => setEditingTitle(null)}
-                  className="!flex min-w-0 items-center"
-                  form={
-                    <div className="flex flex-col gap-2.5">
-                      <div className="flex flex-col gap-1 text-left">
-                        <span className="text-[11px] font-semibold text-white/40">
-                          对话名称
-                        </span>
-                        <Input
-                          autoFocus
-                          type="text"
-                          value={editingTitle?.title ?? activeSession.title}
-                          onChange={(e) => setEditingTitle(prev => prev ? { ...prev, title: e.target.value } : { id: activeSession.id, title: e.target.value })}
-                          placeholder="请输入对话名称"
-                          size="xs"
-                          className="!h-[28px]"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleCommitEditTitle(activeSession);
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  }
-                >
-                  <span 
-                    className="block truncate text-xs font-bold cursor-pointer hover:text-white/80 transition-colors"
-                    onClick={() => handleStartEditTitle(activeSession)}
-                  >
-                    {activeSession.title}
-                  </span>
-                </Tooltip>
-              </Tooltip>
-            )}
+      {isOpen && !activeDesignId ? (
+        <div className="flex flex-col items-center justify-center h-full px-6 py-12 text-center animate-fade-in select-text">
+          <div className="flex items-center justify-center w-12 h-12 rounded-[6px] bg-white/5 border border-white/5 mb-4 text-white/30 animate-pulse">
+            <Bot className="h-6 w-6" />
           </div>
-
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <ContextUsageCircle
-              contextUsagePercent={contextUsagePercent}
-              contextTokens={contextTokens}
-              contextLimit={contextLimit}
-            />
-            <Tooltip content="历史记录" placement="bottom">
+          <h3 className="text-sm font-bold text-white/80 mb-1.5 font-mono">// 提示词 AI 助手</h3>
+          <p className="text-xs text-white/40 leading-relaxed max-w-[240px]">
+            请先在左侧选择一个提示词设计项，以开启该设计的专属 AI 助手。
+          </p>
+        </div>
+      ) : (
+        <>
+          {isOpen && (
+            <div className="flex items-center p-2 shrink-0 h-9 border-b border-white/5 gap-2 animate-fade-in">
               <Tooltip
+                content={isExpanded ? "恢复默认宽度" : "展开最大宽度"}
                 placement="bottom"
-                trigger="click"
-                contentClassName="p-1 min-w-[200px]"
-                content={
-                <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {controller.sessions.length > 0 ? (
-                    controller.sessions.map((item) => {
-                      const isActive = item.id === controller.activeSessionId;
-                      return (
-                        <div
-                          key={item.id}
-                          className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 cursor-pointer ${
-                            isActive
-                              ? "bg-white/10 text-white font-semibold"
-                              : "hover:bg-white/[0.02] text-white/70 group"
-                          }`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            if (!isActive) {
-                              handleSessionSwitch(item.id);
-                            }
-                          }}
-                        >
-                          <div className="flex items-start justify-between gap-2 w-full">
-                            <div className="min-w-0 flex-1">
-                              <span className={`block truncate text-xs font-bold leading-none ${isActive ? "text-white" : "group-hover:text-white"}`}>
-                                {item.title}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="px-3 py-4 text-center text-xs text-white/35">
-                      无对话历史
-                    </div>
-                  )}
-                </div>
-                }
               >
-                <IconButton>
-                  <History className="h-4 w-4" />
+                <IconButton onClick={toggleExpand}>
+                  {isExpanded ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
                 </IconButton>
               </Tooltip>
-            </Tooltip>
-            {activeSession && (
-              <Tooltip content="删除对话" placement="bottom">
-                <Tooltip
-                  title="确定删除此对话吗？"
-                  placement="bottom"
-                  onConfirm={() => controller.handleDeleteChat(activeSession.id)}
-                  variant="primary"
-                >
-                  <IconButton className="flex-shrink-0">
-                    <Trash2 className="h-4 w-4" />
-                  </IconButton>
+              
+              <div className="flex items-center flex-1 min-w-0 gap-1.5">
+                {activeSession && (
+                  <Tooltip
+                    content="重命名对话"
+                    placement="bottom"
+                    className="!flex min-w-0 items-center"
+                  >
+                    <Tooltip
+                      trigger="click"
+                      placement="bottom"
+                      contentClassName="!w-[240px] !p-3 !whitespace-normal flex flex-col"
+                      onConfirm={() => handleCommitEditTitle(activeSession)}
+                      onCancel={() => setEditingTitle(null)}
+                      className="!flex min-w-0 items-center"
+                      form={
+                        <div className="flex flex-col gap-2.5">
+                          <div className="flex flex-col gap-1 text-left">
+                            <span className="text-[11px] font-semibold text-white/40">
+                              对话名称
+                            </span>
+                            <Input
+                              autoFocus
+                              type="text"
+                              value={editingTitle?.title ?? activeSession.title}
+                              onChange={(e) => setEditingTitle(prev => prev ? { ...prev, title: e.target.value } : { id: activeSession.id, title: e.target.value })}
+                              placeholder="请输入对话名称"
+                              size="xs"
+                              className="!h-[28px]"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleCommitEditTitle(activeSession);
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      }
+                    >
+                      <span 
+                        className="block truncate text-xs font-bold cursor-pointer hover:text-white/80 transition-colors"
+                        onClick={() => handleStartEditTitle(activeSession)}
+                      >
+                        {activeSession.title}
+                      </span>
+                    </Tooltip>
+                  </Tooltip>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <ContextUsageCircle
+                  contextUsagePercent={contextUsagePercent}
+                  contextTokens={contextTokens}
+                  contextLimit={contextLimit}
+                />
+                <Tooltip content="历史记录" placement="bottom">
+                  <Tooltip
+                    placement="bottom"
+                    trigger="click"
+                    contentClassName="p-1 min-w-[200px]"
+                    content={
+                    <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
+                      {controller.sessions.length > 0 ? (
+                        controller.sessions.map((item) => {
+                          const isActive = item.id === controller.activeSessionId;
+                          return (
+                            <div
+                              key={item.id}
+                              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 cursor-pointer ${
+                                isActive
+                                  ? "bg-white/10 text-white font-semibold"
+                                  : "hover:bg-white/[0.02] text-white/70 group"
+                              }`}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => {
+                                if (!isActive) {
+                                  handleSessionSwitch(item.id);
+                                }
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2 w-full">
+                                <div className="min-w-0 flex-1">
+                                  <span className={`block truncate text-xs font-bold leading-none ${isActive ? "text-white" : "group-hover:text-white"}`}>
+                                    {item.title}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-4 text-center text-xs text-white/35">
+                          无对话历史
+                        </div>
+                      )}
+                    </div>
+                    }
+                  >
+                    <IconButton>
+                      <History className="h-4 w-4" />
+                    </IconButton>
+                  </Tooltip>
                 </Tooltip>
-              </Tooltip>
-            )}
-            <Tooltip content="新建对话" placement="bottom">
-              <IconButton
-                aria-label="New chat"
-                preset="add"
-                onClick={handleNewChatWithLoading}
-                disabled={controller.messages.length === 0 || controller.isGenerating}
+                {activeSession && (
+                  <Tooltip content="删除对话" placement="bottom">
+                    <Tooltip
+                      title="确定删除此对话吗？"
+                      placement="bottom"
+                      onConfirm={() => controller.handleDeleteChat(activeSession.id)}
+                      variant="primary"
+                    >
+                      <IconButton className="flex-shrink-0">
+                        <Trash2 className="h-4 w-4" />
+                      </IconButton>
+                    </Tooltip>
+                  </Tooltip>
+                )}
+                <Tooltip content="新建对话" placement="bottom">
+                  <IconButton
+                    aria-label="New chat"
+                    preset="add"
+                    onClick={handleNewChatWithLoading}
+                    disabled={controller.messages.length === 0 || controller.isGenerating}
+                  />
+                </Tooltip>
+              </div>
+            </div>
+          )}
+          {isOpen && (
+            <div className="relative flex-1 min-h-0 animate-fade-in">
+              <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
+              <PromptAiChatWorkspace
+                ref={workspaceRef}
+                controller={{
+                  ...controller,
+                  handleSessionChange: handleSessionSwitch,
+                }}
               />
-            </Tooltip>
-          </div>
-        </div>
-      )}
-      {isOpen && (
-        <div className="relative flex-1 min-h-0">
-          <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
-          <PromptAiChatWorkspace
-            ref={workspaceRef}
-            controller={{
-              ...controller,
-              handleSessionChange: handleSessionSwitch,
-            }}
-          />
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
