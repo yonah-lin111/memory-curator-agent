@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   Background,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
   useReactFlow,
@@ -14,12 +15,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { PromptNode, type PromptNodeData, cardTypeMeta, type PromptCardType } from "./PromptNode";
-import { getLayoutedElements } from "../utils/layout";
 import { CanvasControls } from "./CanvasControls";
 import { useFlowHistory } from "../hooks/useFlowHistory";
 import { PromptCanvasContextMenu, type ContextMenuState } from "./PromptCanvasContextMenu";
 import { useToast } from "@/components/ui/Toast";
 import { usePromptDesignStore } from "../store/promptDesignStore";
+import { Workflow } from "lucide-react";
 
 const nodeTypes: NodeTypes = {
   promptNode: PromptNode,
@@ -78,10 +79,26 @@ const getEdgeColor = (nodeType?: string): string => {
 
 export const PromptCanvas = () => {
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { screenToFlowPosition } = useReactFlow();
   const { takeSnapshot, undo, redo, canUndo, canRedo } = useFlowHistory(nodes, edges, setNodes, setEdges);
+
+  const [isUnsaved, setIsUnsaved] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const isFirstLoadDone = useRef(false);
+  const lastSavedDataRef = useRef<string>("");
+
+  // ── 当节点或连线变化时，进行序列化比对，确定是否处于未保存状态 ──
+  useEffect(() => {
+    if (!isFirstLoadDone.current) return;
+    const currentDataStr = JSON.stringify({ nodes, edges });
+    if (currentDataStr !== lastSavedDataRef.current) {
+      setIsUnsaved(true);
+    } else {
+      setIsUnsaved(false);
+    }
+  }, [nodes, edges]);
 
   // ── 监听 activeDesignId 动态加载该设计的节点与连线 ──
   useEffect(() => {
@@ -89,19 +106,29 @@ export const PromptCanvas = () => {
       if (!activeDesignId) {
         setNodes([]);
         setEdges([]);
+        setIsUnsaved(false);
+        isFirstLoadDone.current = false;
+        lastSavedDataRef.current = "";
         return;
       }
       try {
+        isFirstLoadDone.current = false;
+        setIsUnsaved(false);
         const list = await (window.api as any).promptDesign.designs.list();
         const current = list.find((d: any) => d.id === activeDesignId);
         if (current && current.designData) {
           const { nodes: loadedNodes = [], edges: loadedEdges = [] } = current.designData;
           setNodes(loadedNodes);
           setEdges(loadedEdges);
+          lastSavedDataRef.current = JSON.stringify({ nodes: loadedNodes, edges: loadedEdges });
         } else {
           setNodes([]);
           setEdges([]);
+          lastSavedDataRef.current = JSON.stringify({ nodes: [], edges: [] });
         }
+        requestAnimationFrame(() => {
+          isFirstLoadDone.current = true;
+        });
       } catch (err) {
         console.error("Failed to load design data:", err);
       }
@@ -903,6 +930,7 @@ export const PromptCanvas = () => {
       return;
     }
 
+    setIsSaving(true);
     try {
       // 捕获 ReactFlow 最新的画布状态并整体打包
       const payload = {
@@ -914,9 +942,13 @@ export const PromptCanvas = () => {
 
       await (window.api as any).promptDesign.designs.update(activeDesignId, payload);
       toast.success("画布保存成功");
+      lastSavedDataRef.current = JSON.stringify({ nodes, edges });
+      setIsUnsaved(false);
     } catch (err) {
       console.error("Failed to save design:", err);
       toast.error(`保存失败: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsSaving(false);
     }
   }, [nodes, edges, activeDesignId, toast]);
 
@@ -936,6 +968,23 @@ export const PromptCanvas = () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleSave]);
+
+  // ── 未选择任何设计项目时，渲染精美空状态 ──
+  if (!activeDesignId) {
+    return (
+      <div className="h-full w-full bg-[#111111] rounded-[6px] flex flex-col items-center justify-center gap-4 text-white/50 select-none border border-white/5" style={{ borderRadius: "6px" }}>
+        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white/40">
+          <Workflow className="w-6 h-6 animate-pulse" />
+        </div>
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <h3 className="text-sm font-bold text-white/80">未选择设计项目</h3>
+          <p className="text-xs text-white/40 max-w-[280px]">
+            请在左侧侧边栏中选择已有的提示词，或右键项目新建一个画布
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden" style={{ borderRadius: "6px" }}>
@@ -967,6 +1016,19 @@ export const PromptCanvas = () => {
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
       >
         <Background color="#444" gap={20} size={1} />
+        <Panel
+          position="top-left"
+          className="m-4 bg-[#212121] px-2.5 py-1 border border-white/5 rounded-[6px] flex items-center gap-2 text-xs select-none shadow-lg"
+        >
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              isSaving ? "bg-amber-400 animate-pulse" : isUnsaved ? "bg-amber-500" : "bg-[#34d399]"
+            }`}
+          />
+          <span className="text-white/80 font-semibold font-mono">
+            {isSaving ? "保存中" : isUnsaved ? "未保存" : "已保存"}
+          </span>
+        </Panel>
         <CanvasControls
           undo={undo}
           redo={redo}
