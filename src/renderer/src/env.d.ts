@@ -291,7 +291,7 @@ type AiChatStartPayload = {
     // 上下文稳定去重键。
     key: string
     // 上下文来源类型。
-    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
+    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent' | 'skill'
     // 展示标题。
     title: string
     // 来源对象标识。
@@ -1034,6 +1034,25 @@ type AppAPI = {
     startChat: (payload: any) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
     onChatEvent: (listener: (event: any) => void) => () => void
+  }
+  skills?: {
+    list: (forceRefresh?: boolean) => Promise<Array<{
+      id: string
+      name: string
+      description: string
+      supportedAgents?: string[]
+      content: string
+      location: string
+    }>>
+    getAvailableForAgent: (agentId: string) => Promise<Array<{
+      id: string
+      name: string
+      description: string
+      supportedAgents?: string[]
+      content: string
+      location: string
+    }>>
+    clearCache: () => Promise<void>
   }
 }
 

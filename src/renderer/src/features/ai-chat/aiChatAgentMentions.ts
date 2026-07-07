@@ -77,56 +77,56 @@ export type AiChatAgentMentionDeletionRange = {
 export const AI_CHAT_AGENT_MENTION_OPTIONS: AiChatAgentMentionOption[] = [
   {
     id: "people",
-    token: "@people_agent",
+    token: "@people[agent]",
     label: "people",
     description: "检索人物背景，关联社交网络与人脉档案",
   },
   {
     id: "todo",
-    token: "@todo_agent",
+    token: "@todo[agent]",
     label: "todo",
     description: "梳理待办任务，跟踪计划、目标与日程进度",
   },
   {
     id: "snippets",
-    token: "@snippets_agent",
+    token: "@snippets[agent]",
     label: "snippets",
     description: "捕捉瞬时灵感、随笔片段与知识火花",
   },
   {
     id: "journal",
-    token: "@journal_agent",
+    token: "@journal[agent]",
     label: "journal",
     description: "回顾个人日记，串联生活随感与阶段复盘",
   },
   {
     id: "notes",
-    token: "@notes_agent",
+    token: "@notes[agent]",
     label: "notes",
     description: "沉淀深度思考，管理长期笔记与知识体系",
   },
   {
     id: "today",
-    token: "@today_agent",
+    token: "@today[agent]",
     label: "today",
     description: "聚焦当下，快速关联今天的即时记录与活动线索",
   },
   {
     id: "bills",
-    token: "@bills_agent",
+    token: "@bills[agent]",
     label: "bills",
     description: "检索账单记录，查询收支明细与今日消费摘要",
   },
   {
     id: "common",
-    token: "@common_agent",
+    token: "@common[agent]",
     label: "common",
     description: "直接解答，仅可使用通用工具，不调用业务 Agent",
   },
 ];
 
-// Agent token 匹配表达式，只接受空白边界包围的完整 token。
-const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|todo|snippets|journal|notes|today|common|bills)_agent)(?=$|\s)/g;
+// Agent token 匹配表达式，只接受空白边界包围的带有 [agent] 后缀的完整 token。
+const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|todo|snippets|journal|notes|today|common|bills)\[agent\])(?=$|\s)/g;
 
 // Agent 选项索引。
 const AGENT_OPTIONS_BY_ID = new Map(AI_CHAT_AGENT_MENTION_OPTIONS.map((option) => [option.id, option]));

@@ -60,3 +60,9 @@ export const getAiChatTextDir = (): string => join(getAppDataRoot(), 'text', 'ch
  * 获取 AI 聊天文本文件回收目录。
  */
 export const getAiChatTextTrashDir = (): string => join(getAppDataRoot(), 'trash', 'text', 'chat')
+
+/**
+ * 获取 Agent Skills 存储目录。
+ */
+export const getSkillsDir = (): string => join(getAppDataRoot(), 'skills')
+

@@ -194,7 +194,7 @@ type AiChatStartPayload = {
     // 上下文稳定去重键。
     key: string
     // 上下文来源类型。
-    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
+    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent' | 'skill'
     // 展示标题。
     title: string
     // 来源对象标识。
@@ -698,6 +698,16 @@ type ThemeTimelineItem = {
   mentionedInSummary: boolean
 }
 
+// AI Agent 技能数据模型。
+type AiAgentSkill = {
+  id: string
+  name: string
+  description: string
+  supportedAgents?: string[]
+  content: string
+  location: string
+}
+
 // 渲染进程安全 API。
 const api = {
   config: {
@@ -924,6 +934,14 @@ const api = {
         ipcRenderer.removeListener('prompt-ai:chat:event', wrappedListener)
       }
     }
+  },
+  skills: {
+    list: (forceRefresh?: boolean): Promise<AiAgentSkill[]> =>
+      ipcRenderer.invoke('skills:list', forceRefresh),
+    getAvailableForAgent: (agentId: string): Promise<AiAgentSkill[]> =>
+      ipcRenderer.invoke('skills:available-for-agent', agentId),
+    clearCache: (): Promise<void> =>
+      ipcRenderer.invoke('skills:clear-cache')
   }
 }
 

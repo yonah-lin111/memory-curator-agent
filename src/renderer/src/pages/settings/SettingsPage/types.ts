@@ -8,6 +8,6 @@ export type AiSettingsModel = AiSettingsProvider["models"][string];
 
 export type AiSettingsModelSelection = AiSettingsConfig["defaultModel"];
 
-export type SettingsSection = "models" | "providers" | "agent";
+export type SettingsSection = "models" | "providers" | "agent" | "skills";
 
 export type ProviderType = AiSettingsProvider["type"];

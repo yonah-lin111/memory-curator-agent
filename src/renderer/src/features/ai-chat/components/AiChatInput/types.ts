@@ -40,6 +40,8 @@ export interface SelectedTextFile {
 
 // AI 对话输入框组件属性类型。
 export interface AiChatInputProps {
+  // 当前激活的会话 ID。
+  sessionId?: string;
   // 可切换的 AI provider 与模型列表。
   modelOptions: AiModelProviderOption[];
   // 当前选中的 AI provider 与模型。

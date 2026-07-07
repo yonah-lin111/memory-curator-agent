@@ -20,6 +20,7 @@ import {
   isCommandInput,
   getMatchedCommands,
 } from "@/features/ai-chat/components/AiChatInput/utils";
+import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
 
 // 引入微逻辑 Hook
 import { useAiChatFiles } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatFiles";
@@ -27,6 +28,49 @@ import { useAiChatHistory } from "@/features/ai-chat/components/AiChatInput/hook
 import { useAiChatMentions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatMentions";
 import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatModels";
 import { useAiChatSessions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatSessions";
+
+// Agent Skill 令牌匹配规则，匹配形如 @translator[skill]、@summary-booster[skill] 这样的格式
+const SKILL_TOKEN_PATTERN = /(^|\s)(@(translator|summary-booster|code-beautifier|emojis)\[skill\])(?=$|\s)/g;
+
+/**
+ * 获取 Backspace 应删除的完整技能令牌范围及其关联 ID。
+ */
+const getAiChatSkillDeletionRange = (
+  value: string,
+  cursor: number,
+): { start: number; end: number; id: string } | null => {
+  const ranges: Array<{ start: number; end: number; id: string }> = [];
+  SKILL_TOKEN_PATTERN.lastIndex = 0;
+
+  let match = SKILL_TOKEN_PATTERN.exec(value);
+  while (match) {
+    const prefix = match[1] ?? "";
+    const token = match[2] ?? "";
+    const id = match[3] ?? "";
+    const start = match.index + prefix.length;
+    ranges.push({
+      start,
+      end: start + token.length,
+      id,
+    });
+    match = SKILL_TOKEN_PATTERN.exec(value);
+  }
+
+  const directRange = ranges.find((range) => range.end === cursor);
+  if (directRange) {
+    return directRange;
+  }
+
+  const previousCharacter = value[cursor - 1];
+  if (previousCharacter && /\s/.test(previousCharacter)) {
+    const rangeBeforeSpace = ranges.find((range) => range.end === cursor - 1);
+    if (rangeBeforeSpace) {
+      return rangeBeforeSpace;
+    }
+  }
+
+  return null;
+};
 
 /**
  * useAiChatInput - 输入框总状态与逻辑总调度编排 Hook。
@@ -144,7 +188,7 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     updateDraftInput,
   } = useAiChatHistory(setInputText, textareaRef, adjustTextareaHeight);
 
-  // 4. 引入 Agent Mentions (@) Micro Hook
+  // 4. 引入 Agent Mentions (@) Micro Hook（包含 Skill 合并联想检索能力）
   const {
     activeAgentIndex,
     matchedAgentMentions,
@@ -156,7 +200,14 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     selectAgentMention,
     moveActiveAgent,
     handleTextareaCursorMove,
-  } = useAiChatMentions(inputText, setInputText, textareaRef, adjustTextareaHeight, resetHistoryCursor);
+  } = useAiChatMentions(
+    inputText,
+    setInputText,
+    props.sessionId || "",
+    textareaRef,
+    adjustTextareaHeight,
+    resetHistoryCursor,
+  );
 
   // 5. 引入 AI 快速切换模型 (/model) Micro Hook
   const {
@@ -241,6 +292,7 @@ export const useAiChatInput = (props: AiChatInputProps) => {
   const handleSend = useCallback((): void => {
     const parts: AiChatMessagePart[] = [];
     const textToSend = inputSendPayload.text.trim();
+
     if (textToSend) {
       parts.push({
         id: `msg-text-${Date.now()}`,
@@ -521,6 +573,34 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     if (e.key === "Backspace" && !isCommandPanelOpen && !isAgentPanelOpen) {
       const textarea = textareaRef.current;
       if (textarea && textarea.selectionStart === textarea.selectionEnd) {
+        // 1. 首先优先检测是否在回退删除自定义技能令牌（形如 @skill-translator-skill）
+        const skillDeletionRange = getAiChatSkillDeletionRange(
+          inputText,
+          textarea.selectionStart,
+        );
+        if (skillDeletionRange) {
+          e.preventDefault();
+          const nextValue = `${inputText.slice(0, skillDeletionRange.start)}${inputText.slice(skillDeletionRange.end)}`;
+          setInputText(nextValue);
+          resetHistoryCursor();
+
+          // 从 store 卸载被删除的技能
+          if (props.sessionId) {
+            useAiChatContextStore.getState().removeItem(props.sessionId, `skill-${skillDeletionRange.id}`);
+            toast.success("已卸载技能");
+          }
+
+          requestAnimationFrame(() => {
+            adjustTextareaHeight();
+            textarea.setSelectionRange(
+              skillDeletionRange.start,
+              skillDeletionRange.start,
+            );
+          });
+          return;
+        }
+
+        // 2. 其次再执行内置 Agent 的 @ 提到回退删除
         const deletionRange = getAiChatAgentMentionDeletionRange(
           inputText,
           textarea.selectionStart,
@@ -600,6 +680,8 @@ export const useAiChatInput = (props: AiChatInputProps) => {
     executeCommand,
     handleSend,
     resetHistoryCursor,
+    props.sessionId,
+    toast,
   ]);
 
   /**

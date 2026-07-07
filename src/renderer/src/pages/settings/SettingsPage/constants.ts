@@ -20,6 +20,11 @@ export const SETTINGS_SECTIONS: Array<{
     label: "Agent",
     description: "上下文治理参数",
   },
+  {
+    id: "skills",
+    label: "Agent 技能",
+    description: "自定义指令与高级挂载规则",
+  },
 ];
 
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = [

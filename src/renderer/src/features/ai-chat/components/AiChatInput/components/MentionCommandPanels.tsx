@@ -1,7 +1,6 @@
 import type React from "react";
 import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
 import type { AiChatInputCommand } from "@/features/ai-chat/components/AiChatInput/types";
-import type { AiChatAgentMentionOption } from "@/features/ai-chat/aiChatAgentMentions";
 import type { AiChatSession } from "@/features/ai-chat/types";
 
 // 联合面板群属性定义。
@@ -62,13 +61,13 @@ export interface MentionCommandPanelsProps {
   // Agent 提到面板显示状态。
   isAgentPanelOpen: boolean;
   // 当前匹配到的 Agent 列表。
-  matchedAgentMentions: AiChatAgentMentionOption[];
+  matchedAgentMentions: any[];
   // 当前 Agent 面板活动焦点索引。
   activeAgentIndex: number;
   // 修改 Agent 面板活动焦点索引回调。
   onActiveAgentIndexChange: (idx: number) => void;
   // 确认选择 Agent 回调。
-  onAgentSelect: (agent: AiChatAgentMentionOption) => void;
+  onAgentSelect: (agent: any) => void;
 }
 
 /**
@@ -166,7 +165,7 @@ export const MentionCommandPanels = ({
             </span>
             <span className="text-xs text-white/30">-</span>
             <span className="truncate text-xs text-white/45">
-              {session.time.includes("T") 
+              {session.time.includes("T")
                 ? new Date(session.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
                 : session.time}
             </span>
@@ -182,17 +181,22 @@ export const MentionCommandPanels = ({
         onActiveIndexChange={onActiveAgentIndexChange}
         onItemSelect={onAgentSelect}
         idPrefix="ai-chat-agent"
-        renderItem={(agent) => (
-          <span className="flex items-center gap-2 min-w-0">
-            <span className="text-[13px] font-semibold text-white">
-              {agent.token}
+        renderItem={(agent) => {
+          // 直接显示自带分类后缀的 token（形如 @people[agent] 或 @translator[skill]）
+          const displayName = agent.token;
+
+          return (
+            <span className="flex items-center gap-2 min-w-0 w-full">
+              <span className="text-[13px] font-semibold text-white shrink-0">
+                {displayName}
+              </span>
+              <span className="text-xs text-white/20 shrink-0">-</span>
+              <span className="truncate text-xs text-white/45 flex-1 text-left">
+                {agent.description}
+              </span>
             </span>
-            <span className="text-xs text-white/30">-</span>
-            <span className="truncate text-xs text-white/45">
-              {agent.description}
-            </span>
-          </span>
-        )}
+          );
+        }}
       />
     </>
   );

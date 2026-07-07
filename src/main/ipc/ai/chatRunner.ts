@@ -15,6 +15,7 @@ import type { ModelProvider } from "@/agent/types";
 import type { AiToolStep } from "@/db/schema";
 import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService";
 import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry";
+import { getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
 import {
   type AiChatStartPayload,
   type AiChatIpcEvent,
@@ -229,6 +230,39 @@ export const startAiChat = async (
         }
       }
 
+      // 动态获取当前激活 Agent 的自动挂载 Skills 并合入 System Prompt
+      let autoSkillsContent = "";
+      try {
+        const loadedSkills: AiAgentSkill[] = [];
+        for (const hint of agentHints) {
+          const skillsForAgent = await getAvailableSkillsForAgent(hint.id);
+          loadedSkills.push(...skillsForAgent);
+        }
+        // 去重
+        const uniqueSkills = Array.from(
+          new Map(loadedSkills.map((s) => [s.id, s])).values()
+        );
+        if (uniqueSkills.length > 0) {
+          autoSkillsContent =
+            "\n\n# Automatically Loaded Agent Skills:\n" +
+            uniqueSkills.map((s) => s.content).join("\n\n");
+        }
+      } catch (error) {
+        console.error("Failed to load automatic skills in chatRunner:", error);
+      }
+
+      const baseSystemPrompt = appendAiChatAgentDirectiveToSystemMessage(
+        createSystemPrompt(),
+        agentHints,
+      );
+
+      const systemMessage = autoSkillsContent
+        ? {
+            ...baseSystemPrompt,
+            content: `${baseSystemPrompt.content}${autoSkillsContent}`,
+          }
+        : baseSystemPrompt;
+
       for await (const agentEvent of runReactAgent({
         provider,
         model: modelId,
@@ -242,10 +276,7 @@ export const startAiChat = async (
             ? config.agent.context.maxTurns
             : undefined,
         messages: buildContextAgentMessages({
-          systemMessage: appendAiChatAgentDirectiveToSystemMessage(
-            createSystemPrompt(),
-            agentHints,
-          ),
+          systemMessage,
           userMessage: payload.message,
           userParts: payload.parts,
           contextItems: payload.context,

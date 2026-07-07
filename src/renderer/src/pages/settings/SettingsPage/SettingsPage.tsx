@@ -6,6 +6,7 @@ import { useSettings } from "./hooks/useSettings";
 import { ModelsSection } from "./components/ModelsSection";
 import { ProvidersSection } from "./components/ProvidersSection";
 import { AgentSection } from "./components/AgentSection";
+import { SkillsSection } from "./components/SkillsSection";
 
 /**
  * Settings 页面 - 结构化编辑本地 AI 配置。
@@ -121,6 +122,9 @@ export const SettingsPage = (): React.JSX.Element => {
           )}
           {activeSection === "agent" && (
             <AgentSection settings={settings} updateSettings={updateSettings} />
+          )}
+          {activeSection === "skills" && (
+            <SkillsSection />
           )}
         </div>
       </div>

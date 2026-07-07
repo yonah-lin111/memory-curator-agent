@@ -14,7 +14,7 @@ const RUN_ERROR_ASSISTANT_CONTENTS = new Set([
 ]);
 
 // AI 对话上下文来源类型。
-export type AiChatContextKind = "message" | "memory" | "page" | "file" | "tool" | "agent";
+export type AiChatContextKind = "message" | "memory" | "page" | "file" | "tool" | "agent" | "skill";
 
 // AI 对话上下文元信息类型。
 export type AiChatContextMeta = Record<string, string | number | boolean | undefined>;

@@ -2,7 +2,7 @@ import type { AgentMessage, AgentMessageRole, ModelProvider } from '@/agent/type
 import type { AiChatMessagePart } from '@/db/schema'
 
 // Agent 上下文载荷来源类型。
-export type AgentContextKind = 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
+export type AgentContextKind = 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent' | 'skill'
 
 // Agent 上下文载荷元信息。
 export type AgentContextMeta = Record<string, string | number | boolean | undefined>
@@ -450,13 +450,25 @@ export const buildContextAgentMessages = ({
   toolOutputMaxChars = DEFAULT_TOOL_OUTPUT_MAX_CHARS,
   recentToolResultLimit = DEFAULT_RECENT_TOOL_RESULT_LIMIT
 }: BuildContextAgentMessagesInput): AgentMessage[] => {
-  const baseTokens = estimateTokens(systemMessage.content) + estimateTokens(userMessage)
+  // 分离手动挂载的技能（作为高特权系统指令合入系统提示词中）
+  const skillItems = contextItems.filter((item) => item.kind === 'skill')
+  const nonSkillContextItems = contextItems.filter((item) => item.kind !== 'skill')
+
+  const manualSkillsContent = skillItems.map((item) => item.content).join('\n\n')
+  const finalSystemMessage = {
+    ...systemMessage,
+    content: manualSkillsContent
+      ? `${systemMessage.content}\n\n# User Enabled Agent Skills:\n${manualSkillsContent}`
+      : systemMessage.content
+  }
+
+  const baseTokens = estimateTokens(finalSystemMessage.content) + estimateTokens(userMessage)
   const availableTokens =
     typeof contextLimit === 'number'
       ? Math.max(contextLimit - (outputLimit ?? DEFAULT_OUTPUT_RESERVE) - baseTokens, 0)
       : null
   const selectedItems = selectContextItems(
-    contextItems,
+    nonSkillContextItems,
     availableTokens,
     toolOutputMaxChars,
     recentToolResultLimit
@@ -464,7 +476,7 @@ export const buildContextAgentMessages = ({
   const contextMessages = selectedItems.flatMap(toContextAgentMessages)
 
   return [
-    systemMessage,
+    finalSystemMessage,
     ...contextMessages,
     {
       role: 'user',

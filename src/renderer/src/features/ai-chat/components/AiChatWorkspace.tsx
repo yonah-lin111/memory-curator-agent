@@ -961,6 +961,7 @@ export const AiChatWorkspace = ({
 
           {/* 输入区域 */}
           <AiChatInput
+            sessionId={session.id}
             modelOptions={modelOptions}
             selectedModel={selectedModel}
             contextUsagePercent={contextBudget.usagePercent}

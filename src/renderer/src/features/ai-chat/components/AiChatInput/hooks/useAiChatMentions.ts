@@ -1,35 +1,110 @@
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import type { AgentMentionPanelState } from "@/features/ai-chat/components/AiChatInput/types";
 import { resolveAgentMentionPanelState } from "@/features/ai-chat/components/AiChatInput/utils";
 import {
   getMatchedAiChatAgentMentions,
-  type AiChatAgentMentionOption,
 } from "@/features/ai-chat/aiChatAgentMentions";
+import { useAiChatContextStore } from "@/features/ai-chat/aiChatContextStore";
+import { useToast } from "@/components/ui/Toast";
+
+// 统一的 mention 选项结构（兼容 Agent 与 Skill）。
+export interface UnifiedMentionOption {
+  id: string;
+  kind: "agent" | "skill";
+  token: string;
+  label: string;
+  description: string;
+  skillContent?: string;
+  location?: string;
+}
 
 /**
- * useAiChatMentions - 专门管理 AI 输入框内输入 "@" 符号触发 Agent Mentions 的列表弹出、导航与选中的微 Hook。
- *
- * @param inputText 输入文本状态值
- * @param setInputText 改变输入文本状态回调
- * @param textareaRef 文本框 DOM 引用
- * @param adjustTextareaHeight 重算文本框高度回调
- * @param resetHistoryCursor 重置历史提示词游标回调
+ * useAiChatMentions - 专门管理 AI 输入框内输入 "@" 符号触发 Agent Mentions 与 Skills 的统一微 Hook。
+ * 支持在同一个 "@" 菜单下模糊检索并选择 Agent 和自定义 Skill。
  */
 export const useAiChatMentions = (
   inputText: string,
   setInputText: (value: string) => void,
+  sessionId: string,
   textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   adjustTextareaHeight: () => void,
   resetHistoryCursor: () => void,
 ) => {
+  const toast = useToast();
+  const contextStore = useAiChatContextStore();
+  const [skills, setSkills] = useState<any[]>([]);
   const [agentMentionPanelState, setAgentMentionPanelState] =
     useState<AgentMentionPanelState | null>(null);
   const [activeAgentIndex, setActiveAgentIndex] = useState(0);
 
-  const matchedAgentMentions = agentMentionPanelState
-    ? getMatchedAiChatAgentMentions(agentMentionPanelState.query)
-    : [];
+  // 当面板被唤醒时，自动异步读取本地的所有 Skill Markdown 列表。
+  useEffect(() => {
+    if (!agentMentionPanelState) return;
+
+    const fetchSkills = async () => {
+      try {
+        if (window.api?.skills) {
+          const list = await window.api.skills.list(false);
+          setSkills(list || []);
+        }
+      } catch (error) {
+        console.error("Failed to load skills in useAiChatMentions:", error);
+      }
+    };
+
+    fetchSkills();
+  }, [Boolean(agentMentionPanelState)]);
+
+  // 整理出统一展示的匹配选项（包含 Agent 和 Skill）。
+  const matchedAgentMentions = useMemo((): UnifiedMentionOption[] => {
+    if (!agentMentionPanelState) return [];
+
+    const query = agentMentionPanelState.query;
+
+    // 1. 获取匹配的 Agent 列表
+    const matchedAgents = getMatchedAiChatAgentMentions(query).map(
+      (agent): UnifiedMentionOption => ({
+        id: agent.id,
+        kind: "agent",
+        token: agent.token,
+        label: agent.label,
+        description: agent.description,
+      }),
+    );
+
+    // 2. 获取匹配的 Skill 列表并转换格式
+    const normalizedQuery = query.trim().toLowerCase().replace(/^@/, "");
+    const isFuzzyMatch = (q: string, k: string): boolean => {
+      if (!q) return true;
+      let qi = 0;
+      for (const char of k) {
+        if (char === q[qi]) qi += 1;
+        if (qi === q.length) return true;
+      }
+      return false;
+    };
+
+    const matchedSkills = skills
+      .filter((skill) =>
+        [skill.name, skill.id, skill.description || ""].some((keyword) =>
+          isFuzzyMatch(normalizedQuery, keyword.toLowerCase()),
+        ),
+      )
+      .map(
+        (skill): UnifiedMentionOption => ({
+          id: skill.id,
+          kind: "skill",
+          token: `@${skill.id}[skill]`,
+          label: skill.name,
+          description: skill.description || "加载自定义技能系统提示词",
+          skillContent: skill.content,
+          location: skill.location,
+        }),
+      );
+
+    return [...matchedAgents, ...matchedSkills];
+  }, [agentMentionPanelState, skills]);
 
   const isAgentPanelOpen = Boolean(
     agentMentionPanelState && matchedAgentMentions.length > 0,
@@ -51,11 +126,7 @@ export const useAiChatMentions = (
    */
   const syncAgentMentionPanel = useCallback((value: string, cursor: number): void => {
     const nextState = resolveAgentMentionPanelState(value, cursor);
-    const nextMatches = nextState
-      ? getMatchedAiChatAgentMentions(nextState.query)
-      : [];
-
-    if (!nextState || nextMatches.length === 0) {
+    if (!nextState) {
       closeAgentMentionPanel();
       return;
     }
@@ -65,17 +136,44 @@ export const useAiChatMentions = (
   }, [closeAgentMentionPanel]);
 
   /**
-   * 插入选中的 agent token 并恢复输入焦点。
+   * 插入选中的 agent token 或 skill token 并恢复输入焦点。
    */
-  const selectAgentMention = useCallback((agent: AiChatAgentMentionOption): void => {
+  const selectAgentMention = useCallback((option: UnifiedMentionOption): void => {
     const textarea = textareaRef.current;
     if (!textarea || !agentMentionPanelState) {
       return;
     }
 
     const cursor = textarea.selectionStart;
-    const nextValue = `${inputText.slice(0, agentMentionPanelState.start)}${agent.token} ${inputText.slice(cursor)}`;
-    const nextCursor = agentMentionPanelState.start + agent.token.length + 1;
+    const nextValue = `${inputText.slice(0, agentMentionPanelState.start)}${option.token} ${inputText.slice(cursor)}`;
+    const nextCursor = agentMentionPanelState.start + option.token.length + 1;
+
+    // 如果选择的是 Skill，则执行手动挂载 Session 级别的状态更新
+    if (option.kind === "skill" && option.skillContent) {
+      if (!sessionId) {
+        toast.warning("请先选择一个对话会话再挂载技能");
+        return;
+      }
+
+      contextStore.addItem({
+        key: `skill-${option.id}`,
+        sessionId,
+        kind: "skill",
+        title: `Skill: ${option.label}`,
+        sourceId: option.id,
+        summary: option.description,
+        content: option.skillContent,
+        tokens: Math.ceil(option.skillContent.length / 4),
+        createdAt: Date.now(),
+        meta: {
+          name: option.label,
+          description: option.description,
+          location: option.location || "",
+        },
+      });
+
+      toast.success(`已激活技能: ${option.label}`);
+    }
 
     setInputText(nextValue);
     resetHistoryCursor();
@@ -85,7 +183,7 @@ export const useAiChatMentions = (
       textarea.focus();
       textarea.setSelectionRange(nextCursor, nextCursor);
     });
-  }, [inputText, agentMentionPanelState, setInputText, resetHistoryCursor, closeAgentMentionPanel, adjustTextareaHeight, textareaRef]);
+  }, [inputText, agentMentionPanelState, sessionId, contextStore, setInputText, resetHistoryCursor, closeAgentMentionPanel, adjustTextareaHeight, textareaRef, toast]);
 
   /**
    * 循环切换 agent mention 面板选中项。

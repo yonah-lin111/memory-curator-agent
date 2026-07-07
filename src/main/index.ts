@@ -17,6 +17,7 @@ import { registerThemesHandlers } from '@/ipc/themesHandlers'
 import { registerBillsHandlers } from '@/ipc/billsHandlers'
 import { registerPromptDesignHandlers } from '@/ipc/promptDesignHandlers'
 import { registerPromptAiHandlers } from '@/ipc/promptAiHandlers'
+import { registerSkillsHandlers } from '@/ipc/skillsHandlers'
 import { registerImageProtocolHandler, registerImageProtocolSchemes } from '@/protocols/imageProtocol'
 import { createFilesService, type DatabaseConnection as FilesDatabaseConnection } from '@/services/filesService'
 import { scheduleStartupMarkdownImageMaintenance } from '@/services/markdownImageMaintenance'
@@ -74,6 +75,7 @@ app.whenReady().then(() => {
   registerBillsHandlers()
   registerPromptDesignHandlers()
   registerPromptAiHandlers()
+  registerSkillsHandlers()
   registerImageProtocolHandler()
   scheduleStartupMarkdownImageMaintenance(
     createFilesService({ database: database as unknown as FilesDatabaseConnection })
