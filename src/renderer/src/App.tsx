@@ -194,15 +194,6 @@ const AppContent = (): React.JSX.Element => {
   const handleCommandExecute = (
     command: AiChatInputCommandId,
   ): string | void | Promise<string | void> => {
-    if (command === "showContextTimeline") {
-      setIsContextTimelineOpen((prev) => !prev);
-      return;
-    }
-    if (command === "showFullScreen") {
-      setIsSidebarCollapsed(true);
-      setIsContextTimelineOpen(false);
-      return;
-    }
     return handleAiChatCommand(command);
   };
 

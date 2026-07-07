@@ -2,7 +2,7 @@ import type { AiModelProviderOption, AiModelSelection, AiChatSession } from "@/f
 import type { AiChatSendPayload } from "@/features/ai-chat/aiChatAgentMentions";
 
 // AI 输入框内置命令标识。
-export type AiChatInputCommandId = "clear" | "undo" | "model" | "showContextTimeline" | "session" | "showFullScreen";
+export type AiChatInputCommandId = "clear" | "undo" | "model" | "session";
 
 // AI 输入框斜杠命令配置类型。
 export interface AiChatInputCommand {

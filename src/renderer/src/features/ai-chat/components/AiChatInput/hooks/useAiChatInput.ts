@@ -30,7 +30,7 @@ import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks
 import { useAiChatSessions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatSessions";
 
 // Agent Skill 令牌匹配规则，匹配形如 @translator[skill]、@summary-booster[skill] 这样的格式
-const SKILL_TOKEN_PATTERN = /(^|\s)(@(translator|summary-booster|code-beautifier|emojis)\[skill\])(?=$|\s)/g;
+const SKILL_TOKEN_PATTERN = /(^|\s)(@([A-Za-z0-9_-]+)\[skill\])(?=$|\s)/g;
 
 /**
  * 获取 Backspace 应删除的完整技能令牌范围及其关联 ID。

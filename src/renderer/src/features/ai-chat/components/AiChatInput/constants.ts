@@ -24,24 +24,10 @@ export const AI_CHAT_INPUT_COMMANDS: AiChatInputCommand[] = [
     addToContext: false,
   },
   {
-    id: "showContextTimeline",
-    name: "/showContextTimeline",
-    aliases: [],
-    description: "显示或隐藏上下文时间线",
-    addToContext: false,
-  },
-  {
     id: "session",
     name: "/session",
     aliases: ["/resume"],
     description: "快速搜索历史对话并进行切换",
-    addToContext: false,
-  },
-  {
-    id: "showFullScreen",
-    name: "/showFullScreen",
-    aliases: [],
-    description: "折叠侧边栏和上下文时间线",
     addToContext: false,
   },
 ];
