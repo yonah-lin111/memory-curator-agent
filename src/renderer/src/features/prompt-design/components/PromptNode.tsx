@@ -1,5 +1,5 @@
-import { memo, useEffect } from "react";
-import { Handle, Position, useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
+import { memo } from "react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import { useToast } from "@/components/ui/Toast";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import {
@@ -27,8 +27,6 @@ import {
   Layers,
   Sliders,
   Send,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 
 /** 提示词卡片类型 - 完全映射自企业级 XML 规范 */
@@ -318,40 +316,19 @@ const baseIcon = <Settings className="w-4 h-4" />;
 
 export const PromptNode = memo(
   ({ id, data, selected }: { id: string; data: PromptNodeData; selected?: boolean }) => {
-    const { deleteElements, setNodes } = useReactFlow();
-    const updateNodeInternals = useUpdateNodeInternals();
+    const { deleteElements } = useReactFlow();
     const toast = useToast();
     const isLocked = usePromptDesignStore((state) => state.isCanvasLocked);
     const meta = cardTypeMeta[data.nodeType];
     const iconName = data.icon || meta.defaultIcon;
     const hasOutputs = data.outputs && data.outputs.length > 0;
     const handleColorClass = meta.color.split(' ').find(c => c.startsWith('text-'))?.replace('text-', '!bg-') || '!bg-indigo-400';
-    
-    const isCollapsed = data.isCollapsed ?? true;
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (isLocked) return;
       deleteElements({ nodes: [{ id }] });
       toast.info("节点已删除");
-    };
-
-    const toggleCollapse = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (isLocked) return;
-      const newCollapsed = !isCollapsed;
-
-      setNodes((nds) => {
-        return nds.map((n) => {
-          if (n.id === id) {
-            return {
-              ...n,
-              data: { ...n.data, isCollapsed: newCollapsed },
-            };
-          }
-          return n;
-        });
-      });
     };
 
     const nodeBorderColor = meta.isIndependent

@@ -7,15 +7,7 @@ import type { Node, Edge } from "@xyflow/react";
  * 1. 自动根据子卡片数量计算容器 (Task) 的自适应高度。
  * 2. 自动布局容器内部的子卡片。
  * 3. 对全局流采用 Sugiyama 启发式重心对齐 (Right-to-Left Heuristic)，保证连线顺畅。
- */
-import type { Node, Edge } from "@xyflow/react";
-
-/**
- * 极简、方正的矩形拓扑布局算法
- *
- * 包含：
- * 1. 扁平卡片全图布局逻辑。
- * 2. 对全局流采用 Sugiyama 启发式重心对齐 (Right-to-Left Heuristic)，保证连线顺畅。
+ * 4. 扁平卡片全图布局逻辑。
  */
 export const getLayoutedElements = (nodes: Node[], edges: Edge[], _direction = "LR") => {
   const independentTypes = ["comment", "variable", "group"];

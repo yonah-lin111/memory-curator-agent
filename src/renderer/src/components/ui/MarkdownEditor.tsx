@@ -1,7 +1,7 @@
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useEffect } from "react";
 import { MdEditor } from "md-editor-rt";
-import type { ToolbarNames, UploadImgEvent } from "md-editor-rt";
+import type { ExposeParam, ToolbarNames, UploadImgEvent } from "md-editor-rt";
 import "md-editor-rt/lib/style.css";
 
 // Markdown 编辑器高度。
@@ -23,6 +23,8 @@ interface MarkdownEditorProps {
   height: MarkdownEditorHeight;
   // 外层类名。
   className?: string;
+  // 默认显示模式：edit (仅编辑), preview (仅预览), split (双栏)
+  defaultMode?: "edit" | "preview" | "split";
 }
 
 // Markdown 编辑器基础工具栏。
@@ -43,6 +45,7 @@ const MARKDOWN_EDITOR_BASE_TOOLBARS: ToolbarNames[] = [
   "table",
   "=",
   "preview",
+  "previewOnly",
 ];
 
 // Markdown 编辑器页脚配置。
@@ -59,7 +62,11 @@ export const MarkdownEditor = ({
   placeholder,
   height,
   className,
+  defaultMode,
 }: MarkdownEditorProps): React.JSX.Element => {
+  // 编辑器实例引用，用于调用暴露的方法。
+  const editorRef = useRef<ExposeParam>(null);
+
   // 编辑器内联高度，兼容像素数值与 CSS 高度。
   const editorStyle = useMemo<React.CSSProperties>(
     () => ({
@@ -67,6 +74,21 @@ export const MarkdownEditor = ({
     }),
     [height],
   );
+
+  // 根据 defaultMode 设置初始预览状态。
+  useEffect(() => {
+    if (!editorRef.current) {
+      return;
+    }
+
+    if (defaultMode === "preview") {
+      editorRef.current.togglePreviewOnly(true);
+    } else if (defaultMode === "edit") {
+      editorRef.current.togglePreview(false);
+    } else if (defaultMode === "split") {
+      editorRef.current.togglePreview(true);
+    }
+  }, [defaultMode]);
 
   // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
   const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
@@ -91,6 +113,7 @@ export const MarkdownEditor = ({
 
   return (
     <MdEditor
+      ref={editorRef}
       className={className}
       codeTheme="atom"
       footers={[...MARKDOWN_EDITOR_FOOTERS]}
