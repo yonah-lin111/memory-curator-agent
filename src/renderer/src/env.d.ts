@@ -161,6 +161,8 @@ type TodoUpdatePayload = {
   priority: TodoPriority
   // 是否完成。
   completed: boolean
+  // 待办所属日期。
+  entryDate?: string
 }
 
 // 待办排序载荷类型。

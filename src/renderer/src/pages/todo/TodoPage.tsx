@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect, useMemo, useState, useRef } from "react";
-import { ArrowUpDown, CheckSquare, Square } from "lucide-react";
+import { ArrowRight, ArrowUpDown, CheckSquare, ListTodo, Square, X } from "lucide-react";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
 import { useToast } from "@/components/ui/Toast";
@@ -15,6 +15,7 @@ import {
   createTodayEntryDate,
   getEntryMonth,
   hasDailyBridge,
+  shiftEntryDate,
 } from "@/lib/dailyShared";
 
 // 待办记录类型，直接从 bridge 签名反推。
@@ -109,6 +110,87 @@ export const TodoPage = (): React.JSX.Element => {
   // 快速录入输入框引用，用于头部按钮聚焦。
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // 是否处于批量选择模式。
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  // 选中的待办 ID 列表。
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  /**
+   * 全选 / 取消全选。
+   */
+  const handleToggleSelectAll = (): void => {
+    const allUncompletedSelected = uncompletedTodos.every((todo) =>
+      selectedIds.includes(todo.id),
+    );
+    if (allUncompletedSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(uncompletedTodos.map((todo) => todo.id));
+    }
+  };
+
+  /**
+   * 批量转移选中的待办事项到下一天。
+   */
+  const handleTransferSelectedTodos = async (): Promise<void> => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      const nextDate = shiftEntryDate(entryDate, 1);
+
+      if (!hasDailyBridge()) {
+        setTodos((currentTodos) =>
+          currentTodos.filter((todo) => !selectedIds.includes(todo.id)),
+        );
+        toast.success(`已转移 ${selectedIds.length} 个待办至下一天 (${nextDate})`);
+        setIsSelectionMode(false);
+        setSelectedIds([]);
+        return;
+      }
+
+      for (const id of selectedIds) {
+        const todo = todos.find((t) => t.id === id);
+        if (todo) {
+          await window.api.daily.updateTodo(id, {
+            text: todo.text,
+            priority: todo.priority as DailyTodoPriorityValue,
+            completed: todo.completed,
+            entryDate: nextDate,
+          });
+        }
+      }
+
+      setTodos((currentTodos) =>
+        currentTodos.filter((todo) => !selectedIds.includes(todo.id)),
+      );
+
+      // 同步更新两个日期的月历角标
+      setMonthEntryCounts((currentCounts) => {
+        const currentCount = Math.max(
+          (currentCounts[entryDate] ?? todos.length) - selectedIds.length,
+          0,
+        );
+        const nextCount = (currentCounts[nextDate] ?? 0) + selectedIds.length;
+
+        const nextCounts = { ...currentCounts };
+        if (currentCount === 0) {
+          delete nextCounts[entryDate];
+        } else {
+          nextCounts[entryDate] = currentCount;
+        }
+        nextCounts[nextDate] = nextCount;
+        return nextCounts;
+      });
+
+      toast.success(`已转移 ${selectedIds.length} 个待办至下一天 (${nextDate})`);
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    } catch {
+      setErrorMessage("转移待办失败，请稍后再试。");
+      toast.error("转移待办失败");
+    }
+  };
+
   useEffect(() => {
     /**
      * 读取指定日期的待办列表。
@@ -196,6 +278,11 @@ export const TodoPage = (): React.JSX.Element => {
   // 已完成数量。
   const completedCount = useMemo(
     () => todos.filter((todo) => todo.completed).length,
+    [todos],
+  );
+  // 未完成待办列表。
+  const uncompletedTodos = useMemo(
+    () => todos.filter((todo) => !todo.completed),
     [todos],
   );
   // 未完成 P0 数量。
@@ -439,35 +526,83 @@ export const TodoPage = (): React.JSX.Element => {
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 min-h-0 flex-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <h3 className="text-sm font-bold text-white/80">待办列表</h3>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-white/40">
-                已完成 {completedCount}/{todos.length}
-              </span>
-              <IconButton
-                aria-label="One-click sort"
-                onClick={() => void handleSortTodos()}
-                title="手动排序"
-              >
-                <ArrowUpDown className="h-3.5 w-3.5" />
-              </IconButton>
-              <IconButton
-                aria-label="Toggle add todo composer"
-                preset="add"
-                className={showComposer ? "bg-white/5 text-white" : ""}
-                onClick={() => {
-                  setShowComposer((prev) => {
-                    const next = !prev;
-                    if (next) {
-                      window.setTimeout(() => {
-                        focusComposer();
-                      }, 50);
-                    }
-                    return next;
-                  });
-                }}
-                title="添加待办"
-              />
-            </div>
+            {isSelectionMode ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-xs text-violet-400 font-bold mr-1">
+                  已选 {selectedIds.length} 项
+                </span>
+                <IconButton
+                  aria-label="Select all todos"
+                  onClick={handleToggleSelectAll}
+                  title={
+                    selectedIds.length === uncompletedTodos.length &&
+                    uncompletedTodos.length > 0
+                      ? "取消全选"
+                      : "全选"
+                  }
+                >
+                  <CheckSquare className="h-3.5 w-3.5 text-white/60" />
+                </IconButton>
+                <IconButton
+                  aria-label="Move selected todos to next day"
+                  onClick={() => void handleTransferSelectedTodos()}
+                  disabled={selectedIds.length === 0}
+                  title="转移下一天"
+                >
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </IconButton>
+                <IconButton
+                  aria-label="Cancel selection mode"
+                  onClick={() => {
+                    setIsSelectionMode(false);
+                    setSelectedIds([]);
+                  }}
+                  title="取消"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </IconButton>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-white/40">
+                  已完成 {completedCount}/{todos.length}
+                </span>
+                <IconButton
+                  aria-label="Toggle selection mode"
+                  onClick={() => {
+                    setIsSelectionMode(true);
+                    setSelectedIds([]);
+                  }}
+                  title="批量操作"
+                >
+                  <ListTodo className="h-3.5 w-3.5" />
+                </IconButton>
+                <IconButton
+                  aria-label="One-click sort"
+                  onClick={() => void handleSortTodos()}
+                  title="手动排序"
+                >
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                </IconButton>
+                <IconButton
+                  aria-label="Toggle add todo composer"
+                  preset="add"
+                  className={showComposer ? "bg-white/5 text-white" : ""}
+                  onClick={() => {
+                    setShowComposer((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        window.setTimeout(() => {
+                          focusComposer();
+                        }, 50);
+                      }
+                      return next;
+                    });
+                  }}
+                  title="添加待办"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
@@ -545,6 +680,7 @@ export const TodoPage = (): React.JSX.Element => {
             {todos.map((todo) => {
               const isEditing = editingTodo?.id === todo.id;
               const isDeleting = deletingIds.includes(todo.id);
+              const isSelected = selectedIds.includes(todo.id);
 
               return (
                 <div
@@ -557,44 +693,89 @@ export const TodoPage = (): React.JSX.Element => {
                     todo.completed
                       ? "border-white/[0.03] bg-white/[0.02]"
                       : "border-transparent bg-white/[0.02] hover:border-white/8 hover:bg-white/[0.04]"
-                  }`}
+                  } ${isSelected ? "border-violet-500/20 bg-violet-500/4" : ""}`}
                   data-testid="today-todo-item"
                 >
-                  <button
-                    aria-label={
-                      todo.completed
-                        ? "Mark as incomplete"
-                        : "Mark as completed"
-                    }
-                    className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
-                      todo.completed
-                        ? "text-emerald-500"
-                        : "text-white/35 hover:text-white"
-                    }`}
-                    type="button"
-                    onClick={() => void handleToggleTodo(todo)}
-                  >
-                    <Square
-                      className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
+                  {isSelectionMode ? (
+                    <button
+                      aria-label={isSelected ? "Deselect item" : "Select item"}
+                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
                         todo.completed
-                          ? "scale-0 opacity-0 rotate-45"
-                          : "scale-100 opacity-100 rotate-0"
+                          ? "opacity-40 cursor-not-allowed text-white/20"
+                          : isSelected
+                            ? "text-violet-400"
+                            : "text-violet-500/40 hover:text-violet-400"
                       }`}
-                    />
-                    <CheckSquare
-                      className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${
+                      type="button"
+                      onClick={() => {
+                        if (todo.completed) {
+                          toast.warning("已完成的待办不能被选择");
+                          return;
+                        }
+                        setSelectedIds((prev) =>
+                          prev.includes(todo.id)
+                            ? prev.filter((id) => id !== todo.id)
+                            : [...prev, todo.id],
+                        );
+                      }}
+                    >
+                      <Square
+                        className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
+                          isSelected
+                            ? "scale-0 opacity-0 rotate-45"
+                            : "scale-100 opacity-100 rotate-0"
+                        }`}
+                      />
+                      <CheckSquare
+                        className={`absolute h-4 w-4 text-violet-400 transition-all duration-300 ease-out ${
+                          isSelected
+                            ? "scale-100 opacity-100 rotate-0"
+                            : "scale-0 opacity-0 -rotate-45"
+                        }`}
+                      />
+                    </button>
+                  ) : (
+                    <button
+                      aria-label={
                         todo.completed
-                          ? "scale-100 opacity-100 rotate-0"
-                          : "scale-0 opacity-0 -rotate-45"
+                          ? "Mark as incomplete"
+                          : "Mark as completed"
+                      }
+                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
+                        todo.completed
+                          ? "text-emerald-500"
+                          : "text-white/35 hover:text-white"
                       }`}
-                    />
-                  </button>
+                      type="button"
+                      onClick={() => void handleToggleTodo(todo)}
+                    >
+                      <Square
+                        className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
+                          todo.completed
+                            ? "scale-0 opacity-0 rotate-45"
+                            : "scale-100 opacity-100 rotate-0"
+                        }`}
+                      />
+                      <CheckSquare
+                        className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${
+                          todo.completed
+                            ? "scale-100 opacity-100 rotate-0"
+                            : "scale-0 opacity-0 -rotate-45"
+                        }`}
+                      />
+                    </button>
+                  )}
 
                   <button
                     aria-label={`Toggle priority of ${todo.text}`}
                     className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(todo.priority as DailyTodoPriorityValue, todo.completed)}`}
                     type="button"
-                    onClick={() => void handleCycleTodoPriority(todo)}
+                    onClick={() => {
+                      if (!isSelectionMode) {
+                        void handleCycleTodoPriority(todo);
+                      }
+                    }}
+                    disabled={isSelectionMode}
                   >
                     {todo.priority}
                   </button>
@@ -650,7 +831,21 @@ export const TodoPage = (): React.JSX.Element => {
                       }`}
                       style={{ fontSize: "13px", lineHeight: "19.5px" }}
                       type="button"
-                      onClick={() => handleStartEdit(todo)}
+                      onClick={() => {
+                        if (isSelectionMode) {
+                          if (todo.completed) {
+                            toast.warning("已完成的待办不能被选择");
+                            return;
+                          }
+                          setSelectedIds((prev) =>
+                            prev.includes(todo.id)
+                              ? prev.filter((id) => id !== todo.id)
+                              : [...prev, todo.id],
+                          );
+                        } else {
+                          handleStartEdit(todo);
+                        }
+                      }}
                     >
                       <span className="break-words">{todo.text}</span>
                     </button>
@@ -659,6 +854,7 @@ export const TodoPage = (): React.JSX.Element => {
                   <IconButton
                     aria-label={`Delete todo ${todo.text}`}
                     preset="delete"
+                    className={`${isSelectionMode ? "pointer-events-none !opacity-0" : ""}`}
                     onClick={() => handleDeleteTodoWithAnimation(todo.id)}
                   />
                 </div>
