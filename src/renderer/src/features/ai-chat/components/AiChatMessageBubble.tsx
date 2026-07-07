@@ -1000,11 +1000,10 @@ export const AiChatMessageBubble = ({
                     <Tag
                       key={`${message.id}-${part.id}`}
                       size="small"
-                      prefix="@"
                       color="default"
                       bgClass="border-white/5 bg-white/[0.03] text-white/45"
                     >
-                      {part.agentId}
+                      @{part.agentId}[agent]
                     </Tag>
                   );
                 })}

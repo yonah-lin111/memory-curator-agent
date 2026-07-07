@@ -516,4 +516,30 @@ describe("AiChatMessageBubble", () => {
     const modelSpan = getByText("gpt-4o");
     expect(modelSpan).toBeInTheDocument();
   });
+
+  it("用户消息包含提及的 agent 时，展示其为 @agent名称[agent] 格式", () => {
+    const message: AiChatMessage = {
+      id: "u1-agent",
+      role: "user",
+      content: "帮我查一下",
+      time: "10:15",
+      parts: [
+        {
+          id: "p1",
+          kind: "agent",
+          agentId: "people",
+        },
+      ],
+    };
+
+    const { getByText } = render(
+      <AiChatMessageBubble
+        message={message}
+        onOpenContextMenu={noopContextMenu}
+      />,
+    );
+
+    const agentTag = getByText("@people[agent]");
+    expect(agentTag).toBeInTheDocument();
+  });
 });
