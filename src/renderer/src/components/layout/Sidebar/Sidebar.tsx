@@ -1,8 +1,8 @@
 import type React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AiChatHistoryList } from "./components/AiChatHistoryList";
+import { CuratorHistoryList } from "./components/CuratorHistoryList";
 import { PromptSidebarList } from "./components/PromptSidebarList";
-import type { AiChatSession } from "@/features/ai-chat/types";
+import type { CuratorSession } from "@/features/curator/types";
 import { SidebarNavigationList } from "./components/SidebarNavigationList";
 
 /* ==========================================
@@ -38,7 +38,7 @@ type SidebarProps = {
   // 左侧栏内容模式。
   mode: SidebarMode;
   // AI 对话会话列表。
-  chatSessions: AiChatSession[];
+  chatSessions: CuratorSession[];
   // 当前激活的 AI 对话会话标识。
   activeChatId: string;
   // 已完成但尚未查看的 AI 会话 ID。
@@ -127,7 +127,7 @@ export const Sidebar = ({
               : "translate-x-[150%] pointer-events-none -z-10"
           }`}
         >
-          <AiChatHistoryList
+          <CuratorHistoryList
             sessions={chatSessions}
             activeSessionId={activeChatId}
             completionNoticeSessionIds={completionNoticeSessionIds}

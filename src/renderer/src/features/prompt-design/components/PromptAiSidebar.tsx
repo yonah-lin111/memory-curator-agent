@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/Input";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { usePromptAiChatController } from "./usePromptAiChatController";
 import { usePromptDesignStore } from "../store/promptDesignStore";
-import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
-import { resolveAiChatSelectedModelOption, estimateAiChatContextTokens } from "@/features/ai-chat/aiChatContextBuilder";
-import { ContextUsageCircle } from "@/features/ai-chat/components/AiChatInput/components/ContextUsageCircle";
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
+import { resolveCuratorSelectedModelOption, estimateCuratorContextTokens } from "@/lib/ai-shared/contextBuilder";
+import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle";
 
 // 会话切换 loading 最短展示时长（ms），避免闪烁。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -34,16 +34,16 @@ export const PromptAiSidebar = ({
   const designItemId = activeDesignId || "default-design-item-id";
   const controller = usePromptAiChatController(designItemId);
 
-  const { selectedModel, modelOptions } = useActiveAiModels();
+  const { selectedModel, modelOptions } = useActiveCuratorModels();
 
   const contextTokens = useMemo(() => {
     return controller.messages.reduce((sum, msg) => {
-      let tokens = estimateAiChatContextTokens(msg.content);
+      let tokens = estimateCuratorContextTokens(msg.content);
       if (msg.reasoning) {
-        tokens += estimateAiChatContextTokens(msg.reasoning);
+        tokens += estimateCuratorContextTokens(msg.reasoning);
       }
       if (msg.toolSteps) {
-        tokens += msg.toolSteps.reduce((tSum, step) => tSum + estimateAiChatContextTokens(step.observation), 0);
+        tokens += msg.toolSteps.reduce((tSum, step) => tSum + estimateCuratorContextTokens(step.observation), 0);
       }
       return sum + tokens;
     }, 0);
@@ -52,7 +52,7 @@ export const PromptAiSidebar = ({
   const contextLimit = useMemo(() => {
     if (!selectedModel) return undefined;
     const [provider, model] = selectedModel.split("::");
-    const modelOption = resolveAiChatSelectedModelOption(modelOptions, { provider, model });
+    const modelOption = resolveCuratorSelectedModelOption(modelOptions, { provider, model });
     return modelOption?.limit?.context;
   }, [selectedModel, modelOptions]);
 

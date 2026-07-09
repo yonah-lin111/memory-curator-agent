@@ -261,7 +261,7 @@ type AssociatedPersonPayload = {
 }
 
 // AI 对话 agent hint 类型。
-type AiChatAgentHint = {
+type CuratorAgentHint = {
   // Agent 唯一标识。
   id: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
   // 本轮 agent 优先级，数字越小越优先。
@@ -269,7 +269,7 @@ type AiChatAgentHint = {
 }
 
 // AI 对话启动载荷类型。
-type AiChatStartPayload = {
+type CuratorStartPayload = {
   // Agent 运行 ID。
   runId?: string
   // 用户消息 ID。
@@ -281,7 +281,7 @@ type AiChatStartPayload = {
   // 用户消息。
   message: string
   // 用户消息片段。
-  parts?: AiChatMessagePart[]
+  parts?: CuratorMessagePart[]
   // 用户选择的 provider 标识。
   provider?: string
   // 用户选择的模型标识。
@@ -306,11 +306,11 @@ type AiChatStartPayload = {
     meta?: Record<string, string | number | boolean | undefined>
   }>
   // 本轮优先使用的 agent hints。
-  agents?: AiChatAgentHint[]
+  agents?: CuratorAgentHint[]
 }
 
 // AI 会话列表查询载荷。
-type AiChatSessionListPayload = {
+type CuratorSessionListPayload = {
   // 搜索标题或摘要的关键词。
   query?: string
   // 最大返回数量。
@@ -463,7 +463,7 @@ type AiSettingsConfig = {
 }
 
 // AI 对话流式事件类型。
-type AiChatEvent =
+type CuratorEvent =
   | {
       // 事件类型。
       type: 'run_started' | 'assistant_message_started' | 'turn_finished' | 'done'
@@ -553,7 +553,7 @@ type AiChatEvent =
 type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued' | 'cancelled'
 
 // AI 对话会话状态类型。
-type AiChatSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
+type CuratorSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
 
 // AI 工具步骤类型。
 type AiToolStep = {
@@ -574,7 +574,7 @@ type AiToolStep = {
 }
 
 // AI 消息片段类型。
-type AiChatMessagePart =
+type CuratorMessagePart =
   | {
       // 片段唯一标识。
       id: string
@@ -633,7 +633,7 @@ type AiChatMessagePart =
     }
 
 // AI 对话消息类型。
-type AiChatMessage = {
+type CuratorMessage = {
   // 消息唯一标识。
   id: string
   // 消息发送者。
@@ -647,13 +647,13 @@ type AiChatMessage = {
   // 最终回答。
   answer?: string
   // 顺序片段。
-  parts?: AiChatMessagePart[]
+  parts?: CuratorMessagePart[]
   // 调用的模型。
   model?: string
 }
 
 // AI 对话会话类型。
-type AiChatSession = {
+type CuratorSession = {
   // 会话唯一标识。
   id: string
   // 会话标题。
@@ -661,9 +661,9 @@ type AiChatSession = {
   // 会话时间。
   time: string
   // 会话状态。
-  status: AiChatSessionStatus
+  status: CuratorSessionStatus
   // 会话消息列表。
-  messages: AiChatMessage[]
+  messages: CuratorMessage[]
 }
 
 // 页面使用的关联人物类型。
@@ -707,7 +707,7 @@ type MarkdownImageSaveResult = {
 }
 
 // AI 聊天文本文件保存结果类型。
-type AiChatTextFileSaveResult = {
+type CuratorTextFileSaveResult = {
   // 落盘文件名。
   fileName: string
   // 本机绝对路径。
@@ -861,13 +861,13 @@ type AppAPI = {
     // 删除个人头像。
     deletePersonalAvatar?: (url: string) => Promise<void>
     // 保存 AI 聊天图片。
-    saveAiChatImage?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
+    saveCuratorImage?: (payload: MarkdownImageSavePayload) => Promise<MarkdownImageSaveResult>
     // 保存 AI 聊天文本文件。
-    saveAiChatTextFile?: (payload: MarkdownImageSavePayload) => Promise<AiChatTextFileSaveResult>
+    saveCuratorTextFile?: (payload: MarkdownImageSavePayload) => Promise<CuratorTextFileSaveResult>
     // 删除 AI 聊天文本文件。
-    deleteAiChatTextFile?: (fileName: string) => Promise<void>
+    deleteCuratorTextFile?: (fileName: string) => Promise<void>
     // 读取 AI 聊天文本文件内容。
-    readAiChatTextFile?: (url: string) => Promise<string>
+    readCuratorTextFile?: (url: string) => Promise<string>
   }
   // Notes 页面 API。
   notes: {
@@ -939,17 +939,17 @@ type AppAPI = {
   // AI 对话 API。
   ai?: {
     // 读取持久化 AI 会话列表。
-    listSessions?: (payload?: AiChatSessionListPayload) => Promise<AiChatSession[]>
+    listSessions?: (payload?: CuratorSessionListPayload) => Promise<CuratorSession[]>
     // 读取持久化 AI 会话详情。
-    getSession?: (sessionId: string) => Promise<AiChatSession | null>
+    getSession?: (sessionId: string) => Promise<CuratorSession | null>
     // 更新持久化 AI 会话标题。
     updateSessionTitle?: (sessionId: string, title: string) => Promise<void>
     // 删除持久化 AI 会话。
     deleteSession?: (sessionId: string) => Promise<void>
     // 撤销当前会话最后一轮对话。
-    undoLastTurn?: (sessionId: string) => Promise<AiChatSession | null>
+    undoLastTurn?: (sessionId: string) => Promise<CuratorSession | null>
     // 删除指定消息所属的一轮 QA。
-    deleteTurn?: (sessionId: string, messageId: string) => Promise<AiChatSession | null>
+    deleteTurn?: (sessionId: string, messageId: string) => Promise<CuratorSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
     // 读取历史提示词列表。
@@ -957,7 +957,7 @@ type AppAPI = {
     // 保存历史提示词。
     addPromptHistory?: (prompt: string) => Promise<string[]>
     // 启动 AI 对话。
-    startChat: (payload: AiChatStartPayload) => Promise<{ runId: string }>
+    startChat: (payload: CuratorStartPayload) => Promise<{ runId: string }>
     // 取消 AI 对话。
     cancelChat?: (runId: string) => Promise<void>
     // 取消 AI 对话中等待用户回答的 Ask。
@@ -967,7 +967,7 @@ type AppAPI = {
     // 提交工具确认回答。
     submitToolConfirmationAnswer?: (payload: AiToolConfirmationAnswerPayload) => Promise<void>
     // 监听 AI 对话事件。
-    onChatEvent: (listener: (event: AiChatEvent) => void) => () => void
+    onChatEvent: (listener: (event: CuratorEvent) => void) => () => void
   }
   // 周度总结 API。
   weekly?: {

@@ -168,6 +168,7 @@ async function runPromptAiChat(
   // 工具步骤和片段累积（流式写入结束后持久化）
   const assistantToolSteps: AiToolStep[] = [];
   const assistantParts: AiChatMessagePart[] = [];
+  let assistantReasoning = "";
 
   // 后台异步生成会话标题
   if (shouldCreateTitle) {
@@ -253,6 +254,14 @@ async function runPromptAiChat(
           sessionId: payload.sessionId,
           delta: event.delta,
         });
+      } else if (event.type === "reasoning_delta") {
+        assistantReasoning += event.delta;
+        sender.send("prompt-ai:chat:event", {
+          type: "reasoning_delta",
+          runId,
+          sessionId: payload.sessionId,
+          delta: event.delta,
+        });
       } else if (event.type === "tool_started") {
         const step: AiToolStep = {
           id: event.id,
@@ -326,6 +335,10 @@ async function runPromptAiChat(
     }
 
     db.updateMessageContent(assistantMessageId, finalContent);
+    if (assistantReasoning) {
+      assistantParts.push({ id: createCompactUuid(), kind: "reasoning" as any, content: assistantReasoning });
+    }
+    db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
     db.updateAgentRunStatus(runId, "completed");
 
     const completedSession = db.getSession(payload.sessionId);
@@ -343,6 +356,11 @@ async function runPromptAiChat(
       sessionId: payload.sessionId,
     });
   } catch (err: any) {
+    if (assistantReasoning) {
+      assistantParts.push({ id: createCompactUuid(), kind: "reasoning" as any, content: assistantReasoning });
+    }
+    db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
+
     if (signal.aborted) {
       db.updateMessageContent(assistantMessageId, finalContent);
       db.updateAgentRunStatus(runId, "failed", "Aborted by user");

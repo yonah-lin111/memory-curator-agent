@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type { AiToolStep } from "@/features/ai-chat/types";
+import type { CuratorToolStep } from "@/features/curator/types";
 
 export type PromptAiMessage = {
   id: string;
@@ -10,7 +10,7 @@ export type PromptAiMessage = {
   /** 推理思考内容 */
   reasoning?: string;
   /** 工具调用步骤列表 */
-  toolSteps?: AiToolStep[];
+  toolSteps?: CuratorToolStep[];
 };
 
 /**
@@ -23,19 +23,22 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
 };
 
 /**
- * 将后端持久化的工具步骤格式转换为前端 AiToolStep 格式。
+ * 将后端持久化的工具步骤格式转换为前端 CuratorToolStep 格式。
  * 后端 schema: { id, name, status, input, observation?, data?, createdAt?, endedAt? }
  * 前端类型:    { id, title, status, tool, input?, observation, data? }
  */
-const mapBackendToolStep = (raw: any): AiToolStep => ({
-  id: raw.id,
-  title: `Tool result: ${TOOL_DISPLAY_NAMES[raw.name] || raw.name}`,
-  status: raw.status,
-  tool: TOOL_DISPLAY_NAMES[raw.name] || raw.name,
-  input: raw.input,
-  observation: raw.observation ?? "",
-  data: raw.data,
-});
+const mapBackendToolStep = (raw: any): CuratorToolStep => {
+  const toolName = raw.tool || raw.name || "";
+  return {
+    id: raw.id,
+    title: `Tool result: ${TOOL_DISPLAY_NAMES[toolName] || toolName}`,
+    status: raw.status,
+    tool: TOOL_DISPLAY_NAMES[toolName] || toolName,
+    input: raw.input,
+    observation: raw.observation ?? "",
+    data: raw.data,
+  };
+};
 
 export function usePromptAiChatController(designItemId: string) {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
@@ -56,18 +59,27 @@ export function usePromptAiChatController(designItemId: string) {
     if (session) {
       setSessionId(session.id);
       setMessages(
-        session.messages.map((m: any) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content || "",
-          time: new Date(m.createdAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }),
-          model: m.model,
-          toolSteps: m.toolSteps?.map(mapBackendToolStep) || undefined,
-        })),
+        session.messages.map((m: any) => {
+          const parts = m.parts || [];
+          const reasoningPart = parts.find(
+            (p: any) => p.kind === "reasoning" || p.type === "reasoning"
+          );
+          const reasoning = reasoningPart?.content || reasoningPart?.text || undefined;
+
+          return {
+            id: m.id,
+            role: m.role,
+            content: m.content || "",
+            time: new Date(m.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            }),
+            model: m.model,
+            reasoning,
+            toolSteps: m.toolSteps?.map(mapBackendToolStep) || undefined,
+          };
+        }),
       );
     }
   }, []);
@@ -124,7 +136,7 @@ export function usePromptAiChatController(designItemId: string) {
           return prev;
         });
       } else if (event.type === "tool_started") {
-        const step: AiToolStep = event.toolStep;
+        const step: CuratorToolStep = event.toolStep;
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === "assistant") {

@@ -21,14 +21,14 @@ import { Header } from "@/components/layout/Header";
 import { TodayPage } from "@/pages/today/TodayPage";
 import { ToastProvider } from "@/components/ui/Toast";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
-import { AiChatWorkspace } from "@/features/ai-chat/components/AiChatWorkspace";
+import { CuratorWorkspace } from "@/features/curator/components/CuratorWorkspace";
 import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
 import { PromptDesignWorkspace } from "@/features/prompt-design/components/PromptDesignWorkspace";
-import { useAiChatController } from "@/features/ai-chat/useAiChatController";
+import { useCuratorController } from "@/features/curator/useCuratorController";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { IconButton } from "@/components/ui/IconButton";
 import { Layers3 } from "lucide-react";
-import type { AiChatInputCommandId } from "@/features/ai-chat/components/AiChatInput/types";
+import type { CuratorInputCommandId } from "@/features/curator/components/CuratorInput/types";
 
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [
@@ -159,13 +159,13 @@ const AppContent = (): React.JSX.Element => {
     completionNoticeSessionIds,
     activeChatSession,
     aiModelOptions,
-    selectedAiModel,
+    selectedCuratorModel,
     hasMoreChatSessions,
     isLoadingMoreChatSessions,
     handleChatToggle,
     setActiveChatId,
     clearCompletionNoticeSession,
-    setSelectedAiModel,
+    setSelectedCuratorModel,
     handleNewChat,
     handleRenameChat,
     handleDeleteChat,
@@ -177,9 +177,9 @@ const AppContent = (): React.JSX.Element => {
     handleRegenerateLatestAnswer,
     handleEditAndResendUserMessage,
     handleDeleteChatTurn,
-    handleAiChatCommand,
+    handleCuratorCommand,
     handleCancelGeneration,
-  } = useAiChatController();
+  } = useCuratorController();
 
   // 监听 chat 打开状态
   useEffect(() => {
@@ -192,9 +192,9 @@ const AppContent = (): React.JSX.Element => {
 
   // 执行 AI 对话斜杠命令。
   const handleCommandExecute = (
-    command: AiChatInputCommandId,
+    command: CuratorInputCommandId,
   ): string | void | Promise<string | void> => {
-    return handleAiChatCommand(command);
+    return handleCuratorCommand(command);
   };
 
   // 监听 URL 路由 pathname 变化，确保与页面状态双向同步。
@@ -323,11 +323,11 @@ const AppContent = (): React.JSX.Element => {
           <OverlayWorkspace 
             activeOverlay={activeOverlay}
             chatContent={
-              <AiChatWorkspace
+              <CuratorWorkspace
                 isChatOpen={activeOverlay === "chat"}
                 session={activeChatSession}
                 modelOptions={aiModelOptions}
-                selectedModel={selectedAiModel}
+                selectedModel={selectedCuratorModel}
                 isContextTimelineOpen={isContextTimelineOpen}
                 onSendMessage={handleSendMessage}
                 onSubmitAskAnswer={handleSubmitAskAnswer}
@@ -336,7 +336,7 @@ const AppContent = (): React.JSX.Element => {
                 onEditAndResendUserMessage={handleEditAndResendUserMessage}
                 onDeleteChatTurn={handleDeleteChatTurn}
                 onCommandExecute={handleCommandExecute}
-                onModelChange={setSelectedAiModel}
+                onModelChange={setSelectedCuratorModel}
                 onCancelGeneration={handleCancelGeneration}
                 chatSessions={chatSessions}
                 onActiveSessionChange={setActiveChatId}

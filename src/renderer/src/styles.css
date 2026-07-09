@@ -254,7 +254,7 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 /* AI 聊天气泡内 Markdown 预览的图片尺寸限制，圆角符合 6px 规范 */
-.ai-chat-markdown-preview img {
+.curator-markdown-preview img {
   max-width: 300px !important;
   max-height: 300px !important;
   object-fit: cover;
@@ -263,7 +263,7 @@ html:hover::-webkit-scrollbar-thumb,
   transition: opacity 0.2s ease-in-out;
 }
 
-.ai-chat-markdown-preview img.img-loading {
+.curator-markdown-preview img.img-loading {
   width: 300px !important;
   height: 300px !important;
   min-width: 300px !important;
@@ -275,7 +275,7 @@ html:hover::-webkit-scrollbar-thumb,
   opacity: 1 !important;
 }
 
-.ai-chat-markdown-preview img.img-loaded {
+.curator-markdown-preview img.img-loaded {
   opacity: 1;
 }
 
@@ -318,8 +318,8 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 /* AI 思考内容必须整体压到 13px，避免 Markdown 标题突破聊天气泡层级。 */
-.ai-chat-thinking-block.markdown-preview-container,
-.ai-chat-thinking-block.markdown-preview-container * {
+.curator-thinking-block.markdown-preview-container,
+.curator-thinking-block.markdown-preview-container * {
   font-size: 13px !important;
 }
 

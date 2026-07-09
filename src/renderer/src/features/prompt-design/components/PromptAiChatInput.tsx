@@ -3,19 +3,19 @@ import { Paperclip, RotateCcw, SendHorizontal, FileText, Bot, MessageSquare } fr
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
-import { useActiveAiModels } from "@/features/ai-chat/hooks/useActiveAiModels";
-import { CommandPanel } from "@/features/ai-chat/components/CommandPanel";
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
+import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import {
   FALLBACK_LINE_HEIGHT,
   INTERACTIVE_SELECTOR,
   TEXTAREA_MAX_ROWS,
   TEXTAREA_MIN_ROWS,
-} from "@/features/ai-chat/components/AiChatInput/constants";
+} from "@/lib/ai-shared/constants";
 import { useFileMention } from "../hooks/useFileMention";
-import { getMatchedCommands, isCommandInput } from "@/features/ai-chat/components/AiChatInput/utils";
-import { useAiChatModels } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatModels";
-import { useAiChatSessions } from "@/features/ai-chat/components/AiChatInput/hooks/useAiChatSessions";
-import type { AiChatSession } from "@/features/ai-chat/types";
+import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
+import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
+import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
+import type { CuratorSession } from "@/features/curator/types";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
@@ -32,14 +32,14 @@ export const PromptAiChatInput = ({
   onNewChat?: () => void;
   onUndo?: () => void;
   onSessionChange?: (sessionId: string) => void;
-  chatSessions?: AiChatSession[];
+  chatSessions?: CuratorSession[];
 }) => {
   const toast = useToast();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { selectedModel, hasModelOptions, selectOptions, handleModelChange, modelOptions } =
-    useActiveAiModels();
+    useActiveCuratorModels();
 
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -57,7 +57,7 @@ export const PromptAiChatInput = ({
     setActiveModelIndex,
     selectModel,
     moveActiveModel,
-  } = useAiChatModels(
+  } = useCuratorModels(
     inputText,
     setInputText,
     modelOptions,
@@ -73,7 +73,7 @@ export const PromptAiChatInput = ({
     setActiveSessionIndex,
     selectSession,
     moveActiveSession,
-  } = useAiChatSessions(
+  } = useCuratorSessions(
     inputText,
     setInputText,
     chatSessions || [],

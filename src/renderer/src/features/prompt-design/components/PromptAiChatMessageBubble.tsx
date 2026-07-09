@@ -1,8 +1,8 @@
-import { AiChatThinkingBlock } from "@/features/ai-chat/components/AiChatThinkingBlock";
+import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
-import { AiToolCallBlock } from "@/features/ai-chat/components/AiToolCallBlock";
-import type { AiToolStep } from "@/features/ai-chat/types";
+import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import type { CuratorToolStep } from "@/features/curator/types";
 import { Tag } from "@/components/ui/Tag";
 import type { PromptAiMessage } from "./usePromptAiChatController";
 
@@ -12,7 +12,7 @@ export const PromptAiChatMessageBubble = ({
 }: {
   message: PromptAiMessage & {
     reasoning?: string;
-    toolSteps?: AiToolStep[];
+    toolSteps?: CuratorToolStep[];
   };
   isGenerating?: boolean;
 }) => {
@@ -41,15 +41,15 @@ export const PromptAiChatMessageBubble = ({
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">
               {message.reasoning && (
-                <AiChatThinkingBlock content={message.reasoning} />
+                <CuratorThinkingBlock content={message.reasoning} />
               )}
 
               {toolSteps && toolSteps.length > 0 && (
-                <AiToolCallBlock steps={toolSteps} />
+                <CuratorToolCallBlock steps={toolSteps} />
               )}
 
               {message.content && (
-                <div className="markdown-preview-container ai-chat-markdown-preview select-text max-w-full">
+                <div className="markdown-preview-container curator-markdown-preview select-text max-w-full">
                   <MdPreview
                     theme="dark"
                     modelValue={message.content}

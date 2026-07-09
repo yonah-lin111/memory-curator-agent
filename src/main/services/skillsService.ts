@@ -3,6 +3,7 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import matter from 'gray-matter'
 import { getSkillsDir } from '@/paths'
+import { isAiChatAgentId } from '@/agent/core/agentHints'
 
 // AI Agent 技能数据模型。
 export interface AiAgentSkill {
@@ -103,16 +104,31 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
 }
 
 /**
- * 获取适用于特定 AI Agent 的所有 Skills。
- * 如果 Skill 限制了 supportedAgents，则必须包含对应的 agentId；否则全局通用。
+ * 获取适用于特定 Agent 的所有 Skills。
+ *
+ * 过滤规则（按优先级）：
+ * - supportedAgents 缺省或为空 → 全局可用（等同于 public）
+ * - 包含 'public' → 所有 agent 类型均可用
+ * - 包含 'curator' → 所有策展 agent（AiChatAgentId）可用
+ * - 包含 'prompt-design' → 提示词设计 agent 可用
+ * - 包含具体 agentId → 精确匹配
  */
 export const getAvailableSkillsForAgent = async (agentId: string): Promise<AiAgentSkill[]> => {
   const allSkills = await loadSkills()
   return allSkills.filter((skill) => {
-    // supportedAgents 缺省或为空表示全局可用
+    // 未指定或空 → 全局可用
     if (!skill.supportedAgents || skill.supportedAgents.length === 0) {
       return true
     }
+    // public 关键字 → 所有 agent 可用
+    if (skill.supportedAgents.includes('public')) {
+      return true
+    }
+    // curator 关键字 → 所有策展 agent 可用
+    if (skill.supportedAgents.includes('curator') && isAiChatAgentId(agentId)) {
+      return true
+    }
+    // 精确匹配（含 'prompt-design' 等）
     return skill.supportedAgents.includes(agentId)
   })
 }

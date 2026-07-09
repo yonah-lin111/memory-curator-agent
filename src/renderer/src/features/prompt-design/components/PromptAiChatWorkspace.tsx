@@ -290,7 +290,7 @@ export const PromptAiChatWorkspace = forwardRef<
               })}
               {bottomSpacerHeight > 0 && (
                 <div
-                  data-ai-chat-bottom-spacer="true"
+                  data-curator-bottom-spacer="true"
                   style={{ height: `${bottomSpacerHeight}px` }}
                   className="flex-shrink-0"
                 />

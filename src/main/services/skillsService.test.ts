@@ -86,6 +86,56 @@ Craft excellent system prompts.
     expect(commonSkills.map(s => s.id)).toEqual(['global'])
   })
 
+  it('curator keyword makes skill available to all curator agents but not prompt-design', async () => {
+    const curatorSkill = `---
+name: Curator Only Skill
+description: Only for curator agents
+supportedAgents:
+  - curator
+---
+Curator-specific instructions.
+`
+    const curatorDir = join(tempDir, 'curator-skill')
+    await mkdir(curatorDir, { recursive: true })
+    await writeFile(join(curatorDir, 'skill.md'), curatorSkill, 'utf8')
+
+    clearSkillsCache()
+
+    // curator agent 可以看到
+    for (const curatorId of ['common', 'people', 'todo', 'snippets', 'journal', 'notes', 'today', 'bills']) {
+      const skills = await getAvailableSkillsForAgent(curatorId)
+      expect(skills.map(s => s.id)).toContain('curator-skill')
+    }
+
+    // prompt-design 看不到
+    const designSkills = await getAvailableSkillsForAgent('prompt-design')
+    expect(designSkills.map(s => s.id)).not.toContain('curator-skill')
+  })
+
+  it('public keyword makes skill available to all agents', async () => {
+    const publicSkill = `---
+name: Public Skill
+description: Available to everyone
+supportedAgents:
+  - public
+---
+Universal instructions.
+`
+    const publicDir = join(tempDir, 'public-skill')
+    await mkdir(publicDir, { recursive: true })
+    await writeFile(join(publicDir, 'skill.md'), publicSkill, 'utf8')
+
+    clearSkillsCache()
+
+    // chat agent 可以看到
+    const commonSkills = await getAvailableSkillsForAgent('common')
+    expect(commonSkills.map(s => s.id)).toContain('public-skill')
+
+    // prompt-design 也可以看到
+    const designSkills = await getAvailableSkillsForAgent('prompt-design')
+    expect(designSkills.map(s => s.id)).toContain('public-skill')
+  })
+
   it('skips non-directory entries in skills dir', async () => {
     // 在 skills 目录下放一个普通文件，应该被忽略
     const randomFile = join(tempDir, 'readme.txt')

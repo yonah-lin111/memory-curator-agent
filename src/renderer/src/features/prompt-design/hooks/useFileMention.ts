@@ -1,7 +1,7 @@
 import type React from "react";
 import { useCallback, useState, useEffect, useRef } from "react";
-import { resolveAgentMentionPanelState } from "@/features/ai-chat/components/AiChatInput/utils";
-import type { AgentMentionPanelState } from "@/features/ai-chat/components/AiChatInput/types";
+import { resolveAgentMentionPanelState } from "@/lib/ai-shared/utils";
+import type { AgentMentionPanelState } from "@/lib/ai-shared/types";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import { useToast } from "@/components/ui/Toast";
 

@@ -21,18 +21,18 @@ afterAll(() => {
   globalThis.ResizeObserver = originalResizeObserver;
 });
 import type {
-  AiChatEvent,
-  AiChatSession,
-  AiChatStartPayload
-} from '@/features/ai-chat/types'
-import { useAiChatContextStore } from '@/features/ai-chat/aiChatContextStore'
+  CuratorEvent,
+  CuratorSession,
+  CuratorStartPayload
+} from '@/features/curator/types'
+import { useCuratorContextStore } from '@/features/curator/curatorContextStore'
 
 describe('App', () => {
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
     vi.useRealTimers()
-    useAiChatContextStore.getState().resetAll()
+    useCuratorContextStore.getState().resetAll()
     window.history.replaceState({}, '', '/')
   })
 
@@ -340,18 +340,18 @@ describe('App', () => {
 
   it('AI 对话支持流式文本和工具步骤更新', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    let capturedPayload: AiChatStartPayload | null = null
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    let capturedPayload: CuratorStartPayload | null = null
 
     window.api = {
       ai: {
-        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+        startChat: vi.fn(async (payload: CuratorStartPayload) => {
           capturedPayload = payload
           return {
             runId: payload.runId ?? 'run-test'
           }
         }),
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -417,8 +417,8 @@ describe('App', () => {
 
   it('AI 对话切换历史后继续使用持久化助手消息接收流式输出', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    let capturedPayload: AiChatStartPayload | null = null
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    let capturedPayload: CuratorStartPayload | null = null
     const cancelAsk = vi.fn(async () => undefined)
     const cancelChat = vi.fn(async () => undefined)
 
@@ -489,7 +489,7 @@ describe('App', () => {
             messages: []
           }
         }),
-        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+        startChat: vi.fn(async (payload: CuratorStartPayload) => {
           capturedPayload = payload
           return {
             runId: payload.runId ?? 'run-test'
@@ -497,7 +497,7 @@ describe('App', () => {
         }),
         cancelAsk,
         cancelChat,
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -541,8 +541,8 @@ describe('App', () => {
 
   it('Ask 等待态收到标题更新后切换历史仍会取消当前 Ask', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    let capturedPayload: AiChatStartPayload | null = null
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    let capturedPayload: CuratorStartPayload | null = null
     const cancelAsk = vi.fn(async () => undefined)
 
     window.api = {
@@ -570,14 +570,14 @@ describe('App', () => {
           status: sessionId === 'new-chat' ? 'idle' : 'completed',
           messages: []
         })),
-        startChat: vi.fn(async (payload: AiChatStartPayload) => {
+        startChat: vi.fn(async (payload: CuratorStartPayload) => {
           capturedPayload = payload
           return {
             runId: payload.runId ?? 'run-test'
           }
         }),
         cancelAsk,
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -687,7 +687,7 @@ describe('App', () => {
 
   it('AI 对话发送时使用当前选择的模型', async () => {
     const user = userEvent.setup()
-    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+    const startChat = vi.fn(async (payload: CuratorStartPayload) => ({
       runId: payload.runId ?? 'run-test'
     }))
 
@@ -751,7 +751,7 @@ describe('App', () => {
 
   it('AI 对话发送时剥离 agent token 并携带 agent hints', async () => {
     const user = userEvent.setup()
-    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+    const startChat = vi.fn(async (payload: CuratorStartPayload) => ({
       runId: payload.runId ?? 'run-test'
     }))
 
@@ -795,15 +795,15 @@ describe('App', () => {
 
   it('AI 对话第二轮发送时携带上一轮消息上下文', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    const startChat = vi.fn(async (payload: CuratorStartPayload) => ({
       runId: payload.runId ?? 'run-test'
     }))
 
     window.api = {
       ai: {
         startChat,
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -871,8 +871,8 @@ describe('App', () => {
 
   it('非激活会话输出完成后在历史列表显示完成提醒', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    const startChat = vi.fn(async (payload: CuratorStartPayload) => ({
       runId: payload.runId ?? 'run-test'
     }))
 
@@ -902,7 +902,7 @@ describe('App', () => {
           messages: []
         })),
         startChat,
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -943,15 +943,15 @@ describe('App', () => {
 
   it('AI 对话第二轮发送时携带上一轮工具查询上下文', async () => {
     const user = userEvent.setup()
-    const listeners: Array<(event: AiChatEvent) => void> = []
-    const startChat = vi.fn(async (payload: AiChatStartPayload) => ({
+    const listeners: Array<(event: CuratorEvent) => void> = []
+    const startChat = vi.fn(async (payload: CuratorStartPayload) => ({
       runId: payload.runId ?? 'run-test'
     }))
 
     window.api = {
       ai: {
         startChat,
-        onChatEvent: (listener: (event: AiChatEvent) => void) => {
+        onChatEvent: (listener: (event: CuratorEvent) => void) => {
           listeners.push(listener)
           return () => undefined
         }
@@ -1325,7 +1325,7 @@ describe('App', () => {
 
   it('首次加载持久化历史摘要后点击新建对话直接创建空白会话', async () => {
     const user = userEvent.setup()
-    const persistedSessions: AiChatSession[] = [
+    const persistedSessions: CuratorSession[] = [
       {
         id: 'persisted-one',
         title: '历史一',

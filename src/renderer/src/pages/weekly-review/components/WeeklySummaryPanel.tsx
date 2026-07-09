@@ -179,7 +179,7 @@ export const WeeklySummaryPanel = ({
         {(panelState === "streaming" || panelState === "done") &&
           !isEditing && (
             <div
-              className="flex-1 overflow-y-auto markdown-preview-container ai-chat-markdown-preview select-text max-w-full"
+              className="flex-1 overflow-y-auto markdown-preview-container curator-markdown-preview select-text max-w-full"
               data-render-tick={streamTick}
             >
               {panelState === "done" && !isMeaningful ? (

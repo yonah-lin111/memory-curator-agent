@@ -240,8 +240,8 @@ export const TextFile = ({
     setPreviewLoading(true);
     setPreviewError(false);
 
-    const loadContent = window.api?.files?.readAiChatTextFile
-      ? window.api.files.readAiChatTextFile(url)
+    const loadContent = window.api?.files?.readCuratorTextFile
+      ? window.api.files.readCuratorTextFile(url)
       : fetch(url).then((response) => {
           if (!response.ok) {
             throw new Error("Failed to fetch");
