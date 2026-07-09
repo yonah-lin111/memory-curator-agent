@@ -539,7 +539,7 @@ describe("CuratorMessageBubble", () => {
       />,
     );
 
-    const agentTag = getByText("@people[agent]");
+    const agentTag = getByText("@people[tool]");
     expect(agentTag).toBeInTheDocument();
   });
 });

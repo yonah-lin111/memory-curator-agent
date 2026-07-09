@@ -77,56 +77,74 @@ export type CuratorAgentMentionDeletionRange = {
 export const CURATOR_AGENT_MENTION_OPTIONS: CuratorAgentMentionOption[] = [
   {
     id: "people",
-    token: "@people[agent]",
+    token: "@people[tool]",
     label: "people",
     description: "检索人物背景，关联社交网络与人脉档案",
   },
   {
     id: "todo",
-    token: "@todo[agent]",
+    token: "@todo[tool]",
     label: "todo",
     description: "梳理待办任务，跟踪计划、目标与日程进度",
   },
   {
     id: "snippets",
-    token: "@snippets[agent]",
-    label: "snippets",
+    token: "@snippet[tool]",
+    label: "snippet",
     description: "捕捉瞬时灵感、随笔片段与知识火花",
   },
   {
     id: "journal",
-    token: "@journal[agent]",
+    token: "@journal[tool]",
     label: "journal",
     description: "回顾个人日记，串联生活随感与阶段复盘",
   },
   {
     id: "notes",
-    token: "@notes[agent]",
-    label: "notes",
+    token: "@note[tool]",
+    label: "note",
     description: "沉淀深度思考，管理长期笔记与知识体系",
   },
   {
     id: "today",
-    token: "@today[agent]",
+    token: "@today[tool]",
     label: "today",
     description: "聚焦当下，快速关联今天的即时记录与活动线索",
   },
   {
     id: "bills",
-    token: "@bills[agent]",
-    label: "bills",
+    token: "@bill[tool]",
+    label: "bill",
     description: "检索账单记录，查询收支明细与今日消费摘要",
   },
   {
     id: "common",
-    token: "@common[agent]",
+    token: "@common[tool]",
     label: "common",
     description: "直接解答，仅可使用通用工具，不调用业务 Agent",
   },
 ];
 
-// Agent token 匹配表达式，只接受空白边界包围的带有 [agent] 后缀的完整 token。
-const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|todo|snippets|journal|notes|today|common|bills)\[agent\])(?=$|\s)/g;
+// Tool token 匹配表达式，只接受空白边界包围的带有 [tool] 后缀的完整 token。
+const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|person|todos?|snippets?|journals?|notes?|today|bills?|common)\[tool\])(?=$|\s)/g;
+
+// 提及关键字到内置 CuratorAgentId 的归一化映射。
+const NORMALIZE_ID_MAP: Record<string, CuratorAgentId> = {
+  person: "people",
+  people: "people",
+  todo: "todo",
+  todos: "todo",
+  snippet: "snippets",
+  snippets: "snippets",
+  journal: "journal",
+  journals: "journal",
+  note: "notes",
+  notes: "notes",
+  today: "today",
+  bill: "bills",
+  bills: "bills",
+  common: "common",
+};
 
 // Agent 选项索引。
 const AGENT_OPTIONS_BY_ID = new Map(CURATOR_AGENT_MENTION_OPTIONS.map((option) => [option.id, option]));
@@ -194,7 +212,8 @@ const collectAgentMentionRanges = (value: string): CuratorAgentMentionRange[] =>
   while (match) {
     const prefix = match[1] ?? "";
     const token = match[2] ?? "";
-    const id = match[3] ?? "";
+    const rawId = match[3] ?? "";
+    const id = NORMALIZE_ID_MAP[rawId.toLowerCase()] || "";
 
     if (isCuratorAgentId(id)) {
       const start = match.index + prefix.length;

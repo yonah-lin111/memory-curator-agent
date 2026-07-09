@@ -451,6 +451,17 @@ const isReasoningPartGenerating = (
   return isMessageGenerating && partIndex === parts.length - 1;
 };
 
+const AGENT_ID_TO_TOKEN_MAP: Record<string, string> = {
+  people: "@people[tool]",
+  todo: "@todo[tool]",
+  snippets: "@snippet[tool]",
+  journal: "@journal[tool]",
+  notes: "@note[tool]",
+  today: "@today[tool]",
+  bills: "@bill[tool]",
+  common: "@common[tool]",
+};
+
 /**
  * CuratorMessageBubble - 渲染单个用户或 AI 消息气泡。
  */
@@ -1003,7 +1014,7 @@ export const CuratorMessageBubble = ({
                       color="default"
                       bgClass="border-white/5 bg-white/[0.03] text-white/45"
                     >
-                      @{part.agentId}[agent]
+                      {AGENT_ID_TO_TOKEN_MAP[part.agentId] || `@${part.agentId}[tool]`}
                     </Tag>
                   );
                 })}

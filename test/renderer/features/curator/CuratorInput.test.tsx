@@ -446,7 +446,7 @@ describe('CuratorInput', () => {
       key: 'Enter'
     })
 
-    await waitFor(() => expect(textarea).toHaveValue('@people_agent '))
+    await waitFor(() => expect(textarea).toHaveValue('@people[tool] '))
     expect(textarea).toHaveClass('text-white')
   })
 
@@ -493,7 +493,7 @@ describe('CuratorInput', () => {
 
     fireEvent.change(textarea, {
       target: {
-        value: '@people_agent  @todo_agent 查阿明'
+        value: '@people[tool]  @todo[tool] 查阿明'
       }
     })
     fireEvent.keyDown(textarea, {
@@ -505,19 +505,19 @@ describe('CuratorInput', () => {
       agents: [
         {
           id: 'people',
-          token: '@people_agent',
+          token: '@people[tool]',
           label: 'people',
           priority: 1
         },
         {
           id: 'todo',
-          token: '@todo_agent',
+          token: '@todo[tool]',
           label: 'todo',
           priority: 2
         }
       ]
     })
-    expect(addPromptHistory).toHaveBeenCalledWith('@people_agent  @todo_agent 查阿明')
+    expect(addPromptHistory).toHaveBeenCalledWith('@people[tool]  @todo[tool] 查阿明')
     await waitFor(() => expect(textarea).toHaveValue(''))
   })
 
@@ -528,7 +528,7 @@ describe('CuratorInput', () => {
 
     fireEvent.change(textarea, {
       target: {
-        value: '@people_agent '
+        value: '@people[tool] '
       }
     })
     fireEvent.keyDown(textarea, {
@@ -545,10 +545,10 @@ describe('CuratorInput', () => {
 
     fireEvent.change(textarea, {
       target: {
-        value: '@people_agent 查阿明'
+        value: '@people[tool] 查阿明'
       }
     })
-    textarea.setSelectionRange('@people_agent '.length, '@people_agent '.length)
+    textarea.setSelectionRange('@people[tool] '.length, '@people[tool] '.length)
     fireEvent.keyDown(textarea, {
       key: 'Backspace'
     })

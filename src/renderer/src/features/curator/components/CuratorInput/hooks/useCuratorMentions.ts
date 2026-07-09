@@ -87,7 +87,13 @@ export const useCuratorMentions = (
 
     const matchedSkills = skills
       .filter((skill) =>
-        [skill.name, skill.id, skill.description || ""].some((keyword) =>
+        [
+          skill.name,
+          skill.id,
+          skill.description || "",
+          `${skill.id}[skill]`,
+          "skill"
+        ].some((keyword) =>
           isFuzzyMatch(normalizedQuery, keyword.toLowerCase()),
         ),
       )
