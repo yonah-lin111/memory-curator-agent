@@ -15,7 +15,8 @@ import type { ModelProvider } from "@/agent/types";
 import type { AiToolStep } from "@/db/schema";
 import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService";
 import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry";
-import { getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
+import { loadSkills, getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
+import { createSkillTool } from "@/agent/tools/skillTool";
 import {
   type AiChatStartPayload,
   type AiChatIpcEvent,
@@ -80,10 +81,12 @@ export const startAiChat = async (
   let tools = services.toolRegistry.all();
   const agentHints = normalizeAiChatAgentHints(payload.agents);
 
-  // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具，隔离所有业务 Agent 的工具
+  // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具和 load_skill
   const hasCommonAgent = agentHints.some((hint) => hint.id === "common");
   if (hasCommonAgent) {
-    tools = tools.filter((tool) => tool.name.startsWith("common_tool_"));
+    tools = tools.filter(
+      (tool) => tool.name.startsWith("common_tool_") || tool.name === "load_skill"
+    );
   }
   const modelConfig = providerConfig.models[modelId];
   const timestamp = createTimestamp();
@@ -230,22 +233,36 @@ export const startAiChat = async (
         }
       }
 
-      // 动态获取当前激活 Agent 的自动挂载 Skills 并合入 System Prompt
+      // 动态获取当前激活 Agent 的自动挂载 Skills，仅注入元数据到 System Prompt
       let autoSkillsContent = "";
+      let loadedUniqueSkills: AiAgentSkill[] = [];
       try {
         const loadedSkills: AiAgentSkill[] = [];
-        for (const hint of agentHints) {
-          const skillsForAgent = await getAvailableSkillsForAgent(hint.id);
-          loadedSkills.push(...skillsForAgent);
+        if (agentHints.length > 0) {
+          // 有 agent 选择时，按 hint 匹配 skills
+          for (const hint of agentHints) {
+            const skillsForAgent = await getAvailableSkillsForAgent(hint.id);
+            loadedSkills.push(...skillsForAgent);
+          }
+        } else {
+          // 无 agent 选择时，加载所有 skill（全局可用）
+          loadedSkills.push(...(await loadSkills()));
         }
         // 去重
-        const uniqueSkills = Array.from(
+        loadedUniqueSkills = Array.from(
           new Map(loadedSkills.map((s) => [s.id, s])).values()
         );
-        if (uniqueSkills.length > 0) {
+        if (loadedUniqueSkills.length > 0) {
+          // 技能使用规则 + 元数据（name + description）XML 块，完整内容通过 load_skill 按需获取
+          const skillsXml = loadedUniqueSkills
+            .map(
+              (s) =>
+                `  <skill>\n    <name>${s.id}</name>\n    <description>${s.description || s.name}</description>\n  </skill>`
+            )
+            .join("\n");
           autoSkillsContent =
-            "\n\n# Automatically Loaded Agent Skills:\n" +
-            uniqueSkills.map((s) => s.content).join("\n\n");
+            "\n\n技能使用：以下是当前可用的技能列表。当任务明确匹配某个技能描述时，使用 load_skill 按名称加载该技能的完整指令再执行。不要同时加载多个不相关的技能。\n\n" +
+            `<available_skills>\n${skillsXml}\n</available_skills>`;
         }
       } catch (error) {
         console.error("Failed to load automatic skills in chatRunner:", error);
@@ -262,6 +279,13 @@ export const startAiChat = async (
             content: `${baseSystemPrompt.content}${autoSkillsContent}`,
           }
         : baseSystemPrompt;
+
+      // 将 load_skill 工具动态注入到本轮 tools 中
+      let finalTools = tools;
+      if (loadedUniqueSkills.length > 0) {
+        const skillLoadTool = createSkillTool(loadedUniqueSkills);
+        finalTools = [...tools, skillLoadTool];
+      }
 
       for await (const agentEvent of runReactAgent({
         provider,
@@ -289,7 +313,7 @@ export const startAiChat = async (
               ? Infinity
               : config.agent.context.recentToolResultLimit,
         }),
-        tools,
+        tools: finalTools,
         signal: controller.signal,
         askAnswerProvider: (request) => waitForAskAnswer(runId, request),
         toolConfirmationProvider: (request) =>

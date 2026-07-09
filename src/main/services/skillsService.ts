@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
-import { join, extname } from 'node:path'
+import { readdir, readFile, stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import matter from 'gray-matter'
 import { getSkillsDir } from '@/paths'
 
 // AI Agent 技能数据模型。
 export interface AiAgentSkill {
-  // 唯一标识（通常为文件名除去后缀，或 frontmatter 中的 id/name）
+  // 唯一标识（目录名）
   id: string
   // 显示名称
   name: string
@@ -16,7 +16,7 @@ export interface AiAgentSkill {
   supportedAgents?: string[]
   // 实际的 prompt 内容
   content: string
-  // 所在绝对路径
+  // skill.md 所在绝对路径
   location: string
 }
 
@@ -32,7 +32,7 @@ interface SkillFrontmatter {
 let skillsCache: AiAgentSkill[] | null = null
 
 /**
- * 确保 Skills 目录存在，如果不存在则自动创建，支持用户体验。
+ * 确保 Skills 目录存在，如果不存在则自动创建。
  */
 const ensureSkillsDir = async (): Promise<string> => {
   const dir = getSkillsDir()
@@ -44,8 +44,8 @@ const ensureSkillsDir = async (): Promise<string> => {
 }
 
 /**
- * 扫描并加载特定目录下的所有 Skill Markdown 文件。
- * 核心逻辑采用 gray-matter 提取 Frontmatter 和正文。
+ * 扫描并加载 Skills 目录下的所有技能。
+ * 目录结构：skills/<技能名>/skill.md
  */
 export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> => {
   if (skillsCache && !forceRefresh) {
@@ -53,22 +53,30 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
   }
 
   const dir = await ensureSkillsDir()
-  const files = await readdir(dir)
+  const entries = await readdir(dir)
   const skills: AiAgentSkill[] = []
 
-  for (const file of files) {
-    if (extname(file).toLowerCase() !== '.md') {
+  for (const entry of entries) {
+    const entryPath = join(dir, entry)
+    let stats
+    try {
+      stats = await stat(entryPath)
+    } catch {
+      continue
+    }
+    // 跳过非目录项
+    if (!stats.isDirectory()) {
       continue
     }
 
-    const filePath = join(dir, file)
+    const skillMdPath = join(entryPath, 'skill.md')
     try {
-      const fileContent = await readFile(filePath, 'utf8')
+      const fileContent = await readFile(skillMdPath, 'utf8')
       const { data, content } = matter(fileContent)
       const frontmatter = data as SkillFrontmatter
 
-      // 提取基本元数据，缺省时使用文件名作为兜底。
-      const id = file.replace(/\.md$/i, '')
+      // 目录名作为 id，frontmatter 中的 name/id 优先作为显示名
+      const id = entry
       const name = frontmatter.name || id
       const description = frontmatter.description || ''
       const supportedAgents = Array.isArray(frontmatter.supportedAgents)
@@ -81,11 +89,11 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
         description,
         supportedAgents,
         content: content.trim(),
-        location: filePath
+        location: skillMdPath
       })
     } catch (error) {
-      // 容错处理：不因为单个 Skill 文件语法错误崩溃，保证整体服务高可用。
-      console.error(`Failed to parse skill file ${filePath}:`, error)
+      // 容错处理：不因为单个 Skill 文件语法错误崩溃。
+      console.error(`Failed to parse skill file ${skillMdPath}:`, error)
     }
   }
 

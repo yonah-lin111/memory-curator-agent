@@ -9,7 +9,9 @@ import { createNoteCategoryTools } from '@/agent/tools/noteCategoryTool'
 import { createThemeTools } from '@/agent/tools/themeTool'
 import { createBillsTools } from '@/agent/tools/billsTool'
 import { createTodayTool } from '@/agent/tools/todayTool'
+import { createSkillTool } from '@/agent/tools/skillTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
+import type { AiAgentSkill } from '@/services/skillsService'
 import type { NotesService } from '@/services/notesService'
 import type { JournalsService } from '@/services/journalsService'
 import type { PeopleService } from '@/services/peopleService'
@@ -40,6 +42,8 @@ export type AgentToolRegistryContext = {
   billsService?: Pick<BillsService, 'list' | 'todaySummary' | 'create' | 'update' | 'delete'>
   // 聚合器服务。
   aggregatorService?: AggregatorService
+  // 当前请求匹配的 Agent Skills 列表。
+  skills?: AiAgentSkill[]
 }
 
 // Agent 工具工厂。
@@ -78,7 +82,8 @@ const builtinToolFactories: AgentToolFactory[] = [
   ({ billsService }) => billsService ? createBillsTools(billsService) : [],
   (context) => createTodayTool(context),
   () => createTimeNowTool(),
-  () => createDateOffsetTool()
+  () => createDateOffsetTool(),
+  ({ skills }) => (skills && skills.length > 0 ? createSkillTool(skills) : [])
 ]
 
 // 工具调用公共约束。

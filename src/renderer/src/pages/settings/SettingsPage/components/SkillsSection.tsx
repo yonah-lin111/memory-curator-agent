@@ -71,7 +71,7 @@ export const SkillsSection = (): React.JSX.Element => {
             Agent 智能体技能
           </h2>
           <p className="mt-1 text-xs text-white/40">
-            自定义系统指令级技能。加载于 ~/.mc/skills 目录下。
+            自定义系统指令级技能。加载于 ~/.mc/skills/{'<'}<span className="text-white/60">技能名</span>{'>'}/skill.md 路径下。
           </p>
         </div>
         <button
@@ -174,7 +174,7 @@ export const SkillsSection = (): React.JSX.Element => {
               <Cpu className="h-8 w-8 text-white/10 mb-2.5" />
               <h3 className="text-sm font-bold text-white/70">添加你的自定义技能</h3>
               <p className="mt-2 max-w-xs text-xs text-white/40 leading-relaxed">
-                在 macOS 上，你可以直接在 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">~/.mc/skills</code> 目录下新建 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">*.md</code> 格式的文件。
+                在 macOS 上，你可以在 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">~/.mc/skills</code> 下创建 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">技能名/skill.md</code> 格式的技能文件。
               </p>
               <div className="mt-4 rounded-[6px] border border-white/5 bg-black/30 p-2.5 text-left text-[11px] leading-relaxed text-white/50 font-mono">
                 示例前置元数据 (Frontmatter)：
