@@ -12,6 +12,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 
 // 固定的顶部栏组件属性接口
 export interface HeaderProps {
@@ -69,6 +70,9 @@ export const Header = ({
     hideChatButton,
     settingsState,
   } = useHeaderStore();
+
+  const previewFormat = usePromptDesignStore((state) => state.previewFormat);
+  const setPreviewFormat = usePromptDesignStore((state) => state.setPreviewFormat);
 
   const rightZoneKey = isChatOpen
     ? "chat"
@@ -177,9 +181,21 @@ export const Header = ({
             </div>
           )}
           {!isChatOpen && extraActions}
-          {/* 提示词展开后的扩展 icon 组 */}
+          {/* 提示词展开后的扩展 icon组 */}
           {isPromptsOpen && !hideChatButton && (
             <>
+              <Tooltip content={previewFormat === "markdown" ? "切换为 XML 预览" : "切换为 Markdown 预览"} placement="bottom">
+                <IconButton
+                  aria-label="切换预览格式"
+                  onClick={() => setPreviewFormat(previewFormat === "markdown" ? "xml" : "markdown")}
+                >
+                  {previewFormat === "markdown" ? (
+                    <Type className="h-3.5 w-3.5" />
+                  ) : (
+                    <Code className="h-3.5 w-3.5" />
+                  )}
+                </IconButton>
+              </Tooltip>
               <Tooltip
                 trigger="hover"
                 placement="bottom"

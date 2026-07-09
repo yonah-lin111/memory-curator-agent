@@ -216,13 +216,7 @@ const AppContent = (): React.JSX.Element => {
   }, []);
 
   const handlePromptAiToggle = () => {
-    const nextState = !isPromptAiSidebarOpen;
-    setIsPromptAiSidebarOpen(nextState);
-    if (nextState) {
-      setIsSidebarCollapsed(true);
-    } else {
-      setIsSidebarCollapsed(false);
-    }
+    setIsPromptAiSidebarOpen(!isPromptAiSidebarOpen);
   };
 
   // 首次进入页面时触发 500ms Loading 效果。
@@ -348,7 +342,6 @@ const AppContent = (): React.JSX.Element => {
             promptsContent={
               <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} onClosePromptAiSidebar={() => {
                 setIsPromptAiSidebarOpen(false);
-                setIsSidebarCollapsed(false);
               }} />
             }
           />

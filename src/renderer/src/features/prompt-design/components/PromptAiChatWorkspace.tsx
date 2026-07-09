@@ -253,7 +253,7 @@ export const PromptAiChatWorkspace = forwardRef<
   }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#212121]">
       {/* 消息区域容器 */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* 左侧：消息区域（消息列表 + 输入区域） */}
@@ -265,9 +265,9 @@ export const PromptAiChatWorkspace = forwardRef<
               paddingLeft: "1rem",
               paddingRight: "1rem",
             }}
-            className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0"
+            className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
           >
-            <div className="max-w-[860px] mx-auto w-full flex flex-col  flex-1">
+            <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
               {messages.map((message) => {
                 const isLatestUser =
                   message.role === "user" && message.id === latestUserMessageId;
