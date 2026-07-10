@@ -538,6 +538,162 @@ html:hover::-webkit-scrollbar-thumb,
   transition: transform 0.4s cubic-bezier(0.2, 0.85, 0.2, 1);
 }
 
+/* ── MDX Editor 暗黑主题覆写 ── */
+
+/* 根容器 — 暗黑主题 CSS 变量范围 */
+.mdxeditor-dark-container {
+  color-scheme: dark;
+}
+
+/* 编辑器根节点 — 背景透明继承父容器 */
+.mdxeditor-dark-container .mdxeditor-root {
+  --baseBg: #212121;
+  --basePageBg: #212121;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 工具栏 — 隐藏视觉但保留 DOM 用于 Realm 上下文 */
+.mdxeditor-dark-container .mdxeditor-toolbar {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+  visibility: hidden;
+}
+
+/* 可编辑内容区域 — 透明背景、13px 默认字号 */
+.mdxeditor-content-area {
+  background-color: transparent !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  outline: none !important;
+  padding: 0 !important;
+  min-height: 100% !important;
+}
+
+/* 内容区内内联代码 */
+.mdxeditor-content-area code {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 内容区内引用块 */
+.mdxeditor-content-area blockquote {
+  border-left: 2px solid rgba(255, 255, 255, 0.15) !important;
+  padding-left: 12px !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-style: italic;
+}
+
+/* 内容区内选中文本 */
+.mdxeditor-content-area ::selection {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 弹窗/下拉菜单 — 暗黑风格 */
+.mdxeditor-dark-container [class*="mdxeditor-popup"],
+.mdxeditor-dark-container [class*="mdxeditor-dialog"],
+.mdxeditor-dark-container [role="dialog"],
+.mdxeditor-dark-container [role="listbox"] {
+  background-color: #1a1a1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 下拉选项 — 暗黑悬停 */
+.mdxeditor-dark-container [role="option"]:hover,
+.mdxeditor-dark-container [role="menuitem"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 弹窗输入框 */
+.mdxeditor-dark-container input[type="text"],
+.mdxeditor-dark-container input[type="url"],
+.mdxeditor-dark-container textarea:not([class*="cm-"]) {
+  background-color: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+/* 弹窗按钮 */
+.mdxeditor-dark-container [role="dialog"] button {
+  color: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 4px !important;
+}
+.mdxeditor-dark-container [role="dialog"] button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.mdxeditor-dark-container [role="dialog"] button[type="submit"],
+.mdxeditor-dark-container [role="dialog"] button[data-primary] {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+/* 源码视图（CodeMirror）— 暗黑背景 */
+.mdxeditor-dark-container .cm-editor {
+  background-color: #1a1a1a !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 13px !important;
+  border-radius: 6px;
+}
+.mdxeditor-dark-container .cm-editor .cm-gutters {
+  background-color: #161616 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+.mdxeditor-dark-container .cm-editor .cm-activeLine {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* diff 源码视图 */
+.mdxeditor-dark-container .cm-mergeView .cm-scroller {
+  font-size: 13px !important;
+}
+
+/* 真正将滚动条和高阶样式限定在编辑器根节点容器 */
+.mdxeditor-dark-container .mdxeditor-root {
+  overflow-y: auto !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+.mdxeditor-dark-container .mdxeditor-root:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-modal-backdrop-in,
   .animate-card-modal-in,
