@@ -817,6 +817,7 @@ export const TodayPage = (): React.JSX.Element => {
         </div>
 
         <TodayJournalPanel
+          isLoading={isTodayLoading}
           errorMessage={journalError}
           isSaving={isJournalSaving}
           journalContent={journalContent}

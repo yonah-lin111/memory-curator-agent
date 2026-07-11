@@ -228,6 +228,7 @@ export const JournalPage = (): React.JSX.Element => {
     <section aria-label="Journal Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <JournalEditorSurface
+          isLoading={isLoading}
           isDirty={journalContent.trim() !== savedJournalContent.trim()}
           lastSavedAt={lastSavedAt}
           moodLabel={moodLabel}

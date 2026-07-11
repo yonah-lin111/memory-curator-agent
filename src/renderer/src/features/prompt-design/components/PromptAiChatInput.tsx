@@ -30,7 +30,7 @@ export const PromptAiChatInput = ({
   onSend?: (text: string, selectedModel?: string) => void;
   disabled?: boolean;
   onNewChat?: () => void;
-  onUndo?: () => void;
+  onUndo?: () => Promise<"empty" | "undone" | "deleted_empty" | false>;
   onSessionChange?: (sessionId: string) => void;
   chatSessions?: CuratorSession[];
 }) => {
@@ -126,21 +126,43 @@ export const PromptAiChatInput = ({
     adjustTextareaHeight,
   );
 
-  const executeCommand = useCallback((commandId: string) => {
+  const executeCommand = useCallback(async (commandId: string) => {
     setIsCommandPanelOpen(false);
     if (commandId === "clear") {
+      if (disabled) {
+        toast.warning("AI 正在生成，请稍后再试");
+        return;
+      }
       setInputText("");
       onNewChat?.();
+      toast.success("已新建对话");
     } else if (commandId === "undo") {
+      if (disabled) {
+        toast.warning("AI 正在生成，不能撤销消息");
+        return;
+      }
       setInputText("");
-      onUndo?.();
+      if (onUndo) {
+        const res = await onUndo();
+        if (res === "empty") {
+          toast.warning("没有可撤销的对话");
+        } else if (res === "deleted_empty") {
+          toast.success("已撤销上一轮并删除空对话");
+        } else if (res === "undone") {
+          toast.success("已撤销上一轮对话");
+        } else if (res === false) {
+          toast.error("撤销对话失败");
+        }
+      }
     } else if (commandId === "model") {
       setInputText("/model ");
+      toast.info("请选择要切换的 AI 模型");
     } else if (commandId === "session") {
       setInputText("/session ");
+      toast.info("请选择要切换的对话");
     }
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [onNewChat, onUndo]);
+  }, [onNewChat, onUndo, disabled, toast]);
 
   const moveActiveCommand = useCallback((direction: 1 | -1): void => {
     setActiveCommandIndex((currentIndex) => {

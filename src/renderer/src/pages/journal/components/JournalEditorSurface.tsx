@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState, useRef, useEffect } from "react";
 import { BookOpen, Clock3, Smile } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
@@ -18,6 +19,8 @@ interface JournalEditorSurfaceProps {
   onChange: (value: string) => void;
   // 失焦回调。
   onBlur: () => void;
+  // 页面是否正在加载。
+  isLoading?: boolean;
 }
 
 /**
@@ -31,7 +34,24 @@ export const JournalEditorSurface = ({
   isDirty,
   onChange,
   onBlur,
+  isLoading,
 }: JournalEditorSurfaceProps): React.JSX.Element => {
+  const [editorMode, setEditorMode] = useState<"preview" | "split">("split");
+  const prevLoadingRef = useRef<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    // 初次挂载，或者刚刚完成加载 (isLoading 从 true 变 false)
+    const isInitialMount = prevLoadingRef.current === undefined;
+    const justFinishedLoading = prevLoadingRef.current === true && isLoading === false;
+
+    if (isInitialMount || justFinishedLoading) {
+      const mode = value.trim() ? "preview" : "split";
+      setEditorMode(mode);
+    }
+
+    prevLoadingRef.current = isLoading;
+  }, [value, isLoading]);
+
   // 最近保存时间展示值。
   const savedLabel = lastSavedAt 
     ? (lastSavedAt.includes("T") ? new Date(lastSavedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : lastSavedAt.slice(-5))
@@ -65,7 +85,7 @@ export const JournalEditorSurface = ({
           id="journal-page-editor"
           placeholder="写下今天的日记与主观感受..."
           value={value}
-          defaultMode="split"
+          defaultMode={editorMode}
           onBlur={onBlur}
           onChange={(nextValue) => onChange(nextValue ?? "")}
         />

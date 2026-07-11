@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { BookOpen } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
@@ -17,6 +17,8 @@ interface TodayJournalPanelProps {
   onJournalContentChange: (value: string) => void;
   // 编辑器失焦时的回调函数。
   onJournalBlur: () => void;
+  // 页面是否正在加载。
+  isLoading?: boolean;
 }
 
 /**
@@ -27,7 +29,24 @@ export const TodayJournalPanel = ({
   lastSavedAt,
   onJournalContentChange,
   onJournalBlur,
+  isLoading,
 }: TodayJournalPanelProps): React.JSX.Element => {
+  const [editorMode, setEditorMode] = useState<"preview" | "split">("split");
+  const prevLoadingRef = useRef<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    // 初次挂载，或者刚刚完成加载 (isLoading 从 true 变 false)
+    const isInitialMount = prevLoadingRef.current === undefined;
+    const justFinishedLoading = prevLoadingRef.current === true && isLoading === false;
+
+    if (isInitialMount || justFinishedLoading) {
+      const mode = journalContent.trim() ? "preview" : "split";
+      setEditorMode(mode);
+    }
+
+    prevLoadingRef.current = isLoading;
+  }, [journalContent, isLoading]);
+
   const savedLabel = useMemo(() => {
     if (!lastSavedAt) {
       return "未保存";
@@ -58,7 +77,7 @@ export const TodayJournalPanel = ({
           id="today-journal-editor"
           placeholder="写下今天的日记与主观感受..."
           value={journalContent}
-          defaultMode="split"
+          defaultMode={editorMode}
           onBlur={onJournalBlur}
           onChange={onJournalContentChange}
         />

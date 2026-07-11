@@ -13,6 +13,8 @@ export type PromptAiMessage = {
   toolSteps?: CuratorToolStep[];
 };
 
+export type PromptAiUndoResult = "empty" | "undone" | "deleted_empty" | false;
+
 /**
  * 文件工具 UI 显示名称映射。
  */
@@ -248,17 +250,28 @@ export function usePromptAiChatController(designItemId: string) {
     }
   }, [fetchSessions, sessionId, handleNewChat]);
 
-  const handleUndo = useCallback(async () => {
-    if (isGenerating) return;
-    const updated = await window.api.promptAi!.undoLastTurn(sessionId);
-    if (updated) {
-      if (updated.messages.length === 0) {
-        await handleDeleteChat(sessionId);
-      } else {
-        await loadSession(sessionId);
-      }
+  const handleUndo = useCallback(async (): Promise<PromptAiUndoResult> => {
+    if (isGenerating) return false;
+    if (messages.length === 0) {
+      return "empty";
     }
-  }, [isGenerating, sessionId, loadSession, handleDeleteChat]);
+    try {
+      const updated = await window.api.promptAi!.undoLastTurn(sessionId);
+      if (updated) {
+        if (updated.messages.length === 0) {
+          const isDeleted = await handleDeleteChat(sessionId);
+          return isDeleted ? "deleted_empty" : false;
+        }
+
+        await loadSession(sessionId);
+        return "undone";
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to undo last turn:", error);
+      return false;
+    }
+  }, [isGenerating, messages, sessionId, loadSession, handleDeleteChat]);
 
   const sendMessage = useCallback(
     async (text: string, selectedModel?: string) => {

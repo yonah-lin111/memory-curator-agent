@@ -10,6 +10,7 @@ import { usePromptDesignStore } from "../store/promptDesignStore";
 import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
 import { resolveCuratorSelectedModelOption, estimateCuratorContextTokens } from "@/lib/ai-shared/contextBuilder";
 import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle";
+import { useToast } from "@/components/ui/Toast";
 
 // 会话切换 loading 最短展示时长（ms），避免闪烁。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -25,6 +26,7 @@ export const PromptAiSidebar = ({
   isTransitionEnabled = true,
   onClose,
 }: PromptAiSidebarProps): React.JSX.Element => {
+  const toast = useToast();
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
   const [isDragging, setIsDragging] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -93,6 +95,12 @@ export const PromptAiSidebar = ({
    */
   const handleSessionSwitch = (sid: string): void => {
     controller.handleSessionChange(sid);
+    const target = controller.sessions.find(s => s.id === sid);
+    if (target) {
+      toast.success(`已切换对话: ${target.title}`);
+    } else {
+      toast.success("已切换对话");
+    }
   };
 
   /**
@@ -100,6 +108,7 @@ export const PromptAiSidebar = ({
    */
   const handleNewChatWithLoading = (): void => {
     controller.handleNewChat();
+    toast.success("已新建对话");
   };
 
   // 会话切换时统一驱动 loading（useLayoutEffect 确保在浏览器绘制前完成）。
@@ -174,6 +183,9 @@ export const PromptAiSidebar = ({
     const isUpdated = await controller.handleRenameChat(session.id, nextTitle);
     if (isUpdated) {
       setEditingTitle(null);
+      toast.success("已重命名对话");
+    } else {
+      toast.error("重命名对话失败");
     }
   };
 
@@ -384,7 +396,14 @@ export const PromptAiSidebar = ({
                     <Tooltip
                       title="确定删除此对话吗？"
                       placement="bottom"
-                      onConfirm={() => controller.handleDeleteChat(activeSession.id)}
+                      onConfirm={async () => {
+                        const isDeleted = await controller.handleDeleteChat(activeSession.id);
+                        if (isDeleted) {
+                          toast.success("已删除对话");
+                        } else {
+                          toast.error("删除对话失败");
+                        }
+                      }}
                       variant="primary"
                     >
                       <IconButton className="flex-shrink-0">
