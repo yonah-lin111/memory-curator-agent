@@ -58,7 +58,7 @@ export const TodayJournalPanel = ({
           id="today-journal-editor"
           placeholder="写下今天的日记与主观感受..."
           value={journalContent}
-          defaultMode="preview"
+          defaultMode="split"
           onBlur={onJournalBlur}
           onChange={onJournalContentChange}
         />

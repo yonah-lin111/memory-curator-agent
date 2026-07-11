@@ -65,7 +65,7 @@ export const JournalEditorSurface = ({
           id="journal-page-editor"
           placeholder="写下今天的日记与主观感受..."
           value={value}
-          defaultMode="preview"
+          defaultMode="split"
           onBlur={onBlur}
           onChange={(nextValue) => onChange(nextValue ?? "")}
         />
