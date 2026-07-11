@@ -21,7 +21,8 @@ import type {
   CuratorToolStep,
   CuratorToolStepStatus,
 } from "@/features/curator/types";
-import { CuratorAskRequestPanel,
+import {
+  CuratorAskRequestPanel,
   isCuratorAskAnswer,
   isCuratorAskRequest,
   isCuratorToolConfirmationRequest,
@@ -104,9 +105,7 @@ const getStatusConfig = (
  * 检测文件工具的 data 结构，返回简洁摘要。
  * 文件工具 data: { type, path } | { pattern, totalFound }
  */
-const formatFileToolSummary = (
-  data: unknown,
-): string | null => {
+const formatFileToolSummary = (data: unknown): string | null => {
   if (!data || typeof data !== "object") return null;
 
   const d = data as Record<string, unknown>;
@@ -126,7 +125,11 @@ const formatFileToolSummary = (
   }
 
   // grep 工具：{ pattern, totalFound, files? }
-  if (d.pattern && typeof d.totalFound === "number" && typeof d.files === "number") {
+  if (
+    d.pattern &&
+    typeof d.totalFound === "number" &&
+    typeof d.files === "number"
+  ) {
     return `${d.totalFound} match${d.totalFound === 1 ? "" : "es"} in ${d.files} file${d.files === 1 ? "" : "s"} for "${d.pattern}"`;
   }
 
@@ -147,7 +150,9 @@ const formatToolObservation = (step: CuratorToolStep): string => {
 
   // 如果是技能加载工具，直接提取并显示技能显示名
   if (step.tool === "load_skill") {
-    return (step.data as { name?: string } | undefined)?.name || step.observation;
+    return (
+      (step.data as { name?: string } | undefined)?.name || step.observation
+    );
   }
 
   const normalizedObservation = (step.observation ?? "").trim();
@@ -231,7 +236,9 @@ type CuratorToolRequestPanelContainerProps = {
   // 请求数据。
   request: CuratorAskRequest | CuratorToolConfirmationRequest | null;
   // 提交回答回调。
-  onSubmit: ((payload: CuratorAskAnswerSubmitPayload) => void | Promise<void>) | undefined;
+  onSubmit:
+    | ((payload: CuratorAskAnswerSubmitPayload) => void | Promise<void>)
+    | undefined;
   // 切换展开折叠时的回调。
   onToggle?: () => void;
 };
@@ -249,7 +256,8 @@ const CuratorToolRequestPanelContainer = ({
   >(request);
   const [isExpanded, setIsExpanded] = useState<boolean>(!!request);
   const [activeOnSubmit, setActiveOnSubmit] = useState<
-    ((payload: CuratorAskAnswerSubmitPayload) => void | Promise<void>) | undefined
+    | ((payload: CuratorAskAnswerSubmitPayload) => void | Promise<void>)
+    | undefined
   >(() => onSubmit);
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -289,7 +297,9 @@ const CuratorToolRequestPanelContainer = ({
   return (
     <div
       style={{
-        maxHeight: isExpanded ? `${innerRef.current?.scrollHeight || 1000}px` : "0px",
+        maxHeight: isExpanded
+          ? `${innerRef.current?.scrollHeight || 1000}px`
+          : "0px",
         opacity: isExpanded ? 1 : 0,
         transition:
           "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
@@ -299,7 +309,11 @@ const CuratorToolRequestPanelContainer = ({
     >
       <div ref={innerRef} className="mt-1 flex items-start gap-1 text-white/45">
         <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
-          <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
+          <svg
+            className="h-3 w-3 stroke-current"
+            viewBox="0 0 12 12"
+            fill="none"
+          >
             <path
               d="M3 1v5h7"
               strokeWidth="1.5"
@@ -309,7 +323,10 @@ const CuratorToolRequestPanelContainer = ({
           </svg>
         </span>
         <div className="min-w-0 flex-1">
-          <CuratorAskRequestPanel request={activeRequest} onSubmit={activeOnSubmit} />
+          <CuratorAskRequestPanel
+            request={activeRequest}
+            onSubmit={activeOnSubmit}
+          />
         </div>
       </div>
     </div>
@@ -339,7 +356,9 @@ const CuratorToolRequestPanelContainer = ({
  * - theme -> Palette
  * - 未知 -> Wrench
  */
-const getToolIcon = (toolName: string): React.ComponentType<{ className?: string }> => {
+const getToolIcon = (
+  toolName: string,
+): React.ComponentType<{ className?: string }> => {
   const name = toolName.toLowerCase();
 
   // 特定文件与编辑器工具
@@ -409,7 +428,9 @@ type GroupedToolStep = {
 /**
  * 动态计算同一组内步骤的总体状态。
  */
-const getGroupStatus = (groupSteps: CuratorToolStep[]): CuratorToolStepStatus => {
+const getGroupStatus = (
+  groupSteps: CuratorToolStep[],
+): CuratorToolStepStatus => {
   if (groupSteps.some((s) => s.status === "running")) return "running";
   if (groupSteps.some((s) => s.status === "failed")) return "failed";
   if (groupSteps.some((s) => s.status === "cancelled")) return "cancelled";
@@ -433,7 +454,9 @@ export const CuratorToolCallBlock = ({
   const DEFAULT_VISIBLE_COUNT = 3;
 
   // 记录超过 5 项时，各工具组的手动展开状态。
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // 切换工具组展开状态。
   const toggleGroupExpanded = (groupId: string) => {
@@ -470,9 +493,10 @@ export const CuratorToolCallBlock = ({
 
           const hasMoreSteps = group.steps.length > COLLAPSE_THRESHOLD;
           const isExpanded = !!expandedGroups[group.id];
-          const visibleSteps = hasMoreSteps && !isExpanded
-            ? group.steps.slice(0, DEFAULT_VISIBLE_COUNT)
-            : group.steps;
+          const visibleSteps =
+            hasMoreSteps && !isExpanded
+              ? group.steps.slice(0, DEFAULT_VISIBLE_COUNT)
+              : group.steps;
 
           return (
             <div key={group.id} className="relative flex gap-2.5 items-start">
@@ -482,7 +506,9 @@ export const CuratorToolCallBlock = ({
                   aria-label={config.label}
                   className="relative z-10 flex items-center justify-center"
                 >
-                  <StatusIcon className={`h-[18px] w-[18px] ${config.className}`} />
+                  <StatusIcon
+                    className={`h-[15px] w-[15px] ${config.className}`}
+                  />
                 </div>
                 {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
                 {groupIndex < groupedSteps.length - 1 && (
@@ -501,32 +527,38 @@ export const CuratorToolCallBlock = ({
                 <div className="flex flex-col gap-1.5 mt-1">
                   {visibleSteps.map((step) => {
                     const displayObservation = formatToolObservation(step);
-                    const askRequest = isCuratorAskRequest(step.data) ? step.data : null;
-                    const toolConfirmationRequest = isCuratorToolConfirmationRequest(step.data)
+                    const askRequest = isCuratorAskRequest(step.data)
                       ? step.data
                       : null;
+                    const toolConfirmationRequest =
+                      isCuratorToolConfirmationRequest(step.data)
+                        ? step.data
+                        : null;
                     const askAnswerSummary = renderAskAnswerSummary(step.data);
                     const requestPanel = askRequest ?? toolConfirmationRequest;
                     const handleSubmitRequest = askRequest
                       ? onSubmitAskAnswer
-                      : toolConfirmationRequest && onSubmitToolConfirmationAnswer
-                        ? (payload: CuratorAskAnswerSubmitPayload): void | Promise<void> => {
+                      : toolConfirmationRequest &&
+                          onSubmitToolConfirmationAnswer
+                        ? (
+                            payload: CuratorAskAnswerSubmitPayload,
+                          ): void | Promise<void> => {
                             const selected = payload.answers[0]?.[0] ?? "";
                             const cancelLabel =
-                              toolConfirmationRequest.questions[0]?.options[1]?.label;
+                              toolConfirmationRequest.questions[0]?.options[1]
+                                ?.label;
 
                             return onSubmitToolConfirmationAnswer({
                               requestId: payload.requestId,
-                              action: selected === cancelLabel ? "cancel" : "confirm",
+                              action:
+                                selected === cancelLabel ? "cancel" : "confirm",
                             });
                           }
                         : undefined;
 
                     return (
                       <div key={step.id} className="flex flex-col gap-0.5">
-                        <div
-                          className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
-                        >
+                        <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
                           <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
                             <svg
                               className="w-3 h-3 stroke-current"
@@ -567,9 +599,15 @@ export const CuratorToolCallBlock = ({
                         className="text-[11px] text-white/35 hover:text-white/60 transition-colors cursor-pointer select-none font-medium flex items-center gap-1"
                       >
                         {isExpanded ? (
-                          <span>收起余下 {group.steps.length - DEFAULT_VISIBLE_COUNT} 项</span>
+                          <span>
+                            收起余下{" "}
+                            {group.steps.length - DEFAULT_VISIBLE_COUNT} 项
+                          </span>
                         ) : (
-                          <span>展开余下 {group.steps.length - DEFAULT_VISIBLE_COUNT} 项...</span>
+                          <span>
+                            展开余下{" "}
+                            {group.steps.length - DEFAULT_VISIBLE_COUNT} 项...
+                          </span>
                         )}
                       </button>
                     </div>
