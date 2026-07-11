@@ -11,9 +11,14 @@ export type PromptAiMessage = {
   reasoning?: string;
   /** 工具调用步骤列表 */
   toolSteps?: CuratorToolStep[];
+  // 标记生成是否被中断以渲染删除线样式
+  cancelled?: boolean;
 };
 
-export type PromptAiUndoResult = "empty" | "undone" | "deleted_empty" | false;
+export type PromptAiUndoResult = {
+  status: "empty" | "undone" | "deleted_empty";
+  prompt?: string;
+} | false;
 
 /**
  * 文件工具 UI 显示名称映射。
@@ -57,6 +62,11 @@ export function usePromptAiChatController(
   const [sessions, setSessions] = useState<any[]>([]);
   const editorContentRef = useRef(editorContent);
   const runEditorContentRef = useRef(new Map<string, string>());
+  const activeRunIdRef = useRef<string | null>(null);
+  const latestUserPromptRef = useRef<string | null>(null);
+  latestUserPromptRef.current = [...messages]
+    .reverse()
+    .find((message) => message.role === "user")?.content ?? null;
 
   useEffect(() => {
     editorContentRef.current = editorContent;
@@ -93,6 +103,7 @@ export function usePromptAiChatController(
             model: m.model,
             reasoning,
             toolSteps: m.toolSteps?.map(mapBackendToolStep) || undefined,
+            cancelled: m.cancelled,
           };
         }),
       );
@@ -224,6 +235,9 @@ export function usePromptAiChatController(
         // turn_finished 仅代表单次对话轮次结束，可能仍有后续工具调用，须等 done 信号才重置生成态
       } else if (event.type === "done") {
         setIsGenerating(false);
+        if (event.runId === activeRunIdRef.current) {
+          activeRunIdRef.current = null;
+        }
         if (event.runId) {
           runEditorContentRef.current.delete(event.runId);
         }
@@ -232,6 +246,9 @@ export function usePromptAiChatController(
         void fetchSessions();
       } else if (event.type === "error") {
         setIsGenerating(false);
+        if (event.runId === activeRunIdRef.current) {
+          activeRunIdRef.current = null;
+        }
         console.error("AI chat error:", event.message);
       }
     });
@@ -280,18 +297,23 @@ export function usePromptAiChatController(
   const handleUndo = useCallback(async (): Promise<PromptAiUndoResult> => {
     if (isGenerating) return false;
     if (messages.length === 0) {
-      return "empty";
+      return { status: "empty" };
     }
+
+    const prompt = [...messages]
+      .reverse()
+      .find((message) => message.role === "user")?.content;
+
     try {
       const updated = await window.api.promptAi!.undoLastTurn(sessionId);
       if (updated) {
         if (updated.messages.length === 0) {
           const isDeleted = await handleDeleteChat(sessionId);
-          return isDeleted ? "deleted_empty" : false;
+          return isDeleted ? { status: "deleted_empty", prompt } : false;
         }
 
         await loadSession(sessionId);
-        return "undone";
+        return { status: "undone", prompt };
       }
       return false;
     } catch (error) {
@@ -299,6 +321,42 @@ export function usePromptAiChatController(
       return false;
     }
   }, [isGenerating, messages, sessionId, loadSession, handleDeleteChat]);
+
+  /**
+   * 取消当前生成，并在取消前保留最后一条用户提示词。
+   */
+  const handleCancelGeneration = useCallback(async (): Promise<string | null> => {
+    if (!isGenerating || !activeRunIdRef.current) {
+      return null;
+    }
+
+    const prompt = latestUserPromptRef.current;
+
+    try {
+      await window.api.promptAi!.cancelChat(activeRunIdRef.current);
+      setIsGenerating(false);
+      activeRunIdRef.current = null;
+
+      // 立即在前端标记最后一条助手消息已被取消以应用删除线样式
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.role === "assistant") {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = {
+            ...lastMsg,
+            cancelled: true,
+          };
+          return newMessages;
+        }
+        return prev;
+      });
+
+      return prompt;
+    } catch (error) {
+      console.error("Failed to cancel AI chat:", error);
+      return null;
+    }
+  }, [isGenerating]);
 
   const sendMessage = useCallback(
     async (text: string, selectedModel?: string) => {
@@ -317,6 +375,7 @@ export function usePromptAiChatController(
         }),
       };
 
+      latestUserPromptRef.current = text;
       setMessages((prev) => [
         ...prev,
         newMsg,
@@ -336,7 +395,7 @@ export function usePromptAiChatController(
       setIsGenerating(true);
 
       try {
-        await window.api.promptAi!.startChat({
+        const { runId } = await window.api.promptAi!.startChat({
           sessionId,
           designItemId,
           message: text,
@@ -344,6 +403,7 @@ export function usePromptAiChatController(
           model: modelId,
           editorContent,
         });
+        activeRunIdRef.current = runId;
         await fetchSessions(); // 更新会话列表以反映新标题等变化
       } catch (err) {
         console.error("Failed to send message", err);
@@ -370,6 +430,7 @@ export function usePromptAiChatController(
     handleRenameChat,
     handleDeleteChat,
     handleUndo,
+    handleCancelGeneration,
     handleSubmitToolConfirmationAnswer,
     isGenerating,
     sessionInitialized,

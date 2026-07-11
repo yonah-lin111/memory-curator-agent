@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useLayoutEffect, useCallback, useMemo, useEffect } from "react";
 import { Paperclip, RotateCcw, SendHorizontal, FileText, Bot, MessageSquare } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
@@ -15,7 +15,9 @@ import { useFileMention } from "../hooks/useFileMention";
 import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
 import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
 import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
+import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory";
 import type { CuratorSession } from "@/features/curator/types";
+import type { PromptAiUndoResult } from "@/features/prompt-design/components/usePromptAiChatController";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
@@ -26,13 +28,17 @@ export const PromptAiChatInput = ({
   onUndo,
   onSessionChange,
   chatSessions,
+  injectedText,
+  onInjectedTextConsumed,
 }: {
   onSend?: (text: string, selectedModel?: string) => void;
   disabled?: boolean;
   onNewChat?: () => void;
-  onUndo?: () => Promise<"empty" | "undone" | "deleted_empty" | false>;
+  onUndo?: () => Promise<PromptAiUndoResult>;
   onSessionChange?: (sessionId: string) => void;
   chatSessions?: CuratorSession[];
+  injectedText?: string;
+  onInjectedTextConsumed?: () => void;
 }) => {
   const toast = useToast();
   const [inputText, setInputText] = useState("");
@@ -108,6 +114,28 @@ export const PromptAiChatInput = ({
   }, [inputText]);
 
   const {
+    promptHistory,
+    isBrowsingHistory,
+    historyCursorRef,
+    savePromptHistory,
+    movePromptHistory,
+    canMovePromptHistory,
+    resetHistoryCursor,
+    updateDraftInput,
+  } = useCuratorHistory(setInputText, textareaRef, adjustTextareaHeight);
+
+  useEffect(() => {
+    if (injectedText === undefined) {
+      return;
+    }
+
+    setInputText(injectedText);
+    resetHistoryCursor();
+    onInjectedTextConsumed?.();
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [injectedText, onInjectedTextConsumed, resetHistoryCursor]);
+
+  const {
     activeFileIndex,
     matchedFiles,
     isFilePanelOpen,
@@ -141,17 +169,20 @@ export const PromptAiChatInput = ({
         toast.warning("AI 正在生成，不能撤销消息");
         return;
       }
-      setInputText("");
       if (onUndo) {
         const res = await onUndo();
-        if (res === "empty") {
-          toast.warning("没有可撤销的对话");
-        } else if (res === "deleted_empty") {
-          toast.success("已撤销上一轮并删除空对话");
-        } else if (res === "undone") {
-          toast.success("已撤销上一轮对话");
-        } else if (res === false) {
+        if (res === false) {
           toast.error("撤销对话失败");
+        } else if (res.status === "empty") {
+          toast.warning("没有可撤销的对话");
+        } else if (res.status === "deleted_empty") {
+          setInputText(res.prompt ?? "");
+          resetHistoryCursor();
+          toast.success("已撤销上一轮并删除空对话");
+        } else if (res.status === "undone") {
+          setInputText(res.prompt ?? "");
+          resetHistoryCursor();
+          toast.success("已撤销上一轮对话");
         }
       }
     } else if (commandId === "model") {
@@ -162,7 +193,7 @@ export const PromptAiChatInput = ({
       toast.info("请选择要切换的对话");
     }
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [onNewChat, onUndo, disabled, toast]);
+  }, [onNewChat, onUndo, disabled, resetHistoryCursor, toast]);
 
   const moveActiveCommand = useCallback((direction: 1 | -1): void => {
     setActiveCommandIndex((currentIndex) => {
@@ -179,6 +210,8 @@ export const PromptAiChatInput = ({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextValue = e.target.value;
     setInputText(nextValue);
+    updateDraftInput(nextValue);
+    resetHistoryCursor();
     
     // Commands check
     const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
@@ -204,7 +237,7 @@ export const PromptAiChatInput = ({
     }
 
     syncFileMentionPanel(nextValue, e.target.selectionStart);
-  }, [closeFileMentionPanel, syncFileMentionPanel]);
+  }, [closeFileMentionPanel, resetHistoryCursor, syncFileMentionPanel, updateDraftInput]);
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -231,7 +264,9 @@ export const PromptAiChatInput = ({
         .trim();
 
       onSend(cleanedText, selectedModel || undefined);
+      savePromptHistory(inputText);
       setInputText("");
+      resetHistoryCursor();
       closeFileMentionPanel();
     }
   };
@@ -363,6 +398,28 @@ export const PromptAiChatInput = ({
               }
             }
 
+            if (
+              !isFilePanelOpen &&
+              !isCommandPanelOpen &&
+              e.key === "ArrowDown" &&
+              canMovePromptHistory(1)
+            ) {
+              e.preventDefault();
+              movePromptHistory(1);
+              return;
+            }
+
+            if (
+              !isFilePanelOpen &&
+              !isCommandPanelOpen &&
+              e.key === "ArrowUp" &&
+              canMovePromptHistory(-1)
+            ) {
+              e.preventDefault();
+              movePromptHistory(-1);
+              return;
+            }
+
             handleFileMentionKeyDown(e);
             if (e.defaultPrevented) return;
 
@@ -409,10 +466,18 @@ export const PromptAiChatInput = ({
 
           {/* 右侧发送与清空按钮 */}
           <div className="flex items-center gap-1.5">
+            {isBrowsingHistory && (
+              <span className="text-xs text-white/45 select-none mr-0.5">
+                {`History: ${historyCursorRef.current! + 1}/${promptHistory.length}`}
+              </span>
+            )}
             <button
               type="button"
               aria-label="Clear input"
-              onClick={() => setInputText("")}
+              onClick={() => {
+                setInputText("");
+                resetHistoryCursor();
+              }}
               disabled={!inputText}
               className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
                 inputText

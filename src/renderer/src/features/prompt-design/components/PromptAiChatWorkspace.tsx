@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useToast } from "@/components/ui/Toast";
 import { Bot } from "lucide-react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
@@ -53,6 +54,10 @@ export const PromptAiChatWorkspace = forwardRef<
   const latestUserMessageRef = useRef<HTMLDivElement>(null);
   const prevScrolledUserMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
+  const [injectedText, setInjectedText] = useState<string | undefined>(undefined);
+  const escCancelStateRef = useRef<"idle" | "pending">("idle");
+  const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
 
   const latestUserMessageId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -68,6 +73,62 @@ export const PromptAiChatWorkspace = forwardRef<
   const handleSend = (text: string, selectedModel?: string) => {
     sendMessage(text, selectedModel);
   };
+
+  /**
+   * 双击 Esc 时取消当前生成，避免单次误触打断流式输出。
+   */
+  const handleCancelEsc = useCallback((): void => {
+    if (!isGenerating) {
+      return;
+    }
+
+    if (escCancelStateRef.current === "idle") {
+      escCancelStateRef.current = "pending";
+      toast.info("再按一次 Esc 取消 AI 回答");
+      escCancelTimerRef.current = setTimeout(() => {
+        escCancelStateRef.current = "idle";
+        escCancelTimerRef.current = null;
+      }, 2000);
+      return;
+    }
+
+    escCancelStateRef.current = "idle";
+    if (escCancelTimerRef.current) {
+      clearTimeout(escCancelTimerRef.current);
+      escCancelTimerRef.current = null;
+    }
+    void controller.handleCancelGeneration().then((prompt) => {
+      if (prompt) {
+        setInjectedText(prompt);
+      }
+    });
+  }, [controller.handleCancelGeneration, isGenerating, toast]);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      escCancelStateRef.current = "idle";
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current);
+        escCancelTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        handleCancelEsc();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current);
+        escCancelTimerRef.current = null;
+      }
+    };
+  }, [handleCancelEsc, isGenerating]);
 
   const getUserMessageTargetTop = (userMessage: HTMLDivElement): number => {
     return Math.max(userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
@@ -326,6 +387,8 @@ export const PromptAiChatWorkspace = forwardRef<
             onUndo={controller.handleUndo}
             onSessionChange={controller.handleSessionChange}
             chatSessions={controller.sessions}
+            injectedText={injectedText}
+            onInjectedTextConsumed={() => setInjectedText(undefined)}
           />
         </div>
       </div>

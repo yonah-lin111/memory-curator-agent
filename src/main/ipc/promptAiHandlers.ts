@@ -444,6 +444,7 @@ async function runPromptAiChat(
     if (signal.aborted) {
       db.updateMessageContent(assistantMessageId, finalContent);
       db.updateAgentRunStatus(runId, "failed", "Aborted by user");
+      db.cancelMessage(assistantMessageId);
     } else {
       console.error("Prompt AI error:", err);
       db.updateAgentRunStatus(runId, "failed", err.message);

@@ -137,6 +137,18 @@ export class PromptAiPersistenceService {
     stmt.run(content, messageId);
   }
 
+  /**
+   * 将指定的消息标记为已被取消。
+   */
+  public cancelMessage(messageId: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE prompt_ai_chat_messages
+      SET cancelled = 1
+      WHERE external_id = ?
+    `);
+    stmt.run(messageId);
+  }
+
   public getSession(sessionId: string): PromptAiChatSessionItem | null {
     const sessionStmt = this.db.prepare(`
       SELECT * FROM prompt_ai_chat_sessions WHERE external_id = ?
@@ -167,6 +179,7 @@ export class PromptAiPersistenceService {
         answer: row.answer ?? undefined,
         model: row.model ?? undefined,
         createdAt: row.created_at,
+        cancelled: row.cancelled === 1 ? true : undefined,
       };
     });
 
