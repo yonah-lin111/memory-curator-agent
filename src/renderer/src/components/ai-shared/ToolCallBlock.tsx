@@ -558,7 +558,7 @@ export const CuratorToolCallBlock = ({
 
                     return (
                       <div key={step.id} className="flex flex-col gap-0.5">
-                        <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45">
+                        <div className="flex items-start gap-1 text-xs leading-relaxed text-white/45 min-w-0">
                           <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
                             <svg
                               className="w-3 h-3 stroke-current"
@@ -573,7 +573,7 @@ export const CuratorToolCallBlock = ({
                               />
                             </svg>
                           </span>
-                          <span className="flex-1">{displayObservation}</span>
+                          <span className="flex-1 min-w-0 break-all whitespace-pre-wrap">{displayObservation}</span>
                         </div>
                         {toolConfirmationRequest?.input ? (
                           <CuratorToolChangePreview
