@@ -138,7 +138,7 @@ const AppContent = (): React.JSX.Element => {
   const [isContextTimelineOpen, setIsContextTimelineOpen] = useState<boolean>(false);
 
   // 提示词 AI 助手边栏展开状态。
-  const [isPromptAiSidebarOpen, setIsPromptAiSidebarOpen] = useState<boolean>(false);
+  const [isPromptAiSidebarOpen, setIsPromptAiSidebarOpen] = useState<boolean>(true);
 
   // 当前激活的 Overlay (chat, prompts, null)
   const [activeOverlay, setActiveOverlay] = useState<"chat" | "prompts" | null>(null);

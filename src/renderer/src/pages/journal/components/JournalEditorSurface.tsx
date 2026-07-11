@@ -45,12 +45,11 @@ export const JournalEditorSurface = ({
     const justFinishedLoading = prevLoadingRef.current === true && isLoading === false;
 
     if (isInitialMount || justFinishedLoading) {
-      const mode = value.trim() ? "preview" : "split";
-      setEditorMode(mode);
+      setEditorMode("split");
     }
 
     prevLoadingRef.current = isLoading;
-  }, [value, isLoading]);
+  }, [isLoading]);
 
   // 最近保存时间展示值。
   const savedLabel = lastSavedAt 

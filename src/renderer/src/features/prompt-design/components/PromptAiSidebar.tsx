@@ -24,7 +24,7 @@ type PromptAiSidebarProps = {
 };
 
 export const PromptAiSidebar = ({
-  isOpen = false,
+  isOpen = true,
   isTransitionEnabled = true,
   editorContent,
   onEditorContentChange,

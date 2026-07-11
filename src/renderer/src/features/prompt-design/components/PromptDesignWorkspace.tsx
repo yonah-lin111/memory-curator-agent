@@ -15,7 +15,7 @@ interface PromptDesignWorkspaceProps {
  */
 export const PromptDesignWorkspace = ({
   isOpen,
-  isPromptAiSidebarOpen = false,
+  isPromptAiSidebarOpen = true,
   onClosePromptAiSidebar,
 }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
   if (!isOpen) return null;

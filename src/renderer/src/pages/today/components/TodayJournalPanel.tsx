@@ -40,12 +40,11 @@ export const TodayJournalPanel = ({
     const justFinishedLoading = prevLoadingRef.current === true && isLoading === false;
 
     if (isInitialMount || justFinishedLoading) {
-      const mode = journalContent.trim() ? "preview" : "split";
-      setEditorMode(mode);
+      setEditorMode("split");
     }
 
     prevLoadingRef.current = isLoading;
-  }, [journalContent, isLoading]);
+  }, [isLoading]);
 
   const savedLabel = useMemo(() => {
     if (!lastSavedAt) {
