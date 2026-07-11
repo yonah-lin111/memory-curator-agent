@@ -8,6 +8,8 @@ import { promptDesignService } from "@/services/promptDesignService";
 import { getDatabase } from "@/db";
 import { createSessionTitle } from "./ai/helpers";
 import { createPromptFileTools } from "@/agent/tools/promptFileTools";
+import { createPromptEditorTools } from "@/agent/tools/promptEditorTools";
+import { pendingToolConfirmations, waitForToolConfirmation } from "@/ipc/ai/state";
 import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
 import type { AgentMessage, AgentMessageRole } from "@/agent/types";
 
@@ -16,6 +18,9 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_file_read: "Read",
   prompt_glob: "Glob",
   prompt_grep: "Grep",
+  prompt_editor_replace: "Replace editor",
+  prompt_editor_replace_lines: "Replace editor lines",
+  prompt_editor_delete_lines: "Delete editor lines",
 };
 
 /**
@@ -31,6 +36,7 @@ export type PromptAiChatStartPayload = {
   message: string;
   provider?: string;
   model?: string;
+  editorContent?: string;
 };
 
 let persistenceService: PromptAiPersistenceService | null = null;
@@ -74,6 +80,18 @@ export function registerPromptAiHandlers(): void {
       activePromptAiRuns.delete(runId);
     }
   });
+
+  ipcMain.handle(
+    "prompt-ai:tool-confirmation:answer",
+    (_, payload: { requestId: string; action: "confirm" | "cancel" }) => {
+      const pending = pendingToolConfirmations.get(payload?.requestId);
+      if (!pending || (payload.action !== "confirm" && payload.action !== "cancel")) {
+        throw new Error("Invalid Prompt AI tool confirmation payload");
+      }
+      pendingToolConfirmations.delete(payload.requestId);
+      pending.resolve(payload.action);
+    },
+  );
 
   ipcMain.handle("prompt-ai:sessions:list", (_, designItemId: string) => {
     return getPersistence().listSessions(designItemId);
@@ -163,7 +181,10 @@ async function runPromptAiChat(
 
   // 解析项目路径，创建文件工具集
   const projectRoot = promptDesignService.getProjectPathByDesignItemId(payload.designItemId);
-  const tools = createPromptFileTools(projectRoot || "");
+  const tools = [
+    ...createPromptFileTools(projectRoot || ""),
+    ...createPromptEditorTools(payload.editorContent || ""),
+  ];
 
   // 工具步骤和片段累积（流式写入结束后持久化）
   const assistantToolSteps: AiToolStep[] = [];
@@ -239,6 +260,7 @@ async function runPromptAiChat(
       messages: agentMessages,
       tools,
       signal,
+      toolConfirmationProvider: (request) => waitForToolConfirmation(runId, request),
     });
 
     for await (const event of generator) {

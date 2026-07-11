@@ -34,7 +34,12 @@ export const PromptDesignWorkspace = ({
           defaultMode="edit"
         />
       </div>
-      <PromptAiSidebar isOpen={isPromptAiSidebarOpen} onClose={onClosePromptAiSidebar} />
+      <PromptAiSidebar
+        isOpen={isPromptAiSidebarOpen}
+        editorContent={content}
+        onEditorContentChange={setContent}
+        onClose={onClosePromptAiSidebar}
+      />
     </div>
   );
 };

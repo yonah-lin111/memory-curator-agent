@@ -9,12 +9,17 @@ import type { PromptAiMessage } from "./usePromptAiChatController";
 export const PromptAiChatMessageBubble = ({
   message,
   isGenerating = false,
+  onSubmitToolConfirmationAnswer,
 }: {
   message: PromptAiMessage & {
     reasoning?: string;
     toolSteps?: CuratorToolStep[];
   };
   isGenerating?: boolean;
+  onSubmitToolConfirmationAnswer?: (payload: {
+    requestId: string;
+    action: "confirm" | "cancel";
+  }) => void | Promise<void>;
 }) => {
   const isUser = message.role === "user";
 
@@ -45,7 +50,10 @@ export const PromptAiChatMessageBubble = ({
               )}
 
               {toolSteps && toolSteps.length > 0 && (
-                <CuratorToolCallBlock steps={toolSteps} />
+                <CuratorToolCallBlock
+                  steps={toolSteps}
+                  onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer}
+                />
               )}
 
               {message.content && (

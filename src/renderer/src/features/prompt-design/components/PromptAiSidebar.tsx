@@ -18,12 +18,16 @@ const MIN_SWITCH_LOADING_MS = 500;
 type PromptAiSidebarProps = {
   isOpen?: boolean;
   isTransitionEnabled?: boolean;
+  editorContent: string;
+  onEditorContentChange: (content: string) => void;
   onClose?: () => void;
 };
 
 export const PromptAiSidebar = ({
   isOpen = false,
   isTransitionEnabled = true,
+  editorContent,
+  onEditorContentChange,
   onClose,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
@@ -34,7 +38,11 @@ export const PromptAiSidebar = ({
 
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
   const designItemId = activeDesignId || "default-design-item-id";
-  const controller = usePromptAiChatController(designItemId);
+  const controller = usePromptAiChatController(
+    designItemId,
+    editorContent,
+    onEditorContentChange,
+  );
 
   const { selectedModel, modelOptions } = useActiveCuratorModels();
 

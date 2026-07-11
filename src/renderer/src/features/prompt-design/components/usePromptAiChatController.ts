@@ -22,6 +22,9 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_file_read: "Read",
   prompt_glob: "Glob",
   prompt_grep: "Grep",
+  prompt_editor_replace: "Replace editor",
+  prompt_editor_replace_lines: "Replace editor lines",
+  prompt_editor_delete_lines: "Delete editor lines",
 };
 
 /**
@@ -42,7 +45,11 @@ const mapBackendToolStep = (raw: any): CuratorToolStep => {
   };
 };
 
-export function usePromptAiChatController(designItemId: string) {
+export function usePromptAiChatController(
+  designItemId: string,
+  editorContent: string,
+  onEditorContentChange: (content: string) => void,
+) {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -152,6 +159,9 @@ export function usePromptAiChatController(designItemId: string) {
           return prev;
         });
       } else if (event.type === "tool_finished") {
+        if (event.data?.operation && typeof event.data.content === "string") {
+          onEditorContentChange(event.data.content);
+        }
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg && lastMsg.role === "assistant" && lastMsg.toolSteps) {
@@ -315,6 +325,7 @@ export function usePromptAiChatController(designItemId: string) {
           message: text,
           provider: providerId,
           model: modelId,
+          editorContent,
         });
         await fetchSessions(); // 更新会话列表以反映新标题等变化
       } catch (err) {
@@ -322,7 +333,14 @@ export function usePromptAiChatController(designItemId: string) {
         setIsGenerating(false);
       }
     },
-    [sessionId, designItemId, isGenerating, sessionInitialized],
+    [sessionId, designItemId, editorContent, isGenerating, sessionInitialized],
+  );
+
+  const handleSubmitToolConfirmationAnswer = useCallback(
+    async (requestId: string, action: "confirm" | "cancel") => {
+      await window.api.promptAi!.submitToolConfirmationAnswer({ requestId, action });
+    },
+    [],
   );
 
   return {
@@ -335,6 +353,7 @@ export function usePromptAiChatController(designItemId: string) {
     handleRenameChat,
     handleDeleteChat,
     handleUndo,
+    handleSubmitToolConfirmationAnswer,
     isGenerating,
     sessionInitialized,
     LATEST_ASSISTANT_TOP_OFFSET,

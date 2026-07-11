@@ -925,6 +925,8 @@ const api = {
       ipcRenderer.invoke('prompt-ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:chat:cancel', runId),
+    submitToolConfirmationAnswer: (payload: { requestId: string; action: 'confirm' | 'cancel' }): Promise<void> =>
+      ipcRenderer.invoke('prompt-ai:tool-confirmation:answer', payload),
     onChatEvent: (listener: (event: any) => void): (() => void) => {
       const wrappedListener = (_: Electron.IpcRendererEvent, event: any): void => {
         listener(event)

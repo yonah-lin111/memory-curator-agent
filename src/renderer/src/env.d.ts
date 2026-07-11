@@ -1033,6 +1033,7 @@ type AppAPI = {
     undoLastTurn: (sessionId: string) => Promise<any | null>
     startChat: (payload: any) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
+    submitToolConfirmationAnswer: (payload: { requestId: string; action: "confirm" | "cancel" }) => Promise<void>
     onChatEvent: (listener: (event: any) => void) => () => void
   }
   skills?: {
