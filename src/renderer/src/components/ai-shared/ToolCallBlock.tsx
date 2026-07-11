@@ -131,9 +131,14 @@ const formatToolObservation = (step: CuratorToolStep): string => {
     return ASK_ANSWER_OBSERVATION;
   }
 
-  // 优先通过 data 结构生成文件工具摘要
+  // 优先通过 data 结构生成 file 工具摘要
   const fileSummary = formatFileToolSummary(step.data);
   if (fileSummary) return fileSummary;
+
+  // 如果是技能加载工具，直接提取并显示技能显示名
+  if (step.tool === "load_skill") {
+    return (step.data as { name?: string } | undefined)?.name || step.observation;
+  }
 
   const normalizedObservation = (step.observation ?? "").trim();
   const sqlRowsMatch = normalizedObservation.match(

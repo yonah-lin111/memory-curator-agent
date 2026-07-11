@@ -240,8 +240,26 @@ html:hover::-webkit-scrollbar-thumb,
   --md-bk-color-outstand: transparent !important;
   --md-border-color: transparent !important;
   --md-scrollbar-bg-color: transparent !important;
+  --md-scrollbar-thumb-color: transparent !important;
+  --md-scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.1) !important;
+  --md-scrollbar-thumb-active-color: rgba(255, 255, 255, 0.35) !important;
   border: none !important;
   background: transparent !important;
+}
+
+/* 当 .md-editor-clean 整体被 hover 时，显示其内置自定义滚动条滑块（颜色设为微白 10%） */
+.md-editor-clean:hover .md-editor-custom-scrollbar__thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 鼠标直接 hover 自定义滚动条滑块时，滑块稍微加深（颜色设为 hover 色，这里我们合理提高至项目常用的 22% / 0.22） */
+.md-editor-clean .md-editor-custom-scrollbar__thumb:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 鼠标直接 active 拖拽自定义滚动条滑块时，保持 rgba(255, 255, 255, 0.35) */
+.md-editor-clean .md-editor-custom-scrollbar__thumb:active {
+  background: rgba(255, 255, 255, 0.35) !important;
 }
 
 /* 确保编辑区、预览区容器和整体内容区域无任何多余边框、背景与内外边距 */

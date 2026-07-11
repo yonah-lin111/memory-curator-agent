@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { Bot, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Image } from "@/components/ui/Image";
 import { TextFile } from "@/components/ui/TextFile";
 import { IconButton } from "@/components/ui/IconButton";
@@ -711,21 +711,14 @@ export const CuratorMessageBubble = ({
   return (
     <div
       ref={bubbleRef}
-      className={`flex gap-3 w-full max-w-[85%] scroll-mt-4 group/msg-bubble-container ${
-        isUser ? "ml-auto flex-row-reverse" : "mr-auto"
+      className={`w-full max-w-[85%] scroll-mt-4 group/msg-bubble-container ${
+        isUser ? "ml-auto" : "mr-auto"
       }`}
       onContextMenu={handleOpenContextMenu}
     >
-      {/* 角色头像 */}
-      {!isUser && (
-        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/5 bg-white text-black">
-          <Bot className="h-3.5 w-3.5" />
-        </div>
-      )}
-
       {/* 消息气泡主体 */}
       <div
-        className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}
+        className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : ""}`}
       >
         <div
           className={`rounded-[6px] px-1 py-1  text-sm leading-relaxed break-words w-fit max-w-full ${
