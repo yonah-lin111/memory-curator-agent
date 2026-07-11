@@ -208,7 +208,9 @@ export function usePromptAiChatController(
           }
           return prev;
         });
-      } else if (event.type === "turn_finished" || event.type === "done") {
+      } else if (event.type === "turn_finished") {
+        // turn_finished 仅代表单次对话轮次结束，可能仍有后续工具调用，须等 done 信号才重置生成态
+      } else if (event.type === "done") {
         setIsGenerating(false);
       } else if (event.type === "session_title_updated") {
         // 后台标题总结完成后刷新会话列表
