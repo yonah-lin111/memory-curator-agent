@@ -201,7 +201,12 @@ async function runPromptAiChat(
           name: step.tool,
           argumentsText: JSON.stringify(step.input ?? {}),
         }));
-        agentMessages.push({ role: "assistant", content: m.content || "", toolCalls });
+        agentMessages.push({
+          role: "assistant",
+          content: m.content || "",
+          parts: m.parts,
+          toolCalls,
+        });
         for (const step of m.toolSteps) {
           if (step.status === "done") {
             agentMessages.push({
@@ -213,7 +218,7 @@ async function runPromptAiChat(
           }
         }
       } else {
-        agentMessages.push({ role, content: m.content });
+        agentMessages.push({ role, content: m.content, parts: m.parts });
       }
     }
   }

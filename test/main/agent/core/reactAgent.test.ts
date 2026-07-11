@@ -70,6 +70,44 @@ const PEOPLE_DELETE_CONFIRMATION: AgentTool["confirmation"] = {
 };
 
 describe("reactAgent", () => {
+  it("将推理片段与工具调用一并回灌到下一轮", async () => {
+    const providerInputs: ModelTurnInput[] = [];
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
+        if (providerInputs.length === 1) {
+          yield { type: "reasoning_delta", id: "reasoning-1", delta: "先查询。" };
+          yield { type: "reasoning_delta", id: "reasoning-1", delta: "再回答。" };
+          yield { type: "tool_call_done", id: "call-1", name: "people_tool_query", argumentsText: "{}" };
+          return;
+        }
+        yield { type: "text_delta", delta: "完成。" };
+      },
+    };
+    const tool: AgentTool = {
+      name: "people_tool_query",
+      description: "查询",
+      parameters: { type: "object", properties: {} },
+      execute: async () => ({ observation: "已查询", data: [] }),
+    };
+
+    await Array.fromAsync(runReactAgent({
+      provider,
+      model: "fake-model",
+      messages: [{ role: "user", content: "查询" }],
+      tools: [tool],
+      maxTurns: 2,
+    }));
+
+    expect(providerInputs[1].messages.at(-2)).toMatchObject({
+      role: "assistant",
+      toolCalls: [{ id: "call-1" }],
+      parts: [{ id: "reasoning-1", kind: "reasoning", content: "先查询。再回答。" }],
+    });
+  });
+
   it("执行模型请求的工具并把观察结果回灌到下一轮", async () => {
     const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {

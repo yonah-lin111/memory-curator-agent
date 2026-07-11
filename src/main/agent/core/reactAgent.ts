@@ -288,6 +288,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     const tools = prepareToolsForModel(input.tools, messages)
     const toolsByName = new Map<string, AgentTool>(tools.map((tool) => [tool.name, tool]))
     const toolCalls: ModelToolCallDoneEvent[] = []
+    const reasoningParts: NonNullable<AgentMessage['parts']> = []
     let emittedText = false
 
     for await (const event of input.provider.streamTurn({
@@ -313,6 +314,18 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
       }
 
       if (event.type === 'reasoning_delta') {
+        const existingPart = reasoningParts.find(
+          (part) => part.kind === 'reasoning' && part.id === event.id
+        )
+        if (existingPart?.kind === 'reasoning') {
+          existingPart.content += event.delta
+        } else {
+          reasoningParts.push({
+            id: event.id,
+            kind: 'reasoning',
+            content: event.delta
+          })
+        }
         yield {
           type: 'reasoning_delta',
           id: event.id,
@@ -356,6 +369,7 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
     messages.push({
       role: 'assistant',
       content: '',
+      parts: reasoningParts.length ? reasoningParts : undefined,
       toolCalls: normalizedToolCalls
     })
 

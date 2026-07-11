@@ -20,6 +20,9 @@ const quoteDeco = Decoration.mark({ class: "cm-md-quote-mark" });
 const inlineCodeDeco = Decoration.mark({ class: "cm-md-inline-code-mark" });
 const linkDeco = Decoration.mark({ class: "cm-md-link-mark" });
 const separatorDeco = Decoration.mark({ class: "cm-md-separator-mark" });
+const boldDeco = Decoration.mark({ class: "cm-md-bold-mark" });
+const italicDeco = Decoration.mark({ class: "cm-md-emphasis-mark" });
+const strikethroughDeco = Decoration.mark({ class: "cm-md-strikethrough-mark" });
 
 interface LineDecoItem {
   from: number;
@@ -159,6 +162,42 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
                 from: lineFrom + matchIndex + linkMatch[0].length - 1,
                 to: lineFrom + matchIndex + linkMatch[0].length,
                 deco: linkDeco,
+              });
+            }
+
+            // 10. 匹配粗体 ** 或 __
+            let boldMatch;
+            const boldRegex = /\*\*|__/g;
+            while ((boldMatch = boldRegex.exec(text)) !== null) {
+              const matchIndex = boldMatch.index;
+              lineDecos.push({
+                from: lineFrom + matchIndex,
+                to: lineFrom + matchIndex + 2,
+                deco: boldDeco,
+              });
+            }
+
+            // 11. 匹配斜体 * 或 _ (使用 lookahead/lookbehind 排除粗体标记)
+            let italicMatch;
+            const italicRegex = /(?<!\*)\*(?!\*)|(?<!_)_(?!_)/g;
+            while ((italicMatch = italicRegex.exec(text)) !== null) {
+              const matchIndex = italicMatch.index;
+              lineDecos.push({
+                from: lineFrom + matchIndex,
+                to: lineFrom + matchIndex + 1,
+                deco: italicDeco,
+              });
+            }
+
+            // 12. 匹配删除线 ~~
+            let strikeMatch;
+            const strikeRegex = /~~/g;
+            while ((strikeMatch = strikeRegex.exec(text)) !== null) {
+              const matchIndex = strikeMatch.index;
+              lineDecos.push({
+                from: lineFrom + matchIndex,
+                to: lineFrom + matchIndex + 2,
+                deco: strikethroughDeco,
               });
             }
           }

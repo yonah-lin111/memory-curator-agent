@@ -1,4 +1,4 @@
-import { jsonSchema, streamText, tool, type ModelMessage } from 'ai'
+import { jsonSchema, streamText, tool, type AssistantModelMessage, type ModelMessage } from 'ai'
 import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import {
@@ -182,15 +182,33 @@ const parseToolArguments = (argumentsText: string): unknown => {
  * 转换为 AI SDK 模型消息。
  */
 const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
-  if (message.role === 'assistant' && message.toolCalls?.length) {
-    return {
-      role: 'assistant',
-      content: message.toolCalls.map((toolCall) => ({
+  if (message.role === 'assistant' && (message.toolCalls?.length || message.parts?.length)) {
+    const content: Exclude<AssistantModelMessage['content'], string> = []
+
+    for (const part of message.parts ?? []) {
+      if (part.kind === 'text') {
+        content.push({ type: 'text', text: part.content })
+      } else if (part.kind === 'reasoning') {
+        content.push({ type: 'reasoning', text: part.content })
+      }
+    }
+
+    if (message.content && !message.parts?.some((part) => part.kind === 'text' && part.content === message.content)) {
+      content.push({ type: 'text', text: message.content })
+    }
+
+    for (const toolCall of message.toolCalls ?? []) {
+      content.push({
         type: 'tool-call',
         toolCallId: toolCall.id,
         toolName: toolCall.name,
         input: parseToolArguments(toolCall.argumentsText)
-      }))
+      })
+    }
+
+    return {
+      role: 'assistant',
+      content
     }
   }
 

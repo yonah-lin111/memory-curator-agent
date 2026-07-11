@@ -227,6 +227,50 @@ describe('aiSdkProvider', () => {
     ])
   })
 
+  it('将 assistant reasoning 与工具调用重建为 AI SDK 消息', async () => {
+    let capturedInput: Record<string, any> | undefined
+    const config: NormalizedProviderConfig = {
+      id: 'bailian',
+      type: 'openai-compatible',
+      name: 'Bailian',
+      options: { apiKey: 'test-key', baseURL: 'https://example.com/v1' },
+      models: {}
+    }
+    const provider = await createAiSdkModelProvider(config, {
+      loadPackage: async () => ({
+        createOpenAICompatible: () => () => ({})
+      }),
+      streamText: (input) => {
+        capturedInput = input
+        return { stream: (async function* () { yield { type: 'finish' } })() }
+      }
+    })
+
+    await Array.fromAsync(provider.streamTurn({
+      model: 'MiniMax-M2.5',
+      messages: [{
+        role: 'assistant',
+        content: '',
+        parts: [{ id: 'reasoning-1', kind: 'reasoning', content: '先查询人物。' }],
+        toolCalls: [{
+          type: 'tool_call_done',
+          id: 'call-1',
+          name: 'people_tool_query',
+          argumentsText: '{"query":"阿明"}'
+        }]
+      }],
+      tools: []
+    }))
+
+    expect(capturedInput?.messages[0]).toEqual({
+      role: 'assistant',
+      content: [
+        { type: 'reasoning', text: '先查询人物。' },
+        { type: 'tool-call', toolCallId: 'call-1', toolName: 'people_tool_query', input: { query: '阿明' } }
+      ]
+    })
+  })
+
   it('发送给 AI SDK 前统一准备工具定义', async () => {
     let capturedInput: Record<string, unknown> | undefined
     const config: NormalizedProviderConfig = {
