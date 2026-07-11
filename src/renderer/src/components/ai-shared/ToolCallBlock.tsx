@@ -306,6 +306,28 @@ const CuratorToolRequestPanelContainer = ({
   );
 };
 
+// 分组后的工具步骤。
+type GroupedToolStep = {
+  // 组唯一标识。
+  id: string;
+  // 工具名称。
+  tool: string;
+  // 这一组的所有步骤。
+  steps: CuratorToolStep[];
+};
+
+/**
+ * 动态计算同一组内步骤的总体状态。
+ */
+const getGroupStatus = (groupSteps: CuratorToolStep[]): CuratorToolStepStatus => {
+  if (groupSteps.some((s) => s.status === "running")) return "running";
+  if (groupSteps.some((s) => s.status === "failed")) return "failed";
+  if (groupSteps.some((s) => s.status === "cancelled")) return "cancelled";
+  if (groupSteps.every((s) => s.status === "done")) return "done";
+  if (groupSteps.some((s) => s.status === "queued")) return "queued";
+  return "done";
+};
+
 /**
  * CuratorToolCallBlock - 渲染 ReAct 风格的工具执行摘要
  */
@@ -315,37 +337,55 @@ export const CuratorToolCallBlock = ({
   onSubmitToolConfirmationAnswer,
   onToolConfirmationToggle,
 }: CuratorToolCallBlockProps): React.JSX.Element => {
+  // 超过该数量时触发折叠机制。
+  const COLLAPSE_THRESHOLD = 3;
+  // 折叠后默认展示的步骤数量。
+  const DEFAULT_VISIBLE_COUNT = 3;
+
+  // 记录超过 5 项时，各工具组的手动展开状态。
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  // 切换工具组展开状态。
+  const toggleGroupExpanded = (groupId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
+
+  // 将连续出现的同名 steps 聚合成一个组。
+  const groupedSteps: GroupedToolStep[] = [];
+
+  steps.forEach((step) => {
+    const lastGroup = groupedSteps[groupedSteps.length - 1];
+    if (lastGroup && lastGroup.tool === step.tool) {
+      lastGroup.steps.push(step);
+    } else {
+      groupedSteps.push({
+        id: step.id,
+        tool: step.tool,
+        steps: [step],
+      });
+    }
+  });
+
   return (
     <div className="my-0.5 flex flex-col gap-2">
       {/* 步骤列表 */}
       <div className="relative flex flex-col gap-3 pl-1">
-        {steps.map((step, index) => {
-          const config = getStatusConfig(step.status);
+        {groupedSteps.map((group, groupIndex) => {
+          const groupStatus = getGroupStatus(group.steps);
+          const config = getStatusConfig(groupStatus);
           const StatusIcon = config.icon;
-          const displayObservation = formatToolObservation(step);
-          const askRequest = isCuratorAskRequest(step.data) ? step.data : null;
-          const toolConfirmationRequest = isCuratorToolConfirmationRequest(step.data)
-            ? step.data
-            : null;
-          const askAnswerSummary = renderAskAnswerSummary(step.data);
-          const requestPanel = askRequest ?? toolConfirmationRequest;
-          const handleSubmitRequest = askRequest
-            ? onSubmitAskAnswer
-            : toolConfirmationRequest && onSubmitToolConfirmationAnswer
-              ? (payload: CuratorAskAnswerSubmitPayload): void | Promise<void> => {
-                  const selected = payload.answers[0]?.[0] ?? "";
-                  const cancelLabel =
-                    toolConfirmationRequest.questions[0]?.options[1]?.label;
 
-                  return onSubmitToolConfirmationAnswer({
-                    requestId: payload.requestId,
-                    action: selected === cancelLabel ? "cancel" : "confirm",
-                  });
-                }
-              : undefined;
+          const hasMoreSteps = group.steps.length > COLLAPSE_THRESHOLD;
+          const isExpanded = !!expandedGroups[group.id];
+          const visibleSteps = hasMoreSteps && !isExpanded
+            ? group.steps.slice(0, DEFAULT_VISIBLE_COUNT)
+            : group.steps;
 
           return (
-            <div key={step.id} className="relative flex gap-2.5 items-start">
+            <div key={group.id} className="relative flex gap-2.5 items-start">
               {/* 时间轴节点列 */}
               <div className="relative flex flex-col items-center flex-shrink-0 w-6 self-stretch">
                 <div
@@ -355,7 +395,7 @@ export const CuratorToolCallBlock = ({
                   <StatusIcon className={`h-3 w-3 ${config.className}`} />
                 </div>
                 {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
-                {index < steps.length - 1 && (
+                {groupIndex < groupedSteps.length - 1 && (
                   <div className="absolute top-3 bottom-[-24px] w-[2px] bg-white/5" />
                 )}
               </div>
@@ -364,42 +404,87 @@ export const CuratorToolCallBlock = ({
               <div className="flex-1 min-w-0 flex flex-col gap-0.5 ">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-xs font-bold text-white/85 font-mono">
-                    {step.tool}
+                    {group.tool}
                   </span>
                 </div>
 
-                <div
-                  className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
-                >
-                  <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
-                    <svg
-                      className="w-3 h-3 stroke-current"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                    >
-                      <path
-                        d="M3 1v5h7"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                  <span className="flex-1">{displayObservation}</span>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  {visibleSteps.map((step) => {
+                    const displayObservation = formatToolObservation(step);
+                    const askRequest = isCuratorAskRequest(step.data) ? step.data : null;
+                    const toolConfirmationRequest = isCuratorToolConfirmationRequest(step.data)
+                      ? step.data
+                      : null;
+                    const askAnswerSummary = renderAskAnswerSummary(step.data);
+                    const requestPanel = askRequest ?? toolConfirmationRequest;
+                    const handleSubmitRequest = askRequest
+                      ? onSubmitAskAnswer
+                      : toolConfirmationRequest && onSubmitToolConfirmationAnswer
+                        ? (payload: CuratorAskAnswerSubmitPayload): void | Promise<void> => {
+                            const selected = payload.answers[0]?.[0] ?? "";
+                            const cancelLabel =
+                              toolConfirmationRequest.questions[0]?.options[1]?.label;
+
+                            return onSubmitToolConfirmationAnswer({
+                              requestId: payload.requestId,
+                              action: selected === cancelLabel ? "cancel" : "confirm",
+                            });
+                          }
+                        : undefined;
+
+                    return (
+                      <div key={step.id} className="flex flex-col gap-0.5">
+                        <div
+                          className="flex items-start gap-1 text-xs leading-relaxed text-white/45"
+                        >
+                          <span className="inline-flex items-center justify-center w-3 h-[1.625em] flex-shrink-0 select-none">
+                            <svg
+                              className="w-3 h-3 stroke-current"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                            >
+                              <path
+                                d="M3 1v5h7"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+                          <span className="flex-1">{displayObservation}</span>
+                        </div>
+                        {toolConfirmationRequest?.input ? (
+                          <CuratorToolChangePreview
+                            toolName={step.tool}
+                            input={toolConfirmationRequest.input}
+                            isGenerating={step.status === "running"}
+                          />
+                        ) : null}
+                        {askAnswerSummary}
+                        <CuratorToolRequestPanelContainer
+                          request={requestPanel}
+                          onSubmit={handleSubmitRequest}
+                          onToggle={onToolConfirmationToggle}
+                        />
+                      </div>
+                    );
+                  })}
+
+                  {hasMoreSteps && (
+                    <div className="pl-4">
+                      <button
+                        onClick={() => toggleGroupExpanded(group.id)}
+                        className="text-[11px] text-white/35 hover:text-white/60 transition-colors cursor-pointer select-none font-medium flex items-center gap-1"
+                      >
+                        {isExpanded ? (
+                          <span>收起余下 {group.steps.length - DEFAULT_VISIBLE_COUNT} 项</span>
+                        ) : (
+                          <span>展开余下 {group.steps.length - DEFAULT_VISIBLE_COUNT} 项...</span>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {toolConfirmationRequest?.input ? (
-                  <CuratorToolChangePreview
-                    toolName={step.tool}
-                    input={toolConfirmationRequest.input}
-                    isGenerating={step.status === "running"}
-                  />
-                ) : null}
-                {askAnswerSummary}
-                <CuratorToolRequestPanelContainer
-                  request={requestPanel}
-                  onSubmit={handleSubmitRequest}
-                  onToggle={onToolConfirmationToggle}
-                />
               </div>
             </div>
           );
