@@ -305,6 +305,71 @@ html:hover::-webkit-scrollbar-thumb,
   background-color: rgba(255, 255, 255, 0.25) !important;
 }
 
+/* 内联 AI diff 使用 CodeMirror block widget，正文在接受前保持原文不变。 */
+.md-editor .cm-ai-diff-block {
+  box-sizing: border-box;
+  position: relative;
+  margin: 4px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: var(--md-font-code, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.md-editor .cm-ai-diff-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #212121;
+}
+
+.md-editor .cm-ai-diff-controls button {
+  border: 0;
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: rgba(255, 255, 255, 0.8);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.md-editor .cm-ai-diff-accept {
+  background: rgba(74, 222, 128, 0.16);
+}
+
+.md-editor .cm-ai-diff-reject {
+  background: rgba(248, 113, 113, 0.16);
+}
+
+.md-editor .cm-ai-diff-accept:hover {
+  background: rgba(74, 222, 128, 0.28);
+}
+
+.md-editor .cm-ai-diff-reject:hover {
+  background: rgba(248, 113, 113, 0.28);
+}
+
+.md-editor .cm-ai-diff-deleted,
+.md-editor .cm-ai-diff-added {
+  padding: 4px 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-editor .cm-ai-diff-deleted {
+  color: rgba(254, 202, 202, 0.92);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.md-editor .cm-ai-diff-added {
+  color: rgba(209, 250, 229, 0.94);
+  background: rgba(34, 197, 94, 0.14);
+}
+
 /* 自定义 CodeMirror 6 Markdown 语法标记字符的高级分色着色方案 */
 .md-editor .cm-md-heading-mark,
 .md-editor .cm-md-heading-mark * {

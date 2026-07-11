@@ -114,9 +114,51 @@ export const createGlobTool = (projectRoot: string): AgentTool => ({
       path?: string
     }
 
-    const cwd = searchPath
-      ? assertInsideProject(projectRoot, searchPath)
-      : projectRoot
+    let cwd: string
+    try {
+      cwd = searchPath
+        ? assertInsideProject(projectRoot, searchPath)
+        : projectRoot
+    } catch (err: any) {
+      return {
+        observation: `Error: Access denied or directory path invalid.\n- Requested Path: "${searchPath}"\n- Project Root: "${projectRoot}"\n\nSuggestion: Please check the path and make sure it is inside the project root.`,
+        data: {
+          error: 'ACCESS_DENIED_OR_INVALID',
+          requestedPath: searchPath,
+          projectRoot,
+          suggestion: 'Ensure the subdirectory path is valid and inside project root.'
+        }
+      }
+    }
+
+    // Check if cwd exists and is directory
+    try {
+      const stat = await fs.promises.stat(cwd)
+      if (!stat.isDirectory()) {
+        return {
+          observation: `Error: The specified path is not a directory.\n- Requested Path: "${searchPath}"\n- Resolved Path: "${cwd}"\n- Project Root: "${projectRoot}"`,
+          data: {
+            error: 'NOT_A_DIRECTORY',
+            requestedPath: searchPath,
+            resolvedPath: cwd,
+            projectRoot
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return {
+          observation: `Error: The specified directory does not exist.\n- Requested Path: "${searchPath}"\n- Resolved Path: "${cwd}"\n- Project Root: "${projectRoot}"`,
+          data: {
+            error: 'ENOENT',
+            requestedPath: searchPath,
+            resolvedPath: cwd,
+            projectRoot
+          }
+        }
+      }
+      throw err
+    }
 
     // 优先 ripgrep，fallback 到 Node.js
     let results = await globWithRipgrep(pattern, cwd)

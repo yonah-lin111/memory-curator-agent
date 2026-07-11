@@ -1,5 +1,4 @@
 import type { AgentTool, AgentToolResult } from '@/agent/types'
-import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation'
 
 // 编辑器内容更新结果。
 type PromptEditorResult = AgentToolResult & {
@@ -25,12 +24,11 @@ export const createPromptEditorTools = (content: string): AgentTool[] => [
 const createReplaceTool = (): AgentTool => ({
   name: 'prompt_editor_replace',
   description: 'Replace the entire Prompt Design Markdown editor content. Supports multi-line Markdown.',
-  confirmation: buildConfirmation('确认替换提示词', '确认用新内容替换全部提示词', '确认替换', '取消替换'),
   prompt: {
     summary: 'Replace the complete Prompt Design Markdown document.',
     alwaysAvailable: true,
     whenToUse: ['Use when the user asks to rewrite, optimize, or replace the whole prompt.'],
-    safety: ['Always include the complete desired Markdown content. A confirmation is required before applying it.'],
+    safety: ['Always include the complete desired Markdown content.'],
     output: 'Put the complete replacement Markdown in content.'
   },
   parameters: {
@@ -62,12 +60,11 @@ const createReplaceTool = (): AgentTool => ({
 const createReplaceLinesTool = (currentContent: string): AgentTool => ({
   name: 'prompt_editor_replace_lines',
   description: 'Replace an inclusive 1-based line range in the Prompt Design Markdown editor with multi-line Markdown.',
-  confirmation: buildConfirmation('确认替换提示词行', '确认替换指定提示词行', '确认替换', '取消替换'),
   prompt: {
     summary: 'Replace an inclusive 1-based line range in the current Prompt Design Markdown document.',
     alwaysAvailable: true,
     whenToUse: ['Use when the user requests replacing specific known lines while preserving the remaining content.'],
-    safety: ['Line numbers are 1-based and inclusive. Content may be multi-line. A confirmation is required before applying the replacement.'],
+    safety: ['Line numbers are 1-based and inclusive. Content may be multi-line.'],
     output: 'Provide startLine, optional endLine, and replacement content.'
   },
   parameters: {
@@ -104,12 +101,11 @@ const createReplaceLinesTool = (currentContent: string): AgentTool => ({
 const createDeleteLinesTool = (currentContent: string): AgentTool => ({
   name: 'prompt_editor_delete_lines',
   description: 'Delete an inclusive 1-based line range from the Prompt Design Markdown editor.',
-  confirmation: buildConfirmation('确认删除提示词行', '确认删除指定提示词行', '确认删除', '取消删除'),
   prompt: {
     summary: 'Delete an inclusive 1-based line range from the current Prompt Design Markdown document.',
     alwaysAvailable: true,
     whenToUse: ['Use only when the user explicitly requests deletion of a known line range.'],
-    safety: ['Line numbers are 1-based and inclusive. A confirmation is required before applying the deletion.'],
+    safety: ['Line numbers are 1-based and inclusive.'],
     output: 'Provide startLine and endLine.'
   },
   parameters: {
@@ -135,37 +131,6 @@ const createDeleteLinesTool = (currentContent: string): AgentTool => ({
       observation: `Deleted lines ${input.startLine}-${endLine}.`,
       data: { content, operation: 'delete_lines' }
     }
-  }
-})
-
-/**
- * 构造编辑器变更确认配置。
- */
-const buildConfirmation = (
-  header: string,
-  question: string,
-  confirm: string,
-  cancel: string,
-): ToolConfirmationConfig => ({
-  header,
-  question,
-  confirm,
-  cancel,
-  renderSummary: (input) => {
-    if (!isRecord(input)) return null
-    if (typeof input.content === 'string' && isPositiveInteger(input.startLine)) {
-      const endLine = isPositiveInteger(input.endLine) ? input.endLine : input.startLine
-      return `将替换第 ${input.startLine}-${endLine} 行。`
-    }
-    if (typeof input.content === 'string') return '将替换 Markdown 编辑器的全部内容。'
-    if (isPositiveInteger(input.startLine)) {
-      const endLine = isPositiveInteger(input.endLine) ? input.endLine : input.startLine
-      return `将删除第 ${input.startLine}-${endLine} 行。`
-    }
-    return null
-  },
-  completion: {
-    renderMessage: (_, result) => result.observation
   }
 })
 

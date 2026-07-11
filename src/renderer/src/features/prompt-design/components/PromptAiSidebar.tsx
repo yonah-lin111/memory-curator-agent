@@ -19,7 +19,7 @@ type PromptAiSidebarProps = {
   isOpen?: boolean;
   isTransitionEnabled?: boolean;
   editorContent: string;
-  onEditorContentChange: (content: string) => void;
+  onEditorSuggestion: (originalContent: string, candidateContent: string) => void;
   onClose?: () => void;
 };
 
@@ -27,7 +27,7 @@ export const PromptAiSidebar = ({
   isOpen = true,
   isTransitionEnabled = true,
   editorContent,
-  onEditorContentChange,
+  onEditorSuggestion,
   onClose,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
@@ -41,7 +41,7 @@ export const PromptAiSidebar = ({
   const controller = usePromptAiChatController(
     designItemId,
     editorContent,
-    onEditorContentChange,
+    onEditorSuggestion,
   );
 
   const { selectedModel, modelOptions } = useActiveCuratorModels();

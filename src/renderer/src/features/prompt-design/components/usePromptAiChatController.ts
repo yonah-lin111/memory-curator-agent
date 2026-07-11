@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { CuratorToolStep } from "@/features/curator/types";
 
 export type PromptAiMessage = {
@@ -48,13 +48,19 @@ const mapBackendToolStep = (raw: any): CuratorToolStep => {
 export function usePromptAiChatController(
   designItemId: string,
   editorContent: string,
-  onEditorContentChange: (content: string) => void,
+  onEditorSuggestion: (originalContent: string, candidateContent: string) => void,
 ) {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
+  const editorContentRef = useRef(editorContent);
+  const runEditorContentRef = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    editorContentRef.current = editorContent;
+  }, [editorContent]);
 
   const fetchSessions = useCallback(async () => {
     if (!designItemId) return;
@@ -116,6 +122,9 @@ export function usePromptAiChatController(
       if (event.sessionId !== sessionId) return;
 
       if (event.type === "run_started") {
+        if (event.runId) {
+          runEditorContentRef.current.set(event.runId, editorContentRef.current);
+        }
         setIsGenerating(true);
         if (event.model) {
           setMessages((prev) => {
@@ -160,7 +169,10 @@ export function usePromptAiChatController(
         });
       } else if (event.type === "tool_finished") {
         if (event.data?.operation && typeof event.data.content === "string") {
-          onEditorContentChange(event.data.content);
+          onEditorSuggestion(
+            runEditorContentRef.current.get(event.runId) ?? editorContentRef.current,
+            event.data.content,
+          );
         }
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
@@ -212,6 +224,9 @@ export function usePromptAiChatController(
         // turn_finished 仅代表单次对话轮次结束，可能仍有后续工具调用，须等 done 信号才重置生成态
       } else if (event.type === "done") {
         setIsGenerating(false);
+        if (event.runId) {
+          runEditorContentRef.current.delete(event.runId);
+        }
       } else if (event.type === "session_title_updated") {
         // 后台标题总结完成后刷新会话列表
         void fetchSessions();
@@ -222,7 +237,7 @@ export function usePromptAiChatController(
     });
 
     return unlisten;
-  }, [sessionId]);
+  }, [sessionId, onEditorSuggestion]);
 
   const LATEST_ASSISTANT_TOP_OFFSET = 4;
 

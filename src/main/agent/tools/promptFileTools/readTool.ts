@@ -129,7 +129,24 @@ const readFileContent = async (
  */
 export const createReadTool = (projectRoot: string): AgentTool => ({
   name: 'prompt_file_read',
-  description: 'Read files or list directory contents within the project. Supports offset/limit for large files. Returns file content with line numbers.',
+  description: 'Read files or list directory contents within the project root. Only paths inside the project root are allowed. If the exact file path is unknown, please use prompt_glob to find it first.',
+  prompt: {
+    summary: 'Read files or list directory contents within the project root.',
+    whenToUse: [
+      'Use when you need to read the contents of a specific file in the project.',
+      'Use when you need to list the entries of a specific directory in the project.',
+      'Always verify file or directory path. If unsure, use prompt_glob to search for the path first.'
+    ],
+    whenNotToUse: [
+      'Do not use when you do not know the exact file path. Use prompt_glob first.',
+      'Do not use to write or modify files.'
+    ],
+    safety: [
+      'Only paths within the projectRoot can be accessed. Access to outside paths will be denied.',
+      'Binary files cannot be read and will return a binary file message.'
+    ],
+    output: 'Returns file content with line numbers, or directory entries.'
+  },
   parameters: {
     type: 'object',
     properties: {
@@ -156,7 +173,24 @@ export const createReadTool = (projectRoot: string): AgentTool => ({
     }
 
     const resolved = assertInsideProject(projectRoot, filePath)
-    const stat = await fs.promises.stat(resolved)
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.stat(resolved)
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        return {
+          observation: `Error: The specified path does not exist.\n- Requested Path: "${filePath}"\n- Resolved Path: "${resolved}"\n- Project Root: "${projectRoot}"\n\nSuggestion: Please use "prompt_glob" to search for the correct file or verify the path.`,
+          data: {
+            error: 'ENOENT',
+            requestedPath: filePath,
+            resolvedPath: resolved,
+            projectRoot,
+            suggestion: 'Use prompt_glob tool to find files.'
+          }
+        }
+      }
+      throw err
+    }
 
     // 二进制文件拒绝读取
     if (stat.isFile() && await isBinaryFile(resolved)) {

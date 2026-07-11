@@ -1,14 +1,185 @@
 import type React from "react";
-import { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { MdEditor, config } from "md-editor-rt";
 import type { ExposeParam, ToolbarNames, UploadImgEvent } from "md-editor-rt";
 import "md-editor-rt/lib/style.css";
-import { Decoration, ViewPlugin } from "@codemirror/view";
+import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
+import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } from "@codemirror/state";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
+
+// AI 内联审阅的单个连续文本变更块。
+export type MarkdownEditorChangeBlock = {
+  id: string;
+  originalLines: string[];
+  candidateLines: string[];
+  beforeLine?: string;
+  afterLine?: string;
+  status?: "pending" | "conflict";
+};
+
+type InlineDiffActions = {
+  onAccept: (id: string) => void;
+  onReject: (id: string) => void;
+};
+
+type PositionedInlineDiffBlock = MarkdownEditorChangeBlock & { from: number; to: number };
+type InlineDiffState = { decorations: DecorationSet; blocks: PositionedInlineDiffBlock[] };
+
+const PROMPT_DESIGN_EDITOR_ID = "prompt-design-editor";
+const setInlineDiffEffect = StateEffect.define<{ blocks: MarkdownEditorChangeBlock[]; actions: InlineDiffActions }>();
+
+/**
+ * 依据变更块锚点在文档中定位原文，插入建议定位至两侧锚点之间。
+ */
+const getPositionedInlineDiffBlocks = (doc: string, blocks: MarkdownEditorChangeBlock[]): PositionedInlineDiffBlock[] => {
+  const lines = doc === "" ? [] : doc.split("\n");
+  const lineOffsets = lines.reduce<number[]>((offsets, _line, index) => {
+    offsets.push(index === 0 ? 0 : offsets[index - 1] + lines[index - 1].length + 1);
+    return offsets;
+  }, []);
+
+  return blocks.flatMap((block) => {
+    const originalLength = block.originalLines.length;
+
+    // 优先尝试包含上下文锚点的严格匹配
+    for (let index = 0; index <= lines.length - originalLength; index += 1) {
+      const isOriginalMatch = block.originalLines.every((line, offset) => lines[index + offset] === line);
+      const hasBeforeAnchor = block.beforeLine === undefined || lines[index - 1] === block.beforeLine;
+      const hasAfterAnchor = block.afterLine === undefined || lines[index + originalLength] === block.afterLine;
+      if (isOriginalMatch && hasBeforeAnchor && hasAfterAnchor) {
+        const from = index === lines.length ? doc.length : lineOffsets[index];
+        const to = originalLength === 0 ? from : lineOffsets[index + originalLength - 1] + block.originalLines[originalLength - 1].length;
+        return [{ ...block, from, to }];
+      }
+    }
+
+    // 退避方案：若严格匹配失败，且原始非空行在文档中唯一，允许无锚点匹配
+    if (originalLength > 0) {
+      let matchIndex = -1;
+      let matchCount = 0;
+      for (let index = 0; index <= lines.length - originalLength; index += 1) {
+        const isOriginalMatch = block.originalLines.every((line, offset) => lines[index + offset] === line);
+        if (isOriginalMatch) {
+          matchCount += 1;
+          matchIndex = index;
+        }
+      }
+      if (matchCount === 1) {
+        const from = lineOffsets[matchIndex];
+        const to = lineOffsets[matchIndex + originalLength - 1] + block.originalLines[originalLength - 1].length;
+        return [{ ...block, from, to }];
+      }
+    }
+
+    return [];
+  });
+};
+
+/**
+ * 原生 DOM 控件避免 Widget 内部依赖 React 渲染树。
+ */
+class InlineDiffWidget extends WidgetType {
+  constructor(private readonly block: MarkdownEditorChangeBlock, private readonly actions: InlineDiffActions) {
+    super();
+  }
+
+  eq(other: InlineDiffWidget): boolean {
+    return other.block.id === this.block.id
+      && other.block.originalLines.join("\n") === this.block.originalLines.join("\n")
+      && other.block.candidateLines.join("\n") === this.block.candidateLines.join("\n");
+  }
+
+  toDOM(): HTMLElement {
+    const root = document.createElement("div");
+    root.className = "cm-ai-diff-block";
+    const controls = document.createElement("div");
+    controls.className = "cm-ai-diff-controls";
+    const createButton = (label: string, className: string, handler: () => void): HTMLButtonElement => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = className;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.textContent = label;
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", handler);
+      return button;
+    };
+    controls.append(
+      createButton("接受", "cm-ai-diff-accept", () => this.actions.onAccept(this.block.id)),
+      createButton("拒绝", "cm-ai-diff-reject", () => this.actions.onReject(this.block.id)),
+    );
+    root.append(controls);
+    const appendLines = (linesToAppend: string[], className: string, prefix: string): void => {
+      if (linesToAppend.length === 0) return;
+      const section = document.createElement("div");
+      section.className = className;
+      linesToAppend.forEach((line) => {
+        const row = document.createElement("div");
+        row.textContent = `${prefix} ${line || " "}`;
+        section.append(row);
+      });
+      root.append(section);
+    };
+    appendLines(this.block.originalLines, "cm-ai-diff-deleted", "-");
+    appendLines(this.block.candidateLines, "cm-ai-diff-added", "+");
+    return root;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+/**
+ * 创建仅供提示词设计编辑器使用的状态字段，避免污染其他 MarkdownEditor 实例。
+ */
+const createInlineDiffExtension = () => {
+  const inlineDiffField = StateField.define<InlineDiffState>({
+    create: () => ({ decorations: Decoration.none, blocks: [] }),
+    update: (value, transaction) => {
+      const effect = transaction.effects.find((item) => item.is(setInlineDiffEffect));
+      if (!effect) {
+        return {
+          decorations: value.decorations.map(transaction.changes),
+          blocks: value.blocks.map((block) => ({
+            ...block,
+            from: transaction.changes.mapPos(block.from),
+            to: transaction.changes.mapPos(block.to),
+          })),
+        };
+      }
+      const positionedBlocks = getPositionedInlineDiffBlocks(transaction.state.doc.toString(), effect.value.blocks);
+      const builder = new RangeSetBuilder<Decoration>();
+      positionedBlocks.forEach((block) => {
+        const widget = new InlineDiffWidget(block, effect.value.actions);
+        if (block.from === block.to) builder.add(block.from, block.from, Decoration.widget({ widget, block: true, side: 1 }));
+        else builder.add(block.from, block.to, Decoration.replace({ widget, block: true }));
+      });
+      return { decorations: builder.finish(), blocks: positionedBlocks };
+    },
+    provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
+  });
+
+  return [
+    inlineDiffField,
+    EditorState.transactionFilter.of((transaction) => {
+      if (!transaction.docChanged || !transaction.annotation(Transaction.userEvent)) return transaction;
+      const { blocks } = transaction.startState.field(inlineDiffField);
+      let isLocked = false;
+      transaction.changes.iterChanges((fromA, toA) => {
+        if (isLocked) return;
+        isLocked = blocks.some((block) => (
+          block.from === block.to ? fromA <= block.from && toA >= block.from : fromA < block.to && toA > block.from
+        ));
+      });
+      return isLocked ? [] : transaction;
+    }),
+  ];
+};
 
 // 自定义 CodeMirror 6 插件：用于精细匹配 Markdown 标记字符（#, -, [], ```, |, >, `, [link]），并添加专门的 CSS 类以单独着色
 const headingDeco = Decoration.mark({ class: "cm-md-heading-mark" });
@@ -229,13 +400,16 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
 
 // 全局注册 CodeMirror 6 扩展插件，实现 Markdown 语法标记独立高亮分色
 config({
-  codeMirrorExtensions(extensions, _options) {
+  codeMirrorExtensions(extensions, options) {
     return [
       ...extensions,
       {
         type: "markdownHighlight",
         extension: markdownHighlightPlugin,
       },
+      ...(options.editorId === PROMPT_DESIGN_EDITOR_ID
+        ? [{ type: "promptInlineDiff", extension: createInlineDiffExtension() }]
+        : []),
     ];
   },
 });
@@ -258,6 +432,12 @@ interface MarkdownEditorProps {
   className?: string;
   // 默认显示模式：edit (仅编辑), preview (仅预览), split (双栏)
   defaultMode?: "edit" | "preview" | "split";
+  // AI 待审变更块，仅提示词设计编辑器使用。
+  aiChangeBlocks?: MarkdownEditorChangeBlock[];
+  // 接受 AI 变更块。
+  onAcceptAiChange?: (id: string) => void;
+  // 拒绝 AI 变更块。
+  onRejectAiChange?: (id: string) => void;
 }
 
 // Markdown 编辑器基础工具栏。
@@ -296,9 +476,31 @@ export const MarkdownEditor = ({
   height,
   className,
   defaultMode,
+  aiChangeBlocks = [],
+  onAcceptAiChange,
+  onRejectAiChange,
 }: MarkdownEditorProps): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
+  const aiChangeActionsRef = useRef<InlineDiffActions>({
+    onAccept: () => undefined,
+    onReject: () => undefined,
+  });
+  aiChangeActionsRef.current = {
+    onAccept: onAcceptAiChange ?? (() => undefined),
+    onReject: onRejectAiChange ?? (() => undefined),
+  };
+
+  useEffect(() => {
+    const editorView = editorRef.current?.getEditorView();
+    if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
+    editorView.dispatch({
+      effects: setInlineDiffEffect.of({
+        blocks: aiChangeBlocks,
+        actions: aiChangeActionsRef.current,
+      }),
+    });
+  }, [aiChangeBlocks, id, onAcceptAiChange, onRejectAiChange]);
 
   // 编辑器内联高度，兼容像素数值与 CSS 高度。
   const editorStyle = useMemo<React.CSSProperties>(

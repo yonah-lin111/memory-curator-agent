@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { Bot } from "lucide-react";
 import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
 import { PromptAiChatInput } from "./PromptAiChatInput";
 import { usePromptAiChatController } from "./usePromptAiChatController";
@@ -268,32 +269,44 @@ export const PromptAiChatWorkspace = forwardRef<
             className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
           >
             <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
-              {messages.map((message) => {
-                const isLatestUser =
-                  message.role === "user" && message.id === latestUserMessageId;
-                const isGeneratingMessage =
-                  isGenerating &&
-                  message.role !== "user" &&
-                  message.id === messages[messages.length - 1]?.id;
-
-                return (
-                  <div
-                    key={message.id}
-                    ref={isLatestUser ? latestUserMessageRef : null}
-                  >
-                    <PromptAiChatMessageBubble
-                      message={message as any}
-                      isGenerating={isGeneratingMessage}
-                      onSubmitToolConfirmationAnswer={(payload) =>
-                        controller.handleSubmitToolConfirmationAnswer(
-                          payload.requestId,
-                          payload.action,
-                        )
-                      }
-                    />
+              {messages.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center text-center p-8 select-none my-auto animate-fade-in">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-[6px] bg-white/5 border border-white/5 mb-4 text-white/30 animate-pulse">
+                    <Bot className="h-6 w-6" />
                   </div>
-                );
-              })}
+                  <h3 className="text-sm font-bold text-white/80 mb-1.5 font-mono">// 提示词 AI 助手</h3>
+                  <p className="text-xs text-white/40 leading-relaxed max-w-[280px]">
+                    在此与 AI 助手交流。输入你想调整的提示词思路，或让它为你润色、检查或优化当前选中的提示词设计。
+                  </p>
+                </div>
+              ) : (
+                messages.map((message) => {
+                  const isLatestUser =
+                    message.role === "user" && message.id === latestUserMessageId;
+                  const isGeneratingMessage =
+                    isGenerating &&
+                    message.role !== "user" &&
+                    message.id === messages[messages.length - 1]?.id;
+
+                  return (
+                    <div
+                      key={message.id}
+                      ref={isLatestUser ? latestUserMessageRef : null}
+                    >
+                      <PromptAiChatMessageBubble
+                        message={message as any}
+                        isGenerating={isGeneratingMessage}
+                        onSubmitToolConfirmationAnswer={(payload) =>
+                          controller.handleSubmitToolConfirmationAnswer(
+                            payload.requestId,
+                            payload.action,
+                          )
+                        }
+                      />
+                    </div>
+                  );
+                })
+              )}
               {bottomSpacerHeight > 0 && (
                 <div
                   data-curator-bottom-spacer="true"
