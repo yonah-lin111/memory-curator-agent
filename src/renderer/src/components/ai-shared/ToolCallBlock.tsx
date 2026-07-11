@@ -1,5 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
-import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  FileText,
+  Files,
+  SearchCode,
+  Replace,
+  FilePenLine,
+  FileX,
+  Puzzle,
+  MessageCircleQuestion,
+  Clock,
+  ChartNoAxesCombined,
+  Palette,
+  Wrench,
+} from "lucide-react";
 import type {
   CuratorToolStep,
   CuratorToolStepStatus,
@@ -51,8 +68,6 @@ const getStatusConfig = (
 ): {
   // 状态显示文本。
   label: string;
-  // 状态图标组件。
-  icon: React.ComponentType<{ className?: string }>;
   // 状态样式类名。
   className: string;
 } => {
@@ -60,31 +75,26 @@ const getStatusConfig = (
     case "done":
       return {
         label: "Tool completed",
-        icon: CheckCircle2,
         className: "text-emerald-400",
       };
     case "failed":
       return {
         label: "Tool failed",
-        icon: XCircle,
         className: "text-red-400",
       };
     case "cancelled":
       return {
         label: "Cancelled",
-        icon: XCircle,
         className: "text-white/35",
       };
     case "running":
       return {
         label: "Running",
-        icon: Loader2,
         className: "text-amber-400 animate-spin",
       };
     case "queued":
       return {
         label: "Queued",
-        icon: CircleDashed,
         className: "text-white/30",
       };
   }
@@ -306,6 +316,86 @@ const CuratorToolRequestPanelContainer = ({
   );
 };
 
+/**
+ * 根据工具名称、类别等语义返回对应的 Lucide 图标组件。
+ *
+ * 映射规则：
+ * - CRUD 统一操作：
+ *   - query/list -> Search
+ *   - add -> Plus
+ *   - update -> Pencil
+ *   - delete/remove -> Trash2
+ *   - batch 操作沿用对应 CRUD
+ * - prompt_file_read / 显示名 Read -> FileText
+ * - prompt_glob / Glob -> Files
+ * - prompt_grep / Grep -> SearchCode
+ * - prompt_editor_replace / Replace editor -> Replace
+ * - replace_lines / Replace editor lines -> FilePenLine
+ * - delete_lines / Delete editor lines -> FileX
+ * - load_skill -> Puzzle
+ * - common_tool_ask -> MessageCircleQuestion
+ * - 时间工具 -> Clock
+ * - today/bills summary -> ChartNoAxesCombined
+ * - theme -> Palette
+ * - 未知 -> Wrench
+ */
+const getToolIcon = (toolName: string): React.ComponentType<{ className?: string }> => {
+  const name = toolName.toLowerCase();
+
+  // 特定文件与编辑器工具
+  if (name === "prompt_file_read" || name === "read") {
+    return FileText;
+  }
+  if (name === "prompt_glob" || name === "glob") {
+    return Files;
+  }
+  if (name === "prompt_grep" || name === "grep") {
+    return SearchCode;
+  }
+  if (name === "prompt_editor_replace" || name === "replace editor") {
+    return Replace;
+  }
+  if (name.includes("replace_lines") || name === "replace editor lines") {
+    return FilePenLine;
+  }
+  if (name.includes("delete_lines") || name === "delete editor lines") {
+    return FileX;
+  }
+
+  // 基础系统与沟通工具
+  if (name === "load_skill") {
+    return Puzzle;
+  }
+  if (name === "common_tool_ask") {
+    return MessageCircleQuestion;
+  }
+  if (name.includes("time") || name.includes("date_offset")) {
+    return Clock;
+  }
+  if (name.includes("summary")) {
+    return ChartNoAxesCombined;
+  }
+  if (name.includes("theme")) {
+    return Palette;
+  }
+
+  // CRUD 操作标准映射（包含 batch 操作）
+  if (name.includes("query") || name.includes("list")) {
+    return Search;
+  }
+  if (name.includes("add")) {
+    return Plus;
+  }
+  if (name.includes("update")) {
+    return Pencil;
+  }
+  if (name.includes("delete") || name.includes("remove")) {
+    return Trash2;
+  }
+
+  return Wrench;
+};
+
 // 分组后的工具步骤。
 type GroupedToolStep = {
   // 组唯一标识。
@@ -376,7 +466,7 @@ export const CuratorToolCallBlock = ({
         {groupedSteps.map((group, groupIndex) => {
           const groupStatus = getGroupStatus(group.steps);
           const config = getStatusConfig(groupStatus);
-          const StatusIcon = config.icon;
+          const StatusIcon = getToolIcon(group.tool);
 
           const hasMoreSteps = group.steps.length > COLLAPSE_THRESHOLD;
           const isExpanded = !!expandedGroups[group.id];
@@ -390,13 +480,13 @@ export const CuratorToolCallBlock = ({
               <div className="relative flex flex-col items-center flex-shrink-0 w-6 self-stretch">
                 <div
                   aria-label={config.label}
-                  className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#212121] border border-white/10"
+                  className="relative z-10 flex items-center justify-center"
                 >
-                  <StatusIcon className={`h-3 w-3 ${config.className}`} />
+                  <StatusIcon className={`h-[18px] w-[18px] ${config.className}`} />
                 </div>
                 {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
                 {groupIndex < groupedSteps.length - 1 && (
-                  <div className="absolute top-3 bottom-[-24px] w-[2px] bg-white/5" />
+                  <div className="absolute top-[9px] bottom-[-24px] w-[2px] bg-white/5" />
                 )}
               </div>
 
