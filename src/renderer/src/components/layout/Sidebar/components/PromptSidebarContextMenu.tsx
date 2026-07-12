@@ -11,7 +11,8 @@ type PromptSidebarContextMenuProps = {
   x: number;
   y: number;
   onAddDesign?: () => void;
-  onRename: () => void;
+  onEditProject?: () => void;
+  onRename?: () => void;
   onDelete: () => void;
 };
 
@@ -24,10 +25,20 @@ const VIEWPORT_PADDING = 8;
 /**
  * 把菜单坐标钳制在当前视口内。
  */
-const getMenuPosition = (x: number, y: number, type: ContextMenuType): { left: number; top: number } => {
-  const MENU_HEIGHT = type === "project" ? 118 : 82;
-  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING);
-  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING);
+const getMenuPosition = (
+  x: number,
+  y: number,
+  type: ContextMenuType,
+): { left: number; top: number } => {
+  const MENU_HEIGHT = type === "project" ? 120 : 82;
+  const maxLeft = Math.max(
+    VIEWPORT_PADDING,
+    window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING,
+  );
+  const maxTop = Math.max(
+    VIEWPORT_PADDING,
+    window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING,
+  );
 
   return {
     left: Math.min(Math.max(x, VIEWPORT_PADDING), maxLeft),
@@ -44,6 +55,7 @@ export const PromptSidebarContextMenu = ({
   x,
   y,
   onAddDesign,
+  onEditProject,
   onRename,
   onDelete,
 }: PromptSidebarContextMenuProps): React.JSX.Element => {
@@ -78,6 +90,28 @@ export const PromptSidebarContextMenu = ({
         top: position.top,
       }}
     >
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onEditProject}
+        >
+          <Edit3 className="h-3.5 w-3.5 text-white/45" />
+          <span>编辑项目</span>
+        </button>
+      ) : (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onRename}
+        >
+          <Edit3 className="h-3.5 w-3.5 text-white/45" />
+          <span>重命名</span>
+        </button>
+      )}
+
       {type === "project" && (
         <button
           className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
@@ -89,15 +123,6 @@ export const PromptSidebarContextMenu = ({
           <span>新增设计</span>
         </button>
       )}
-      <button
-        className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
-        role="menuitem"
-        type="button"
-        onClick={onRename}
-      >
-        <Edit3 className="h-3.5 w-3.5 text-white/45" />
-        <span>重命名</span>
-      </button>
       <button
         className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400/45 ${
           isConfirmingDelete
@@ -113,7 +138,13 @@ export const PromptSidebarContextMenu = ({
             isConfirmingDelete ? "text-white" : "text-rose-400/80"
           }`}
         />
-        <span>{isConfirmingDelete ? "确认删除" : (type === "project" ? "删除项目" : "删除设计")}</span>
+        <span>
+          {isConfirmingDelete
+            ? "确认删除"
+            : type === "project"
+              ? "删除项目"
+              : "删除设计"}
+        </span>
       </button>
     </div>
   );

@@ -114,9 +114,6 @@ export const PromptAiChatInput = ({
   }, [inputText]);
 
   const {
-    promptHistory,
-    isBrowsingHistory,
-    historyCursorRef,
     savePromptHistory,
     movePromptHistory,
     canMovePromptHistory,
@@ -466,11 +463,6 @@ export const PromptAiChatInput = ({
 
           {/* 右侧发送与清空按钮 */}
           <div className="flex items-center gap-1.5">
-            {isBrowsingHistory && (
-              <span className="text-xs text-white/45 select-none mr-0.5">
-                {`History: ${historyCursorRef.current! + 1}/${promptHistory.length}`}
-              </span>
-            )}
             <button
               type="button"
               aria-label="Clear input"
