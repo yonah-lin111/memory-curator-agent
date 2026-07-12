@@ -9,7 +9,9 @@ import { getDatabase } from "@/db";
 import { createSessionTitle } from "./ai/helpers";
 import { createPromptFileTools } from "@/agent/tools/promptFileTools";
 import { createPromptEditorTools } from "@/agent/tools/promptEditorTools";
-import { pendingToolConfirmations, waitForToolConfirmation } from "@/ipc/ai/state";
+import { createAskTool } from "@/agent/tools/askTool";
+import { cancelAiChatAsk, pendingToolConfirmations, waitForAskAnswer, waitForToolConfirmation } from "@/ipc/ai/state";
+import { submitAskAnswer, type AskAnswerPayload } from "@/ipc/ai/ask";
 import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
 import type { AgentMessage, AgentMessageRole } from "@/agent/types";
 
@@ -21,6 +23,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_editor_replace: "Replace editor",
   prompt_editor_replace_lines: "Replace editor lines",
   prompt_editor_delete_lines: "Delete editor lines",
+  common_tool_ask: "Ask",
 };
 
 /**
@@ -149,12 +152,18 @@ export function registerPromptAiHandlers(): void {
   );
 
   ipcMain.handle("prompt-ai:chat:cancel", (_, runId: string) => {
+    cancelAiChatAsk(runId);
     const run = activePromptAiRuns.get(runId);
     if (run) {
       run.abortController.abort();
       activePromptAiRuns.delete(runId);
     }
   });
+
+  ipcMain.handle(
+    "prompt-ai:chat:ask-answer",
+    (_, payload: AskAnswerPayload) => submitAskAnswer(payload),
+  );
 
   ipcMain.handle(
     "prompt-ai:tool-confirmation:answer",
@@ -257,6 +266,7 @@ async function runPromptAiChat(
   // 解析项目路径，创建文件工具集
   const projectRoot = promptDesignService.getProjectPathByDesignItemId(payload.designItemId);
   const tools = [
+    createAskTool(),
     ...createPromptFileTools(projectRoot || ""),
     ...createPromptEditorTools(payload.editorContent || ""),
   ];
@@ -346,6 +356,7 @@ async function runPromptAiChat(
       messages: agentMessages,
       tools,
       signal,
+      askAnswerProvider: (request) => waitForAskAnswer(runId, request),
       toolConfirmationProvider: (request) => waitForToolConfirmation(runId, request),
     });
 

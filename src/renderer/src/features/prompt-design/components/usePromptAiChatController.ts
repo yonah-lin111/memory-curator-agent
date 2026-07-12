@@ -1,4 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import type {
+  CuratorAskAnswerSubmitPayload,
+  CuratorToolConfirmationAnswerSubmitPayload,
+} from "@/components/ai-shared/AskRequestPanel";
 import type { CuratorMessage, CuratorMessagePart, CuratorToolStep } from "@/features/curator/types";
 
 export type PromptAiPart = Extract<CuratorMessagePart, { kind: "text" | "reasoning" | "tool" }>;
@@ -402,14 +406,18 @@ export const usePromptAiChatController = (
     }
   }, [designItemId, editorContent, fetchSessions, isGenerating, sessionId, sessionInitialized]);
 
-  const handleSubmitToolConfirmationAnswer = useCallback(async (requestId: string, action: "confirm" | "cancel") => {
-    await window.api.promptAi!.submitToolConfirmationAnswer({ requestId, action });
+  const handleSubmitAskAnswer = useCallback(async (payload: CuratorAskAnswerSubmitPayload) => {
+    await window.api.promptAi!.submitAskAnswer(payload);
+  }, []);
+
+  const handleSubmitToolConfirmationAnswer = useCallback(async (payload: CuratorToolConfirmationAnswerSubmitPayload) => {
+    await window.api.promptAi!.submitToolConfirmationAnswer(payload);
   }, []);
 
   return {
     activeSessionId: sessionId, messages, sessions, sendMessage, handleNewChat,
     handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
-    handleCancelGeneration, handleSubmitToolConfirmationAnswer, isGenerating,
+    handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, isGenerating,
     sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
   };
 };

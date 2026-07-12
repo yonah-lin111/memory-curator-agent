@@ -1033,6 +1033,7 @@ type AppAPI = {
     undoLastTurn: (sessionId: string) => Promise<PromptAiChatSession | null>
     startChat: (payload: PromptAiChatStartPayload) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
+    submitAskAnswer: (payload: AiAskAnswerPayload) => Promise<void>
     submitToolConfirmationAnswer: (payload: { requestId: string; action: "confirm" | "cancel" }) => Promise<void>
     onChatEvent: (listener: (event: PromptAiChatEvent) => void) => () => void
   }

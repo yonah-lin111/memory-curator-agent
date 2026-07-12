@@ -1,3 +1,7 @@
+import type {
+  CuratorAskAnswerSubmitPayload,
+  CuratorToolConfirmationAnswerSubmitPayload,
+} from "@/components/ai-shared/AskRequestPanel";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
 import { Tag } from "@/components/ui/Tag";
@@ -9,10 +13,12 @@ import "md-editor-rt/lib/preview.css";
 type PromptAiChatMessageBubbleProps = {
   message: PromptAiMessage;
   isGenerating?: boolean;
-  onSubmitToolConfirmationAnswer?: (payload: {
-    requestId: string;
-    action: "confirm" | "cancel";
-  }) => void | Promise<void>;
+  onSubmitAskAnswer?: (
+    payload: CuratorAskAnswerSubmitPayload,
+  ) => void | Promise<void>;
+  onSubmitToolConfirmationAnswer?: (
+    payload: CuratorToolConfirmationAnswerSubmitPayload,
+  ) => void | Promise<void>;
 };
 
 /**
@@ -68,6 +74,7 @@ const findToolStepByPart = (
 export const PromptAiChatMessageBubble = ({
   message,
   isGenerating = false,
+  onSubmitAskAnswer,
   onSubmitToolConfirmationAnswer,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
@@ -84,6 +91,7 @@ export const PromptAiChatMessageBubble = ({
         <CuratorToolCallBlock
           key={toolKeys.join("-")}
           steps={toolSteps}
+          onSubmitAskAnswer={onSubmitAskAnswer}
           onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer}
         />,
       );

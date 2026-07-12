@@ -50,12 +50,11 @@ import {
   type AiToolConfirmationAnswerPayload,
 } from "./ai/types";
 import {
-  pendingAskAnswers,
   pendingToolConfirmations,
   cancelAiChatRun,
   cancelAiChatAsk,
-  isStringMatrix,
 } from "./ai/state";
+import { submitAskAnswer } from "./ai/ask";
 import {
   createSystemPrompt,
   createModelOptionsResponse,
@@ -177,23 +176,7 @@ export const registerAiHandlers = (): void => {
 
   ipcMain.handle(
     "ai:chat:ask-answer",
-    async (_, payload: AiAskAnswerPayload) => {
-      if (
-        !payload ||
-        typeof payload.requestId !== "string" ||
-        !isStringMatrix(payload.answers)
-      ) {
-        throw new Error("Invalid Ask answer payload");
-      }
-
-      const pending = pendingAskAnswers.get(payload.requestId);
-      if (!pending) {
-        throw new Error(`Ask request is not pending: ${payload.requestId}`);
-      }
-
-      pendingAskAnswers.delete(payload.requestId);
-      pending.resolve(payload.answers);
-    },
+    async (_, payload: AiAskAnswerPayload) => submitAskAnswer(payload),
   );
 
   ipcMain.handle(

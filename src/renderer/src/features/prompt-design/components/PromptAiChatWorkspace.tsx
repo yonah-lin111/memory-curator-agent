@@ -357,11 +357,9 @@ export const PromptAiChatWorkspace = forwardRef<
                       <PromptAiChatMessageBubble
                         message={message as any}
                         isGenerating={isGeneratingMessage}
-                        onSubmitToolConfirmationAnswer={(payload) =>
-                          controller.handleSubmitToolConfirmationAnswer(
-                            payload.requestId,
-                            payload.action,
-                          )
+                        onSubmitAskAnswer={controller.handleSubmitAskAnswer}
+                        onSubmitToolConfirmationAnswer={
+                          controller.handleSubmitToolConfirmationAnswer
                         }
                       />
                     </div>

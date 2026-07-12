@@ -974,6 +974,8 @@ const api = {
       ipcRenderer.invoke('prompt-ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:chat:cancel', runId),
+    submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
+      ipcRenderer.invoke('prompt-ai:chat:ask-answer', payload),
     submitToolConfirmationAnswer: (payload: { requestId: string; action: 'confirm' | 'cancel' }): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:tool-confirmation:answer', payload),
     onChatEvent: (listener: (event: PromptAiChatEvent) => void): (() => void) => {
