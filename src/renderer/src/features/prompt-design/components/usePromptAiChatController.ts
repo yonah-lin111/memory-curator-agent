@@ -1,5 +1,36 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { CuratorToolStep } from "@/features/curator/types";
+import type { CuratorMessage, CuratorMessagePart, CuratorToolStep } from "@/features/curator/types";
+
+export type PromptAiPart = Extract<CuratorMessagePart, { kind: "text" | "reasoning" | "tool" }>;
+
+type PromptAiPersistedMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+  model?: string;
+  parts?: CuratorMessagePart[];
+  toolSteps?: CuratorToolStep[];
+  cancelled?: boolean;
+};
+
+type PromptAiSession = {
+  id: string;
+  title: string;
+  time: string;
+  status: "idle" | "running" | "completed" | "failed";
+  messages: CuratorMessage[];
+};
+
+type PromptAiEvent =
+  | { type: "run_started"; runId: string; sessionId: string; model?: string }
+  | { type: "text_delta" | "reasoning_delta"; runId: string; sessionId: string; delta: string }
+  | { type: "tool_started"; runId: string; sessionId: string; toolStep: CuratorToolStep }
+  | { type: "tool_finished"; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }
+  | { type: "tool_failed"; runId: string; sessionId: string; toolStepId: string; error?: string }
+  | { type: "turn_finished" | "done"; runId: string; sessionId: string }
+  | { type: "session_title_updated"; runId: string; sessionId: string; title: string }
+  | { type: "error"; runId: string; sessionId: string; message: string };
 
 export type PromptAiMessage = {
   id: string;
@@ -7,11 +38,10 @@ export type PromptAiMessage = {
   content: string;
   time: string;
   model?: string;
-  /** 推理思考内容 */
+  parts?: PromptAiPart[];
+  /** 旧消费方的思考内容聚合，渲染仍以 parts 为准。 */
   reasoning?: string;
-  /** 工具调用步骤列表 */
   toolSteps?: CuratorToolStep[];
-  // 标记生成是否被中断以渲染删除线样式
   cancelled?: boolean;
 };
 
@@ -20,9 +50,6 @@ export type PromptAiUndoResult = {
   prompt?: string;
 } | false;
 
-/**
- * 文件工具 UI 显示名称映射。
- */
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_file_read: "Read",
   prompt_glob: "Glob",
@@ -33,40 +60,113 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
 };
 
 /**
- * 将后端持久化的工具步骤格式转换为前端 CuratorToolStep 格式。
- * 后端 schema: { id, name, status, input, observation?, data?, createdAt?, endedAt? }
- * 前端类型:    { id, title, status, tool, input?, observation, data? }
+ * 标准化历史工具步骤，兼容早期的 name 字段。
  */
-const mapBackendToolStep = (raw: any): CuratorToolStep => {
-  const toolName = raw.tool || raw.name || "";
+const mapBackendToolStep = (raw: CuratorToolStep): CuratorToolStep => {
+  const toolName = raw.tool;
   return {
-    id: raw.id,
-    title: `Tool result: ${TOOL_DISPLAY_NAMES[toolName] || toolName}`,
-    status: raw.status,
+    ...raw,
+    title: raw.title || `Tool result: ${TOOL_DISPLAY_NAMES[toolName] || toolName}`,
     tool: TOOL_DISPLAY_NAMES[toolName] || toolName,
-    input: raw.input,
     observation: raw.observation ?? "",
-    data: raw.data,
   };
 };
 
-export function usePromptAiChatController(
+/**
+ * 旧记录没有可用 parts 时，按历史字段重建可渲染片段。
+ */
+const resolveMessageParts = (message: PromptAiPersistedMessage): PromptAiPart[] => {
+  const usableParts = message.parts?.filter(
+    (part): part is PromptAiPart => part.kind === "text" || part.kind === "reasoning" || part.kind === "tool",
+  ) || [];
+
+  const nextParts = [...usableParts];
+  const hasText = nextParts.some((part) => part.kind === "text");
+  const hasTool = nextParts.some((part) => part.kind === "tool");
+
+  if (!hasText && message.content) {
+    nextParts.push({
+      id: `${message.id}-content`,
+      kind: "text",
+      content: message.content,
+    });
+  }
+
+  if (!hasTool && message.toolSteps?.length) {
+    const toolParts: PromptAiPart[] = message.toolSteps.map((step) => ({
+      id: `${message.id}-tool-${step.id}`,
+      kind: "tool",
+      stepId: step.id,
+    }));
+    const firstTextIndex = nextParts.findIndex((part) => part.kind === "text");
+    if (firstTextIndex !== -1) {
+      nextParts.splice(firstTextIndex, 0, ...toolParts);
+    } else {
+      nextParts.push(...toolParts);
+    }
+  }
+
+  return nextParts;
+};
+
+/**
+ * 连续同类型流式增量合并，工具事件会自然截断片段。
+ */
+const appendStreamPart = (
+  parts: PromptAiPart[] | undefined,
+  kind: "text" | "reasoning",
+  delta: string,
+): PromptAiPart[] => {
+  const nextParts = [...(parts ?? [])];
+  const lastPart = nextParts.at(-1);
+  if (lastPart?.kind === kind) {
+    nextParts[nextParts.length - 1] = { ...lastPart, content: lastPart.content + delta };
+    return nextParts;
+  }
+
+  nextParts.push({
+    id: `stream-${Date.now()}-${nextParts.length}`,
+    kind,
+    content: delta,
+    ...(kind === "reasoning" ? { status: "streaming" as const } : {}),
+  });
+  return nextParts;
+};
+
+/**
+ * 将指定事件应用到最后一条助手消息，保持流式和历史消息结构一致。
+ */
+const updateLastAssistantMessage = (
+  messages: PromptAiMessage[],
+  update: (message: PromptAiMessage) => PromptAiMessage,
+): PromptAiMessage[] => {
+  const lastIndex = messages.length - 1;
+  const lastMessage = messages[lastIndex];
+  if (!lastMessage || lastMessage.role !== "assistant") return messages;
+
+  const nextMessages = [...messages];
+  nextMessages[lastIndex] = update(lastMessage);
+  return nextMessages;
+};
+
+/**
+ * 管理 Prompt AI 会话、流式片段和编辑器工具建议。
+ */
+export const usePromptAiChatController = (
   designItemId: string,
   editorContent: string,
   onEditorSuggestion: (originalContent: string, candidateContent: string) => void,
-) {
+) => {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionInitialized, setSessionInitialized] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<PromptAiSession[]>([]);
   const editorContentRef = useRef(editorContent);
   const runEditorContentRef = useRef(new Map<string, string>());
   const activeRunIdRef = useRef<string | null>(null);
   const latestUserPromptRef = useRef<string | null>(null);
-  latestUserPromptRef.current = [...messages]
-    .reverse()
-    .find((message) => message.role === "user")?.content ?? null;
+  latestUserPromptRef.current = [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
 
   useEffect(() => {
     editorContentRef.current = editorContent;
@@ -75,186 +175,120 @@ export function usePromptAiChatController(
   const fetchSessions = useCallback(async () => {
     if (!designItemId) return;
     const items = await window.api.promptAi!.listSessions(designItemId);
-    setSessions(items);
+    setSessions(items.map((item) => ({
+      ...item,
+      time: item.lastMessageAt,
+    })));
     return items;
   }, [designItemId]);
 
   const loadSession = useCallback(async (sid: string) => {
     const session = await window.api.promptAi!.getSession(sid);
-    if (session) {
-      setSessionId(session.id);
-      setMessages(
-        session.messages.map((m: any) => {
-          const parts = m.parts || [];
-          const reasoningPart = parts.find(
-            (p: any) => p.kind === "reasoning" || p.type === "reasoning"
-          );
-          const reasoning = reasoningPart?.content || reasoningPart?.text || undefined;
+    if (!session) return;
 
-          return {
-            id: m.id,
-            role: m.role,
-            content: m.content || "",
-            time: new Date(m.createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-            }),
-            model: m.model,
-            reasoning,
-            toolSteps: m.toolSteps?.map(mapBackendToolStep) || undefined,
-            cancelled: m.cancelled,
-          };
-        }),
-      );
-    }
+    setSessionId(session.id);
+    setMessages(session.messages.map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: message.content || "",
+      time: message.createdAt,
+      model: message.model,
+      parts: resolveMessageParts(message),
+      reasoning: message.parts
+        ?.filter((part) => part.kind === "reasoning")
+        .map((part) => part.content)
+        .join(""),
+      toolSteps: message.toolSteps?.map(mapBackendToolStep),
+      cancelled: message.cancelled,
+    })));
   }, []);
 
-  // 初始化会话
   useEffect(() => {
     const init = async () => {
       setSessionInitialized(false);
       const items = await fetchSessions();
-      if (items && items.length > 0) {
+      if (items?.length) {
         await loadSession(items[0].id);
       } else {
         setSessionId(`sess-${Date.now()}`);
       }
       setSessionInitialized(true);
     };
-    init();
+    void init();
   }, [fetchSessions, loadSession]);
 
-  // 处理传入事件
   useEffect(() => {
     if (!sessionId) return;
 
-    const unlisten = window.api.promptAi!.onChatEvent((event: any) => {
+    const unlisten = window.api.promptAi!.onChatEvent((event: PromptAiEvent) => {
       if (event.sessionId !== sessionId) return;
 
       if (event.type === "run_started") {
-        if (event.runId) {
-          runEditorContentRef.current.set(event.runId, editorContentRef.current);
-        }
+        runEditorContentRef.current.set(event.runId, editorContentRef.current);
         setIsGenerating(true);
         if (event.model) {
-          setMessages((prev) => {
-            const lastMsg = prev[prev.length - 1];
-            if (lastMsg && lastMsg.role === "assistant") {
-              const newMessages = [...prev];
-              newMessages[newMessages.length - 1] = {
-                ...lastMsg,
-                model: event.model,
-              };
-              return newMessages;
-            }
-            return prev;
-          });
+          setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({ ...message, model: event.model })));
         }
       } else if (event.type === "text_delta") {
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.role === "assistant") {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = {
-              ...lastMsg,
-              content: lastMsg.content + event.delta,
-            };
-            return newMessages;
-          }
-          return prev;
-        });
-      } else if (event.type === "tool_started") {
-        const step: CuratorToolStep = event.toolStep;
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.role === "assistant") {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = {
-              ...lastMsg,
-              toolSteps: [...(lastMsg.toolSteps || []), step],
-            };
-            return newMessages;
-          }
-          return prev;
-        });
-      } else if (event.type === "tool_finished") {
-        if (event.data?.operation && typeof event.data.content === "string") {
-          onEditorSuggestion(
-            runEditorContentRef.current.get(event.runId) ?? editorContentRef.current,
-            event.data.content,
-          );
-        }
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.role === "assistant" && lastMsg.toolSteps) {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = {
-              ...lastMsg,
-              toolSteps: lastMsg.toolSteps.map((s) =>
-                s.id === event.toolStepId
-                  ? { ...s, status: "done" as const, observation: event.observation ?? "", data: event.data }
-                  : s
-              ),
-            };
-            return newMessages;
-          }
-          return prev;
-        });
-      } else if (event.type === "tool_failed") {
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.role === "assistant" && lastMsg.toolSteps) {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = {
-              ...lastMsg,
-              toolSteps: lastMsg.toolSteps.map((s) =>
-                s.id === event.toolStepId
-                  ? { ...s, status: "failed" as const, observation: event.error ?? "" }
-                  : s
-              ),
-            };
-            return newMessages;
-          }
-          return prev;
-        });
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          content: message.content + event.delta,
+          parts: appendStreamPart(message.parts, "text", event.delta),
+        })));
       } else if (event.type === "reasoning_delta") {
-        setMessages((prev) => {
-          const lastMsg = prev[prev.length - 1];
-          if (lastMsg && lastMsg.role === "assistant") {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1] = {
-              ...lastMsg,
-              reasoning: (lastMsg.reasoning || "") + event.delta,
-            };
-            return newMessages;
-          }
-          return prev;
-        });
-      } else if (event.type === "turn_finished") {
-        // turn_finished 仅代表单次对话轮次结束，可能仍有后续工具调用，须等 done 信号才重置生成态
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          reasoning: (message.reasoning ?? "") + event.delta,
+          parts: appendStreamPart(message.parts, "reasoning", event.delta),
+        })));
+      } else if (event.type === "tool_started") {
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          toolSteps: [...(message.toolSteps ?? []), event.toolStep],
+          parts: [...(message.parts ?? []), { id: `tool-${event.toolStep.id}`, kind: "tool", stepId: event.toolStep.id }],
+        })));
+      } else if (event.type === "tool_finished") {
+        if (
+          typeof event.data === "object" &&
+          event.data !== null &&
+          "operation" in event.data &&
+          "content" in event.data &&
+          typeof event.data.content === "string"
+        ) {
+          onEditorSuggestion(runEditorContentRef.current.get(event.runId) ?? editorContentRef.current, event.data.content);
+        }
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          toolSteps: message.toolSteps?.map((step) => step.id === event.toolStepId
+            ? { ...step, status: "done", observation: event.observation ?? "", data: event.data }
+            : step),
+        })));
+      } else if (event.type === "tool_failed") {
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          toolSteps: message.toolSteps?.map((step) => step.id === event.toolStepId
+            ? { ...step, status: "failed", observation: event.error ?? "" }
+            : step),
+        })));
       } else if (event.type === "done") {
         setIsGenerating(false);
-        if (event.runId === activeRunIdRef.current) {
-          activeRunIdRef.current = null;
-        }
-        if (event.runId) {
-          runEditorContentRef.current.delete(event.runId);
-        }
+        if (event.runId === activeRunIdRef.current) activeRunIdRef.current = null;
+        runEditorContentRef.current.delete(event.runId);
+        setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
+          ...message,
+          parts: message.parts?.map((part) => part.kind === "reasoning" ? { ...part, status: "done" } : part),
+        })));
       } else if (event.type === "session_title_updated") {
-        // 后台标题总结完成后刷新会话列表
         void fetchSessions();
       } else if (event.type === "error") {
         setIsGenerating(false);
-        if (event.runId === activeRunIdRef.current) {
-          activeRunIdRef.current = null;
-        }
+        if (event.runId === activeRunIdRef.current) activeRunIdRef.current = null;
         console.error("AI chat error:", event.message);
       }
     });
 
     return unlisten;
-  }, [sessionId, onEditorSuggestion]);
+  }, [fetchSessions, onEditorSuggestion, sessionId]);
 
   const LATEST_ASSISTANT_TOP_OFFSET = 4;
 
@@ -265,8 +299,7 @@ export function usePromptAiChatController(
   }, [isGenerating]);
 
   const handleSessionChange = useCallback((sid: string) => {
-    if (isGenerating) return;
-    loadSession(sid);
+    if (!isGenerating) void loadSession(sid);
   }, [isGenerating, loadSession]);
 
   const handleRenameChat = useCallback(async (sid: string, title: string) => {
@@ -284,73 +317,45 @@ export function usePromptAiChatController(
     try {
       await window.api.promptAi!.deleteSession(sid);
       await fetchSessions();
-      if (sessionId === sid) {
-        handleNewChat();
-      }
+      if (sessionId === sid) handleNewChat();
       return true;
     } catch (error) {
       console.error("Failed to delete chat:", error);
       return false;
     }
-  }, [fetchSessions, sessionId, handleNewChat]);
+  }, [fetchSessions, handleNewChat, sessionId]);
 
   const handleUndo = useCallback(async (): Promise<PromptAiUndoResult> => {
     if (isGenerating) return false;
-    if (messages.length === 0) {
-      return { status: "empty" };
-    }
-
-    const prompt = [...messages]
-      .reverse()
-      .find((message) => message.role === "user")?.content;
+    if (!messages.length) return { status: "empty" };
+    const prompt = [...messages].reverse().find((message) => message.role === "user")?.content;
 
     try {
       const updated = await window.api.promptAi!.undoLastTurn(sessionId);
-      if (updated) {
-        if (updated.messages.length === 0) {
-          const isDeleted = await handleDeleteChat(sessionId);
-          return isDeleted ? { status: "deleted_empty", prompt } : false;
-        }
-
-        await loadSession(sessionId);
-        return { status: "undone", prompt };
+      if (!updated) return false;
+      if (!updated.messages.length) {
+        const isDeleted = await handleDeleteChat(sessionId);
+        return isDeleted ? { status: "deleted_empty", prompt } : false;
       }
-      return false;
+      await loadSession(sessionId);
+      return { status: "undone", prompt };
     } catch (error) {
       console.error("Failed to undo last turn:", error);
       return false;
     }
-  }, [isGenerating, messages, sessionId, loadSession, handleDeleteChat]);
+  }, [handleDeleteChat, isGenerating, loadSession, messages, sessionId]);
 
   /**
-   * 取消当前生成，并在取消前保留最后一条用户提示词。
+   * 取消当前生成，并保留最后一条用户提示词供输入框恢复。
    */
   const handleCancelGeneration = useCallback(async (): Promise<string | null> => {
-    if (!isGenerating || !activeRunIdRef.current) {
-      return null;
-    }
-
+    if (!isGenerating || !activeRunIdRef.current) return null;
     const prompt = latestUserPromptRef.current;
-
     try {
       await window.api.promptAi!.cancelChat(activeRunIdRef.current);
       setIsGenerating(false);
       activeRunIdRef.current = null;
-
-      // 立即在前端标记最后一条助手消息已被取消以应用删除线样式
-      setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1];
-        if (lastMsg && lastMsg.role === "assistant") {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = {
-            ...lastMsg,
-            cancelled: true,
-          };
-          return newMessages;
-        }
-        return prev;
-      });
-
+      setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({ ...message, cancelled: true })));
       return prompt;
     } catch (error) {
       console.error("Failed to cancel AI chat:", error);
@@ -358,82 +363,35 @@ export function usePromptAiChatController(
     }
   }, [isGenerating]);
 
-  const sendMessage = useCallback(
-    async (text: string, selectedModel?: string) => {
-      if (isGenerating || !text.trim() || !sessionInitialized) return;
+  const sendMessage = useCallback(async (text: string, selectedModel?: string) => {
+    if (isGenerating || !text.trim() || !sessionInitialized) return;
+    const [providerId, modelId] = selectedModel?.split("::") ?? [];
+    const time = new Date().toISOString();
+    latestUserPromptRef.current = text;
+    setMessages((previous) => [...previous,
+      { id: `msg-${Date.now()}`, role: "user", content: text, time },
+      { id: `msg-${Date.now()}-ai`, role: "assistant", content: "", model: modelId, time, parts: [] },
+    ]);
+    setIsGenerating(true);
 
-      const [providerId, modelId] = selectedModel?.split("::") ?? [];
+    try {
+      const { runId } = await window.api.promptAi!.startChat({ sessionId, designItemId, message: text, provider: providerId, model: modelId, editorContent });
+      activeRunIdRef.current = runId;
+      await fetchSessions();
+    } catch (error) {
+      console.error("Failed to send message", error);
+      setIsGenerating(false);
+    }
+  }, [designItemId, editorContent, fetchSessions, isGenerating, sessionId, sessionInitialized]);
 
-      const newMsg: PromptAiMessage = {
-        id: `msg-${Date.now()}`,
-        role: "user",
-        content: text,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
-      };
-
-      latestUserPromptRef.current = text;
-      setMessages((prev) => [
-        ...prev,
-        newMsg,
-        {
-          id: `msg-${Date.now()}-ai`,
-          role: "assistant",
-          content: "",
-          model: modelId,
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }),
-        },
-      ]);
-
-      setIsGenerating(true);
-
-      try {
-        const { runId } = await window.api.promptAi!.startChat({
-          sessionId,
-          designItemId,
-          message: text,
-          provider: providerId,
-          model: modelId,
-          editorContent,
-        });
-        activeRunIdRef.current = runId;
-        await fetchSessions(); // 更新会话列表以反映新标题等变化
-      } catch (err) {
-        console.error("Failed to send message", err);
-        setIsGenerating(false);
-      }
-    },
-    [sessionId, designItemId, editorContent, isGenerating, sessionInitialized],
-  );
-
-  const handleSubmitToolConfirmationAnswer = useCallback(
-    async (requestId: string, action: "confirm" | "cancel") => {
-      await window.api.promptAi!.submitToolConfirmationAnswer({ requestId, action });
-    },
-    [],
-  );
+  const handleSubmitToolConfirmationAnswer = useCallback(async (requestId: string, action: "confirm" | "cancel") => {
+    await window.api.promptAi!.submitToolConfirmationAnswer({ requestId, action });
+  }, []);
 
   return {
-    activeSessionId: sessionId,
-    messages,
-    sessions,
-    sendMessage,
-    handleNewChat,
-    handleSessionChange,
-    handleRenameChat,
-    handleDeleteChat,
-    handleUndo,
-    handleCancelGeneration,
-    handleSubmitToolConfirmationAnswer,
-    isGenerating,
-    sessionInitialized,
-    LATEST_ASSISTANT_TOP_OFFSET,
+    activeSessionId: sessionId, messages, sessions, sendMessage, handleNewChat,
+    handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
+    handleCancelGeneration, handleSubmitToolConfirmationAnswer, isGenerating,
+    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
   };
-}
+};

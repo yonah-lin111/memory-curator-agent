@@ -484,6 +484,16 @@ type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
+      kind: 'reasoning'
+      // Markdown 思考内容。
+      content: string
+      // 思考片段状态。
+      status?: 'streaming' | 'done'
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
       kind: 'tool'
       // 对应工具步骤 ID。
       stepId: string
@@ -516,6 +526,45 @@ type AiChatMessagePart =
       // Agent 唯一标识。
       agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
     }
+
+// 提示词 AI 对话启动载荷。
+type PromptAiChatStartPayload = {
+  sessionId: string
+  designItemId: string
+  message: string
+  provider?: string
+  model?: string
+  editorContent?: string
+}
+
+// 提示词 AI 持久化消息。
+type PromptAiChatMessage = AiChatMessage & {
+  sessionId: string
+  createdAt: string
+}
+
+// 提示词 AI 持久化会话。
+type PromptAiChatSession = {
+  id: string
+  designItemId: string
+  title: string
+  status: AiChatSessionStatus
+  createdAt: string
+  updatedAt: string
+  lastMessageAt: string
+  messages: PromptAiChatMessage[]
+}
+
+// 提示词 AI 流式事件。
+type PromptAiChatEvent =
+  | { type: 'run_started'; runId: string; sessionId: string; model?: string }
+  | { type: 'text_delta' | 'reasoning_delta'; runId: string; sessionId: string; delta: string }
+  | { type: 'tool_started'; runId: string; sessionId: string; toolStep: AiToolStep }
+  | { type: 'tool_finished'; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }
+  | { type: 'tool_failed'; runId: string; sessionId: string; toolStepId: string; error?: string }
+  | { type: 'turn_finished' | 'done'; runId: string; sessionId: string }
+  | { type: 'session_title_updated'; runId: string; sessionId: string; title: string }
+  | { type: 'error'; runId: string; sessionId: string; message: string }
 
 // AI 对话消息类型。
 type AiChatMessage = {
@@ -909,26 +958,26 @@ const api = {
       ipcRenderer.invoke('prompt-design:files:search', { directory, query })
   },
   promptAi: {
-    listSessions: (designItemId: string): Promise<any[]> =>
+    listSessions: (designItemId: string): Promise<PromptAiChatSession[]> =>
       ipcRenderer.invoke('prompt-ai:sessions:list', designItemId),
-    createSession: (designItemId: string): Promise<any> =>
+    createSession: (designItemId: string): Promise<PromptAiChatSession | null> =>
       ipcRenderer.invoke('prompt-ai:session:create', designItemId),
-    getSession: (sessionId: string): Promise<any | null> =>
+    getSession: (sessionId: string): Promise<PromptAiChatSession | null> =>
       ipcRenderer.invoke('prompt-ai:session:get', sessionId),
     updateSessionTitle: (sessionId: string, title: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:session:title:update', sessionId, title),
     deleteSession: (sessionId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:session:delete', sessionId),
-    undoLastTurn: (sessionId: string): Promise<any | null> =>
+    undoLastTurn: (sessionId: string): Promise<PromptAiChatSession | null> =>
       ipcRenderer.invoke('prompt-ai:session:undo', sessionId),
-    startChat: (payload: any): Promise<{ runId: string }> =>
+    startChat: (payload: PromptAiChatStartPayload): Promise<{ runId: string }> =>
       ipcRenderer.invoke('prompt-ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:chat:cancel', runId),
     submitToolConfirmationAnswer: (payload: { requestId: string; action: 'confirm' | 'cancel' }): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:tool-confirmation:answer', payload),
-    onChatEvent: (listener: (event: any) => void): (() => void) => {
-      const wrappedListener = (_: Electron.IpcRendererEvent, event: any): void => {
+    onChatEvent: (listener: (event: PromptAiChatEvent) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, event: PromptAiChatEvent): void => {
         listener(event)
       }
       ipcRenderer.on('prompt-ai:chat:event', wrappedListener)

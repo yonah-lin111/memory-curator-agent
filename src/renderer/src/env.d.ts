@@ -1026,15 +1026,15 @@ type AppAPI = {
     todaySummary: (date?: string) => Promise<BillTodaySummary>
   }
   promptAi?: {
-    listSessions: (designItemId: string) => Promise<any[]>
-    getSession: (sessionId: string) => Promise<any | null>
+    listSessions: (designItemId: string) => Promise<PromptAiChatSession[]>
+    getSession: (sessionId: string) => Promise<PromptAiChatSession | null>
     updateSessionTitle: (sessionId: string, title: string) => Promise<void>
     deleteSession: (sessionId: string) => Promise<void>
-    undoLastTurn: (sessionId: string) => Promise<any | null>
-    startChat: (payload: any) => Promise<{ runId: string }>
+    undoLastTurn: (sessionId: string) => Promise<PromptAiChatSession | null>
+    startChat: (payload: PromptAiChatStartPayload) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
     submitToolConfirmationAnswer: (payload: { requestId: string; action: "confirm" | "cancel" }) => Promise<void>
-    onChatEvent: (listener: (event: any) => void) => () => void
+    onChatEvent: (listener: (event: PromptAiChatEvent) => void) => () => void
   }
   skills?: {
     list: (forceRefresh?: boolean) => Promise<Array<{
@@ -1056,6 +1056,42 @@ type AppAPI = {
     clearCache: () => Promise<void>
   }
 }
+
+type PromptAiChatStartPayload = {
+  sessionId: string
+  designItemId: string
+  message: string
+  provider?: string
+  model?: string
+  editorContent?: string
+}
+
+type PromptAiChatMessage = CuratorMessage & {
+  sessionId: string
+  createdAt: string
+  cancelled?: boolean
+}
+
+type PromptAiChatSession = {
+  id: string
+  designItemId: string
+  title: string
+  status: CuratorSessionStatus
+  createdAt: string
+  updatedAt: string
+  lastMessageAt: string
+  messages: PromptAiChatMessage[]
+}
+
+type PromptAiChatEvent =
+  | { type: 'run_started'; runId: string; sessionId: string; model?: string }
+  | { type: 'text_delta' | 'reasoning_delta'; runId: string; sessionId: string; delta: string }
+  | { type: 'tool_started'; runId: string; sessionId: string; toolStep: CuratorToolStep }
+  | { type: 'tool_finished'; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }
+  | { type: 'tool_failed'; runId: string; sessionId: string; toolStepId: string; error?: string }
+  | { type: 'turn_finished' | 'done'; runId: string; sessionId: string }
+  | { type: 'session_title_updated'; runId: string; sessionId: string; title: string }
+  | { type: 'error'; runId: string; sessionId: string; message: string }
 
 declare global {
   interface Window {

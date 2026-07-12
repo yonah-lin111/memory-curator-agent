@@ -68,6 +68,42 @@ const renderToolFailureContent = (toolName: string, error: string): string =>
     }
   );
 
+/**
+ * 将连续同类型流式增量合并到最后一个片段，保留模型实际输出顺序。
+ */
+const appendStreamPart = (
+  parts: AiChatMessagePart[],
+  kind: "text" | "reasoning",
+  delta: string,
+): void => {
+  const lastPart = parts.at(-1);
+  if (lastPart?.kind === kind) {
+    lastPart.content += delta;
+    if (lastPart.kind === "reasoning") {
+      lastPart.status = "streaming";
+    }
+    return;
+  }
+
+  parts.push({
+    id: createCompactUuid(),
+    kind,
+    content: delta,
+    ...(kind === "reasoning" ? { status: "streaming" as const } : {}),
+  });
+};
+
+/**
+ * 完成所有仍在输出中的思考片段，避免历史记录恢复为生成态。
+ */
+const finalizeReasoningParts = (parts: AiChatMessagePart[]): void => {
+  for (const part of parts) {
+    if (part.kind === "reasoning" && part.status === "streaming") {
+      part.status = "done";
+    }
+  }
+};
+
 export type PromptAiChatStartPayload = {
   runId?: string;
   sessionId: string;
@@ -228,7 +264,6 @@ async function runPromptAiChat(
   // 工具步骤和片段累积（流式写入结束后持久化）
   const assistantToolSteps: AiToolStep[] = [];
   const assistantParts: AiChatMessagePart[] = [];
-  let assistantReasoning = "";
 
   // 后台异步生成会话标题
   if (shouldCreateTitle) {
@@ -326,6 +361,8 @@ async function runPromptAiChat(
         });
       } else if (event.type === "text_delta") {
         finalContent += event.delta;
+        appendStreamPart(assistantParts, "text", event.delta);
+        db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "text_delta",
           runId,
@@ -333,7 +370,8 @@ async function runPromptAiChat(
           delta: event.delta,
         });
       } else if (event.type === "reasoning_delta") {
-        assistantReasoning += event.delta;
+        appendStreamPart(assistantParts, "reasoning", event.delta);
+        db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "reasoning_delta",
           runId,
@@ -350,7 +388,11 @@ async function runPromptAiChat(
           observation: "Starting...",
         };
         assistantToolSteps.push(step);
-        // assistantParts.push({ type: "tool_call", toolCall: step }); // FIXME: tool_call structure in AiChatMessagePart
+        assistantParts.push({
+          id: createCompactUuid(),
+          kind: "tool",
+          stepId: step.id,
+        });
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         const displayName = getToolDisplayName(event.name);
         sender.send("prompt-ai:chat:event", {
@@ -373,11 +415,6 @@ async function runPromptAiChat(
           step.observation = event.observation;
           step.data = event.data;
         }
-        
-        // 我们在 AiChatMessagePart 中如果是工具片段，其数据结构可能不同
-        // 目前 schema 中 tool_call 的 part 类型还未完善，我们先忽略对 part 的更新
-        // const part = assistantParts.find(p => p.kind === "tool_call" && p.toolCall?.id === event.id); ...
-        
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "tool_finished",
@@ -415,9 +452,7 @@ async function runPromptAiChat(
     }
 
     db.updateMessageContent(assistantMessageId, finalContent);
-    if (assistantReasoning) {
-      assistantParts.push({ id: createCompactUuid(), kind: "reasoning" as any, content: assistantReasoning });
-    }
+    finalizeReasoningParts(assistantParts);
     db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
     db.updateAgentRunStatus(runId, "completed");
 
@@ -436,9 +471,7 @@ async function runPromptAiChat(
       sessionId: payload.sessionId,
     });
   } catch (err: any) {
-    if (assistantReasoning) {
-      assistantParts.push({ id: createCompactUuid(), kind: "reasoning" as any, content: assistantReasoning });
-    }
+    finalizeReasoningParts(assistantParts);
     db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
 
     if (signal.aborted) {
