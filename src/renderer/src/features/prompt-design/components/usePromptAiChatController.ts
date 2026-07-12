@@ -110,6 +110,18 @@ const resolveMessageParts = (message: PromptAiPersistedMessage): PromptAiPart[] 
 };
 
 /**
+ * 避免思考块在切换到后续片段时因状态未闭合而持续处于加载态。
+ */
+const completeReasoningParts = (parts: PromptAiPart[] | undefined): PromptAiPart[] => {
+  if (!parts) return [];
+  return parts.map((part) =>
+    part.kind === "reasoning" && part.status !== "done"
+      ? { ...part, status: "done" as const }
+      : part,
+  );
+};
+
+/**
  * 连续同类型流式增量合并，工具事件会自然截断片段。
  */
 const appendStreamPart = (
@@ -117,7 +129,10 @@ const appendStreamPart = (
   kind: "text" | "reasoning",
   delta: string,
 ): PromptAiPart[] => {
-  const nextParts = [...(parts ?? [])];
+  let nextParts = [...(parts ?? [])];
+  if (kind === "text") {
+    nextParts = completeReasoningParts(nextParts);
+  }
   const lastPart = nextParts.at(-1);
   if (lastPart?.kind === kind) {
     nextParts[nextParts.length - 1] = { ...lastPart, content: lastPart.content + delta };
@@ -245,7 +260,10 @@ export const usePromptAiChatController = (
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,
           toolSteps: [...(message.toolSteps ?? []), event.toolStep],
-          parts: [...(message.parts ?? []), { id: `tool-${event.toolStep.id}`, kind: "tool", stepId: event.toolStep.id }],
+          parts: [
+            ...completeReasoningParts(message.parts),
+            { id: `tool-${event.toolStep.id}`, kind: "tool", stepId: event.toolStep.id },
+          ],
         })));
       } else if (event.type === "tool_finished") {
         if (
