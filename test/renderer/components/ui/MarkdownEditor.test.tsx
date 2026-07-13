@@ -14,6 +14,7 @@ let latestMdEditorProps: {
 } | null = null;
 
 vi.mock("md-editor-rt", () => ({
+  config: vi.fn(),
   MdEditor: (props: typeof latestMdEditorProps) => {
     latestMdEditorProps = props;
     return <textarea aria-label="markdown" />;

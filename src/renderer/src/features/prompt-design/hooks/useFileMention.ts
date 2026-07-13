@@ -1,65 +1,9 @@
 import type React from "react";
 import { useCallback, useState, useEffect, useRef } from "react";
-import { resolveAgentMentionPanelState } from "@/lib/ai-shared/utils";
+import { resolveAgentMentionPanelState, getFileMentionDeletionRange } from "@/lib/ai-shared/utils";
 import type { AgentMentionPanelState } from "@/lib/ai-shared/types";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import { useToast } from "@/components/ui/Toast";
-
-// 文件提及 token 匹配表达式：查找所有类似于 @path/to/file.ts 的字符串
-const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
-
-type FileMentionDeletionRange = {
-  start: number;
-  end: number;
-};
-
-export const getFileMentionDeletionRange = (
-  value: string,
-  cursor: number,
-): FileMentionDeletionRange | null => {
-  const ranges: FileMentionDeletionRange[] = [];
-  FILE_MENTION_PATTERN.lastIndex = 0;
-
-  let match = FILE_MENTION_PATTERN.exec(value);
-  while (match) {
-    const prefix = match[1] ?? "";
-    const token = match[2] ?? "";
-    const start = match.index + prefix.length;
-    ranges.push({
-      start,
-      end: start + token.length,
-    });
-    match = FILE_MENTION_PATTERN.exec(value);
-  }
-
-  const directRange = ranges.find((range) => range.end === cursor);
-  if (directRange) {
-    // 1) 光标紧贴任意 @token 末尾（如 @historlist1|）时，普通 Backspace 必须遵循原生逐字删除，不能整段删除
-    return null;
-  }
-
-  // 2) 当光标位于该 @token 后一个或多个连续空白字符之后（如 @historlist1   |），普通 Backspace 应一次删除整块：@token 及其紧随的全部空白，光标回到 token 起点
-  // 3) 支持空格、换行、制表符等 \s
-  const previousCharacter = value[cursor - 1];
-  if (previousCharacter && /\s/.test(previousCharacter)) {
-    // 我们从 cursor - 1 开始向左搜索，跳过所有连续的空白字符
-    let i = cursor - 1;
-    while (i >= 0 && /\s/.test(value[i])) {
-      i--;
-    }
-    // 此时 i 停在非空白字符上，或者越界。我们看它是不是一个 token 的结尾
-    const tokenEnd = i + 1;
-    const rangeBeforeSpaces = ranges.find((range) => range.end === tokenEnd);
-    if (rangeBeforeSpaces) {
-      return {
-        start: rangeBeforeSpaces.start,
-        end: cursor,
-      };
-    }
-  }
-
-  return null;
-};
 
 export const useFileMention = (
   inputText: string,

@@ -6,6 +6,7 @@ import "md-editor-rt/lib/style.css";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } from "@codemirror/state";
+import { useMarkdownFileMention } from "@/features/prompt-design/hooks/useMarkdownFileMention";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
@@ -484,6 +485,7 @@ export const MarkdownEditor = ({
 }: MarkdownEditorProps): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
+  const { handleEditorViewReady, mentionPanel } = useMarkdownFileMention(id === PROMPT_DESIGN_EDITOR_ID);
   const aiChangeActionsRef = useRef<InlineDiffActions>({
     onAccept: () => undefined,
     onReject: () => undefined,
@@ -492,6 +494,12 @@ export const MarkdownEditor = ({
     onAccept: onAcceptAiChange ?? (() => undefined),
     onReject: onRejectAiChange ?? (() => undefined),
   };
+
+  useEffect(() => {
+    const editorView = editorRef.current?.getEditorView();
+    if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
+    handleEditorViewReady(editorView);
+  }, [handleEditorViewReady, id]);
 
   useEffect(() => {
     const editorView = editorRef.current?.getEditorView();
@@ -555,7 +563,8 @@ export const MarkdownEditor = ({
   }, []);
 
   return (
-    <MdEditor
+    <>
+      <MdEditor
       ref={editorRef}
       className={rootClassName}
       codeTheme="atom"
@@ -574,6 +583,8 @@ export const MarkdownEditor = ({
       value={value}
       onBlur={onBlur}
       onChange={onChange}
-    />
+      />
+      {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
+    </>
   );
 };

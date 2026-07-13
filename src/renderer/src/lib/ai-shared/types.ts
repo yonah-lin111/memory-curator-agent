@@ -23,6 +23,12 @@ export interface AgentMentionPanelState {
   query: string;
 }
 
+// @ 文件提及删除范围。
+export interface FileMentionDeletionRange {
+  start: number;
+  end: number;
+}
+
 // 已选文本文件条目。
 export interface SelectedTextFile {
   // 落盘文件名。

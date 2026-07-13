@@ -1,12 +1,16 @@
 import type {
   CuratorInputCommand,
   AgentMentionPanelState,
+  FileMentionDeletionRange,
 } from "@/lib/ai-shared/types";
 import {
   CURATOR_INPUT_COMMANDS,
   SUPPORTED_TEXT_MIME_TYPES,
   PROMPT_HISTORY_LIMIT,
 } from "@/lib/ai-shared/constants";
+
+// 文件提及 token 匹配表达式：查找所有类似于 @path/to/file.ts 的字符串
+export const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
 /**
  * 判断输入文本是否处在斜杠命令模式。
@@ -137,6 +141,61 @@ export const resolveAgentMentionPanelState = (
     start: lastAt,
     query,
   };
+};
+
+/**
+ * 计算 @ 文件提及需要整块删除的范围。
+ *
+ * @param value 输入的文本内容
+ * @param cursor 光标位置
+ * @returns 删除范围或 null
+ */
+export const getFileMentionDeletionRange = (
+  value: string,
+  cursor: number,
+): FileMentionDeletionRange | null => {
+  const ranges: FileMentionDeletionRange[] = [];
+  FILE_MENTION_PATTERN.lastIndex = 0;
+
+  let match = FILE_MENTION_PATTERN.exec(value);
+  while (match) {
+    const prefix = match[1] ?? "";
+    const token = match[2] ?? "";
+    const start = match.index + prefix.length;
+    ranges.push({
+      start,
+      end: start + token.length,
+    });
+    match = FILE_MENTION_PATTERN.exec(value);
+  }
+
+  const directRange = ranges.find((range) => range.end === cursor);
+  if (directRange) {
+    // 1) 光标紧贴任意 @token 末尾（如 @historlist1|）时，普通 Backspace 必须遵循原生逐字删除，不能整段删除
+    return null;
+  }
+
+  // 2) 当光标位于该 @token 后一个或多个连续水平空白字符之后（如 @historlist1   |），普通 Backspace 应一次删除整块：@token 及其紧随的全部水平空白，光标回到 token 起点
+  // 3) 仅支持空格、制表符等水平空白，绝不可吞换行
+  const previousCharacter = value[cursor - 1];
+  if (previousCharacter && /[ \t]/.test(previousCharacter)) {
+    // 我们从 cursor - 1 开始向左搜索，跳过所有连续的水平空白字符
+    let i = cursor - 1;
+    while (i >= 0 && /[ \t]/.test(value[i])) {
+      i--;
+    }
+    // 此时 i 停在非水平空白字符上，或者越界。我们看它是不是一个 token 的结尾
+    const tokenEnd = i + 1;
+    const rangeBeforeSpaces = ranges.find((range) => range.end === tokenEnd);
+    if (rangeBeforeSpaces) {
+      return {
+        start: rangeBeforeSpaces.start,
+        end: cursor,
+      };
+    }
+  }
+
+  return null;
 };
 
 /**

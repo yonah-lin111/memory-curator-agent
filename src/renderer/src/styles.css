@@ -370,6 +370,12 @@ html:hover::-webkit-scrollbar-thumb,
   background: rgba(34, 197, 94, 0.14);
 }
 
+/* 仅由文件提及面板插入的路径使用暖黄色，普通 @ 文本保持原样。 */
+.md-editor .cm-file-mention {
+  color: #fcd34d !important;
+  font-weight: bold !important;
+}
+
 /* 自定义 CodeMirror 6 Markdown 语法标记字符的高级分色着色方案 */
 .md-editor .cm-md-heading-mark,
 .md-editor .cm-md-heading-mark * {

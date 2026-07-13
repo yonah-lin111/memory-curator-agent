@@ -327,7 +327,7 @@ export const PromptAiChatWorkspace = forwardRef<
               paddingLeft: "1rem",
               paddingRight: "1rem",
             }}
-            className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] py-4 flex flex-col min-w-0 transition-all duration-300 ease-in-out"
+            className="flex-1 relative overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] [overflow-anchor:none] flex flex-col min-w-0 transition-all duration-300 ease-in-out"
           >
             <div className="max-w-[860px] mx-auto w-full flex flex-col gap-4 flex-1">
               {messages.length === 0 ? (

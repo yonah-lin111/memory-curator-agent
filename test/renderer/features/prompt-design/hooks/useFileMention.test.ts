@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFileMentionDeletionRange } from "@/features/prompt-design/hooks/useFileMention";
+import { getFileMentionDeletionRange } from "@/lib/ai-shared/utils";
 
 describe("useFileMention - getFileMentionDeletionRange", () => {
   it("光标紧贴任意 @token 末尾时，普通 Backspace 必须返回 null 遵循原生逐字删除", () => {
@@ -27,12 +27,9 @@ describe("useFileMention - getFileMentionDeletionRange", () => {
     });
   });
 
-  it("支持空格、换行、制表符等 \\s 作为空白字符", () => {
+  it("仅支持空格、制表符等水平空白，绝不可吞换行（改为明确断言换行后返回 null）", () => {
     const textNewline = "@file.ts\n";
-    expect(getFileMentionDeletionRange(textNewline, 9)).toEqual({
-      start: 0,
-      end: 9,
-    });
+    expect(getFileMentionDeletionRange(textNewline, 9)).toBeNull();
 
     const textTab = "@file.ts\t\t";
     // Length of "@file.ts\t\t" is 10. Cursor is at index 10 (at the end of the string)

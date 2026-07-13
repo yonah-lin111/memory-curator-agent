@@ -29,6 +29,10 @@ export interface CommandPanelProps<T extends SuggestionItem> {
   onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
   // 自定义 ID 前缀，用于构建 aria-activedescendant 对应的元素 ID。
   idPrefix: string;
+  // 面板额外样式，用于编辑器光标定位等特殊场景。
+  style?: React.CSSProperties;
+  // 面板额外类名，用于编辑器光标定位等特殊场景。
+  className?: string;
 }
 
 /**
@@ -45,6 +49,8 @@ export const CommandPanel = <T extends SuggestionItem>({
   onKeyDown,
   onScroll,
   idPrefix,
+  style,
+  className,
 }: CommandPanelProps<T>): React.JSX.Element | null => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +82,8 @@ export const CommandPanel = <T extends SuggestionItem>({
       aria-activedescendant={`${idPrefix}-${activeItem?.id}`}
       onKeyDown={onKeyDown}
       onScroll={onScroll}
-      className="absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 overflow-y-auto max-h-[30vh] rounded-[6px] border border-white/10 bg-[#303030] shadow-2xl outline-none"
+      style={style}
+      className={`absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 max-h-[30vh] overflow-y-auto rounded-[6px] border border-white/10 bg-[#303030] shadow-2xl outline-none ${className ?? ""}`}
     >
       {items.map((item, index) => {
         const isActive = index === activeIndex;
