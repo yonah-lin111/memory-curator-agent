@@ -309,7 +309,7 @@ const CuratorToolRequestPanelContainer = ({
       className="overflow-hidden"
       onTransitionEnd={handleTransitionEnd}
     >
-      <div ref={innerRef} className="mt-1 flex items-start gap-1 text-white/45">
+      <div ref={innerRef} className="pt-1 flex items-start gap-1 text-white/45">
         <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
           <svg
             className="h-3 w-3 stroke-current"
