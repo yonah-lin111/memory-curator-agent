@@ -12,9 +12,16 @@ import type {
 } from "@/features/curator/types";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
-import type {
-  CuratorAskAnswerSubmitPayload,
-  CuratorToolConfirmationAnswerSubmitPayload,
+import {
+  ExecutionGroupBlock,
+  groupExecutionParts,
+  type ExecutionSequencePart,
+} from "@/components/ai-shared/ExecutionGroup";
+import {
+  isCuratorAskRequest,
+  isCuratorToolConfirmationRequest,
+  type CuratorAskAnswerSubmitPayload,
+  type CuratorToolConfirmationAnswerSubmitPayload,
 } from "@/components/ai-shared/AskRequestPanel";
 import {
   resolveDedupedRenderablePartContents,
@@ -914,104 +921,45 @@ export const CuratorMessageBubble = ({
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">
               {(() => {
-                const groupedElements: React.JSX.Element[] = [];
-                let currentToolSteps: CuratorToolStep[] = [];
-                let currentToolKeys: string[] = [];
-                let toolStartIndex: number | null = null;
-                let toolEndIndex: number | null = null;
+                const sequenceParts: ExecutionSequencePart[] = messageParts.map((part) => {
+                  if (part.kind === "text") return { id: part.id, kind: "text" };
+                  if (part.kind === "reasoning") {
+                    return { id: part.id, kind: "reasoning" };
+                  }
+                  const step = findToolStepByPart(message.toolSteps, part);
+                  return {
+                    id: part.id,
+                    kind: "tool",
+                    isInteractionPending: Boolean(step?.data && (isCuratorAskRequest(step.data) || isCuratorToolConfirmationRequest(step.data))),
+                  };
+                });
 
-                const hasRenderableReasoningAt = (index: number): boolean =>
-                  messageParts[index]?.kind === "reasoning" &&
-                  Boolean(dedupedRenderablePartContents[index]);
-
-                const hasRenderableToolAt = (index: number): boolean =>
-                  Boolean(findToolStepByPart(message.toolSteps, messageParts[index]));
-
-                const flushToolSteps = (): void => {
-                  if (
-                    currentToolSteps.length === 0 ||
-                    toolStartIndex === null ||
-                    toolEndIndex === null
-                  ) {
-                    return;
+                return groupExecutionParts(sequenceParts).flatMap((item) => {
+                  if (item.kind === "text") {
+                    const part = messageParts.find((candidate) => candidate.id === item.id);
+                    const displayText = part ? dedupedRenderablePartContents[messageParts.indexOf(part)] ?? "" : "";
+                    return displayText ? [<CuratorMarkdownPreview key={`${message.id}-${item.id}`} content={displayText} isGenerating={isGenerating} />] : [];
                   }
 
-                  const key = currentToolKeys.join("-");
-                  groupedElements.push(
-                    <CuratorToolCallBlock
-                      key={key}
-                      steps={[...currentToolSteps]}
-                      onSubmitAskAnswer={onSubmitAskAnswer}
-                      onSubmitToolConfirmationAnswer={
-                        onSubmitToolConfirmationAnswer
-                      }
-                      onToolConfirmationToggle={onToolConfirmationToggle}
-                      connectsToNextExecution={hasRenderableReasoningAt(
-                        toolEndIndex + 1,
-                      )}
-                    />,
-                  );
-                  currentToolSteps = [];
-                  currentToolKeys = [];
-                  toolStartIndex = null;
-                  toolEndIndex = null;
-                };
-
-                for (const [partIndex, part] of messageParts.entries()) {
-                  if (part.kind === "text") {
-                    const displayText =
-                      dedupedRenderablePartContents[partIndex] ?? "";
-
-                    if (!displayText) {
-                      continue;
-                    }
-
-                    flushToolSteps();
-                    groupedElements.push(
-                      <CuratorMarkdownPreview
-                        key={`${message.id}-text-${partIndex}`}
-                        content={displayText}
-                        isGenerating={isGenerating}
-                      />,
-                    );
-                  } else if (part.kind === "reasoning") {
-                    const displayReasoning =
-                      dedupedRenderablePartContents[partIndex] ?? "";
-
-                    if (!displayReasoning) {
-                      continue;
-                    }
-
-                    flushToolSteps();
-                    groupedElements.push(
-                      <CuratorThinkingBlock
-                        key={`${message.id}-reasoning-${partIndex}`}
-                        content={displayReasoning}
-                        isGenerating={isReasoningPartGenerating(
-                          messageParts,
-                          partIndex,
-                          isGenerating,
-                        )}
-                        onToggle={onThinkingBlockToggle}
-                        connectsToNextExecution={
-                          hasRenderableToolAt(partIndex + 1) ||
-                          hasRenderableReasoningAt(partIndex + 1)
+                  return [
+                    <ExecutionGroupBlock
+                      key={`${message.id}-${item.group.id}`}
+                      group={item.group}
+                      isGenerating={isGenerating}
+                      onToggle={onThinkingBlockToggle}
+                      renderPart={(sequencePart, connectsToNextExecution) => {
+                        const partIndex = messageParts.findIndex((candidate) => candidate.id === sequencePart.id);
+                        const part = messageParts[partIndex];
+                        if (part?.kind === "reasoning") {
+                          const displayReasoning = dedupedRenderablePartContents[partIndex] ?? "";
+                          return displayReasoning ? <CuratorThinkingBlock key={part.id} content={displayReasoning} isGenerating={isReasoningPartGenerating(messageParts, partIndex, isGenerating)} onToggle={onThinkingBlockToggle} connectsToNextExecution={connectsToNextExecution} /> : <></>;
                         }
-                      />,
-                    );
-                  } else {
-                    const step = findToolStepByPart(message.toolSteps, part);
-                    if (step) {
-                      if (toolStartIndex === null) toolStartIndex = partIndex;
-                      toolEndIndex = partIndex;
-                      currentToolSteps.push(step);
-                      currentToolKeys.push(`${message.id}-${part.id}`);
-                    }
-                  }
-                }
-                flushToolSteps();
-
-                return groupedElements;
+                        const step = findToolStepByPart(message.toolSteps, part);
+                        return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} onToolConfirmationToggle={onToolConfirmationToggle} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+                      }}
+                    />,
+                  ];
+                });
               })()}
             </div>
           )}

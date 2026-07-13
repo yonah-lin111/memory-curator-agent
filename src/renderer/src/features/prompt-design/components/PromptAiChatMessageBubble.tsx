@@ -1,9 +1,16 @@
-import type {
-  CuratorAskAnswerSubmitPayload,
-  CuratorToolConfirmationAnswerSubmitPayload,
+import {
+  isCuratorAskRequest,
+  isCuratorToolConfirmationRequest,
+  type CuratorAskAnswerSubmitPayload,
+  type CuratorToolConfirmationAnswerSubmitPayload,
 } from "@/components/ai-shared/AskRequestPanel";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import {
+  ExecutionGroupBlock,
+  groupExecutionParts,
+  type ExecutionSequencePart,
+} from "@/components/ai-shared/ExecutionGroup";
 import { Tag } from "@/components/ui/Tag";
 import type { CuratorToolStep } from "@/features/curator/types";
 import type { PromptAiMessage, PromptAiPart } from "@/features/prompt-design/components/usePromptAiChatController";
@@ -81,67 +88,45 @@ export const PromptAiChatMessageBubble = ({
   const messageParts = resolveMessageParts(message);
 
   const renderAssistantParts = (): React.JSX.Element[] => {
-    const elements: React.JSX.Element[] = [];
-    let toolSteps: CuratorToolStep[] = [];
-    let toolKeys: string[] = [];
-    let toolStartIndex: number | null = null;
-    let toolEndIndex: number | null = null;
+    const sequenceParts: ExecutionSequencePart[] = messageParts.map((part) => {
+      if (part.kind === "text") return { id: part.id, kind: "text" };
+      if (part.kind === "reasoning") return { id: part.id, kind: "reasoning" };
+      const step = findToolStepByPart(message.toolSteps, part);
+      return {
+        id: part.id,
+        kind: "tool",
+        isInteractionPending: Boolean(
+          step && (isCuratorAskRequest(step.data) || isCuratorToolConfirmationRequest(step.data)),
+        ),
+      };
+    });
 
-    const hasReasoningPart = (part: PromptAiPart | undefined): boolean =>
-      part?.kind === "reasoning" && Boolean(part.content);
+    return groupExecutionParts(sequenceParts).flatMap((item) => {
+      if (item.kind === "text") {
+        const part = messageParts.find((candidate) => candidate.id === item.id);
+        return part?.kind === "text" && part.content
+          ? [<div key={`${message.id}-${part.id}`} className="markdown-preview-container curator-markdown-preview select-text max-w-full"><MdPreview theme="dark" modelValue={part.content} previewTheme="default" codeTheme="atom" style={{ backgroundColor: "transparent" }} showCodeRowNumber={false} /></div>]
+          : [];
+      }
 
-    const hasToolPart = (part: PromptAiPart | undefined): boolean =>
-      Boolean(part && findToolStepByPart(message.toolSteps, part));
-
-    const flushToolSteps = (): void => {
-      if (!toolSteps.length || toolStartIndex === null || toolEndIndex === null) return;
-      elements.push(
-        <CuratorToolCallBlock
-          key={toolKeys.join("-")}
-          steps={toolSteps}
-          onSubmitAskAnswer={onSubmitAskAnswer}
-          onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer}
-          connectsToNextExecution={hasReasoningPart(messageParts[toolEndIndex + 1])}
+      const { group } = item;
+      return [
+        <ExecutionGroupBlock
+          key={`${message.id}-${group.id}`}
+          group={group}
+          isGenerating={isGenerating}
+          onToggle={undefined}
+          renderPart={(sequencePart, connectsToNextExecution) => {
+            const part = messageParts.find((candidate) => candidate.id === sequencePart.id);
+            if (part?.kind === "reasoning" && part.content) {
+              return <CuratorThinkingBlock key={part.id} content={part.content} isGenerating={part.status === "streaming" || (isGenerating && part.id === messageParts.at(-1)?.id)} connectsToNextExecution={connectsToNextExecution} />;
+            }
+            const step = part && findToolStepByPart(message.toolSteps, part);
+            return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+          }}
         />,
-      );
-      toolSteps = [];
-      toolKeys = [];
-      toolStartIndex = null;
-      toolEndIndex = null;
-    };
-
-    for (const [index, part] of messageParts.entries()) {
-      if (part.kind === "tool") {
-        const step = findToolStepByPart(message.toolSteps, part);
-        if (step) {
-          if (toolStartIndex === null) toolStartIndex = index;
-          toolEndIndex = index;
-          toolSteps.push(step);
-          toolKeys.push(`${message.id}-${part.id}`);
-        }
-        continue;
-      }
-
-      flushToolSteps();
-      if (part.kind === "reasoning" && part.content) {
-        elements.push(
-          <CuratorThinkingBlock
-            key={`${message.id}-reasoning-${index}`}
-            content={part.content}
-            isGenerating={part.status === "streaming" || (isGenerating && index === messageParts.length - 1)}
-            connectsToNextExecution={hasToolPart(messageParts[index + 1]) || hasReasoningPart(messageParts[index + 1])}
-          />,
-        );
-      } else if (part.kind === "text" && part.content) {
-        elements.push(
-          <div key={`${message.id}-text-${index}`} className="markdown-preview-container curator-markdown-preview select-text max-w-full">
-            <MdPreview theme="dark" modelValue={part.content} previewTheme="default" codeTheme="atom" style={{ backgroundColor: "transparent" }} showCodeRowNumber={false} />
-          </div>,
-        );
-      }
-    }
-    flushToolSteps();
-    return elements;
+      ];
+    });
   };
 
   return (

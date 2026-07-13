@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useLayoutEffect, useState, useRef } from "react";
 import { ChevronDown, Brain } from "lucide-react";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
@@ -29,6 +29,30 @@ export const CuratorThinkingBlock = ({
   const [isExpanded, setIsExpanded] = useState(false);
   // 思考内容内部容器引用，用于测量真实自适应高度。
   const innerRef = useRef<HTMLDivElement>(null);
+  // 缓存真实内容高度，避免流式内容追加导致高度过期被裁切。
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const element = innerRef.current;
+    if (!element) {
+      return;
+    }
+
+    if (!isExpanded) {
+      setContentHeight(null);
+      return;
+    }
+
+    setContentHeight(element.scrollHeight);
+    const observer = new ResizeObserver(() => {
+      setContentHeight(element.scrollHeight);
+    });
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isExpanded, content]);
 
   return (
     <div className="flex w-full gap-2.5 pl-1 my-1.5">
@@ -70,7 +94,11 @@ export const CuratorThinkingBlock = ({
         {/* 展开的思考内容区域，带平滑高度与透明度过渡 */}
         <div
           style={{
-            maxHeight: isExpanded ? `${innerRef.current?.scrollHeight || 1000}px` : "0px",
+            maxHeight: isExpanded
+              ? contentHeight !== null
+                ? `${contentHeight}px`
+                : `${innerRef.current?.scrollHeight || 0}px`
+              : "0px",
             opacity: isExpanded ? 1 : 0,
             transition: "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
           }}
