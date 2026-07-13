@@ -119,7 +119,7 @@ export const PromptAiChatInput = ({
     canMovePromptHistory,
     resetHistoryCursor,
     updateDraftInput,
-  } = useCuratorHistory(setInputText, textareaRef, adjustTextareaHeight);
+  } = useCuratorHistory("prompt-design", setInputText, textareaRef, adjustTextareaHeight);
 
   useEffect(() => {
     if (injectedText === undefined) {

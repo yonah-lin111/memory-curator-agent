@@ -2,15 +2,20 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mergePromptHistory, isTextareaCursorAt } from "@/lib/ai-shared/utils";
 
+// 提示词历史作用域。
+type PromptHistoryScope = "curator" | "prompt-design";
+
 /**
  * useCuratorHistory - 专门管理 AI 输入框提示词历史存取、使用上下方向键浏览/历史回溯定位的微 Hook。
  *
  * @param inputText 当前输入文本状态值
+ * @param scope 提示词历史所属输入区域
  * @param setInputText 修改输入文本状态回调
  * @param textareaRef 文本框 DOM 引用
  * @param adjustTextareaHeight 重算文本框高度回调
  */
 export const useCuratorHistory = (
+  scope: PromptHistoryScope,
   setInputText: (value: string) => void,
   textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   adjustTextareaHeight: () => void,
@@ -35,7 +40,7 @@ export const useCuratorHistory = (
       };
     }
 
-    void listPromptHistory()
+    void listPromptHistory(scope)
       .then((history) => {
         if (isMounted) {
           setPromptHistory(history);
@@ -50,7 +55,7 @@ export const useCuratorHistory = (
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [scope]);
 
   /**
    * 保存提示词历史，IPC 不可用时退回内存态避免交互断裂。
@@ -76,7 +81,7 @@ export const useCuratorHistory = (
       return;
     }
 
-    void addPromptHistory(normalizedPrompt)
+    void addPromptHistory(scope, normalizedPrompt)
       .then((history) => {
         setPromptHistory(history);
       })
@@ -85,7 +90,7 @@ export const useCuratorHistory = (
           mergePromptHistory(currentHistory, normalizedPrompt),
         );
       });
-  }, []);
+  }, [scope]);
 
   /**
    * 切换历史后恢复焦点并设置光标位置。

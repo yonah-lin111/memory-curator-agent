@@ -2,8 +2,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getPromptHistoryDir } from '@/paths'
 
+// 提示词历史作用域。
+export type PromptHistoryScope = 'curator' | 'prompt-design'
+
 // 提示词历史文件名。
-const PROMPT_HISTORY_FILE_NAME = 'ai-chat-prompts.json'
+const PROMPT_HISTORY_FILE_NAMES: Record<PromptHistoryScope, string> = {
+  curator: 'ai-chat-prompts.json',
+  'prompt-design': 'prompt-design-ai-chat-prompts.json'
+}
 
 // 提示词历史最大保留数量。
 const PROMPT_HISTORY_LIMIT = 100
@@ -12,6 +18,8 @@ const PROMPT_HISTORY_LIMIT = 100
 type PromptHistoryServiceDeps = {
   // 提示词历史目录。
   historyDir?: string
+  // 提示词历史所属输入区域。
+  scope?: PromptHistoryScope
 }
 
 // 提示词历史文件结构。
@@ -57,7 +65,8 @@ export const createPromptHistoryService = (
   deps: PromptHistoryServiceDeps = {}
 ): PromptHistoryService => {
   const historyDir = deps.historyDir ?? getPromptHistoryDir()
-  const historyPath = join(historyDir, PROMPT_HISTORY_FILE_NAME)
+  const scope = deps.scope ?? 'curator'
+  const historyPath = join(historyDir, PROMPT_HISTORY_FILE_NAMES[scope])
 
   /**
    * 读取历史文件，文件不存在或损坏时返回空历史。

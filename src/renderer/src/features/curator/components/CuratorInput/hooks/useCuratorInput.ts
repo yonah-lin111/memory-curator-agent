@@ -186,7 +186,7 @@ export const useCuratorInput = (props: CuratorInputProps) => {
     canMovePromptHistory,
     resetHistoryCursor,
     updateDraftInput,
-  } = useCuratorHistory(setInputText, textareaRef, adjustTextareaHeight);
+  } = useCuratorHistory('curator', setInputText, textareaRef, adjustTextareaHeight);
 
   // 4. 引入 Agent Mentions (@) Micro Hook（包含 Skill 合并联想检索能力）
   const {

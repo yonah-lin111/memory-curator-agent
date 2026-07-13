@@ -260,6 +260,9 @@ type AssociatedPersonPayload = {
   details: string
 }
 
+// 提示词历史作用域。
+type PromptHistoryScope = 'curator' | 'prompt-design'
+
 // AI 对话 agent hint 类型。
 type CuratorAgentHint = {
   // Agent 唯一标识。
@@ -952,10 +955,10 @@ type AppAPI = {
     deleteTurn?: (sessionId: string, messageId: string) => Promise<CuratorSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
-    // 读取历史提示词列表。
-    listPromptHistory?: () => Promise<string[]>
-    // 保存历史提示词。
-    addPromptHistory?: (prompt: string) => Promise<string[]>
+    // 读取指定输入区域的历史提示词列表。
+    listPromptHistory?: (scope: PromptHistoryScope) => Promise<string[]>
+    // 保存指定输入区域的历史提示词。
+    addPromptHistory?: (scope: PromptHistoryScope, prompt: string) => Promise<string[]>
     // 启动 AI 对话。
     startChat: (payload: CuratorStartPayload) => Promise<{ runId: string }>
     // 取消 AI 对话。
