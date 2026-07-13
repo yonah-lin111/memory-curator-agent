@@ -63,8 +63,8 @@ const resolveMessageParts = (message: PromptAiMessage): PromptAiPart[] => {
  */
 const findToolStepByPart = (
   steps: CuratorToolStep[] | undefined,
-  part: PromptAiPart,
-): CuratorToolStep | null => part.kind === "tool" && "stepId" in part
+  part: PromptAiPart | undefined,
+): CuratorToolStep | null => part && part.kind === "tool" && "stepId" in part
   ? steps?.find((step) => step.id === part.stepId) ?? null
   : null;
 
@@ -84,25 +84,38 @@ export const PromptAiChatMessageBubble = ({
     const elements: React.JSX.Element[] = [];
     let toolSteps: CuratorToolStep[] = [];
     let toolKeys: string[] = [];
+    let toolStartIndex: number | null = null;
+    let toolEndIndex: number | null = null;
+
+    const hasReasoningPart = (part: PromptAiPart | undefined): boolean =>
+      part?.kind === "reasoning" && Boolean(part.content);
+
+    const hasToolPart = (part: PromptAiPart | undefined): boolean =>
+      Boolean(part && findToolStepByPart(message.toolSteps, part));
 
     const flushToolSteps = (): void => {
-      if (!toolSteps.length) return;
+      if (!toolSteps.length || toolStartIndex === null || toolEndIndex === null) return;
       elements.push(
         <CuratorToolCallBlock
           key={toolKeys.join("-")}
           steps={toolSteps}
           onSubmitAskAnswer={onSubmitAskAnswer}
           onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer}
+          connectsToNextExecution={hasReasoningPart(messageParts[toolEndIndex + 1])}
         />,
       );
       toolSteps = [];
       toolKeys = [];
+      toolStartIndex = null;
+      toolEndIndex = null;
     };
 
     for (const [index, part] of messageParts.entries()) {
       if (part.kind === "tool") {
         const step = findToolStepByPart(message.toolSteps, part);
         if (step) {
+          if (toolStartIndex === null) toolStartIndex = index;
+          toolEndIndex = index;
           toolSteps.push(step);
           toolKeys.push(`${message.id}-${part.id}`);
         }
@@ -116,6 +129,7 @@ export const PromptAiChatMessageBubble = ({
             key={`${message.id}-reasoning-${index}`}
             content={part.content}
             isGenerating={part.status === "streaming" || (isGenerating && index === messageParts.length - 1)}
+            connectsToNextExecution={hasToolPart(messageParts[index + 1]) || hasReasoningPart(messageParts[index + 1])}
           />,
         );
       } else if (part.kind === "text" && part.content) {

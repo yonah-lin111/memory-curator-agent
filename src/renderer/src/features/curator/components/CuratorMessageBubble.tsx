@@ -421,9 +421,9 @@ const resolveAiMessageParts = ({
  */
 const findToolStepByPart = (
   steps: CuratorToolStep[] | undefined,
-  part: CuratorMessagePart,
+  part: CuratorMessagePart | undefined,
 ): CuratorToolStep | null => {
-  if (part.kind !== "tool") {
+  if (!part || part.kind !== "tool") {
     return null;
   }
 
@@ -917,24 +917,44 @@ export const CuratorMessageBubble = ({
                 const groupedElements: React.JSX.Element[] = [];
                 let currentToolSteps: CuratorToolStep[] = [];
                 let currentToolKeys: string[] = [];
+                let toolStartIndex: number | null = null;
+                let toolEndIndex: number | null = null;
+
+                const hasRenderableReasoningAt = (index: number): boolean =>
+                  messageParts[index]?.kind === "reasoning" &&
+                  Boolean(dedupedRenderablePartContents[index]);
+
+                const hasRenderableToolAt = (index: number): boolean =>
+                  Boolean(findToolStepByPart(message.toolSteps, messageParts[index]));
 
                 const flushToolSteps = (): void => {
-                  if (currentToolSteps.length > 0) {
-                    const key = currentToolKeys.join("-");
-                    groupedElements.push(
-                      <CuratorToolCallBlock
-                        key={key}
-                        steps={[...currentToolSteps]}
-                        onSubmitAskAnswer={onSubmitAskAnswer}
-                        onSubmitToolConfirmationAnswer={
-                          onSubmitToolConfirmationAnswer
-                        }
-                        onToolConfirmationToggle={onToolConfirmationToggle}
-                      />,
-                    );
-                    currentToolSteps = [];
-                    currentToolKeys = [];
+                  if (
+                    currentToolSteps.length === 0 ||
+                    toolStartIndex === null ||
+                    toolEndIndex === null
+                  ) {
+                    return;
                   }
+
+                  const key = currentToolKeys.join("-");
+                  groupedElements.push(
+                    <CuratorToolCallBlock
+                      key={key}
+                      steps={[...currentToolSteps]}
+                      onSubmitAskAnswer={onSubmitAskAnswer}
+                      onSubmitToolConfirmationAnswer={
+                        onSubmitToolConfirmationAnswer
+                      }
+                      onToolConfirmationToggle={onToolConfirmationToggle}
+                      connectsToNextExecution={hasRenderableReasoningAt(
+                        toolEndIndex + 1,
+                      )}
+                    />,
+                  );
+                  currentToolSteps = [];
+                  currentToolKeys = [];
+                  toolStartIndex = null;
+                  toolEndIndex = null;
                 };
 
                 for (const [partIndex, part] of messageParts.entries()) {
@@ -973,11 +993,17 @@ export const CuratorMessageBubble = ({
                           isGenerating,
                         )}
                         onToggle={onThinkingBlockToggle}
+                        connectsToNextExecution={
+                          hasRenderableToolAt(partIndex + 1) ||
+                          hasRenderableReasoningAt(partIndex + 1)
+                        }
                       />,
                     );
                   } else {
                     const step = findToolStepByPart(message.toolSteps, part);
                     if (step) {
+                      if (toolStartIndex === null) toolStartIndex = partIndex;
+                      toolEndIndex = partIndex;
                       currentToolSteps.push(step);
                       currentToolKeys.push(`${message.id}-${part.id}`);
                     }

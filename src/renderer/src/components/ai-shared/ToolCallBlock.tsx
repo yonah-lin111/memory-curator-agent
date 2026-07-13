@@ -61,6 +61,8 @@ type CuratorToolCallBlockProps = {
   ) => void | Promise<void>;
   // 工具确认表单展开收拢时的回调。
   onToolConfirmationToggle?: () => void;
+  // 后一紧邻思考节点存在时显示末节点出站连接线。
+  connectsToNextExecution?: boolean;
 };
 
 // 根据工具步骤状态返回状态展示配置。
@@ -447,6 +449,7 @@ export const CuratorToolCallBlock = ({
   onSubmitAskAnswer,
   onSubmitToolConfirmationAnswer,
   onToolConfirmationToggle,
+  connectsToNextExecution = false,
 }: CuratorToolCallBlockProps): React.JSX.Element => {
   // 超过该数量时触发折叠机制。
   const COLLAPSE_THRESHOLD = 3;
@@ -510,10 +513,11 @@ export const CuratorToolCallBlock = ({
                     className={`h-[15px] w-[15px] ${config.className}`}
                   />
                 </div>
-                {/* 穿透节点中心的连接线：从当前节点中心延伸至下一节点中心 */}
-                {groupIndex < groupedSteps.length - 1 && (
-                  <div className="absolute top-[9px] bottom-[-24px] w-[2px] bg-white/5" />
-                )}
+                {groupIndex < groupedSteps.length - 1 ? (
+                  <div className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5" />
+                ) : connectsToNextExecution ? (
+                  <div className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5" />
+                ) : null}
               </div>
 
               {/* 步骤详细内容 */}
