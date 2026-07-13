@@ -404,6 +404,18 @@ async function runPromptAiChat(
           kind: "tool",
           stepId: step.id,
         });
+        db.upsertToolCall({
+          id: createCompactUuid(),
+          runId,
+          messageId: assistantMessageId,
+          toolCallId: event.id,
+          name: event.name,
+          status: "running",
+          input: event.input,
+          observation: "",
+          data: null,
+          timestamp: new Date().toISOString(),
+        });
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         const displayName = getToolDisplayName(event.name);
         sender.send("prompt-ai:chat:event", {
@@ -426,6 +438,18 @@ async function runPromptAiChat(
           step.observation = event.observation;
           step.data = event.data;
         }
+        db.upsertToolCall({
+          id: createCompactUuid(),
+          runId,
+          messageId: assistantMessageId,
+          toolCallId: event.id,
+          name: event.name,
+          status: "done",
+          input: step?.input ?? {},
+          observation: event.observation,
+          data: event.data,
+          timestamp: new Date().toISOString(),
+        });
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "tool_finished",
@@ -443,7 +467,20 @@ async function runPromptAiChat(
           step.observation = `Tool execution failed: ${event.error}`;
           step.data = { error: event.error };
         }
-        
+        db.upsertToolCall({
+          id: createCompactUuid(),
+          runId,
+          messageId: assistantMessageId,
+          toolCallId: event.id,
+          name: event.name,
+          status: "failed",
+          input: step?.input ?? {},
+          observation: `Tool execution failed: ${event.error}`,
+          data: { error: event.error },
+          error: event.error,
+          timestamp: new Date().toISOString(),
+        });
+
         db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
         sender.send("prompt-ai:chat:event", {
           type: "tool_failed",

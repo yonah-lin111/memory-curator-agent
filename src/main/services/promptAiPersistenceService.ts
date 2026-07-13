@@ -1,5 +1,6 @@
 import type {
   AiAgentRunStatus,
+  AiAgentToolCallStatus,
   AiChatMessageRole,
   AiChatSessionStatus,
   AiToolStep,
@@ -24,6 +25,20 @@ export type AppendPromptAiMessageInput = {
   role: AiChatMessageRole;
   content: string;
   model?: string;
+  timestamp: string;
+};
+
+export type PromptAiToolCallInput = {
+  id: string;
+  runId: string;
+  messageId: string;
+  toolCallId: string;
+  name: string;
+  status: AiAgentToolCallStatus;
+  input: unknown;
+  observation: string;
+  data: unknown;
+  error?: string;
   timestamp: string;
 };
 
@@ -303,6 +318,46 @@ export class PromptAiPersistenceService {
       JSON.stringify(parts),
       timestamp,
       messageId,
+    );
+  }
+
+  public upsertToolCall(input: PromptAiToolCallInput): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO prompt_ai_agent_tool_calls (
+        external_id, run_id, message_id, tool_call_id, name, status,
+        input_json, observation, data_json, error, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(run_id, tool_call_id) DO UPDATE SET
+        message_id = excluded.message_id,
+        name = excluded.name,
+        status = excluded.status,
+        input_json = excluded.input_json,
+        observation = excluded.observation,
+        data_json = excluded.data_json,
+        error = excluded.error,
+        updated_at = excluded.updated_at
+    `);
+    const safeStringify = (value: unknown): string => {
+      try {
+        return JSON.stringify(value ?? null);
+      } catch {
+        return JSON.stringify({ error: "数据无法序列化" });
+      }
+    };
+    stmt.run(
+      input.id,
+      input.runId,
+      input.messageId,
+      input.toolCallId,
+      input.name,
+      input.status,
+      safeStringify(input.input),
+      input.observation,
+      safeStringify(input.data),
+      input.error ?? null,
+      input.timestamp,
+      input.timestamp,
     );
   }
 
