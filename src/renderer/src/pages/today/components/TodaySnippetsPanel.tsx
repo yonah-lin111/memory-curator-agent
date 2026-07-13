@@ -179,7 +179,7 @@ export const TodaySnippetsPanel = ({
   };
 
   return (
-    <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3">
+    <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 h-[360px]">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
         <div className="flex items-center gap-2">
           <StickyNote className="h-4 w-4 text-white/60" />
@@ -201,7 +201,7 @@ export const TodaySnippetsPanel = ({
         </div>
       </div>
 
-      <div className="max-h-[360px] flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
+      <div className="min-h-0 flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
         {errorMessage ? (
           <div className="rounded-[6px] border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-xs text-rose-300">
             {errorMessage}

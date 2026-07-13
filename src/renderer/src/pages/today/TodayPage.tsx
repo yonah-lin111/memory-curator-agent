@@ -794,7 +794,7 @@ export const TodayPage = (): React.JSX.Element => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-[300px] flex-shrink-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 h-[360px] flex-shrink-0">
           <TodayTodoPanel
             errorMessage={todayError}
             isLoading={isTodayLoading}
