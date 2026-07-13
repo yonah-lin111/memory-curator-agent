@@ -153,13 +153,15 @@ const createInlineDiffExtension = () => {
         };
       }
       const positionedBlocks = getPositionedInlineDiffBlocks(transaction.state.doc.toString(), effect.value.blocks);
+      // RangeSetBuilder 要求加入的范围必须按 from (必要时 to) 升序排列，否则会抛出异常。
+      const sortedBlocks = [...positionedBlocks].sort((a, b) => a.from - b.from || a.to - b.to);
       const builder = new RangeSetBuilder<Decoration>();
-      positionedBlocks.forEach((block) => {
+      sortedBlocks.forEach((block) => {
         const widget = new InlineDiffWidget(block, effect.value.actions);
         if (block.from === block.to) builder.add(block.from, block.from, Decoration.widget({ widget, block: true, side: 1 }));
         else builder.add(block.from, block.to, Decoration.replace({ widget, block: true }));
       });
-      return { decorations: builder.finish(), blocks: positionedBlocks };
+      return { decorations: builder.finish(), blocks: sortedBlocks };
     },
     provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
   });
