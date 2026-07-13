@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState, useRef } from "react";
-import { ChevronDown, Layers } from "lucide-react";
+import { ChevronDown, Boxes } from "lucide-react";
 
 // 连续执行片段。
 export type ExecutionSequencePart =
@@ -178,7 +178,7 @@ export const ExecutionGroupBlock = ({
       {/* 维持时间轴视觉，包含专属图标与连接线 */}
       <div className="relative flex w-6 flex-col items-center self-stretch shrink-0">
         <div className="relative z-10 flex h-5 w-5 items-center justify-center">
-          <Layers className="h-3.5 w-3.5 text-emerald-400" />
+          <Boxes className="h-3.5 w-3.5 text-orange-400" />
         </div>
         {group.connectsToNextExecution && (
           <div

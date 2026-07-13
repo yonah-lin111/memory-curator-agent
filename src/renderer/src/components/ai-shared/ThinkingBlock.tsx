@@ -55,14 +55,16 @@ export const CuratorThinkingBlock = ({
   }, [isExpanded, content]);
 
   return (
-    <div className="flex w-full gap-2.5 pl-1 my-1.5">
+    <div className="flex w-full gap-2.5 pl-1 my-1.5 items-start">
       {/* 固定按钮高度，避免字体行高改变节点中心位置。 */}
       <div className="relative flex w-6 flex-col items-center self-stretch shrink-0">
-        <Brain className="relative z-10 h-[15px] w-[15px] text-white/50" />
+        <div className="flex h-5 items-center justify-center">
+          <Brain className="relative z-10 h-[15px] w-[15px] text-white/50" />
+        </div>
         {connectsToNextExecution && (
           <div
             aria-hidden="true"
-            className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5"
+            className="absolute top-[10px] bottom-[-24px] w-[2px] bg-white/5"
           />
         )}
       </div>
