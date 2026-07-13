@@ -13,7 +13,7 @@ type FileMentionDeletionRange = {
   end: number;
 };
 
-const getFileMentionDeletionRange = (
+export const getFileMentionDeletionRange = (
   value: string,
   cursor: number,
 ): FileMentionDeletionRange | null => {
@@ -34,15 +34,25 @@ const getFileMentionDeletionRange = (
 
   const directRange = ranges.find((range) => range.end === cursor);
   if (directRange) {
-    return directRange;
+    // 1) 光标紧贴任意 @token 末尾（如 @historlist1|）时，普通 Backspace 必须遵循原生逐字删除，不能整段删除
+    return null;
   }
 
+  // 2) 当光标位于该 @token 后一个或多个连续空白字符之后（如 @historlist1   |），普通 Backspace 应一次删除整块：@token 及其紧随的全部空白，光标回到 token 起点
+  // 3) 支持空格、换行、制表符等 \s
   const previousCharacter = value[cursor - 1];
   if (previousCharacter && /\s/.test(previousCharacter)) {
-    const rangeBeforeSpace = ranges.find((range) => range.end === cursor - 1);
-    if (rangeBeforeSpace) {
+    // 我们从 cursor - 1 开始向左搜索，跳过所有连续的空白字符
+    let i = cursor - 1;
+    while (i >= 0 && /\s/.test(value[i])) {
+      i--;
+    }
+    // 此时 i 停在非空白字符上，或者越界。我们看它是不是一个 token 的结尾
+    const tokenEnd = i + 1;
+    const rangeBeforeSpaces = ranges.find((range) => range.end === tokenEnd);
+    if (rangeBeforeSpaces) {
       return {
-        start: rangeBeforeSpace.start,
+        start: rangeBeforeSpaces.start,
         end: cursor,
       };
     }

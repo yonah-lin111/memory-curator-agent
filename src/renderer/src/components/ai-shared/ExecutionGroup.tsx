@@ -110,16 +110,8 @@ export const ExecutionGroupBlock = ({
 }: ExecutionGroupBlockProps): React.JSX.Element => {
   // 判定是否为真正可聚合的分组：
   // 1. 至少包含 2 个执行片段；
-  // 2. 排除“恰好 1 个 tool + 1 个 reasoning”的连续片段，此类不聚合。
   const isAggregatableGroup = (() => {
     if (group.parts.length < 2) return false;
-    if (group.parts.length === 2) {
-      const firstKind = group.parts[0].kind;
-      const secondKind = group.parts[1].kind;
-      if (firstKind !== secondKind) {
-        return false;
-      }
-    }
     return true;
   })();
 
