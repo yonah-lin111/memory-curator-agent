@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useState, useRef } from "react";
-import { ChevronDown, Workflow } from "lucide-react";
+import { ChevronDown, Layers } from "lucide-react";
 
 // 连续执行片段。
 export type ExecutionSequencePart =
@@ -8,8 +8,8 @@ export type ExecutionSequencePart =
       id: string;
       // 片段类型。
       kind: "tool" | "reasoning";
-      // 交互型工具是否仍待用户处理。
-      isInteractionPending?: boolean;
+      // 是否为交互型工具。
+      isInteractionTool?: boolean;
     }
   | {
       // 片段唯一标识。
@@ -56,7 +56,7 @@ export const groupExecutionParts = (
       return;
     }
 
-    if (part.isInteractionPending) {
+    if (part.isInteractionTool) {
       flush();
       groups.push({
         kind: "execution",
@@ -104,24 +104,33 @@ type ExecutionGroupBlockProps = {
  */
 export const ExecutionGroupBlock = ({
   group,
-  isGenerating = false,
+  isGenerating: _isGenerating = false,
   renderPart,
   onToggle,
 }: ExecutionGroupBlockProps): React.JSX.Element => {
-  const isCollapsible = group.parts.length >= 2;
-  const [isExpanded, setIsExpanded] = useState(isGenerating);
+  // 判定是否为真正可聚合的分组：
+  // 1. 至少包含 2 个执行片段；
+  // 2. 排除“恰好 1 个 tool + 1 个 reasoning”的连续片段，此类不聚合。
+  const isAggregatableGroup = (() => {
+    if (group.parts.length < 2) return false;
+    if (group.parts.length === 2) {
+      const firstKind = group.parts[0].kind;
+      const secondKind = group.parts[1].kind;
+      if (firstKind !== secondKind) {
+        return false;
+      }
+    }
+    return true;
+  })();
+
+  const isCollapsible = isAggregatableGroup;
+  const [isExpanded, setIsExpanded] = useState(false);
   // 引用真实容器以动态获取高度并保留折叠展开动画。
   const innerRef = useRef<HTMLDivElement>(null);
   // 缓存真实内容高度，避免子卡片展开或流式内容追加导致高度过期被裁切的问题。
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   // 仅首次展开或收起使用高度过渡，内容尺寸变化时即时更新。
   const [isAnimating, setIsAnimating] = useState(false);
-
-  useLayoutEffect(() => {
-    if (isGenerating) {
-      setIsExpanded(true);
-    }
-  }, [isGenerating]);
 
   useLayoutEffect(() => {
     const element = innerRef.current;
@@ -152,7 +161,13 @@ export const ExecutionGroupBlock = ({
 
 
   if (!isCollapsible) {
-    return renderPart(group.parts[0], group.connectsToNextExecution);
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        {group.parts.map((part, index) =>
+          renderPart(part, index < group.parts.length - 1 || group.connectsToNextExecution),
+        )}
+      </div>
+    );
   }
 
   const toolCount = group.parts.filter((part) => part.kind === "tool").length;
@@ -162,11 +177,13 @@ export const ExecutionGroupBlock = ({
     <div className="flex w-full gap-2.5 pl-1 my-1.5">
       {/* 维持时间轴视觉，包含专属图标与连接线 */}
       <div className="relative flex w-6 flex-col items-center self-stretch shrink-0">
-        <Workflow className="relative z-10 h-[15px] w-[15px] text-white/50" />
+        <div className="relative z-10 flex h-5 w-5 items-center justify-center">
+          <Layers className="h-3.5 w-3.5 text-emerald-400" />
+        </div>
         {group.connectsToNextExecution && (
           <div
             aria-hidden="true"
-            className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5"
+            className="absolute top-5 bottom-[-24px] w-[2px] bg-white/5"
           />
         )}
       </div>

@@ -1,6 +1,8 @@
 import {
   isCuratorAskRequest,
   isCuratorToolConfirmationRequest,
+  isCuratorAskAnswer,
+  isCuratorToolConfirmationAnswer,
   type CuratorAskAnswerSubmitPayload,
   type CuratorToolConfirmationAnswerSubmitPayload,
 } from "@/components/ai-shared/AskRequestPanel";
@@ -95,8 +97,13 @@ export const PromptAiChatMessageBubble = ({
       return {
         id: part.id,
         kind: "tool",
-        isInteractionPending: Boolean(
-          step && (isCuratorAskRequest(step.data) || isCuratorToolConfirmationRequest(step.data)),
+        isInteractionTool: Boolean(
+          step && (
+            isCuratorAskRequest(step.data) ||
+            isCuratorToolConfirmationRequest(step.data) ||
+            isCuratorAskAnswer(step.data) ||
+            isCuratorToolConfirmationAnswer(step.data)
+          ),
         ),
       };
     });

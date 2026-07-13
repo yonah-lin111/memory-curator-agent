@@ -14,6 +14,7 @@ import type { CuratorMessageUpdater } from "@/features/curator/core/curatorSessi
 import {
   isCuratorAskRequest,
   isCuratorToolConfirmationRequest,
+  isCuratorToolConfirmationAnswer,
 } from "@/components/ai-shared/AskRequestPanel";
 
 // Ask 被作废时主进程返回的固定错误文本。
@@ -25,33 +26,6 @@ const TOOL_CONFIRMATION_CANCELLED_MESSAGE =
 
 // 整个 AI run 被硬取消时的固定错误文本。
 const CURATOR_CANCELLED_MESSAGE = "AI chat request was cancelled";
-
-// 工具确认回答数据。
-type CuratorToolConfirmationAnswerData = {
-  // 工具数据类型。
-  kind: "tool_confirmation_answer";
-  // 工具确认请求唯一标识。
-  id: string;
-  // 用户确认动作。
-  action: "confirm" | "cancel";
-};
-
-/**
- * 判断值是否为普通对象。
- */
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-/**
- * 判断工具数据是否为工具确认回答。
- */
-const isCuratorToolConfirmationAnswer = (
-  value: unknown,
-): value is CuratorToolConfirmationAnswerData =>
-  isRecord(value) &&
-  value.kind === "tool_confirmation_answer" &&
-  typeof value.id === "string" &&
-  (value.action === "confirm" || value.action === "cancel");
 
 /**
  * 判断工具结果是否仍在等待后续输入或执行。

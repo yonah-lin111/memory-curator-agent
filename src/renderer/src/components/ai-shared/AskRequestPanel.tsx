@@ -159,6 +159,26 @@ export const isCuratorToolConfirmationRequest = (
   Array.isArray(value.questions) &&
   value.questions.every(isAskQuestion);
 
+export type CuratorToolConfirmationAnswerData = {
+  // 工具数据类型。
+  kind: "tool_confirmation_answer";
+  // 工具确认请求唯一标识。
+  id: string;
+  // 用户确认动作。
+  action: "confirm" | "cancel";
+};
+
+/**
+ * 判断工具数据是否为工具确认回答。
+ */
+export const isCuratorToolConfirmationAnswer = (
+  value: unknown,
+): value is CuratorToolConfirmationAnswerData =>
+  isRecord(value) &&
+  value.kind === "tool_confirmation_answer" &&
+  typeof value.id === "string" &&
+  (value.action === "confirm" || value.action === "cancel");
+
 /**
  * 判断工具数据是否为 Ask 回答。
  */

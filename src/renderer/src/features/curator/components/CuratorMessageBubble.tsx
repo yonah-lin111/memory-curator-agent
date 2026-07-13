@@ -20,6 +20,8 @@ import {
 import {
   isCuratorAskRequest,
   isCuratorToolConfirmationRequest,
+  isCuratorAskAnswer,
+  isCuratorToolConfirmationAnswer,
   type CuratorAskAnswerSubmitPayload,
   type CuratorToolConfirmationAnswerSubmitPayload,
 } from "@/components/ai-shared/AskRequestPanel";
@@ -930,7 +932,14 @@ export const CuratorMessageBubble = ({
                   return {
                     id: part.id,
                     kind: "tool",
-                    isInteractionPending: Boolean(step?.data && (isCuratorAskRequest(step.data) || isCuratorToolConfirmationRequest(step.data))),
+                    isInteractionTool: Boolean(
+                      step?.data && (
+                        isCuratorAskRequest(step.data) ||
+                        isCuratorToolConfirmationRequest(step.data) ||
+                        isCuratorAskAnswer(step.data) ||
+                        isCuratorToolConfirmationAnswer(step.data)
+                      ),
+                    ),
                   };
                 });
 
