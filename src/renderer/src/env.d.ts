@@ -1025,6 +1025,23 @@ type AppAPI = {
     /** 指定日期账单摘要，不传则取今日 */
     todaySummary: (date?: string) => Promise<BillTodaySummary>
   }
+  promptDesign?: {
+    projects: {
+      list: () => Promise<any[]>
+      create: (input: any) => Promise<any>
+      rename: (id: string, name: string) => Promise<void>
+      update: (id: string, input: any) => Promise<void>
+      delete: (id: string) => Promise<void>
+    }
+    designs: {
+      list: (projectId?: string) => Promise<any[]>
+      create: (input: any) => Promise<any>
+      rename: (id: string, name: string) => Promise<void>
+      update: (id: string, input: any) => Promise<void>
+      delete: (id: string) => Promise<void>
+    }
+    searchFiles: (directory: string, query: string) => Promise<string[]>
+  }
   promptAi?: {
     listSessions: (designItemId: string) => Promise<PromptAiChatSession[]>
     getSession: (sessionId: string) => Promise<PromptAiChatSession | null>

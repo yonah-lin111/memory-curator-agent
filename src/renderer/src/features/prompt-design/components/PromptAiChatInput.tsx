@@ -334,12 +334,22 @@ export const PromptAiChatInput = ({
           activeIndex={activeFileIndex}
           onActiveIndexChange={setActiveFileIndex}
           onItemSelect={(item) => selectFileMention(item.path)}
-          renderItem={(item) => (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <FileText className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate text-sm">{item.path}</span>
-            </div>
-          )}
+          renderItem={(item) => {
+            const lastSlash = item.path.lastIndexOf("/");
+            const baseName = lastSlash !== -1 ? item.path.substring(lastSlash + 1) : item.path;
+            const dirPath = lastSlash !== -1 ? item.path.substring(0, lastSlash) : "";
+            return (
+              <div className="flex items-center gap-2 overflow-hidden w-full py-0.5">
+                <FileText className="h-4 w-4 shrink-0 opacity-50" />
+                <div className="flex flex-col min-w-0 flex-1 text-left">
+                  <span className="truncate text-sm text-white font-medium">{baseName}</span>
+                  {dirPath && (
+                    <span className="truncate text-xs text-white/35">{dirPath}</span>
+                  )}
+                </div>
+              </div>
+            );
+          }}
           idPrefix="prompt-file-mention"
         />
 

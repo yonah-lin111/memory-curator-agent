@@ -66,22 +66,33 @@ export const useFileMention = (
   
   const activeProjectId = usePromptDesignStore((state) => state.activeProjectId);
   const [activeProject, setActiveProject] = useState<any>(null);
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
   const toastStore = useToast();
 
   useEffect(() => {
     if (activeProjectId) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.api as any).promptDesign.projects.list()
-        .then((projects: any[]) => {
+      setIsLoadingProject(true);
+      let isCurrent = true;
+      window.api.promptDesign?.projects.list()
+        ?.then((projects: any[]) => {
+          if (!isCurrent) return;
           const p = projects.find(p => p.id === activeProjectId);
           setActiveProject(p || null);
+          setIsLoadingProject(false);
         })
         .catch((err: unknown) => {
+          if (!isCurrent) return;
           console.error("Failed to fetch projects:", err);
+          setIsLoadingProject(false);
         });
+      return () => {
+        isCurrent = false;
+      };
     } else {
       setActiveProject(null);
+      setIsLoadingProject(false);
     }
+    return undefined;
   }, [activeProjectId]);
 
   const isFilePanelOpen = Boolean(
@@ -96,7 +107,7 @@ export const useFileMention = (
 
   const syncFileMentionPanel = useCallback((value: string, cursor: number): void => {
     const nextState = resolveAgentMentionPanelState(value, cursor);
-    
+
     if (!nextState) {
       closeFileMentionPanel();
       return;
@@ -104,27 +115,32 @@ export const useFileMention = (
 
     setFileMentionPanelState(nextState);
     setActiveFileIndex(0);
-    
-    if (nextState && activeProject && !activeProject.path) {
-      toastStore.error("当前项目不是本地文件系统项目，无法使用文件提及功能");
-      closeFileMentionPanel();
-    } else if (nextState && !activeProject) {
+  }, [closeFileMentionPanel]);
+
+  useEffect(() => {
+    if (!fileMentionPanelState || isLoadingProject) {
+      return;
+    }
+
+    if (!activeProject) {
       toastStore.error("未找到当前活动的本地项目");
       closeFileMentionPanel();
+    } else if (!activeProject.path) {
+      toastStore.error("当前项目不是本地文件系统项目，无法使用文件提及功能");
+      closeFileMentionPanel();
     }
-  }, [closeFileMentionPanel, activeProject, toastStore]);
+  }, [activeProject, isLoadingProject, fileMentionPanelState, closeFileMentionPanel, toastStore]);
 
   useEffect(() => {
     if (!fileMentionPanelState || !activeProject?.path) {
       setMatchedFiles([]);
       return;
     }
-    
+
     let isMounted = true;
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window.api as any).promptDesign.searchFiles(activeProject.path, fileMentionPanelState.query)
-      .then((results: string[]) => {
+
+    window.api.promptDesign?.searchFiles(activeProject.path, fileMentionPanelState.query)
+      ?.then((results: string[]) => {
         if (isMounted) {
           setMatchedFiles(results);
           setActiveFileIndex(0);
@@ -133,10 +149,10 @@ export const useFileMention = (
       .catch((err: unknown) => {
         console.error("Failed to search files:", err);
         if (isMounted) {
-          toastStore.error("文件搜索失败，请确保主进程已重启");
+          toastStore.error("文件搜索失败，请确保主重启");
         }
       });
-      
+
     return () => {
       isMounted = false;
     };
