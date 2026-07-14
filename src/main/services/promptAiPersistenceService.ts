@@ -285,6 +285,48 @@ export class PromptAiPersistenceService {
     return this.getSession(sessionId);
   }
 
+  public deleteTurnByMessageId(
+    sessionId: string,
+    messageId: string,
+  ): PromptAiChatSessionItem | null {
+    const deleteTx = this.db.transaction(() => {
+      const messagesStmt = this.db.prepare(`
+        SELECT rowid AS row_order, external_id, role, created_at
+        FROM prompt_ai_chat_messages
+        WHERE session_id = ?
+        ORDER BY created_at ASC, rowid ASC
+      `);
+      const messages = messagesStmt.all(sessionId) as { row_order: number; external_id: string; role: string; created_at: string }[];
+      const messageIndex = messages.findIndex((message) => message.external_id === messageId);
+      if (messageIndex < 0) return;
+
+      let turnStartIndex = messageIndex;
+      while (turnStartIndex > 0 && messages[turnStartIndex].role !== "user") {
+        turnStartIndex -= 1;
+      }
+      if (messages[turnStartIndex].role !== "user") return;
+
+      const removedMessages = messages.slice(turnStartIndex);
+      const removedMessageIds = removedMessages.map((message) => message.external_id);
+      const removedAssistantMessageIds = removedMessages
+        .filter((message) => message.role === "assistant")
+        .map((message) => message.external_id);
+
+      if (removedAssistantMessageIds.length > 0) {
+        const placeholders = removedAssistantMessageIds.map(() => "?").join(", ");
+        this.db.prepare(`DELETE FROM prompt_ai_agent_runs WHERE session_id = ? AND assistant_message_id IN (${placeholders})`).run(sessionId, ...removedAssistantMessageIds);
+      }
+      const placeholders = removedMessageIds.map(() => "?").join(", ");
+      this.db.prepare(`DELETE FROM prompt_ai_chat_messages WHERE external_id IN (${placeholders})`).run(...removedMessageIds);
+
+      const remainingMessages = messages.slice(0, turnStartIndex);
+      this.updateSessionTimestamp(sessionId, remainingMessages.at(-1)?.created_at ?? new Date().toISOString());
+    });
+
+    deleteTx();
+    return this.getSession(sessionId);
+  }
+
   public recordAgentRun(
     runId: string,
     sessionId: string,

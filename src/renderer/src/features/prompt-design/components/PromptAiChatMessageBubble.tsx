@@ -1,3 +1,4 @@
+import React from "react";
 import {
   isCuratorAskRequest,
   isCuratorToolConfirmationRequest,
@@ -19,12 +20,38 @@ import type { PromptAiMessage, PromptAiPart } from "@/features/prompt-design/com
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 
+export type PromptAiMessageContextMenuRequest = {
+  messageId: string;
+  x: number;
+  y: number;
+  canRegenerate: boolean;
+  plainTextContent: string;
+  markdownContent: string;
+  onEdit?: () => void;
+};
+
+const stripMarkdownSyntax = (content: string): string => content
+  .replace(/```[a-zA-Z0-9_-]*\n?([\s\S]*?)```/g, "$1")
+  .replace(/`([^`]+)`/g, "$1")
+  .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+  .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+  .replace(/^#{1,6}\s+/gm, "")
+  .replace(/^>\s?/gm, "")
+  .replace(/^\s*[-*+]\s+/gm, "")
+  .replace(/^\s*\d+\.\s+/gm, "")
+  .replace(/[*_~]{1,3}/g, "")
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
+
 type PromptAiChatMessageBubbleProps = {
   message: PromptAiMessage;
   isGenerating?: boolean;
+  canRegenerate?: boolean;
   onSubmitAskAnswer?: (
     payload: CuratorAskAnswerSubmitPayload,
   ) => void | Promise<void>;
+  onOpenContextMenu: (request: PromptAiMessageContextMenuRequest) => void;
+  onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
   onSubmitToolConfirmationAnswer?: (
     payload: CuratorToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
@@ -83,11 +110,35 @@ const findToolStepByPart = (
 export const PromptAiChatMessageBubble = ({
   message,
   isGenerating = false,
+  canRegenerate = false,
   onSubmitAskAnswer,
+  onOpenContextMenu,
+  onEditAndResendUserMessage,
   onSubmitToolConfirmationAnswer,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const isUser = message.role === "user";
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editText, setEditText] = React.useState(message.content);
   const messageParts = resolveMessageParts(message);
+  const markdownContent = isUser ? message.content : messageParts.filter((part): part is Extract<PromptAiPart, { kind: "text" }> => part.kind === "text").map((part) => part.content).join("\n\n").trim() || message.content;
+  const plainTextContent = stripMarkdownSyntax(markdownContent);
+
+  /**
+   * 打开当前消息的右键菜单。
+   */
+  const handleOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    onOpenContextMenu({
+      messageId: message.id,
+      x: event.clientX,
+      y: event.clientY,
+      canRegenerate,
+      plainTextContent,
+      markdownContent,
+      onEdit: isUser ? () => setIsEditing(true) : undefined,
+    });
+  };
 
   const renderAssistantParts = (): React.JSX.Element[] => {
     const sequenceParts: ExecutionSequencePart[] = messageParts.map((part) => {
@@ -137,11 +188,19 @@ export const PromptAiChatMessageBubble = ({
   };
 
   return (
-    <div className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}>
+    <div className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`} onContextMenu={handleOpenContextMenu}>
       <div className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}>
         <div className={`rounded-[6px] px-1 py-1 text-sm leading-relaxed break-words w-fit max-w-full ${isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "text-white/80"} ${message.cancelled ? "line-through opacity-50" : ""}`}>
           {isUser ? (
-            <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left">{message.content}</div>
+            isEditing ? (
+              <div className="flex w-[400px] max-w-full flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2.5">
+                <textarea value={editText} onChange={(event) => setEditText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (editText.trim() && editText.trim() !== message.content.trim() && !isGenerating) { setIsEditing(false); void onEditAndResendUserMessage?.(message.id, editText.trim()); } } }} className="w-full resize-none bg-transparent text-sm text-white focus:outline-none custom-scrollbar" autoFocus />
+                <div className="flex justify-end gap-1.5 border-t border-white/5 pt-2">
+                  <button type="button" className="rounded-[4px] px-2 py-1 text-xs text-white/50 hover:bg-white/10" onClick={() => { setIsEditing(false); setEditText(message.content); }}>取消</button>
+                  <button type="button" className="rounded-[4px] bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15 disabled:opacity-40" disabled={!editText.trim() || editText.trim() === message.content.trim() || isGenerating} onClick={() => { setIsEditing(false); void onEditAndResendUserMessage?.(message.id, editText.trim()); }}>发送并重新生成</button>
+                </div>
+              </div>
+            ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left">{message.content}</div>
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">{renderAssistantParts()}</div>
           )}

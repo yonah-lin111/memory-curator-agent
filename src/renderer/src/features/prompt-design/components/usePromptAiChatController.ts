@@ -414,9 +414,35 @@ export const usePromptAiChatController = (
     await window.api.promptAi!.submitToolConfirmationAnswer(payload);
   }, []);
 
+  const handleDeleteTurn = useCallback(async (messageId: string): Promise<void> => {
+    if (isGenerating) return;
+    try {
+      await window.api.promptAi!.deleteTurn(sessionId, messageId);
+      await loadSession(sessionId);
+      await fetchSessions();
+    } catch (error) {
+      console.error("Failed to delete AI chat turn:", error);
+    }
+  }, [fetchSessions, isGenerating, loadSession, sessionId]);
+
+  const handleRegenerateLatestAnswer = useCallback(async (): Promise<void> => {
+    if (isGenerating) return;
+    const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+    if (!latestUserMessage) return;
+    await handleUndo();
+    await sendMessage(latestUserMessage.content);
+  }, [handleUndo, isGenerating, messages, sendMessage]);
+
+  const handleEditAndResendUserMessage = useCallback(async (messageId: string, text: string): Promise<void> => {
+    if (isGenerating || !text.trim()) return;
+    await handleDeleteTurn(messageId);
+    await sendMessage(text);
+  }, [handleDeleteTurn, isGenerating, sendMessage]);
+
   return {
     activeSessionId: sessionId, messages, sessions, sendMessage, handleNewChat,
     handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
+    handleDeleteTurn, handleRegenerateLatestAnswer, handleEditAndResendUserMessage,
     handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, isGenerating,
     sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
   };

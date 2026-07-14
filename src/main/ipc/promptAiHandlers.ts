@@ -208,6 +208,10 @@ export function registerPromptAiHandlers(): void {
   ipcMain.handle("prompt-ai:session:undo", (_, sessionId: string) => {
     return getPersistence().undoLastTurn(sessionId);
   });
+
+  ipcMain.handle("prompt-ai:session:turn:delete", (_, sessionId: string, messageId: string) => {
+    return getPersistence().deleteTurnByMessageId(sessionId, messageId);
+  });
 }
 
 async function runPromptAiChat(

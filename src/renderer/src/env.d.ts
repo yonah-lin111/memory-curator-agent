@@ -1051,6 +1051,7 @@ type AppAPI = {
     updateSessionTitle: (sessionId: string, title: string) => Promise<void>
     deleteSession: (sessionId: string) => Promise<void>
     undoLastTurn: (sessionId: string) => Promise<PromptAiChatSession | null>
+    deleteTurn: (sessionId: string, messageId: string) => Promise<PromptAiChatSession | null>
     startChat: (payload: PromptAiChatStartPayload) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
     submitAskAnswer: (payload: AiAskAnswerPayload) => Promise<void>

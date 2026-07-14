@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { Bot } from "lucide-react";
-import { PromptAiChatMessageBubble } from "./PromptAiChatMessageBubble";
-import { PromptAiChatInput } from "./PromptAiChatInput";
-import { usePromptAiChatController } from "./usePromptAiChatController";
+import { PromptAiChatMessageBubble, type PromptAiMessageContextMenuRequest } from "@/features/prompt-design/components/PromptAiChatMessageBubble";
+import { PromptAiMessageContextMenu } from "@/features/prompt-design/components/PromptAiMessageContextMenu";
+import { PromptAiChatInput } from "@/features/prompt-design/components/PromptAiChatInput";
+import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 
 // 底部占位计算所需的 DOM 参数。
 type BottomSpacerParams = {
@@ -55,6 +56,7 @@ export const PromptAiChatWorkspace = forwardRef<
   const prevScrolledUserMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
   const [injectedText, setInjectedText] = useState<string | undefined>(undefined);
+  const [messageContextMenu, setMessageContextMenu] = useState<PromptAiMessageContextMenuRequest | null>(null);
   const escCancelStateRef = useRef<"idle" | "pending">("idle");
   const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toast = useToast();
@@ -314,6 +316,67 @@ export const PromptAiChatWorkspace = forwardRef<
     return undefined;
   }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
+  useEffect(() => {
+    if (!messageContextMenu) return undefined;
+    const closeContextMenu = (): void => setMessageContextMenu(null);
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") closeContextMenu();
+    };
+    document.addEventListener("click", closeContextMenu);
+    document.addEventListener("scroll", closeContextMenu, true);
+    window.addEventListener("resize", closeContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("click", closeContextMenu);
+      document.removeEventListener("scroll", closeContextMenu, true);
+      window.removeEventListener("resize", closeContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [messageContextMenu]);
+
+  /**
+   * 写入系统剪贴板，兼容缺失 Clipboard API 的运行时。
+   */
+  const copyTextToClipboard = async (content: string): Promise<void> => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(content);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = content;
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  };
+
+  const handleCopyText = (): void => {
+    if (!messageContextMenu) return;
+    void copyTextToClipboard(messageContextMenu.plainTextContent);
+    setMessageContextMenu(null);
+  };
+  const handleCopyMarkdown = (): void => {
+    if (!messageContextMenu) return;
+    void copyTextToClipboard(messageContextMenu.markdownContent);
+    setMessageContextMenu(null);
+  };
+  const handleRegenerate = (): void => {
+    setMessageContextMenu(null);
+    void controller.handleRegenerateLatestAnswer();
+  };
+  const handleDeleteQa = (): void => {
+    if (!messageContextMenu) return;
+    const { messageId } = messageContextMenu;
+    setMessageContextMenu(null);
+    void controller.handleDeleteTurn(messageId);
+  };
+  const handleEdit = (): void => {
+    messageContextMenu?.onEdit?.();
+    setMessageContextMenu(null);
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#212121]">
       {/* 消息区域容器 */}
@@ -357,6 +420,13 @@ export const PromptAiChatWorkspace = forwardRef<
                       <PromptAiChatMessageBubble
                         message={message as any}
                         isGenerating={isGeneratingMessage}
+                        canRegenerate={
+                          !isGenerating &&
+                          message.role === "assistant" &&
+                          message.id === messages[messages.length - 1]?.id
+                        }
+                        onOpenContextMenu={setMessageContextMenu}
+                        onEditAndResendUserMessage={controller.handleEditAndResendUserMessage}
                         onSubmitAskAnswer={controller.handleSubmitAskAnswer}
                         onSubmitToolConfirmationAnswer={
                           controller.handleSubmitToolConfirmationAnswer
@@ -390,6 +460,18 @@ export const PromptAiChatWorkspace = forwardRef<
           />
         </div>
       </div>
+      {messageContextMenu ? (
+        <PromptAiMessageContextMenu
+          x={messageContextMenu.x}
+          y={messageContextMenu.y}
+          canRegenerate={messageContextMenu.canRegenerate}
+          onCopyText={handleCopyText}
+          onCopyMarkdown={handleCopyMarkdown}
+          onRegenerate={handleRegenerate}
+          onDeleteQa={handleDeleteQa}
+          onEdit={messageContextMenu.onEdit ? handleEdit : undefined}
+        />
+      ) : null}
     </div>
   );
 });
