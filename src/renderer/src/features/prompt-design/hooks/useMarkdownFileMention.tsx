@@ -9,7 +9,7 @@ import type { AgentMentionPanelState } from "@/lib/ai-shared/types";
 import { resolveAgentMentionPanelState, getFileMentionDeletionRange } from "@/lib/ai-shared/utils";
 
 type ActiveProject = { id: string; path?: string };
-type MentionPanelPosition = { left: number; top: number };
+type MentionPanelPosition = { left: number; top: number | "auto"; bottom: number | "auto"; maxHeight?: string };
 type FileMentionRange = { from: number; to: number };
 
 const addFileMentionEffect = StateEffect.define<FileMentionRange>();
@@ -123,10 +123,31 @@ export const useMarkdownFileMention = (enabled: boolean) => {
 
     setPanelState(nextState);
     setActiveIndex(0);
-    setPanelPosition({
-      left: Math.min(Math.max(coords.left, 8), Math.max(window.innerWidth - 368, 8)),
-      top: Math.min(coords.bottom + 6, Math.max(window.innerHeight - 240, 8)),
-    });
+
+    // 测算剩余视口空间以决定面板展示在光标上方还是下方
+    const spaceBelow = window.innerHeight - coords.bottom;
+    const panelHeight = window.innerHeight * 0.3; // 固定的面板参考高度为可用视口的 30%
+    const offset = 6;
+
+    if (spaceBelow < panelHeight) {
+      // 只要下方空间不足，一律置顶，并通过计算可用空间设置最大高度以避免溢出
+      const maxAvailableHeight = Math.min(panelHeight, Math.max(0, coords.top - offset - 16)); // 留出顶部安全边距，且不超过 30vh (panelHeight) 及真实可用高度
+      setPanelPosition({
+        left: Math.min(Math.max(coords.left, 8), Math.max(window.innerWidth - 368, 8)),
+        top: "auto",
+        bottom: window.innerHeight - coords.top + offset,
+        maxHeight: `${maxAvailableHeight}px`,
+      });
+    } else {
+      // 否则定位在光标下方，并通过计算可用空间设置最大高度以避免溢出
+      const maxAvailableHeight = Math.min(panelHeight, Math.max(0, spaceBelow - offset - 16)); // 限制在 30vh 且绝不超出真实可用高度
+      setPanelPosition({
+        left: Math.min(Math.max(coords.left, 8), Math.max(window.innerWidth - 368, 8)),
+        top: coords.bottom + offset,
+        bottom: "auto",
+        maxHeight: `${maxAvailableHeight}px`,
+      });
+    }
   }, [activeProject?.path, closePanel]);
   const syncPanelRef = useRef(syncPanel);
   syncPanelRef.current = syncPanel;
@@ -249,8 +270,14 @@ export const useMarkdownFileMention = (enabled: boolean) => {
         );
       }}
       idPrefix="prompt-markdown-file-mention"
-      className="fixed z-50 w-[360px]"
-      style={panelPosition ? { left: panelPosition.left, top: panelPosition.top, right: "auto", bottom: "auto" } : undefined}
+      className="fixed z-[100] w-[360px]"
+      style={panelPosition ? {
+        left: panelPosition.left,
+        top: panelPosition.top,
+        right: "auto",
+        bottom: panelPosition.bottom,
+        maxHeight: panelPosition.maxHeight,
+      } : undefined}
     />
   );
 

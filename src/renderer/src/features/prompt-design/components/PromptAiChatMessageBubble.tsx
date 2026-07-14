@@ -112,7 +112,7 @@ export const PromptAiChatMessageBubble = ({
       if (item.kind === "text") {
         const part = messageParts.find((candidate) => candidate.id === item.id);
         return part?.kind === "text" && part.content
-          ? [<div key={`${message.id}-${part.id}`} className="markdown-preview-container curator-markdown-preview select-text max-w-full"><MdPreview theme="dark" modelValue={part.content} previewTheme="default" codeTheme="atom" style={{ backgroundColor: "transparent" }} showCodeRowNumber={false} /></div>]
+          ? [<div key={`${message.id}-${part.id}`} className="markdown-preview-container curator-markdown-preview select-text max-w-full"><MdPreview theme="dark" modelValue={part.content} previewTheme="default" codeTheme="atom" style={{ backgroundColor: "transparent" }} autoFoldThreshold={isGenerating ? Infinity : 0} showCodeRowNumber={false} /></div>]
           : [];
       }
 

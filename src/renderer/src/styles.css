@@ -508,7 +508,9 @@ html:hover::-webkit-scrollbar-thumb,
   border-radius: 4px !important;
   padding: 6px 8px !important; /* 优雅的紧凑内边距 */
   font-size: 12px !important; /* text-xs */
-  transition: background-color 150ms ease, color 150ms ease !important;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease !important;
   cursor: pointer;
 }
 
@@ -523,7 +525,9 @@ html:hover::-webkit-scrollbar-thumb,
 .md-editor .md-editor-toolbar-item {
   border-radius: 6px !important; /* rounded-[6px] */
   background-color: transparent !important;
-  transition: color 150ms ease, background-color 150ms ease !important;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease !important;
   cursor: pointer;
 }
 
@@ -592,16 +596,19 @@ html:hover::-webkit-scrollbar-thumb,
   opacity: 1;
 }
 
-/* 向上调整随滚动条滚动的代码块顶部栏的 top 位置 */
-.markdown-preview-container .md-editor-code-head {
-  top: -16px !important;
+/* 向上调整随滚动条滚动的代码块顶部栏的 top 位置，并降低层级防止遮挡悬浮 UI */
+.markdown-preview-container .md-editor-code-head,
+.md-editor-clean .md-editor-code-head {
+  top: 0px !important;
   z-index: 2 !important;
 }
 
 /* MdPreview 代码块展开/折叠时的平滑过渡效果 */
 .markdown-preview-container .md-editor-code {
   interpolate-size: allow-keywords;
-  transition: width 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1);
+  transition:
+    width 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1);
 }
 
 .markdown-preview-container .md-editor-code::details-content {
@@ -609,10 +616,10 @@ html:hover::-webkit-scrollbar-thumb,
   block-size: 0;
   inline-size: 0;
   overflow: hidden;
-  transition: 
-    opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
-    block-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
-    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
+  transition:
+    opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    block-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
     content-visibility 0.25s allow-discrete;
 }
 
@@ -641,10 +648,14 @@ html:hover::-webkit-scrollbar-thumb,
 .journal-markdown-preview.markdown-preview-container * {
   font-size: 13px !important;
 }
-.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:first-child {
+.journal-markdown-preview.markdown-preview-container
+  .md-editor-preview
+  > *:first-child {
   margin-top: 0 !important;
 }
-.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:last-child {
+.journal-markdown-preview.markdown-preview-container
+  .md-editor-preview
+  > *:last-child {
   margin-bottom: 0 !important;
 }
 

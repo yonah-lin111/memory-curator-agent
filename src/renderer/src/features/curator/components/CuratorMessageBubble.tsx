@@ -380,6 +380,11 @@ const CuratorMarkdownPreview = ({
         autoFoldThreshold={isGenerating ? Infinity : 0}
         showCodeRowNumber={false}
       />
+      <style>{`
+        .curator-markdown-preview .md-editor-preview .md-editor-code .md-editor-code-head {
+          top: -16px !important;
+        }
+      `}</style>
     </div>
   );
 };
