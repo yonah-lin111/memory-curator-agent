@@ -10,11 +10,6 @@ import {
   hasDailyBridge,
 } from "@/lib/dailyShared";
 
-// 生成当前时间戳，供无 bridge 环境回退使用。
-const createCurrentTimestamp = (_entryDate: string): string => {
-  return new Date().toISOString();
-};
-
 /**
  * JournalPage 组件 - 单日日记的沉浸书写与回看。
  */
@@ -37,8 +32,6 @@ export const JournalPage = (): React.JSX.Element => {
   const [savedJournalContent, setSavedJournalContent] = useState<string>("");
   // 页面是否正在加载。
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // 最近保存时间。
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   // 月历标记是否正在加载。
   const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
     useState<boolean>(true);
@@ -106,7 +99,6 @@ export const JournalPage = (): React.JSX.Element => {
         if (!hasDailyBridge()) {
           setJournalContent("");
           setSavedJournalContent("");
-          setLastSavedAt(null);
           return;
         }
 
@@ -114,7 +106,6 @@ export const JournalPage = (): React.JSX.Element => {
         const nextValue = todayData.journal?.content ?? "";
         setJournalContent(nextValue);
         setSavedJournalContent(nextValue);
-        setLastSavedAt(todayData.journal?.updatedAt ?? null);
       } catch {
         toast.error("读取日记失败");
       } finally {
@@ -136,7 +127,6 @@ export const JournalPage = (): React.JSX.Element => {
     try {
       if (!hasDailyBridge()) {
         setSavedJournalContent(normalizedValue);
-        setLastSavedAt(normalizedValue ? createCurrentTimestamp(entryDate) : null);
         setMonthEntryCounts((currentCounts) => {
           if (normalizedValue) {
             return { ...currentCounts, [entryDate]: 1 };
@@ -152,7 +142,6 @@ export const JournalPage = (): React.JSX.Element => {
       if (!normalizedValue) {
         await window.api.daily.deleteJournal(entryDate);
         setSavedJournalContent("");
-        setLastSavedAt(null);
         setMonthEntryCounts((currentCounts) => {
           const nextCounts = { ...currentCounts };
           delete nextCounts[entryDate];
@@ -166,7 +155,6 @@ export const JournalPage = (): React.JSX.Element => {
         content: normalizedValue,
       });
       setSavedJournalContent(saved.content);
-      setLastSavedAt(saved.updatedAt);
       setMonthEntryCounts((currentCounts) => ({ ...currentCounts, [entryDate]: 1 }));
     } catch {
       toast.error("自动保存失败");
@@ -224,13 +212,16 @@ export const JournalPage = (): React.JSX.Element => {
     return "平稳";
   }, [journalContent]);
 
+  // 只有当前正文与最近一次成功保存的正文一致时才显示已保存。
+  const isJournalSaved =
+    !isLoading && journalContent.trim() === savedJournalContent.trim();
+
   return (
     <section aria-label="Journal Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <JournalEditorSurface
           isLoading={isLoading}
-          isDirty={journalContent.trim() !== savedJournalContent.trim()}
-          lastSavedAt={lastSavedAt}
+          isSaved={isJournalSaved}
           moodLabel={moodLabel}
           value={journalContent}
           wordCount={journalContent.length}

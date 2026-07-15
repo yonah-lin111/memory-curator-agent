@@ -175,20 +175,6 @@ const createTodayEntryDate = (): string => {
 };
 
 /**
- * 生成当前时间戳，供无 bridge 环境回退使用。
- */
-const createCurrentTimestamp = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const date = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${date} ${hours}:${minutes}`;
-};
-
-/**
  * TodayPage 组件 - 负责中间列 Today 主页面。
  * 接入本地 SQLite，默认只展示当天数据。
  */
@@ -226,8 +212,6 @@ export const TodayPage = (): React.JSX.Element => {
   const [journalContent, setJournalContent] = useState<string>("");
   // 最近一次成功保存的日记正文。
   const [savedJournalContent, setSavedJournalContent] = useState<string>("");
-  // 最近一次成功保存时间。
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   // 日记是否正在保存。
   const [isJournalSaving, setIsJournalSaving] = useState(false);
   // 日记错误文案。
@@ -272,14 +256,12 @@ export const TodayPage = (): React.JSX.Element => {
     try {
       if (!hasDailyApi) {
         setSavedJournalContent(normalizedContent);
-        setLastSavedAt(normalizedContent ? createCurrentTimestamp() : null);
         return;
       }
 
       if (!normalizedContent) {
         await window.api.daily.deleteJournal(entryDate);
         setSavedJournalContent("");
-        setLastSavedAt(null);
         return;
       }
 
@@ -288,7 +270,6 @@ export const TodayPage = (): React.JSX.Element => {
         content: rawContent,
       });
       setSavedJournalContent(saved.content);
-      setLastSavedAt(saved.updatedAt);
     } catch {
       setJournalError("保存日记失败，请稍后重试");
       toast.error("保存日记失败，请稍后重试");
@@ -332,7 +313,6 @@ export const TodayPage = (): React.JSX.Element => {
         setNotes(FALLBACK_NOTES);
         setJournalContent("");
         setSavedJournalContent("");
-        setLastSavedAt(null);
         setJournalError(null);
         void loadBillSummary();
         return;
@@ -343,7 +323,6 @@ export const TodayPage = (): React.JSX.Element => {
       setNotes(todayData.snippets);
       setJournalContent(todayData.journal?.content ?? "");
       setSavedJournalContent(todayData.journal?.content ?? "");
-      setLastSavedAt(todayData.journal?.updatedAt ?? null);
       setJournalError(null);
       void loadBillSummary();
     } catch {
@@ -820,8 +799,12 @@ export const TodayPage = (): React.JSX.Element => {
           isLoading={isTodayLoading}
           errorMessage={journalError}
           isSaving={isJournalSaving}
+          isSaved={
+            !isTodayLoading &&
+            !isJournalSaving &&
+            journalContent.trim() === savedJournalContent.trim()
+          }
           journalContent={journalContent}
-          lastSavedAt={lastSavedAt}
           onJournalBlur={handleJournalBlur}
           onJournalContentChange={setJournalContent}
         />

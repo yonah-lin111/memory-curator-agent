@@ -531,6 +531,11 @@ html:hover::-webkit-scrollbar-thumb,
   cursor: pointer;
 }
 
+/* 工具栏分组分隔符使用独立颜色，避免 clean 模式的透明边框变量将其隐藏。 */
+.md-editor .md-editor-divider {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
 .md-editor .md-editor-toolbar-item:hover {
   background-color: rgba(255, 255, 255, 0.05) !important; /* hover:bg-white/5 */
 }

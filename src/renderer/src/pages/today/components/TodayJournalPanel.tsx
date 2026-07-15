@@ -1,5 +1,5 @@
 import type React from "react";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BookOpen } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 
@@ -7,10 +7,10 @@ import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 interface TodayJournalPanelProps {
   // 今日日记的正文。
   journalContent: string;
+  // 当前正文是否已成功保存。
+  isSaved: boolean;
   // 是否正在保存。
   isSaving: boolean;
-  // 最近一次保存时间。
-  lastSavedAt: string | null;
   // 保存失败提示。
   errorMessage: string | null;
   // 日记内容改变时的回调函数。
@@ -26,7 +26,7 @@ interface TodayJournalPanelProps {
  */
 export const TodayJournalPanel = ({
   journalContent,
-  lastSavedAt,
+  isSaved,
   onJournalContentChange,
   onJournalBlur,
   isLoading,
@@ -46,16 +46,6 @@ export const TodayJournalPanel = ({
     prevLoadingRef.current = isLoading;
   }, [isLoading]);
 
-  const savedLabel = useMemo(() => {
-    if (!lastSavedAt) {
-      return "未保存";
-    }
-
-    return lastSavedAt.includes("T")
-      ? new Date(lastSavedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })
-      : lastSavedAt.slice(-5);
-  }, [lastSavedAt]);
-
   return (
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 flex-shrink-0 mb-1">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -65,9 +55,6 @@ export const TodayJournalPanel = ({
             日记与主观表达
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs font-mono text-white/40">
-          <span>最近保存: {savedLabel}</span>
-        </div>
       </div>
       <div className="p-1">
         <MarkdownEditor
@@ -76,6 +63,8 @@ export const TodayJournalPanel = ({
           id="today-journal-editor"
           placeholder="写下今天的日记与主观感受..."
           value={journalContent}
+          showSaveStatus
+          isSaved={isSaved}
           defaultMode={editorMode}
           onBlur={onJournalBlur}
           onChange={onJournalContentChange}

@@ -431,6 +431,10 @@ interface MarkdownEditorProps {
   placeholder: string;
   // 编辑器高度。
   height: MarkdownEditorHeight;
+  // 是否显示 Markdown 内容保存状态。
+  showSaveStatus?: boolean;
+  // 当前 Markdown 内容是否已保存，由父组件根据实际保存结果控制。
+  isSaved?: boolean;
   // 外层类名。
   className?: string;
   // 默认显示模式：edit (仅编辑), preview (仅预览), split (双栏)
@@ -461,6 +465,9 @@ const MARKDOWN_EDITOR_BASE_TOOLBARS: ToolbarNames[] = [
   "code",
   "link",
   "table",
+  "-",
+  "revoke",
+  "next",
   "=",
   "preview",
   "previewOnly",
@@ -479,6 +486,8 @@ export const MarkdownEditor = ({
   onBlur,
   placeholder,
   height,
+  showSaveStatus = false,
+  isSaved = false,
   className,
   defaultMode,
   aiChangeBlocks = [],
@@ -597,7 +606,7 @@ export const MarkdownEditor = ({
   }, []);
 
   return (
-    <>
+    <div className="relative h-full">
       <MdEditor
       ref={editorRef}
       className={rootClassName}
@@ -618,7 +627,19 @@ export const MarkdownEditor = ({
       onBlur={onBlur}
       onChange={onChange}
       />
+      {showSaveStatus && value.trim() !== "" && (
+        <div
+          aria-live="polite"
+          className="absolute bottom-0 right-1 flex items-center gap-1.5 bg-[#212121] pl-2 text-xs text-white/45"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${isSaved ? "bg-emerald-400" : "bg-amber-400"}`}
+          />
+          <span>{isSaved ? "已保存" : "未保存"}</span>
+        </div>
+      )}
       {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
-    </>
+    </div>
   );
 };

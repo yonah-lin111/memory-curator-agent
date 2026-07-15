@@ -188,6 +188,8 @@ export const PromptDesignWorkspace = ({
 }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
   const toast = useToast();
   const [content, setContent] = useState("");
+  const [savedContent, setSavedContent] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [changeBlocks, setChangeBlocks] = useState<MarkdownEditorChangeBlock[]>(
     [],
   );
@@ -203,17 +205,19 @@ export const PromptDesignWorkspace = ({
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 为了保证并发更新安全，维护一个各 design id 独立的保存任务队列
-  const updatePromisesRef = useRef<Record<string, Promise<void>>>({});
+  const updatePromisesRef = useRef<Record<string, Promise<boolean>>>({});
 
   const enqueueUpdate = useCallback(
-    (id: string, designData: string): Promise<void> => {
-      const prevPromise = updatePromisesRef.current[id] || Promise.resolve();
+    (id: string, designData: string): Promise<boolean> => {
+      const prevPromise = updatePromisesRef.current[id] || Promise.resolve(true);
       const nextPromise = prevPromise.then(async () => {
         try {
           await window.api.promptDesign?.designs.update(id, { designData });
+          return true;
         } catch (error) {
           console.error(`保存提示词设计失败[${id}]:`, error);
           toast.error("保存提示词设计失败，请稍后重试");
+          return false;
         }
       });
       updatePromisesRef.current[id] = nextPromise;
@@ -235,8 +239,15 @@ export const PromptDesignWorkspace = ({
     }
     const pending = pendingSaveRef.current;
     pendingSaveRef.current = null;
-    return pending ? enqueueUpdate(pending.id, pending.content) : Promise.resolve();
-  }, [enqueueUpdate]);
+    if (!pending) return Promise.resolve();
+
+    return enqueueUpdate(pending.id, pending.content).then((isSuccessful) => {
+      if (isSuccessful && pending.id === activeDesignId) {
+        setSavedContent(pending.content);
+      }
+      setIsSaving(false);
+    });
+  }, [activeDesignId, enqueueUpdate]);
 
   /**
    * 合并连续输入，并在停止输入后保存。
@@ -244,13 +255,21 @@ export const PromptDesignWorkspace = ({
   const scheduleSave = useCallback(
     (id: string, nextContent: string): void => {
       pendingSaveRef.current = { id, content: nextContent };
+      setIsSaving(true);
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
         void flushSave();
-      }, 700);
+      }, 1000);
     },
     [flushSave],
   );
+
+  /**
+   * 在编辑器失焦时立即提交尚未落库的提示词内容。
+   */
+  const handleEditorBlur = useCallback((): void => {
+    void flushSave();
+  }, [flushSave]);
 
   /**
    * 用户直接编辑时废弃基于旧快照的候选变更。
@@ -296,6 +315,8 @@ export const PromptDesignWorkspace = ({
   useEffect(() => {
     let isMounted = true;
     if (!activeDesignId) {
+      setSavedContent("");
+      setIsSaving(false);
       setIsInitializing(false);
       return;
     }
@@ -309,13 +330,16 @@ export const PromptDesignWorkspace = ({
         pendingProgrammaticContentsRef.current.add(loadedContent);
         contentRef.current = loadedContent;
         setContent(loadedContent);
+        setSavedContent(loadedContent);
         setChangeBlocks([]);
       } else {
         // Fallback for not found active design
         contentRef.current = "";
         setContent("");
+        setSavedContent("");
         setChangeBlocks([]);
       }
+      setIsSaving(false);
       setIsInitializing(false);
     }).catch((error) => {
       if (!isMounted) return;
@@ -434,13 +458,16 @@ export const PromptDesignWorkspace = ({
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#000000]">
       <div className="flex min-w-0 flex-1 flex-col rounded-[6px] border border-white/5 bg-[#212121] shadow-inner overflow-hidden">
-        <div className="min-h-0 flex-1 relative">
+        <div className="min-h-0 flex-1 relative flex flex-col">
           {activeDesignId && !isInitializing ? (
             <>
               <MarkdownEditor
                 aiChangeBlocks={changeBlocks}
                 id="prompt-design-editor"
+                showSaveStatus
+                isSaved={!isInitializing && !isSaving && content === savedContent}
                 onAcceptAiChange={handleAcceptChange}
+                onBlur={handleEditorBlur}
                 onChange={handleEditorContentChange}
                 onRejectAiChange={handleRejectChange}
                 placeholder="在此编辑提示词内容..."
