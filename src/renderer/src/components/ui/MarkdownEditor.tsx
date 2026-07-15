@@ -1,12 +1,13 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { MdEditor, config } from "md-editor-rt";
-import type { ExposeParam, ToolbarNames, UploadImgEvent } from "md-editor-rt";
+import type { ExposeParam, UploadImgEvent } from "md-editor-rt";
 import "md-editor-rt/lib/style.css";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } from "@codemirror/state";
 import { useMarkdownFileMention } from "@/features/prompt-design/hooks/useMarkdownFileMention";
+import { MarkdownEditorToolbar } from "@/components/ui/MarkdownEditorToolbar";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
@@ -417,8 +418,41 @@ config({
   },
 });
 
+// Markdown 编辑器控制句柄。
+type MarkdownEditorCommand =
+  | "bold"
+  | "italic"
+  | "strikeThrough"
+  | "h1"
+  | "h2"
+  | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
+  | "quote"
+  | "unorderedList"
+  | "orderedList"
+  | "task"
+  | "codeRow"
+  | "code"
+  | "link"
+  | "table";
+
+export interface MarkdownEditorHandle {
+  // 执行 md-editor-rt 提供的 Markdown 插入命令。
+  execCommand: (command: MarkdownEditorCommand) => void;
+  // 切换双栏预览。
+  togglePreview: (status?: boolean) => void;
+  // 切换仅预览模式。
+  togglePreviewOnly: (status?: boolean) => void;
+  // 聚焦编辑器。
+  focus: () => void;
+  // 获取 CodeMirror 编辑器实例，用于撤销和重做。
+  getEditorView: () => EditorView | undefined;
+}
+
 // Markdown 编辑器属性。
-interface MarkdownEditorProps {
+export interface MarkdownEditorProps {
   // 编辑器唯一标识。
   id: string;
   // 当前 Markdown 正文。
@@ -449,37 +483,13 @@ interface MarkdownEditorProps {
   onEditorViewReady?: (view: EditorView) => void;
 }
 
-// Markdown 编辑器基础工具栏。
-const MARKDOWN_EDITOR_BASE_TOOLBARS: ToolbarNames[] = [
-  "bold",
-  "italic",
-  "strikeThrough",
-  "-",
-  "title",
-  "quote",
-  "unorderedList",
-  "orderedList",
-  "task",
-  "-",
-  "codeRow",
-  "code",
-  "link",
-  "table",
-  "-",
-  "revoke",
-  "next",
-  "=",
-  "preview",
-  "previewOnly",
-];
-
 // Markdown 编辑器页脚配置。
 const MARKDOWN_EDITOR_FOOTERS = ["markdownTotal"] as const;
 
 /**
  * MarkdownEditor - 项目统一 Markdown 编辑器。
  */
-export const MarkdownEditor = ({
+export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
   id,
   value,
   onChange,
@@ -494,9 +504,16 @@ export const MarkdownEditor = ({
   onAcceptAiChange,
   onRejectAiChange,
   onEditorViewReady,
-}: MarkdownEditorProps): React.JSX.Element => {
+}, ref): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
+  useImperativeHandle(ref, () => ({
+    execCommand: (command) => editorRef.current?.execCommand(command),
+    togglePreview: (status) => editorRef.current?.togglePreview(status),
+    togglePreviewOnly: (status) => editorRef.current?.togglePreviewOnly(status),
+    focus: () => editorRef.current?.focus(),
+    getEditorView: () => editorRef.current?.getEditorView(),
+  }), []);
   const { handleEditorViewReady, mentionPanel } = useMarkdownFileMention(id === PROMPT_DESIGN_EDITOR_ID);
   const aiChangeActionsRef = useRef<InlineDiffActions>({
     onAccept: () => undefined,
@@ -606,27 +623,30 @@ export const MarkdownEditor = ({
   }, []);
 
   return (
-    <div className="relative h-full">
-      <MdEditor
-      ref={editorRef}
-      className={rootClassName}
-      codeTheme="atom"
-      footers={[...MARKDOWN_EDITOR_FOOTERS]}
-      id={id}
-      language="zh-CN"
-      noPrettier
-      onUploadImg={handleUploadImg}
-      placeholder={placeholder}
-      preview
-      previewTheme="default"
-      showCodeRowNumber
-      style={editorStyle}
-      theme="dark"
-      toolbars={MARKDOWN_EDITOR_BASE_TOOLBARS}
-      value={value}
-      onBlur={onBlur}
-      onChange={onChange}
-      />
+    <div className="relative flex h-full min-h-0 flex-col" data-markdown-editor-root>
+      <MarkdownEditorToolbar defaultMode={defaultMode} editorRef={editorRef} />
+      <div className="min-h-0 flex-1">
+        <MdEditor
+          ref={editorRef}
+          className={rootClassName}
+          codeTheme="atom"
+          footers={[...MARKDOWN_EDITOR_FOOTERS]}
+          id={id}
+          language="zh-CN"
+          noPrettier
+          onUploadImg={handleUploadImg}
+          placeholder={placeholder}
+          preview
+          previewTheme="default"
+          showCodeRowNumber
+          style={editorStyle}
+          theme="dark"
+          toolbars={[]}
+          value={value}
+          onBlur={onBlur}
+          onChange={onChange}
+        />
+      </div>
       {showSaveStatus && value.trim() !== "" && (
         <div
           aria-live="polite"
@@ -642,4 +662,6 @@ export const MarkdownEditor = ({
       {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
     </div>
   );
-};
+});
+
+MarkdownEditor.displayName = "MarkdownEditor";

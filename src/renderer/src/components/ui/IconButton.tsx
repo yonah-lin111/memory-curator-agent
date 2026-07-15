@@ -119,14 +119,13 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(({
   const finalHoverBg = hoverBgClass ?? (preset ? PRESET_BG_CLASSES[preset] : "hover:bg-white/5");
   const finalHoverText = hoverTextClass ?? (preset ? PRESET_TEXT_CLASSES[preset] : "hover:text-white");
   const defaultTextClass = preset ? PRESET_DEFAULT_TEXT_CLASSES[preset] : "text-white/45";
+  const highlightedStyles = `${finalHoverBg.replace("hover:", "")} ${finalHoverText.replace("hover:", "")}`;
 
   // 状态样式
   const stateStyles = disabled
-    ? (highlighted ? "bg-white text-black" : `${defaultTextClass}`)
+    ? (highlighted ? highlightedStyles : `${defaultTextClass}`)
     : (highlighted
-        ? (preset === "close"
-            ? "bg-white/85 text-black hover:bg-white"
-            : "bg-white text-black hover:bg-white/90")
+        ? highlightedStyles
         : `${defaultTextClass} ${finalHoverBg} ${finalHoverText}`);
 
   // 确定最终需要渲染的图标或子元素

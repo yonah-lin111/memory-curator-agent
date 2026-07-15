@@ -24,6 +24,7 @@
     "@ai-sdk/google": "^3.0.80",
     "@ai-sdk/openai": "^3.0.66",
     "@ai-sdk/openai-compatible": "^2.0.48",
+    "@codemirror/commands": "^6.10.3",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "@electron-toolkit/preload": "^3.0.2",
