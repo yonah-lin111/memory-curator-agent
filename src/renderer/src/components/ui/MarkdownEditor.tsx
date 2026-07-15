@@ -441,6 +441,8 @@ interface MarkdownEditorProps {
   onAcceptAiChange?: (id: string) => void;
   // 拒绝 AI 变更块。
   onRejectAiChange?: (id: string) => void;
+  // 编辑器实例就绪回调。
+  onEditorViewReady?: (view: EditorView) => void;
 }
 
 // Markdown 编辑器基础工具栏。
@@ -482,6 +484,7 @@ export const MarkdownEditor = ({
   aiChangeBlocks = [],
   onAcceptAiChange,
   onRejectAiChange,
+  onEditorViewReady,
 }: MarkdownEditorProps): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
@@ -499,7 +502,8 @@ export const MarkdownEditor = ({
     const editorView = editorRef.current?.getEditorView();
     if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
     handleEditorViewReady(editorView);
-  }, [handleEditorViewReady, id]);
+    onEditorViewReady?.(editorView);
+  }, [handleEditorViewReady, id, onEditorViewReady]);
 
   useEffect(() => {
     const editorView = editorRef.current?.getEditorView();

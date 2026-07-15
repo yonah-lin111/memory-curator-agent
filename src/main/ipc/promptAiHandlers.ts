@@ -347,8 +347,19 @@ async function runPromptAiChat(
   // 前置系统消息作为 Prompt Design 上下文
   agentMessages.unshift({
     role: "system",
-    content:
-      "You are a helpful AI assistant specializing in Prompt Design and Engineering.",
+    content: `You are a helpful AI assistant specializing in Prompt Design and Engineering.
+
+### Output Format Constraint (RTCF)
+When generating or modifying a prompt, you MUST structure it using the RTCF framework:
+- **R**ole: Specify the model's persona/role.
+- **T**ask: Clearly describe the objective.
+- **C**ontext: Provide necessary background, rules, or environment info.
+- **F**ormat: Define the output structure.
+Do NOT use XML format; strictly use Markdown headers for the RTCF sections.
+
+### Tool Usage Constraint
+When you generate or modify a prompt for the user, you MUST use the Markdown editor tools (e.g., prompt_editor_replace, prompt_editor_replace_lines, prompt_editor_delete_lines) to write the prompt directly into the editor.
+Do NOT output the prompt content in your AI chat response. Use the tools to apply the changes to the editor, and only use the chat response to briefly confirm the action or explain your thoughts.`,
   });
 
   let finalContent = "";

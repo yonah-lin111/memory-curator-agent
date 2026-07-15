@@ -1,8 +1,13 @@
 import type React from "react";
 import { useCallback, useRef, useState } from "react";
+import { EditorView } from "@codemirror/view";
+import { StateEffect } from "@codemirror/state";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
 import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSidebar";
+import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
@@ -186,6 +191,9 @@ export const PromptDesignWorkspace = ({
   const contentRef = useRef(content);
   const nextChangeIdRef = useRef(0);
   const pendingProgrammaticContentsRef = useRef<Set<string>>(new Set());
+  const editorViewRef = useRef<EditorView | null>(null);
+  const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
 
   /**
    * 用户直接编辑时废弃基于旧快照的候选变更。
@@ -217,6 +225,28 @@ export const PromptDesignWorkspace = ({
     },
     [],
   );
+
+  const controller = usePromptAiChatController(activeDesignId || "default-design-item-id", content, handleEditorSuggestion);
+
+  const handleEditorViewReady = useCallback((view: EditorView): void => {
+    if (editorViewRef.current === view) return;
+    editorViewRef.current = view;
+    view.dispatch({
+      effects: StateEffect.appendConfig.of(
+        EditorView.domEventHandlers({
+          keydown: (event, editorView) => {
+            if (event.key !== "Shift" || event.repeat) return false;
+            const now = Date.now();
+            const previous = editorView.dom.dataset.promptShiftTime;
+            editorView.dom.dataset.promptShiftTime = String(now);
+            if (!previous || now - Number(previous) > 500) return false;
+            setInlineInputView(editorView);
+            return true;
+          },
+        }),
+      ),
+    });
+  }, []);
 
   /**
    * 仅在变更块仍可定位到原文时应用，防止静默覆盖。
@@ -296,14 +326,21 @@ export const PromptDesignWorkspace = ({
             height="100%"
             defaultMode="edit"
             value={content}
+            onEditorViewReady={handleEditorViewReady}
           />
+          {inlineInputView && (
+            <PromptAiInlineInput
+              view={inlineInputView}
+              controller={controller}
+              onClose={() => setInlineInputView(null)}
+            />
+          )}
         </div>
       </div>
       <PromptAiSidebar
         isOpen={isPromptAiSidebarOpen}
-        editorContent={content}
-        onEditorSuggestion={handleEditorSuggestion}
         onClose={onClosePromptAiSidebar}
+        controller={controller}
       />
     </div>
   );

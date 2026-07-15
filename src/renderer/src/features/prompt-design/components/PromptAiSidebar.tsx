@@ -18,17 +18,15 @@ const MIN_SWITCH_LOADING_MS = 500;
 type PromptAiSidebarProps = {
   isOpen?: boolean;
   isTransitionEnabled?: boolean;
-  editorContent: string;
-  onEditorSuggestion: (originalContent: string, candidateContent: string) => void;
   onClose?: () => void;
+  controller: ReturnType<typeof usePromptAiChatController>;
 };
 
 export const PromptAiSidebar = ({
   isOpen = true,
   isTransitionEnabled = true,
-  editorContent,
-  onEditorSuggestion,
   onClose,
+  controller,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
@@ -37,13 +35,6 @@ export const PromptAiSidebar = ({
   const isDraggingRef = useRef(isDragging);
 
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
-  const designItemId = activeDesignId || "default-design-item-id";
-  const controller = usePromptAiChatController(
-    designItemId,
-    editorContent,
-    onEditorSuggestion,
-  );
-
   const { selectedModel, modelOptions } = useActiveCuratorModels();
 
   const contextTokens = useMemo(() => {
