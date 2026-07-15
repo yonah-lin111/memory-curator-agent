@@ -516,6 +516,36 @@ export const MarkdownEditor = ({
     });
   }, [aiChangeBlocks, id, onAcceptAiChange, onRejectAiChange]);
 
+  // 注册全局/组件级快捷键
+  useEffect(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // cmd + shift + p (兼容 Windows ctrl): 开启/关闭 md 组件的全局预览 (previewOnly)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        e.stopPropagation();
+        editorRef.current?.togglePreviewOnly();
+      } 
+      // cmd + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
+      else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        e.stopPropagation();
+        // 若当前在全屏预览模式下，则先退出全屏预览，再判断是否需要切换双栏状态
+        if (el.classList.contains("md-editor-previewOnly")) {
+          editorRef.current?.togglePreviewOnly();
+        } else {
+          editorRef.current?.togglePreview();
+        }
+      }
+    };
+
+    // 使用捕获阶段，确保能优先拦截
+    el.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => el.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [id]);
+
   // 编辑器内联高度，兼容像素数值与 CSS 高度。
   const editorStyle = useMemo<React.CSSProperties>(
     () => ({
