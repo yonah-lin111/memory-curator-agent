@@ -474,6 +474,9 @@ export const PromptSidebarList = ({
                             key={prompt.id}
                             className={`w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 cursor-pointer group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "hover:bg-white/[0.02] text-white/70"}`}
                             onClick={async () => {
+                              const switched = await setActiveDesignId(prompt.id);
+                              if (!switched) return;
+
                               try {
                                 const sessions = await (
                                   window.api as any
@@ -489,8 +492,8 @@ export const PromptSidebarList = ({
                                   err,
                                 );
                               }
+
                               setActiveProjectId(proj.id);
-                              setActiveDesignId(prompt.id);
                               setProjectName(proj.name);
                               setItemName(prompt.name);
                               onDesignSelected?.();
@@ -594,14 +597,14 @@ export const PromptSidebarList = ({
                 );
                 if (activeProjectId === contextMenu.id) {
                   setActiveProjectId(null);
-                  setActiveDesignId(null);
+                  setActiveDesignId(null, true);
                 }
               } else {
                 await (window.api as any).promptDesign.designs.delete(
                   contextMenu.id,
                 );
                 if (activeDesignId === contextMenu.id) {
-                  setActiveDesignId(null);
+                  setActiveDesignId(null, true);
                 }
               }
               await fetchData();

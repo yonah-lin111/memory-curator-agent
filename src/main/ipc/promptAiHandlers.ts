@@ -3,7 +3,10 @@ import { createCompactUuid } from "@/id";
 import { loadProviderConfig } from "@/agent/providers/providerConfig";
 import { createModelProvider } from "@/agent/providers/providerFactory";
 import { runReactAgent } from "@/agent/core/reactAgent";
-import { PromptAiPersistenceService } from "@/services/promptAiPersistenceService";
+import {
+  PromptAiPersistenceService,
+  type PromptAiChatMessageItem,
+} from "@/services/promptAiPersistenceService";
 import { promptDesignService } from "@/services/promptDesignService";
 import { getDatabase } from "@/db";
 import { createSessionTitle } from "./ai/helpers";
@@ -70,6 +73,82 @@ const renderToolFailureContent = (toolName: string, error: string): string =>
       tool: toolName,
     }
   );
+
+/**
+ * 将持久化会话转换为模型上下文，确保历史工具调用和结果严格成对。
+ */
+export const buildPromptAiAgentMessages = (
+  messages: PromptAiChatMessageItem[],
+  currentAssistantMessageId: string,
+): AgentMessage[] => {
+  const agentMessages: AgentMessage[] = [];
+  const usedToolCallIds = new Set<string>();
+
+  for (const message of messages) {
+    if (message.id === currentAssistantMessageId) {
+      continue;
+    }
+
+    if (message.role === "assistant" && message.toolSteps?.length) {
+      const validSteps = message.toolSteps.filter((step) => {
+        if (
+          typeof step.id !== "string" ||
+          step.id.length === 0 ||
+          typeof step.tool !== "string" ||
+          step.tool.length === 0 ||
+          usedToolCallIds.has(step.id)
+        ) {
+          return false;
+        }
+        usedToolCallIds.add(step.id);
+        return true;
+      });
+
+      if (validSteps.length > 0) {
+        agentMessages.push({
+          role: "assistant",
+          content: message.content || "",
+          parts: message.parts,
+          toolCalls: validSteps.map((step) => ({
+            type: "tool_call_done" as const,
+            id: step.id,
+            name: step.tool,
+            argumentsText: JSON.stringify(step.input ?? {}),
+          })),
+        });
+
+        for (const step of validSteps) {
+          const content =
+            step.status === "done"
+              ? renderToolResultContent(step.observation || "Success", step.data)
+              : step.status === "failed"
+                ? renderToolFailureContent(
+                    step.tool,
+                    step.observation || "Tool execution failed",
+                  )
+                : renderToolFailureContent(
+                    step.tool,
+                    "Tool execution was interrupted or cancelled",
+                  );
+
+          agentMessages.push({
+            role: "tool",
+            toolCallId: step.id,
+            name: step.tool,
+            content,
+          });
+        }
+        continue;
+      }
+    }
+
+    if (message.role === "user" || message.role === "assistant") {
+      agentMessages.push({ role: message.role as AgentMessageRole, content: message.content, parts: message.parts });
+    }
+  }
+
+  return agentMessages;
+};
 
 /**
  * 将连续同类型流式增量合并到最后一个片段，保留模型实际输出顺序。
@@ -296,53 +375,10 @@ async function runPromptAiChat(
 
   // 重建消息用于上下文（含工具调用历史）
   const session = db.getSession(payload.sessionId);
-  const agentMessages: AgentMessage[] = [];
-
-  if (session?.messages) {
-    for (const m of session.messages) {
-      const role = m.role as AgentMessageRole;
-
-      if (role === "assistant" && m.toolSteps && m.toolSteps.length > 0 && m.id !== assistantMessageId) {
-        // 带工具调用的 assistant 消息：先输出 assistant + toolCalls，再输出 tool 结果
-        const toolCalls = m.toolSteps.map((step) => ({
-          type: "tool_call_done" as const,
-          id: step.id,
-          name: step.tool,
-          argumentsText: JSON.stringify(step.input ?? {}),
-        }));
-        agentMessages.push({
-          role: "assistant",
-          content: m.content || "",
-          parts: m.parts,
-          toolCalls,
-        });
-        for (const step of m.toolSteps) {
-          let content = "";
-          if (step.status === "done") {
-            content = renderToolResultContent(
-              step.observation || "Success",
-              step.data
-            );
-          } else if (step.status === "failed") {
-            const errMsg = step.observation || "Tool execution failed";
-            content = renderToolFailureContent(step.tool, errMsg);
-          } else {
-            const cancelMsg = "Tool execution was interrupted or cancelled";
-            content = renderToolFailureContent(step.tool, cancelMsg);
-          }
-
-          agentMessages.push({
-            role: "tool",
-            toolCallId: step.id,
-            name: step.tool,
-            content,
-          });
-        }
-      } else {
-        agentMessages.push({ role, content: m.content, parts: m.parts });
-      }
-    }
-  }
+  const agentMessages: AgentMessage[] = buildPromptAiAgentMessages(
+    session?.messages ?? [],
+    assistantMessageId,
+  );
 
   // 前置系统消息作为 Prompt Design 上下文
   agentMessages.unshift({

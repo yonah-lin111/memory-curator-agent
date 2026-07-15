@@ -10,18 +10,31 @@ type PromptEditorResult = AgentToolResult & {
 
 /**
  * 创建提示词编辑器工具集。
- * 工具仅处理本轮快照，实际写入由渲染进程确认后完成。
+ * 工具调用按同一 run 的顺序共享累计正文，避免并行基于旧快照计算。
  */
-export const createPromptEditorTools = (content: string): AgentTool[] => [
-  createReplaceTool(),
-  createReplaceLinesTool(content),
-  createDeleteLinesTool(content),
-]
+export const createPromptEditorTools = (content: string): AgentTool[] => {
+  let currentContent = content
+  const updateContent = (nextContent: string, operation: PromptEditorResult['data']['operation']): PromptEditorResult => {
+    currentContent = nextContent
+    return {
+      observation: 'Prompt editor content updated.',
+      data: { content: currentContent, operation },
+    }
+  }
+
+  return [
+    createReplaceTool(updateContent),
+    createReplaceLinesTool(() => currentContent, updateContent),
+    createDeleteLinesTool(() => currentContent, updateContent),
+  ]
+}
 
 /**
  * 创建全文替换工具。
  */
-const createReplaceTool = (): AgentTool => ({
+const createReplaceTool = (
+  updateContent: (content: string, operation: PromptEditorResult['data']['operation']) => PromptEditorResult,
+): AgentTool => ({
   name: 'prompt_editor_replace',
   description: 'Replace the entire Prompt Design Markdown editor content. Supports multi-line Markdown.',
   prompt: {
@@ -46,10 +59,7 @@ const createReplaceTool = (): AgentTool => ({
       throw new Error('Prompt editor replacement requires content string')
     }
 
-    return {
-      observation: 'Prompt editor content replaced.',
-      data: { content: input.content, operation: 'replace' }
-    }
+    return updateContent(input.content, 'replace')
   }
 })
 
@@ -57,7 +67,10 @@ const createReplaceTool = (): AgentTool => ({
 /**
  * 创建按行替换工具。
  */
-const createReplaceLinesTool = (currentContent: string): AgentTool => ({
+const createReplaceLinesTool = (
+  getCurrentContent: () => string,
+  updateContent: (content: string, operation: PromptEditorResult['data']['operation']) => PromptEditorResult,
+): AgentTool => ({
   name: 'prompt_editor_replace_lines',
   description: 'Replace an inclusive 1-based line range in the Prompt Design Markdown editor with multi-line Markdown.',
   prompt: {
@@ -85,20 +98,21 @@ const createReplaceLinesTool = (currentContent: string): AgentTool => ({
     if (!isPositiveInteger(endLine)) {
       throw new Error('Prompt editor line replacement requires a positive integer endLine')
     }
+    const currentContent = getCurrentContent()
     const lines = getValidatedLineRange(currentContent, input.startLine, endLine)
     const content = [
       ...lines.slice(0, input.startLine - 1),
       input.content,
       ...lines.slice(endLine),
     ].join('\n')
-    return {
-      observation: `Replaced lines ${input.startLine}-${endLine}.`,
-      data: { content, operation: 'replace_lines' }
-    }
+    return updateContent(content, 'replace_lines')
   }
 })
 
-const createDeleteLinesTool = (currentContent: string): AgentTool => ({
+const createDeleteLinesTool = (
+  getCurrentContent: () => string,
+  updateContent: (content: string, operation: PromptEditorResult['data']['operation']) => PromptEditorResult,
+): AgentTool => ({
   name: 'prompt_editor_delete_lines',
   description: 'Delete an inclusive 1-based line range from the Prompt Design Markdown editor.',
   prompt: {
@@ -125,12 +139,10 @@ const createDeleteLinesTool = (currentContent: string): AgentTool => ({
     if (!isPositiveInteger(endLine)) {
       throw new Error('Prompt editor line deletion requires a positive integer endLine')
     }
+    const currentContent = getCurrentContent()
     const lines = getValidatedLineRange(currentContent, input.startLine, endLine)
     const content = [...lines.slice(0, input.startLine - 1), ...lines.slice(endLine)].join('\n')
-    return {
-      observation: `Deleted lines ${input.startLine}-${endLine}.`,
-      data: { content, operation: 'delete_lines' }
-    }
+    return updateContent(content, 'delete_lines')
   }
 })
 

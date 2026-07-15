@@ -19,7 +19,9 @@ interface PromptDesignState {
   activeProjectId: string | null;
   setActiveProjectId: (id: string | null) => void;
   activeDesignId: string | null;
-  setActiveDesignId: (id: string | null) => void;
+  setActiveDesignId: (id: string | null, force?: boolean) => Promise<boolean>;
+  beforeDesignSwitch?: () => Promise<boolean>;
+  setBeforeDesignSwitch: (callback?: () => Promise<boolean>) => () => void;
   // 添加一个可选的 updateNodeData 方法，供内部节点在画布外层缺失上下文时安全调用更新
   updateNodeData?: (nodeId: string, newData: any) => void;
   setUpdateNodeData: (fn: (nodeId: string, newData: any) => void) => void;
@@ -43,7 +45,23 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   activeProjectId: null,
   setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
   activeDesignId: null,
-  setActiveDesignId: (id: string | null) => set({ activeDesignId: id }),
+  setActiveDesignId: async (id: string | null, force = false) => {
+    if (!force) {
+      const callback = usePromptDesignStore.getState().beforeDesignSwitch;
+      if (callback && !(await callback())) return false;
+    }
+    set({ activeDesignId: id });
+    return true;
+  },
+  beforeDesignSwitch: undefined,
+  setBeforeDesignSwitch: (callback) => {
+    set({ beforeDesignSwitch: callback });
+    return () => {
+      if (usePromptDesignStore.getState().beforeDesignSwitch === callback) {
+        set({ beforeDesignSwitch: undefined });
+      }
+    };
+  },
   updateNodeData: undefined,
   setUpdateNodeData: (fn) => set({ updateNodeData: fn }),
 }));

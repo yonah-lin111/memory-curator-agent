@@ -173,7 +173,7 @@ export class PromptAiPersistenceService {
     if (!sessionRow) return null;
 
     const messagesStmt = this.db.prepare(`
-      SELECT * FROM prompt_ai_chat_messages WHERE session_id = ? ORDER BY created_at ASC
+      SELECT * FROM prompt_ai_chat_messages WHERE session_id = ? ORDER BY created_at ASC, rowid ASC
     `);
     const messageRows = messagesStmt.all(sessionId) as PromptAiChatMessageRow[];
 
