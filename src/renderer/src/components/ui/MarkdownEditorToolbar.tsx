@@ -42,6 +42,23 @@ interface MarkdownEditorToolbarProps {
 // Markdown 编辑器预览模式。
 type MarkdownPreviewMode = "edit" | "preview" | "split";
 
+// 表格网格尺寸。
+interface MarkdownTableSize {
+  columns: number;
+  rows: number;
+}
+
+// 生成带表头和默认数据行的 Markdown 表格。
+const createMarkdownTable = ({ columns, rows }: MarkdownTableSize): string => {
+  const createRow = (firstCell = ""): string =>
+    `| ${firstCell} |${"  |".repeat(columns - 1)}\n`;
+  const headerRow = createRow("Header");
+  const separatorRow = `|${" --- |".repeat(columns)}\n`;
+  const firstContentRow = createRow("Content");
+  const emptyContentRow = createRow();
+  return `${headerRow}${separatorRow}${firstContentRow}${emptyContentRow.repeat(rows - 1)}`;
+};
+
 // 工具项配置。
 interface MarkdownToolbarActionProps {
   // 工具项图标。
@@ -54,6 +71,12 @@ interface MarkdownToolbarActionProps {
   alignRight?: boolean;
   // 是否使用选中状态样式。
   highlighted?: boolean;
+  // 自定义 Tooltip 内容。
+  tooltipContent?: React.ReactNode;
+  // Tooltip 触发方式。
+  tooltipTrigger?: "hover" | "click" | "both";
+  // Tooltip 触发元素鼠标进入回调。
+  onMouseEnter?: () => void;
 }
 
 // 工具栏按钮。
@@ -63,18 +86,23 @@ const MarkdownToolbarAction = ({
   onClick,
   alignRight = false,
   highlighted = false,
+  tooltipContent,
+  tooltipTrigger = "hover",
+  onMouseEnter,
 }: MarkdownToolbarActionProps): React.JSX.Element => (
   <Tooltip
     className={alignRight ? "ml-auto" : ""}
-    content={label}
+    content={tooltipContent ?? label}
+    contentClassName={tooltipContent ? "!p-1.5 !whitespace-normal" : ""}
     placement="bottom"
-    trigger="hover"
+    trigger={tooltipTrigger}
   >
     <IconButton
       aria-label={label}
       className="h-7 w-7"
       highlighted={highlighted}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
     >
       <Icon className="h-3.5 w-3.5" />
     </IconButton>
@@ -89,6 +117,7 @@ export const MarkdownEditorToolbar = ({
   defaultMode = "edit",
 }: MarkdownEditorToolbarProps): React.JSX.Element => {
   const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>(defaultMode);
+  const [tableSize, setTableSize] = useState<MarkdownTableSize | null>(null);
 
   useEffect(() => {
     setPreviewMode(defaultMode);
@@ -114,6 +143,58 @@ export const MarkdownEditorToolbar = ({
     editorRef.current?.execCommand(command);
     editorRef.current?.focus();
   };
+
+  /**
+   * 将选择的表格插入当前编辑器选区，并把焦点还给编辑器。
+   */
+  const insertTable = (size: MarkdownTableSize): void => {
+    const view = editorRef.current?.getEditorView();
+    if (!view) return;
+
+    const { from, to } = view.state.selection.main;
+    const markdown = createMarkdownTable(size);
+    view.dispatch({
+      changes: { from, to, insert: markdown },
+      selection: { anchor: from + markdown.length },
+    });
+    editorRef.current?.focus();
+    setTableSize(null);
+  };
+
+  // 根据鼠标悬停位置高亮表格网格区域。
+  const tablePicker = (
+    <div aria-label="选择表格大小" className="flex flex-col gap-1">
+      <div className="px-0.5 text-center text-[11px] text-white/70" aria-live="polite">
+        {tableSize ? `${tableSize.columns} × ${tableSize.rows}` : "选择表格大小"}
+      </div>
+      <div className="grid grid-cols-5 gap-1" role="grid">
+        {Array.from({ length: 4 }, (_, rowIndex) =>
+          Array.from({ length: 5 }, (_, columnIndex) => {
+            const columns = columnIndex + 1;
+            const rows = rowIndex + 1;
+            const isHighlighted =
+              tableSize !== null && columns <= tableSize.columns && rows <= tableSize.rows;
+
+            return (
+              <button
+                key={`${columns}-${rows}`}
+                aria-label={`${columns} 列 ${rows} 行`}
+                className={`h-3.5 w-3.5 rounded-[3px] border transition-colors ${
+                  isHighlighted
+                    ? "border-[#737373] bg-[#666666]"
+                    : "border-[#555555] bg-[#454545] hover:border-[#737373] hover:bg-[#666666]"
+                }`}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setTableSize({ columns, rows })}
+                onClick={() => insertTable({ columns, rows })}
+              />
+            );
+          }),
+        )}
+      </div>
+    </div>
+  );
 
   /**
    * 使用 CodeMirror 历史记录撤销最近一次编辑。
@@ -152,7 +233,14 @@ export const MarkdownEditorToolbar = ({
     { icon: Code2, label: "行内代码", onClick: () => execute("codeRow") },
     { icon: Code, label: "代码块", onClick: () => execute("code") },
     { icon: Link, label: "链接", onClick: () => execute("link") },
-    { icon: Table2, label: "表格", onClick: () => execute("table") },
+    {
+      icon: Table2,
+      label: "表格",
+      onClick: () => setTableSize(null),
+      onMouseEnter: () => setTableSize(null),
+      tooltipContent: tablePicker,
+      tooltipTrigger: "both",
+    },
     {
       icon: SquareSplitHorizontal,
       label: "双栏预览",

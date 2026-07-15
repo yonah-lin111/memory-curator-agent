@@ -7,6 +7,7 @@ import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } from "@codemirror/state";
 import { useMarkdownFileMention } from "@/features/prompt-design/hooks/useMarkdownFileMention";
+import { MarkdownEditorFooter } from "@/components/ui/MarkdownEditorFooter";
 import { MarkdownEditorToolbar } from "@/components/ui/MarkdownEditorToolbar";
 
 // Markdown 编辑器高度。
@@ -483,9 +484,6 @@ export interface MarkdownEditorProps {
   onEditorViewReady?: (view: EditorView) => void;
 }
 
-// Markdown 编辑器页脚配置。
-const MARKDOWN_EDITOR_FOOTERS = ["markdownTotal"] as const;
-
 /**
  * MarkdownEditor - 项目统一 Markdown 编辑器。
  */
@@ -630,7 +628,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           ref={editorRef}
           className={rootClassName}
           codeTheme="atom"
-          footers={[...MARKDOWN_EDITOR_FOOTERS]}
+          footers={[]}
           id={id}
           language="zh-CN"
           noPrettier
@@ -647,18 +645,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           onChange={onChange}
         />
       </div>
-      {showSaveStatus && value.trim() !== "" && (
-        <div
-          aria-live="polite"
-          className="absolute bottom-0 right-1 flex items-center gap-1.5 bg-[#212121] pl-2 text-xs text-white/45"
-        >
-          <span
-            aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${isSaved ? "bg-emerald-400" : "bg-amber-400"}`}
-          />
-          <span>{isSaved ? "已保存" : "未保存"}</span>
-        </div>
-      )}
+      <MarkdownEditorFooter
+        isSaved={isSaved}
+        showSaveStatus={showSaveStatus}
+        value={value}
+      />
       {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
     </div>
   );
