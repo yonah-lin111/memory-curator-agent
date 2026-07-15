@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {
   Search,
   Plus,
@@ -261,7 +261,29 @@ const CuratorToolRequestPanelContainer = ({
     | ((payload: CuratorAskAnswerSubmitPayload) => void | Promise<void>)
     | undefined
   >(() => onSubmit);
+  // 内容切换或换行后同步展开容器高度，避免较长问题被裁剪。
+  const [contentHeight, setContentHeight] = useState<number>(0);
   const innerRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const element = innerRef.current;
+    if (!element || !isExpanded) {
+      return undefined;
+    }
+
+    const updateContentHeight = (): void => {
+      const nextHeight = element.scrollHeight;
+      setContentHeight((previousHeight) =>
+        previousHeight === nextHeight ? previousHeight : nextHeight,
+      );
+    };
+
+    updateContentHeight();
+    const resizeObserver = new ResizeObserver(updateContentHeight);
+    resizeObserver.observe(element);
+
+    return () => resizeObserver.disconnect();
+  }, [activeRequest, isExpanded]);
 
   useEffect(() => {
     if (request && onSubmit) {
@@ -300,7 +322,9 @@ const CuratorToolRequestPanelContainer = ({
     <div
       style={{
         maxHeight: isExpanded
-          ? `${innerRef.current?.scrollHeight || 1000}px`
+          ? contentHeight > 0
+            ? `${contentHeight}px`
+            : "0px"
           : "0px",
         opacity: isExpanded ? 1 : 0,
         transition:
