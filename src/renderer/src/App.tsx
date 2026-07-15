@@ -26,8 +26,6 @@ import { OverlayWorkspace } from "@/components/layout/OverlayWorkspace";
 import { PromptDesignWorkspace } from "@/features/prompt-design/components/PromptDesignWorkspace";
 import { useCuratorController } from "@/features/curator/useCuratorController";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
-import { IconButton } from "@/components/ui/IconButton";
-import { Layers3 } from "lucide-react";
 import type { CuratorInputCommandId } from "@/features/curator/components/CuratorInput/types";
 
 // 侧边栏支持的页面标识列表。
@@ -133,9 +131,6 @@ const renderPageById = (pageId: SidebarPageId): React.JSX.Element => {
 const AppContent = (): React.JSX.Element => {
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-
-  // 上下文时间线展开状态。
-  const [isContextTimelineOpen, setIsContextTimelineOpen] = useState<boolean>(false);
 
   // 提示词 AI 助手边栏展开状态。
   const [isPromptAiSidebarOpen, setIsPromptAiSidebarOpen] = useState<boolean>(true);
@@ -283,19 +278,6 @@ const AppContent = (): React.JSX.Element => {
           chatTitle={activeChatSession.title}
           promptsProjectName={projectName}
           promptsItemName={itemName}
-          chatLeadingAction={
-            activeOverlay === "chat" ? (
-              <IconButton
-                aria-label="Toggle AI context timeline"
-                title="查看 AI 上下文记录"
-                highlighted={isContextTimelineOpen}
-                onClick={() => setIsContextTimelineOpen((prev) => !prev)}
-                className={isContextTimelineOpen ? "" : "text-white/45 hover:bg-white/5 hover:text-white"}
-              >
-                <Layers3 className="h-3.5 w-3.5" />
-              </IconButton>
-            ) : null
-          }
         />
 
         <div className="flex-1 min-h-0 relative overflow-hidden">
@@ -322,7 +304,6 @@ const AppContent = (): React.JSX.Element => {
                 session={activeChatSession}
                 modelOptions={aiModelOptions}
                 selectedModel={selectedCuratorModel}
-                isContextTimelineOpen={isContextTimelineOpen}
                 onSendMessage={handleSendMessage}
                 onSubmitAskAnswer={handleSubmitAskAnswer}
                 onSubmitToolConfirmationAnswer={handleSubmitToolConfirmationAnswer}

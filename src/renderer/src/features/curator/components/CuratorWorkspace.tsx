@@ -27,7 +27,6 @@ import {
 import { useCuratorContextStore } from "@/features/curator/curatorContextStore";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { isEmptyCuratorDraftSession } from "@/features/curator/core/curatorSessionReducer";
-import { CuratorContextTimeline } from "@/features/curator/components/CuratorContextTimeline";
 import { useToast } from "@/components/ui/Toast";
 
 // 空上下文数组，避免 Zustand selector 在空态返回新引用。
@@ -119,8 +118,6 @@ type CuratorWorkspaceProps = {
   onModelChange: (selection: CuratorModelSelection) => void;
   // 取消当前 AI 生成回调。
   onCancelGeneration?: () => void;
-  // 上下文时间线是否展开
-  isContextTimelineOpen?: boolean;
   // AI 会话列表。
   chatSessions?: CuratorSession[];
   // AI 激活会话切换回调.
@@ -150,7 +147,6 @@ export const CuratorWorkspace = ({
   onCommandExecute,
   onModelChange,
   onCancelGeneration,
-  isContextTimelineOpen = false,
   chatSessions,
   onActiveSessionChange,
   hasMoreChatSessions,
@@ -980,14 +976,6 @@ export const CuratorWorkspace = ({
             onLoadMoreChatSessions={onLoadMoreChatSessions}
           />
         </div>
-
-        {/* 右侧：上下文时间线 */}
-        <CuratorContextTimeline
-          items={contextItems}
-          budget={contextBudget}
-          messages={session.messages}
-          isOpen={isContextTimelineOpen}
-        />
       </div>
 
       {messageContextMenu ? (
