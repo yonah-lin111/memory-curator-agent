@@ -174,7 +174,7 @@ const updateLastAssistantMessage = (
 export const usePromptAiChatController = (
   designItemId: string,
   editorContent: string,
-  onEditorSuggestion: (runId: string, originalContent: string, candidateContent: string) => void,
+  onEditorSuggestion: (originalContent: string, candidateContent: string) => void,
 ) => {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
@@ -277,7 +277,7 @@ export const usePromptAiChatController = (
           "content" in event.data &&
           typeof event.data.content === "string"
         ) {
-          onEditorSuggestion(event.runId, runEditorContentRef.current.get(event.runId) ?? editorContentRef.current, event.data.content);
+          onEditorSuggestion(runEditorContentRef.current.get(event.runId) ?? editorContentRef.current, event.data.content);
         }
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,

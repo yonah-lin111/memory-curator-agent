@@ -155,15 +155,7 @@ const createInlineDiffExtension = () => {
       }
       const positionedBlocks = getPositionedInlineDiffBlocks(transaction.state.doc.toString(), effect.value.blocks);
       // RangeSetBuilder 要求加入的范围必须按 from (必要时 to) 升序排列，否则会抛出异常。
-      // 遇到同起点的范围时，优先选择跨度更大（to 更大）的非零范围，避免零宽范围先于替换范围添加导致的冲突。
-      const sortedBlocks = [...positionedBlocks]
-        .sort((a, b) => a.from - b.from || b.to - a.to)
-        .reduce<PositionedInlineDiffBlock[]>((acc, block) => {
-          if (acc.length === 0 || block.from >= acc[acc.length - 1].to) {
-            acc.push(block);
-          }
-          return acc;
-        }, []);
+      const sortedBlocks = [...positionedBlocks].sort((a, b) => a.from - b.from || a.to - b.to);
       const builder = new RangeSetBuilder<Decoration>();
       sortedBlocks.forEach((block) => {
         const widget = new InlineDiffWidget(block, effect.value.actions);
