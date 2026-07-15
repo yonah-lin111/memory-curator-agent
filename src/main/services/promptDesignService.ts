@@ -105,7 +105,7 @@ export const promptDesignService = {
       id: row.external_id,
       projectId: row.project_id,
       name: row.name,
-      designData: row.design_data ? JSON.parse(row.design_data) : null,
+      designData: row.design_data ?? "",
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }))
@@ -115,7 +115,7 @@ export const promptDesignService = {
     const db = getDatabase()
     const id = input.id || createCompactUuid()
     const now = new Date().toISOString()
-    const designDataStr = input.designData ? JSON.stringify(input.designData) : null
+    const designDataStr = input.designData ?? ""
 
     db.prepare(
       "INSERT INTO prompt_design_items (external_id, project_id, name, design_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
@@ -125,7 +125,7 @@ export const promptDesignService = {
       id,
       projectId: input.projectId,
       name: input.name,
-      designData: input.designData || null,
+      designData: designDataStr,
       createdAt: now,
       updatedAt: now,
     }
@@ -151,7 +151,7 @@ export const promptDesignService = {
       if (input.name !== undefined && input.designData !== undefined) {
         db.prepare("UPDATE prompt_design_items SET name = ?, design_data = ?, updated_at = ? WHERE external_id = ?").run(
           input.name,
-          JSON.stringify(input.designData),
+          input.designData,
           now,
           id
         )
@@ -163,7 +163,7 @@ export const promptDesignService = {
         )
       } else if (input.designData !== undefined) {
         db.prepare("UPDATE prompt_design_items SET design_data = ?, updated_at = ? WHERE external_id = ?").run(
-          JSON.stringify(input.designData),
+          input.designData,
           now,
           id
         )

@@ -43,7 +43,7 @@ describe('promptDesignService', () => {
     expect(design.name).toBe('Test Design')
 
     // 2. Perform a Markdown content update.
-    const designData = { promptContent: '# Test prompt\n\nHello' }
+    const designData = '# Test prompt\n\nHello'
 
     promptDesignService.updateDesign('d-1', {
       name: 'Updated Name',
@@ -53,7 +53,7 @@ describe('promptDesignService', () => {
     // 3. Verify design_items is updated
     const designRow = testDb.prepare("SELECT * FROM prompt_design_items WHERE external_id = 'd-1'").get() as any
     expect(designRow.name).toBe('Updated Name')
-    expect(JSON.parse(designRow.design_data)).toEqual(designData)
+    expect(designRow.design_data).toEqual(designData)
 
   })
 })

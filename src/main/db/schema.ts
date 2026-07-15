@@ -363,7 +363,7 @@ export type PromptDesign = {
   id: string;
   projectId: string;
   name: string;
-  designData: any; // 存储为 JSON 字符串，解析后为对象
+  designData: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -373,13 +373,13 @@ export type PromptDesignCreateInput = {
   id: string;
   projectId: string;
   name: string;
-  designData?: any;
+  designData?: string;
 };
 
 /** 提示词设计更新输入 */
 export type PromptDesignUpdateInput = {
   name?: string;
-  designData?: any;
+  designData?: string;
 };
 
 /** 提示词业务节点提纯数据库行（方案二 CQRS 核心表） */

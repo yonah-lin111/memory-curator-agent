@@ -1,9 +1,11 @@
 import type React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
 import { StateEffect } from "@codemirror/state";
+import { Bot } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
+import { useToast } from "@/components/ui/Toast";
 import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSidebar";
 import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
@@ -184,6 +186,7 @@ export const PromptDesignWorkspace = ({
   isPromptAiSidebarOpen = true,
   onClosePromptAiSidebar,
 }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
+  const toast = useToast();
   const [content, setContent] = useState("");
   const [changeBlocks, setChangeBlocks] = useState<MarkdownEditorChangeBlock[]>(
     [],
@@ -195,20 +198,81 @@ export const PromptDesignWorkspace = ({
   const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
 
+  // 初始化加载标识，防抖相关
+  const [isInitializing, setIsInitializing] = useState(true);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 为了保证并发更新安全，维护一个各 design id 独立的保存任务队列
+  const updatePromisesRef = useRef<Record<string, Promise<void>>>({});
+
+  const enqueueUpdate = useCallback(
+    (id: string, designData: string): Promise<void> => {
+      const prevPromise = updatePromisesRef.current[id] || Promise.resolve();
+      const nextPromise = prevPromise.then(async () => {
+        try {
+          await window.api.promptDesign?.designs.update(id, { designData });
+        } catch (error) {
+          console.error(`保存提示词设计失败[${id}]:`, error);
+          toast.error("保存提示词设计失败，请稍后重试");
+        }
+      });
+      updatePromisesRef.current[id] = nextPromise;
+      return nextPromise;
+    },
+    [toast],
+  );
+
+  // 保存最新待保存内容，避免切换设计项时读到旧闭包。
+  const pendingSaveRef = useRef<{ id: string; content: string } | null>(null);
+
+  /**
+   * 将待保存内容立即加入对应设计项的串行写入队列。
+   */
+  const flushSave = useCallback((): Promise<void> => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    return pending ? enqueueUpdate(pending.id, pending.content) : Promise.resolve();
+  }, [enqueueUpdate]);
+
+  /**
+   * 合并连续输入，并在停止输入后保存。
+   */
+  const scheduleSave = useCallback(
+    (id: string, nextContent: string): void => {
+      pendingSaveRef.current = { id, content: nextContent };
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        void flushSave();
+      }, 700);
+    },
+    [flushSave],
+  );
+
   /**
    * 用户直接编辑时废弃基于旧快照的候选变更。
    */
-  const handleEditorContentChange = useCallback((nextContent: string): void => {
-    contentRef.current = nextContent;
-    setContent(nextContent);
+  const handleEditorContentChange = useCallback(
+    (nextContent: string): void => {
+      contentRef.current = nextContent;
+      setContent(nextContent);
 
-    if (pendingProgrammaticContentsRef.current.has(nextContent)) {
-      pendingProgrammaticContentsRef.current.delete(nextContent);
-    } else {
-      setChangeBlocks([]);
-      pendingProgrammaticContentsRef.current.clear();
-    }
-  }, []);
+      if (pendingProgrammaticContentsRef.current.has(nextContent)) {
+        pendingProgrammaticContentsRef.current.delete(nextContent);
+      } else {
+        setChangeBlocks([]);
+        pendingProgrammaticContentsRef.current.clear();
+      }
+
+      if (activeDesignId && !isInitializing) {
+        scheduleSave(activeDesignId, nextContent);
+      }
+    },
+    [activeDesignId, isInitializing, scheduleSave],
+  );
 
   /**
    * 将 AI 候选文本转换为可独立审阅的连续变更块。
@@ -227,6 +291,57 @@ export const PromptDesignWorkspace = ({
   );
 
   const controller = usePromptAiChatController(activeDesignId || "default-design-item-id", content, handleEditorSuggestion);
+
+  // 初始化加载当前 activeDesignId 的数据
+  useEffect(() => {
+    let isMounted = true;
+    if (!activeDesignId) {
+      setIsInitializing(false);
+      return;
+    }
+
+    setIsInitializing(true);
+    void window.api.promptDesign?.designs.list().then((designs) => {
+      if (!isMounted) return;
+      const design = designs.find((d) => d.id === activeDesignId);
+      if (design) {
+        const loadedContent = design.designData || "";
+        pendingProgrammaticContentsRef.current.add(loadedContent);
+        contentRef.current = loadedContent;
+        setContent(loadedContent);
+        setChangeBlocks([]);
+      } else {
+        // Fallback for not found active design
+        contentRef.current = "";
+        setContent("");
+        setChangeBlocks([]);
+      }
+      setIsInitializing(false);
+    }).catch((error) => {
+      if (!isMounted) return;
+      console.error(`加载提示词设计失败[${activeDesignId}]:`, error);
+      toast.error("加载提示词设计失败");
+      setIsInitializing(false);
+    });
+
+    return () => {
+      isMounted = false;
+      flushSave(); // <-- 改在这里，卸载前冲刷（顺便在 flushSave 内部会清空 timer）
+    };
+  }, [activeDesignId, flushSave, toast]);
+
+  // 使用 setBeforeDesignSwitch 在切换设计时冲刷当前设计
+  useEffect(() => {
+    const unsubscribe = usePromptDesignStore.getState().setBeforeDesignSwitch(async () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      flushSave();
+      return true;
+    });
+    return unsubscribe;
+  }, [flushSave]);
 
   const handleEditorViewReady = useCallback((view: EditorView): void => {
     if (editorViewRef.current === view) return;
@@ -261,6 +376,10 @@ export const PromptDesignWorkspace = ({
         pendingProgrammaticContentsRef.current.add(nextContent);
         contentRef.current = nextContent;
         setContent(nextContent);
+
+        if (activeDesignId) {
+          scheduleSave(activeDesignId, nextContent);
+        }
 
         setChangeBlocks((previous) =>
           previous
@@ -315,26 +434,42 @@ export const PromptDesignWorkspace = ({
   return (
     <div className="flex h-full w-full overflow-hidden bg-[#000000]">
       <div className="flex min-w-0 flex-1 flex-col rounded-[6px] border border-white/5 bg-[#212121] shadow-inner overflow-hidden">
-        <div className="min-h-0 flex-1">
-          <MarkdownEditor
-            aiChangeBlocks={changeBlocks}
-            id="prompt-design-editor"
-            onAcceptAiChange={handleAcceptChange}
-            onChange={handleEditorContentChange}
-            onRejectAiChange={handleRejectChange}
-            placeholder="在此编辑提示词内容..."
-            height="100%"
-            defaultMode="edit"
-            value={content}
-            onEditorViewReady={handleEditorViewReady}
-          />
-          {inlineInputView && (
-            <PromptAiInlineInput
-              view={inlineInputView}
-              controller={controller}
-              onClose={() => setInlineInputView(null)}
-            />
-          )}
+        <div className="min-h-0 flex-1 relative">
+          {activeDesignId && !isInitializing ? (
+            <>
+              <MarkdownEditor
+                aiChangeBlocks={changeBlocks}
+                id="prompt-design-editor"
+                onAcceptAiChange={handleAcceptChange}
+                onChange={handleEditorContentChange}
+                onRejectAiChange={handleRejectChange}
+                placeholder="在此编辑提示词内容..."
+                height="100%"
+                defaultMode="edit"
+                value={content}
+                onEditorViewReady={handleEditorViewReady}
+              />
+              {inlineInputView && (
+                <PromptAiInlineInput
+                  view={inlineInputView}
+                  controller={controller}
+                  onClose={() => setInlineInputView(null)}
+                />
+              )}
+            </>
+          ) : !activeDesignId ? (
+            <div className="flex h-full w-full flex-col items-center justify-center px-6 py-12 text-center animate-fade-in select-text">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[6px] border border-white/5 bg-white/5 text-white/30 animate-pulse">
+                <Bot className="h-6 w-6" />
+              </div>
+              <h3 className="mb-1.5 text-sm font-bold text-white/80 font-mono">
+                // 提示词设计
+              </h3>
+              <p className="max-w-[240px] text-xs leading-relaxed text-white/40">
+                选择或新建提示词设计项以开始编辑。
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
       <PromptAiSidebar
