@@ -3,6 +3,8 @@ import { EditorView } from "@codemirror/view";
 import { RotateCcw, SendHorizontal, FileText } from "lucide-react";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import { IconButton } from "@/components/ui/IconButton";
+import { Tag } from "@/components/ui/Tag";
+
 import { useFileMention } from "@/features/prompt-design/hooks/useFileMention";
 import type { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 
@@ -52,7 +54,7 @@ export const PromptAiInlineInput = ({
   const handleSend = useCallback((): void => {
     const text = inputText.trim();
     if (!text || controller.isGenerating) return;
-    void controller.sendMessage(text);
+    void controller.sendMessage(text, undefined, { references: controller.references });
     setInputText("");
     mention.closeFileMentionPanel();
     restoreEditorFocus();
@@ -139,6 +141,7 @@ export const PromptAiInlineInput = ({
         idPrefix="prompt-inline-file-mention"
         style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
       />
+      {controller.references.length > 0 && <div className="flex flex-wrap gap-1 px-1">{controller.references.map((reference) => <Tag key={reference.id} size="small" onClose={() => controller.setReferences((items) => items.filter((item) => item.id !== reference.id))}>第{reference.startLine}–{reference.endLine}行</Tag>)}</div>}
       <textarea
         ref={textareaRef}
         rows={2}

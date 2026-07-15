@@ -72,8 +72,8 @@ export const PromptAiChatWorkspace = forwardRef<
     return null;
   }, [messages]);
 
-  const handleSend = (text: string, selectedModel?: string) => {
-    sendMessage(text, selectedModel);
+  const handleSend = (text: string, selectedModel?: string, options?: { references?: typeof controller.references }) => {
+    sendMessage(text, selectedModel, options);
   };
 
   /**
@@ -457,6 +457,8 @@ export const PromptAiChatWorkspace = forwardRef<
             chatSessions={controller.sessions}
             injectedText={injectedText}
             onInjectedTextConsumed={() => setInjectedText(undefined)}
+            references={controller.references}
+            onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
           />
         </div>
       </div>

@@ -1086,12 +1086,14 @@ type PromptAiChatStartPayload = {
   provider?: string
   model?: string
   editorContent?: string
+  references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
 
 type PromptAiChatMessage = CuratorMessage & {
   sessionId: string
   createdAt: string
   cancelled?: boolean
+  references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
 
 type PromptAiChatSession = {

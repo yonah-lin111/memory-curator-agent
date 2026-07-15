@@ -25,6 +25,7 @@ export type AppendPromptAiMessageInput = {
   role: AiChatMessageRole;
   content: string;
   model?: string;
+  references?: AiChatMessagePart[];
   timestamp: string;
 };
 
@@ -50,6 +51,7 @@ export type PromptAiChatMessageItem = {
   toolSteps?: AiToolStep[];
   answer?: string;
   parts?: AiChatMessagePart[];
+  references?: AiChatMessagePart[];
   model?: string;
   createdAt: string;
 };
@@ -132,7 +134,7 @@ export class PromptAiPersistenceService {
       input.sessionId,
       input.role,
       input.content,
-      "[]",
+      input.references?.length ? JSON.stringify(input.references) : "[]",
       "[]",
       input.timestamp,
       input.model ?? null,
@@ -190,6 +192,7 @@ export class PromptAiPersistenceService {
         role: row.role as AiChatMessageRole,
         content: row.content,
         parts: parts.length > 0 ? parts : undefined,
+        references: parts.filter((part) => part.kind === "reference"),
         toolSteps: toolSteps.length > 0 ? toolSteps : undefined,
         answer: row.answer ?? undefined,
         model: row.model ?? undefined,

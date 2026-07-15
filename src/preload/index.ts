@@ -538,6 +538,7 @@ type PromptAiChatStartPayload = {
   provider?: string
   model?: string
   editorContent?: string
+  references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
 
 // 提示词 AI 持久化消息。

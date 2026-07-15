@@ -15,6 +15,7 @@ import {
   type ExecutionSequencePart,
 } from "@/components/ai-shared/ExecutionGroup";
 import { Tag } from "@/components/ui/Tag";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { CuratorToolStep } from "@/features/curator/types";
 import type { PromptAiMessage, PromptAiPart } from "@/features/prompt-design/components/usePromptAiChatController";
 import { MdPreview } from "md-editor-rt";
@@ -200,7 +201,7 @@ export const PromptAiChatMessageBubble = ({
                   <button type="button" className="rounded-[4px] bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15 disabled:opacity-40" disabled={!editText.trim() || editText.trim() === message.content.trim() || isGenerating} onClick={() => { setIsEditing(false); void onEditAndResendUserMessage?.(message.id, editText.trim()); }}>发送并重新生成</button>
                 </div>
               </div>
-            ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left">{message.content}</div>
+            ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"><div className="mb-1">{message.content}</div>{message.references?.length ? <div className="flex flex-wrap gap-1">{message.references.map((reference) => <Tooltip key={reference.id} content={<pre className="max-h-60 max-w-[360px] overflow-auto whitespace-pre-wrap text-xs">{reference.content}</pre>}><Tag size="small">第{reference.startLine}–{reference.endLine}行</Tag></Tooltip>)}</div> : null}</div>
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">{renderAssistantParts()}</div>
           )}

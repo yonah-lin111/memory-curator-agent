@@ -17,7 +17,8 @@ import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
 import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
 import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory";
 import type { CuratorSession } from "@/features/curator/types";
-import type { PromptAiUndoResult } from "@/features/prompt-design/components/usePromptAiChatController";
+import type { PromptAiSendOptions, PromptAiUndoResult } from "@/features/prompt-design/components/usePromptAiChatController";
+import { Tag } from "@/components/ui/Tag";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
@@ -30,8 +31,10 @@ export const PromptAiChatInput = ({
   chatSessions,
   injectedText,
   onInjectedTextConsumed,
+  references = [],
+  onReferenceRemove,
 }: {
-  onSend?: (text: string, selectedModel?: string) => void;
+  onSend?: (text: string, selectedModel?: string, options?: PromptAiSendOptions) => void;
   disabled?: boolean;
   onNewChat?: () => void;
   onUndo?: () => Promise<PromptAiUndoResult>;
@@ -39,6 +42,8 @@ export const PromptAiChatInput = ({
   chatSessions?: CuratorSession[];
   injectedText?: string;
   onInjectedTextConsumed?: () => void;
+  references?: { id: string; startLine: number; endLine: number; content: string }[];
+  onReferenceRemove?: (id: string) => void;
 }) => {
   const toast = useToast();
   const [inputText, setInputText] = useState("");
@@ -260,7 +265,7 @@ export const PromptAiChatInput = ({
         })
         .trim();
 
-      onSend(cleanedText, selectedModel || undefined);
+      onSend(cleanedText, selectedModel || undefined, { references });
       savePromptHistory(inputText);
       setInputText("");
       resetHistoryCursor();
@@ -352,6 +357,9 @@ export const PromptAiChatInput = ({
           }}
           idPrefix="prompt-file-mention"
         />
+
+        {/* 引用标签 */}
+        {references.length > 0 && <div className="flex flex-wrap gap-1 px-1">{references.map((reference) => <Tag key={reference.id} size="small" onClose={() => onReferenceRemove?.(reference.id)}>第{reference.startLine}–{reference.endLine}行</Tag>)}</div>}
 
         {/* 输入框 */}
         <textarea

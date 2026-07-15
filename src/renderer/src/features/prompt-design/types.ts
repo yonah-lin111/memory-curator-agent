@@ -15,3 +15,11 @@ export type PromptDesign = {
   createdAt: string;
   updatedAt: string;
 };
+
+// 编辑器引用的不可变行快照。
+export type PromptDesignReference = {
+  id: string;
+  startLine: number;
+  endLine: number;
+  content: string;
+};

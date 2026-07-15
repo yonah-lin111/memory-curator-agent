@@ -15,6 +15,8 @@ import { submitAskAnswer, type AskAnswerPayload } from "@/ipc/ai/ask";
 import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
 import type { AgentMessage, AgentMessageRole } from "@/agent/types";
 
+type PromptDesignReference = { id: string; startLine: number; endLine: number; content: string };
+
 // 文件工具 UI 显示名称映射。
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_file_read: "Read",
@@ -115,6 +117,7 @@ export type PromptAiChatStartPayload = {
   provider?: string;
   model?: string;
   editorContent?: string;
+  references?: PromptDesignReference[];
 };
 
 let persistenceService: PromptAiPersistenceService | null = null;
@@ -247,12 +250,18 @@ async function runPromptAiChat(
   });
 
   const userMessageId = createCompactUuid();
+  const referenceBlock = payload.references?.length
+    ? `\n\n<references>\n${payload.references.map((reference) => `- 第${reference.startLine}–${reference.endLine}行\n\`\`\`md\n${reference.content}\n\`\`\``).join("\n")}\n</references>`
+    : "";
+  const agentMessage = `${payload.message}${referenceBlock}`;
+
   db.appendMessage({
     id: userMessageId,
     sessionId: payload.sessionId,
     role: "user",
-    content: payload.message,
+    content: agentMessage,
     timestamp: now,
+    references: payload.references?.map((reference) => ({ id: reference.id, kind: "reference" as const, startLine: reference.startLine, endLine: reference.endLine, content: reference.content })),
   });
 
   const assistantMessageId = createCompactUuid();

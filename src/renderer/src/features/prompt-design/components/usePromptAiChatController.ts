@@ -5,6 +5,8 @@ import type {
 } from "@/components/ai-shared/AskRequestPanel";
 import type { CuratorMessage, CuratorMessagePart, CuratorToolStep } from "@/features/curator/types";
 
+import type { PromptDesignReference } from "@/features/prompt-design/types";
+
 export type PromptAiPart = Extract<CuratorMessagePart, { kind: "text" | "reasoning" | "tool" }>;
 
 type PromptAiPersistedMessage = {
@@ -16,6 +18,7 @@ type PromptAiPersistedMessage = {
   parts?: CuratorMessagePart[];
   toolSteps?: CuratorToolStep[];
   cancelled?: boolean;
+  references?: PromptDesignReference[];
 };
 
 type PromptAiSession = {
@@ -47,7 +50,10 @@ export type PromptAiMessage = {
   reasoning?: string;
   toolSteps?: CuratorToolStep[];
   cancelled?: boolean;
+  references?: PromptDesignReference[];
 };
+
+export type PromptAiSendOptions = { references?: PromptDesignReference[] };
 
 export type PromptAiUndoResult = {
   status: "empty" | "undone" | "deleted_empty";
@@ -181,6 +187,7 @@ export const usePromptAiChatController = (
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [sessions, setSessions] = useState<PromptAiSession[]>([]);
+  const [references, setReferences] = useState<PromptDesignReference[]>([]);
   const editorContentRef = useRef(editorContent);
   const runEditorContentRef = useRef(new Map<string, string>());
   const activeRunIdRef = useRef<string | null>(null);
@@ -206,6 +213,7 @@ export const usePromptAiChatController = (
     if (!session) return;
 
     setSessionId(session.id);
+    setReferences([]);
     setMessages(session.messages.map((message) => ({
       id: message.id,
       role: message.role,
@@ -218,7 +226,7 @@ export const usePromptAiChatController = (
         .map((part) => part.content)
         .join(""),
       toolSteps: message.toolSteps?.map(mapBackendToolStep),
-      cancelled: message.cancelled,
+      references: message.references,
     })));
   }, []);
 
@@ -385,19 +393,25 @@ export const usePromptAiChatController = (
     }
   }, [isGenerating]);
 
-  const sendMessage = useCallback(async (text: string, selectedModel?: string) => {
+  const sendMessage = useCallback(async (text: string, selectedModel?: string, options?: PromptAiSendOptions) => {
     if (isGenerating || !text.trim() || !sessionInitialized) return;
     const [providerId, modelId] = selectedModel?.split("::") ?? [];
     const time = new Date().toISOString();
+    const referenceSnapshot = options?.references?.map((reference) => ({ ...reference }));
+    const referenceBlocks = referenceSnapshot?.map((reference) =>
+      `\n\n第${reference.startLine}–${reference.endLine}行:\n${reference.content}`,
+    ).join("") ?? "";
+    const agentText = `${text}${referenceBlocks}`;
     latestUserPromptRef.current = text;
+    setReferences([]);
     setMessages((previous) => [...previous,
-      { id: `msg-${Date.now()}`, role: "user", content: text, time },
+      { id: `msg-${Date.now()}`, role: "user", content: text, time, references: referenceSnapshot },
       { id: `msg-${Date.now()}-ai`, role: "assistant", content: "", model: modelId, time, parts: [] },
     ]);
     setIsGenerating(true);
 
     try {
-      const { runId } = await window.api.promptAi!.startChat({ sessionId, designItemId, message: text, provider: providerId, model: modelId, editorContent });
+      const { runId } = await window.api.promptAi!.startChat({ sessionId, designItemId, message: agentText, provider: providerId, model: modelId, editorContent, references: referenceSnapshot });
       activeRunIdRef.current = runId;
       await fetchSessions();
     } catch (error) {
@@ -444,6 +458,6 @@ export const usePromptAiChatController = (
     handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
     handleDeleteTurn, handleRegenerateLatestAnswer, handleEditAndResendUserMessage,
     handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, isGenerating,
-    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
+    references, setReferences,    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
   };
 };

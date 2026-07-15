@@ -10,6 +10,8 @@ import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSid
 import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
+import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
+import type { PromptDesignReference } from "@/features/prompt-design/types";
 
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
@@ -196,8 +198,11 @@ export const PromptDesignWorkspace = ({
   const contentRef = useRef(content);
   const nextChangeIdRef = useRef(0);
   const pendingProgrammaticContentsRef = useRef<Set<string>>(new Set());
+  const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">("edit");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; view: EditorView; mode: "edit" | "preview" | "split" } | null>(null);
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
 
   // 初始化加载标识，防抖相关
@@ -276,12 +281,21 @@ export const PromptDesignWorkspace = ({
    */
   const handleEditorContentChange = useCallback(
     (nextContent: string): void => {
+      const previousContent = contentRef.current;
       contentRef.current = nextContent;
       setContent(nextContent);
 
       if (pendingProgrammaticContentsRef.current.has(nextContent)) {
         pendingProgrammaticContentsRef.current.delete(nextContent);
       } else {
+        const previousLines = toLines(previousContent);
+        const nextLines = toLines(nextContent);
+        controllerRef.current?.setReferences((previous) => previous.filter((reference) =>
+          previousLines.slice(reference.startLine - 1, reference.endLine).join("\n") ===
+            nextLines.slice(reference.startLine - 1, reference.endLine).join("\n") &&
+          previousLines.slice(0, reference.startLine - 1).join("\n") ===
+            nextLines.slice(0, reference.startLine - 1).join("\n"),
+        ));
         setChangeBlocks([]);
         pendingProgrammaticContentsRef.current.clear();
       }
@@ -310,6 +324,59 @@ export const PromptDesignWorkspace = ({
   );
 
   const controller = usePromptAiChatController(activeDesignId || "default-design-item-id", content, handleEditorSuggestion);
+  controllerRef.current = controller;
+
+  const getReferenceRange = useCallback((view: EditorView): PromptDesignReference | null => {
+    const selection = view.state.selection.main;
+    const from = Math.min(selection.from, selection.to);
+    const to = Math.max(selection.from, selection.to);
+    const start = view.state.doc.lineAt(from);
+    const end = view.state.doc.lineAt(to);
+    const startLine = start.number;
+    const endLine = end.number;
+    if (endLine - startLine + 1 > 200) return null;
+    return { id: `reference-${Date.now()}`, startLine, endLine, content: view.state.doc.sliceString(start.from, end.to) };
+  }, []);
+
+  const handleContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>, view: EditorView): void => {
+    event.preventDefault();
+    const selection = view.state.selection.main;
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos !== null && !(pos >= selection.from && pos <= selection.to && selection.from !== selection.to)) {
+      view.dispatch({ selection: { anchor: pos, head: pos } });
+    }
+    setContextMenu({ x: event.clientX, y: event.clientY, view, mode: editorMode });
+  }, []);
+
+  const copySelection = useCallback(async (view: EditorView, cut = false): Promise<void> => {
+    const selection = view.state.selection.main;
+    const text = view.state.sliceDoc(selection.from, selection.to);
+    try {
+      await navigator.clipboard.writeText(text);
+      if (cut && selection.from !== selection.to) view.dispatch({ changes: { from: selection.from, to: selection.to, insert: "" } });
+    } catch { toast.error("剪贴板操作失败"); }
+    setContextMenu(null);
+  }, [toast]);
+
+  const handleQuote = useCallback((): void => {
+    if (!contextMenu) return;
+    const reference = getReferenceRange(contextMenu.view);
+    if (!reference) { toast.warning("引用最多支持200行"); return; }
+    // use controllerRef to ensure we use the latest function
+    controllerRef.current?.setReferences((previous) => {
+      const merged = [...previous, reference].sort((a, b) => a.startLine - b.startLine);
+      const result: PromptDesignReference[] = [];
+      for (const item of merged) {
+        const last = result.at(-1);
+        if (last && item.startLine <= last.endLine + 1) {
+          last.endLine = Math.max(last.endLine, item.endLine);
+          last.content = contextMenu.view.state.doc.line(last.startLine).from <= contextMenu.view.state.doc.length ? contextMenu.view.state.doc.sliceString(contextMenu.view.state.doc.line(last.startLine).from, contextMenu.view.state.doc.line(last.endLine).to) : last.content;
+        } else result.push({ ...item });
+      }
+      return result.slice(0, 10);
+    });
+    setContextMenu(null);
+  }, [contextMenu, getReferenceRange, toast]);
 
   // 初始化加载当前 activeDesignId 的数据
   useEffect(() => {
@@ -475,6 +542,8 @@ export const PromptDesignWorkspace = ({
                 defaultMode="edit"
                 value={content}
                 onEditorViewReady={handleEditorViewReady}
+                onContextMenu={handleContextMenu}
+                onModeChange={setEditorMode}
               />
               {inlineInputView && (
                 <PromptAiInlineInput
@@ -499,6 +568,7 @@ export const PromptDesignWorkspace = ({
           ) : null}
         </div>
       </div>
+      {contextMenu && <PromptDesignContextMenu x={contextMenu.x} y={contextMenu.y} isEditMode={contextMenu.mode !== "preview"} canPaste={contextMenu.mode !== "preview"} canQuote={contextMenu.mode !== "preview" && contextMenu.view.state.selection.main.from !== contextMenu.view.state.selection.main.to} onCopy={() => void copySelection(contextMenu.view)} onPaste={() => { void navigator.clipboard.readText().then((text) => contextMenu.view.dispatch(contextMenu.view.state.replaceSelection(text))).catch(() => toast.error("剪贴板操作失败")); setContextMenu(null); }} onCut={() => void copySelection(contextMenu.view, true)} onQuote={handleQuote} onClose={() => setContextMenu(null)} />}
       <PromptAiSidebar
         isOpen={isPromptAiSidebarOpen}
         onClose={onClosePromptAiSidebar}

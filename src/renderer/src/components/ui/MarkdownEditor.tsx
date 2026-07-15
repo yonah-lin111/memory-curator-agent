@@ -482,6 +482,10 @@ export interface MarkdownEditorProps {
   onRejectAiChange?: (id: string) => void;
   // 编辑器实例就绪回调。
   onEditorViewReady?: (view: EditorView) => void;
+  // 编辑器右键菜单回调。
+  onContextMenu?: (event: React.MouseEvent<HTMLDivElement>, view: EditorView) => void;
+  // 编辑器显示模式变化回调。
+  onModeChange?: (mode: "edit" | "preview" | "split") => void;
 }
 
 /**
@@ -502,6 +506,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   onAcceptAiChange,
   onRejectAiChange,
   onEditorViewReady,
+  onContextMenu,
+  onModeChange,
 }, ref): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
@@ -599,6 +605,23 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     }
   }, [defaultMode]);
 
+  useEffect(() => {
+    const root = document.getElementById(id);
+    if (!root || !onModeChange) return;
+    const reportMode = (): void => {
+      const mode = root.classList.contains("md-editor-previewOnly")
+        ? "preview"
+        : root.classList.contains("md-editor-preview")
+          ? "split"
+          : "edit";
+      onModeChange(mode);
+    };
+    reportMode();
+    const observer = new MutationObserver(reportMode);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, [id, onModeChange]);
+
   // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
   const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
     void (async () => {
@@ -621,7 +644,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   }, []);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col" data-markdown-editor-root>
+    <div
+      className="relative flex h-full min-h-0 flex-col"
+      data-markdown-editor-root
+      onContextMenu={(event) => {
+        const view = editorRef.current?.getEditorView();
+        if (view && onContextMenu) onContextMenu(event, view);
+      }}
+    >
       <MarkdownEditorToolbar defaultMode={defaultMode} editorRef={editorRef} />
       <div className="min-h-0 flex-1">
         <MdEditor

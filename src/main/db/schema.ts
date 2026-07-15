@@ -272,9 +272,16 @@ export type AiChatMessagePart =
       stepId: string;
     }
   | {
-      // 片段唯一标识。
+      // 引用快照片段。
       id: string;
-      // 片段类型。
+      kind: "reference";
+      startLine: number;
+      endLine: number;
+      content: string;
+    }
+  | {
+      // 图片片段。
+      id: string;
       kind: "image";
       // 图片的本地协议地址。
       url: string;
