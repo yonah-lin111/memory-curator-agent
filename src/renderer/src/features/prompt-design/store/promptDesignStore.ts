@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 
 interface PromptDesignState {
-  isCanvasLocked: boolean;
-  setIsCanvasLocked: (locked: boolean) => void;
-  /** 卡片碰撞偏移开关，默认关闭（允许重叠） */
-  isCollisionAvoidance: boolean;
-  setCollisionAvoidance: (enabled: boolean) => void;
-  exportRequest: number;
-  exportFormat: 'xml' | 'markdown';
-  requestExport: (format?: 'xml' | 'markdown') => void;
-  resetExportRequest: () => void;
-  edgeType: 'smoothstep' | 'default';
-  setEdgeType: (type: 'smoothstep' | 'default') => void;
   projectName: string;
   setProjectName: (name: string) => void;
   itemName: string;
@@ -20,22 +9,15 @@ interface PromptDesignState {
   setActiveProjectId: (id: string | null) => void;
   activeDesignId: string | null;
   setActiveDesignId: (id: string | null) => void;
-  // 添加一个可选的 updateNodeData 方法，供内部节点在画布外层缺失上下文时安全调用更新
-  updateNodeData?: (nodeId: string, newData: any) => void;
-  setUpdateNodeData: (fn: (nodeId: string, newData: any) => void) => void;
+  // 切换设计项前触发的回调集合。
+  beforeDesignSwitchCallbacks: (() => Promise<boolean>)[];
+  // 注册切换前拦截回调。返回取消注册函数。
+  setBeforeDesignSwitch: (callback: () => Promise<boolean>) => () => void;
+  // 设置当前活动设计项，触发拦截校验。
+  setActiveDesignIdSafe: (id: string | null) => Promise<boolean>;
 }
 
-export const usePromptDesignStore = create<PromptDesignState>((set) => ({
-  isCanvasLocked: false,
-  setIsCanvasLocked: (locked: boolean) => set({ isCanvasLocked: locked }),
-  isCollisionAvoidance: false,
-  setCollisionAvoidance: (enabled: boolean) => set({ isCollisionAvoidance: enabled }),
-  exportRequest: 0,
-  exportFormat: 'xml',
-  requestExport: (format = 'xml') => set((state) => ({ exportRequest: state.exportRequest + 1, exportFormat: format })),
-  resetExportRequest: () => set({ exportRequest: 0 }),
-  edgeType: 'default',
-  setEdgeType: (type: 'smoothstep' | 'default') => set({ edgeType: type }),
+export const usePromptDesignStore = create<PromptDesignState>((set, get) => ({
   projectName: '未命名项目',
   setProjectName: (name: string) => set({ projectName: name }),
   itemName: '未命名设计',
@@ -44,6 +26,26 @@ export const usePromptDesignStore = create<PromptDesignState>((set) => ({
   setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
   activeDesignId: null,
   setActiveDesignId: (id: string | null) => set({ activeDesignId: id }),
-  updateNodeData: undefined,
-  setUpdateNodeData: (fn) => set({ updateNodeData: fn }),
+  beforeDesignSwitchCallbacks: [],
+  setBeforeDesignSwitch: (callback) => {
+    set((state) => ({
+      beforeDesignSwitchCallbacks: [...state.beforeDesignSwitchCallbacks, callback],
+    }));
+    return () => {
+      set((state) => ({
+        beforeDesignSwitchCallbacks: state.beforeDesignSwitchCallbacks.filter(
+          (cb) => cb !== callback,
+        ),
+      }));
+    };
+  },
+  setActiveDesignIdSafe: async (id) => {
+    const { beforeDesignSwitchCallbacks } = get();
+    for (const callback of beforeDesignSwitchCallbacks) {
+      const canSwitch = await callback();
+      if (!canSwitch) return false;
+    }
+    set({ activeDesignId: id });
+    return true;
+  },
 }));

@@ -20,7 +20,6 @@ type MigratableTableName =
   | 'note_categories'
   | 'prompt_design_projects'
   | 'prompt_design_items'
-  | 'prompt_active_nodes'
   | 'prompt_ai_chat_sessions'
   | 'prompt_ai_chat_messages'
 
@@ -579,22 +578,20 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
     requiredColumns: ['external_id']
   })
   rebuildTable(database, {
-    tableName: 'prompt_active_nodes',
+    tableName: 'prompt_design_items',
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
-      design_item_id TEXT NOT NULL,
-      parent_node_id TEXT,
-      node_type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      content TEXT,
-      sort_order INTEGER NOT NULL DEFAULT 0,
+      project_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      design_data TEXT,
+      created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
-      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(external_id) ON DELETE CASCADE
+      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     `.trim(),
-    insertColumns: ['external_id', 'design_item_id', 'parent_node_id', 'node_type', 'title', 'content', 'sort_order', 'updated_at'],
-    selectColumns: ['external_id', 'design_item_id', 'parent_node_id', 'node_type', 'title', 'content', 'sort_order', 'updated_at'],
-    orderByClause: 'sort_order ASC, id ASC',
-    timestampColumns: ['updated_at'],
+    insertColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
+    selectColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
+    orderByClause: 'created_at ASC, id ASC',
+    timestampColumns: ['created_at', 'updated_at'],
     requiredColumns: ['external_id']
   })
 }
@@ -1102,29 +1099,6 @@ export const createPromptDesignTables = (database: Database.Database): void => {
 }
 
 /**
- * 创建 prompt_active_nodes 业务节点表。
- */
-export const createPromptActiveNodesTable = (database: Database.Database): void => {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS prompt_active_nodes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      external_id TEXT NOT NULL UNIQUE,
-      design_item_id TEXT NOT NULL,
-      parent_node_id TEXT,
-      node_type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      content TEXT,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      updated_at TIMESTAMP NOT NULL,
-      FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(external_id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_prompt_active_nodes_design_item ON prompt_active_nodes(design_item_id);
-    CREATE INDEX IF NOT EXISTS idx_prompt_active_nodes_parent ON prompt_active_nodes(parent_node_id);
-  `)
-}
-
-/**
  * 创建提示词 AI Agent 持久化表与索引。
  */
 export const createPromptAiPersistenceTables = (database: Database.Database): void => {
@@ -1261,7 +1235,7 @@ export const initDatabase = (): Database.Database => {
       'prompt_ai_agent_runs',
       'prompt_ai_chat_messages',
       'prompt_ai_chat_sessions',
-      'prompt_active_nodes',
+      'prompt_active_nodes', // 历史残留
       'prompt_design_items',
       'prompt_design_projects'
     ]
@@ -1274,10 +1248,16 @@ export const initDatabase = (): Database.Database => {
       }
     }
     sqlite.pragma('user_version = 1')
+  } else {
+      try {
+        // v1 -> v2 (or unversioned minor upgrade): drop obsolete prompt_active_nodes
+        sqlite.exec(`DROP TABLE IF EXISTS prompt_active_nodes;`)
+      } catch (e) {
+        // ignore
+      }
   }
 
   createPromptDesignTables(sqlite)
-  createPromptActiveNodesTable(sqlite)
   createPromptAiPersistenceTables(sqlite)
 
   // 启用 SQLite 外键约束，以支持级联删除

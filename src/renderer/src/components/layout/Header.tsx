@@ -4,12 +4,8 @@ import {
   RotateCcw,
   Book,
   Bot,
-  FileDown,
-  Code,
-  Type,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast, getToastColorClass } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
 
@@ -35,8 +31,6 @@ export interface HeaderProps {
   isPromptAiOpen?: boolean;
   // 提示词 AI 助手切换回调
   onPromptAiToggle?: () => void;
-  // 导出提示词回调
-  onPromptExport?: (format?: "xml" | "markdown") => void;
   // 提示词项目名称
   promptsProjectName?: string;
   // 提示词设计项名称
@@ -57,7 +51,6 @@ export const Header = ({
   onPromptsToggle,
   isPromptAiOpen = false,
   onPromptAiToggle,
-  onPromptExport,
   promptsProjectName,
   promptsItemName,
 }: HeaderProps): React.JSX.Element => {
@@ -180,39 +173,6 @@ export const Header = ({
           {/* 提示词展开后的扩展 icon组 */}
           {isPromptsOpen && !hideChatButton && (
             <>
-              <Tooltip
-                trigger="hover"
-                placement="bottom"
-                contentClassName="!p-1 !w-max"
-                content={
-                  <div className="flex flex-col gap-0.5">
-                    <button
-                      className="flex items-center gap-2 px-2 py-1.5 text-xs text-white/80 hover:text-white hover:bg-white/10 rounded-[4px] transition-colors text-left"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPromptExport?.("xml");
-                      }}
-                    >
-                      <Code className="w-3.5 h-3.5" />
-                      <span>导出 XML</span>
-                    </button>
-                    <button
-                      className="flex items-center gap-2 px-2 py-1.5 text-xs text-white/80 hover:text-white hover:bg-white/10 rounded-[4px] transition-colors text-left"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPromptExport?.("markdown");
-                      }}
-                    >
-                      <Type className="w-3.5 h-3.5" />
-                      <span>导出 Markdown</span>
-                    </button>
-                  </div>
-                }
-              >
-                <IconButton aria-label="导出提示词" title="导出结构化提示词">
-                  <FileDown className="h-3.5 w-3.5" />
-                </IconButton>
-              </Tooltip>
               <IconButton
                 aria-label={isPromptAiOpen ? "关闭提示词 AI" : "打开提示词 AI"}
                 title="提示词 AI 助手"

@@ -490,7 +490,15 @@ export const PromptSidebarList = ({
                                 );
                               }
                               setActiveProjectId(proj.id);
-                              setActiveDesignId(prompt.id);
+                              
+                              const useStore = usePromptDesignStore.getState();
+                              if (useStore.setActiveDesignIdSafe) {
+                                const success = await useStore.setActiveDesignIdSafe(prompt.id);
+                                if (!success) return;
+                              } else {
+                                setActiveDesignId(prompt.id);
+                              }
+
                               setProjectName(proj.name);
                               setItemName(prompt.name);
                               onDesignSelected?.();
