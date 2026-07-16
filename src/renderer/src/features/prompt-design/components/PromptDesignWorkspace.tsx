@@ -29,6 +29,9 @@ type MatchedLine = {
   candidateIndex: number;
 };
 
+// Diff 定位使用的前后上下文行数。
+const DIFF_CONTEXT_LINE_COUNT = 3;
+
 /**
  * 将空文本表示为空行数组，避免插入时引入虚假空行。
  */
@@ -116,21 +119,21 @@ const getChangeBlocks = (
       {
         originalLines: changedOriginalLines,
         candidateLines: changedCandidateLines,
-        beforeLine:
-          boundary.originalIndex >= 0
-            ? originalLines[boundary.originalIndex]
-            : undefined,
-        afterLine:
-          next.originalIndex < originalLines.length
-            ? originalLines[next.originalIndex]
-            : undefined,
+        beforeContext: originalLines.slice(
+          Math.max(0, boundary.originalIndex - DIFF_CONTEXT_LINE_COUNT + 1),
+          boundary.originalIndex + 1,
+        ),
+        afterContext: originalLines.slice(
+          next.originalIndex,
+          next.originalIndex + DIFF_CONTEXT_LINE_COUNT,
+        ),
       },
     ];
   });
 };
 
 /**
- * 在当前正文中定位变更块，避免将过期建议写入用户手动修改后的内容。
+ * 使用变更范围与多行上下文唯一定位变更块，拒绝任何可能误命中的操作。
  */
 const applyChangeBlock = (
   content: string,
@@ -139,48 +142,28 @@ const applyChangeBlock = (
   const lines = toLines(content);
   const originalLength = block.originalLines.length;
 
-  // 优先匹配包含上下文锚点的块
+  const beforeContext = block.beforeContext ?? (block.beforeLine === undefined ? [] : [block.beforeLine]);
+  const afterContext = block.afterContext ?? (block.afterLine === undefined ? [] : [block.afterLine]);
+  const matchedIndexes: number[] = [];
   for (let index = 0; index <= lines.length - originalLength; index += 1) {
     const isOriginalMatch = block.originalLines.every(
       (line, offset) => lines[index + offset] === line,
     );
-    const hasBeforeAnchor =
-      block.beforeLine === undefined || lines[index - 1] === block.beforeLine;
-    const hasAfterAnchor =
-      block.afterLine === undefined ||
-      lines[index + originalLength] === block.afterLine;
-    if (isOriginalMatch && hasBeforeAnchor && hasAfterAnchor) {
-      return [
-        ...lines.slice(0, index),
-        ...block.candidateLines,
-        ...lines.slice(index + originalLength),
-      ].join("\n");
-    }
+    const hasBeforeContext = beforeContext.every(
+      (line, offset) => lines[index - beforeContext.length + offset] === line,
+    );
+    const hasAfterContext = afterContext.every(
+      (line, offset) => lines[index + originalLength + offset] === line,
+    );
+    if (isOriginalMatch && hasBeforeContext && hasAfterContext) matchedIndexes.push(index);
   }
-
-  // 退避方案：如果原始行不为空且在文档中唯一，允许无锚点匹配
-  if (originalLength > 0) {
-    let matchIndex = -1;
-    let matchCount = 0;
-    for (let index = 0; index <= lines.length - originalLength; index += 1) {
-      const isOriginalMatch = block.originalLines.every(
-        (line, offset) => lines[index + offset] === line,
-      );
-      if (isOriginalMatch) {
-        matchCount += 1;
-        matchIndex = index;
-      }
-    }
-    if (matchCount === 1) {
-      return [
-        ...lines.slice(0, matchIndex),
-        ...block.candidateLines,
-        ...lines.slice(matchIndex + originalLength),
-      ].join("\n");
-    }
-  }
-
-  return null;
+  if (matchedIndexes.length !== 1) return null;
+  const index = matchedIndexes[0];
+  return [
+    ...lines.slice(0, index),
+    ...block.candidateLines,
+    ...lines.slice(index + originalLength),
+  ].join("\n");
 };
 
 /**
@@ -198,11 +181,16 @@ export const PromptDesignWorkspace = ({
   toastRef.current = toast;
   const [content, setContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
+  // 设计项内容加载完成后递增，用于清空编辑器历史。
+  const [historyResetVersion, setHistoryResetVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [changeBlocks, setChangeBlocks] = useState<MarkdownEditorChangeBlock[]>(
     [],
   );
+  // Agent 未确认修改的最新完整候选正文，作为下一轮 Agent 的工作副本。
+  const [pendingCandidateContent, setPendingCandidateContent] = useState<string | null>(null);
   const contentRef = useRef(content);
+  const pendingCandidateContentRef = useRef<string | null>(null);
   const nextChangeIdRef = useRef(0);
   const pendingProgrammaticContentsRef = useRef<Set<string>>(new Set());
   const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
@@ -284,7 +272,7 @@ export const PromptDesignWorkspace = ({
   }, [flushSave]);
 
   /**
-   * 用户直接编辑时废弃基于旧快照的候选变更。
+   * 用户直接编辑非 Diff 区域时，将同一补丁同步到候选正文后重新派生 Diff。
    */
   const handleEditorContentChange = useCallback(
     (nextContent: string): void => {
@@ -303,7 +291,33 @@ export const PromptDesignWorkspace = ({
           previousLines.slice(0, reference.startLine - 1).join("\n") ===
             nextLines.slice(0, reference.startLine - 1).join("\n"),
         ));
-        setChangeBlocks([]);
+        const currentWorkingContent = pendingCandidateContentRef.current ?? previousContent;
+        let nextWorkingContent = currentWorkingContent;
+        let hasSyncConflict = false;
+        for (const userBlock of getChangeBlocks(previousContent, nextContent)) {
+          const patchedContent = applyChangeBlock(nextWorkingContent, {
+            ...userBlock,
+            id: "user-change",
+          });
+          if (patchedContent === null) {
+            hasSyncConflict = true;
+            break;
+          }
+          nextWorkingContent = patchedContent;
+        }
+
+        if (hasSyncConflict) {
+          // 不猜测重复文本的目标位置，保留候选分支并标记冲突供用户处理。
+          setChangeBlocks((previous) => previous.map((block) => ({ ...block, status: "conflict" })));
+        } else {
+          const nextBlocks = getChangeBlocks(nextContent, nextWorkingContent).map(
+            (block) => ({ ...block, id: `ai-change-${nextChangeIdRef.current++}` }),
+          );
+          setChangeBlocks(nextBlocks);
+          const nextCandidate = nextBlocks.length > 0 ? nextWorkingContent : null;
+          setPendingCandidateContent(nextCandidate);
+          pendingCandidateContentRef.current = nextCandidate;
+        }
         pendingProgrammaticContentsRef.current.clear();
       }
 
@@ -315,22 +329,32 @@ export const PromptDesignWorkspace = ({
   );
 
   /**
-   * 将 AI 候选文本转换为可独立审阅的连续变更块。
+   * 将 AI 最新候选文本与已确认正文比较，重建唯一的一组待审变更。
    */
   const handleEditorSuggestion = useCallback(
-    (originalContent: string, candidateContent: string): void => {
-      const blocks = getChangeBlocks(originalContent, candidateContent).map(
+    (workingContent: string, candidateContent: string): boolean => {
+      const expectedWorkingContent = pendingCandidateContentRef.current ?? contentRef.current;
+      // 忽略基于过期正文生成的异步工具结果，避免覆盖最新待审候选。
+      if (workingContent !== expectedWorkingContent) return false;
+      const blocks = getChangeBlocks(contentRef.current, candidateContent).map(
         (block) => ({
           ...block,
           id: `ai-change-${nextChangeIdRef.current++}`,
         }),
       );
-      setChangeBlocks((previous) => [...previous, ...blocks]);
+      setChangeBlocks(blocks);
+      setPendingCandidateContent(candidateContent);
+      pendingCandidateContentRef.current = candidateContent;
+      return true;
     },
     [],
   );
 
-  const controller = usePromptAiChatController(activeDesignId || "default-design-item-id", content, handleEditorSuggestion);
+  const controller = usePromptAiChatController(
+    activeDesignId || "default-design-item-id",
+    pendingCandidateContent ?? content,
+    handleEditorSuggestion,
+  );
   controllerRef.current = controller;
 
   const getReferenceRange = useCallback((view: EditorView): PromptDesignReference | null => {
@@ -420,12 +444,18 @@ export const PromptDesignWorkspace = ({
         setContent(loadedContent);
         setSavedContent(loadedContent);
         setChangeBlocks([]);
+        setPendingCandidateContent(null);
+        pendingCandidateContentRef.current = null;
+        setHistoryResetVersion((version) => version + 1);
       } else {
         // Fallback for not found active design
         contentRef.current = "";
         setContent("");
         setSavedContent("");
         setChangeBlocks([]);
+        setPendingCandidateContent(null);
+        pendingCandidateContentRef.current = null;
+        setHistoryResetVersion((version) => version + 1);
       }
       setIsSaving(false);
       finishInitializing();
@@ -494,39 +524,15 @@ export const PromptDesignWorkspace = ({
           scheduleSave(activeDesignId, nextContent);
         }
 
-        setChangeBlocks((previous) =>
-          previous
-            .filter((item) => item.id !== id)
-            .map((item) => {
-              let beforeLine = item.beforeLine;
-              let afterLine = item.afterLine;
-
-              if (block.originalLines.length > 0) {
-                const lastOrig =
-                  block.originalLines[block.originalLines.length - 1];
-                if (beforeLine === lastOrig) {
-                  beforeLine =
-                    block.candidateLines.length > 0
-                      ? block.candidateLines[block.candidateLines.length - 1]
-                      : block.beforeLine;
-                }
-
-                const firstOrig = block.originalLines[0];
-                if (afterLine === firstOrig) {
-                  afterLine =
-                    block.candidateLines.length > 0
-                      ? block.candidateLines[0]
-                      : block.afterLine;
-                }
-              }
-
-              return {
-                ...item,
-                beforeLine,
-                afterLine,
-              };
-            }),
+        const candidateContent = pendingCandidateContentRef.current ?? nextContent;
+        const remainingBlocks = getChangeBlocks(nextContent, candidateContent).map(
+          (item) => ({ ...item, id: `ai-change-${nextChangeIdRef.current++}` }),
         );
+        setChangeBlocks(remainingBlocks);
+        setPendingCandidateContent(
+          remainingBlocks.length > 0 ? candidateContent : null,
+        );
+        pendingCandidateContentRef.current = remainingBlocks.length > 0 ? candidateContent : null;
         return;
       }
       setChangeBlocks((previous) =>
@@ -535,12 +541,26 @@ export const PromptDesignWorkspace = ({
         ),
       );
     },
-    [changeBlocks],
+    [changeBlocks, scheduleSave, activeDesignId],
   );
 
   const handleRejectChange = useCallback((id: string): void => {
-    setChangeBlocks((previous) => previous.filter((item) => item.id !== id));
-  }, []);
+    const block = changeBlocks.find((item) => item.id === id);
+    const candidateContent = pendingCandidateContentRef.current;
+    if (!block || !candidateContent) return;
+    const nextCandidateContent = applyChangeBlock(candidateContent, {
+      ...block,
+      originalLines: block.candidateLines,
+      candidateLines: block.originalLines,
+    });
+    if (nextCandidateContent === null) return;
+    const nextBlocks = getChangeBlocks(contentRef.current, nextCandidateContent).map(
+      (item) => ({ ...item, id: `ai-change-${nextChangeIdRef.current++}` }),
+    );
+    setChangeBlocks(nextBlocks);
+    setPendingCandidateContent(nextBlocks.length > 0 ? nextCandidateContent : null);
+    pendingCandidateContentRef.current = nextBlocks.length > 0 ? nextCandidateContent : null;
+  }, [changeBlocks]);
 
   if (!isOpen) return null;
 
@@ -564,6 +584,7 @@ export const PromptDesignWorkspace = ({
                 height="100%"
                 defaultMode="edit"
                 value={content}
+                historyResetVersion={historyResetVersion}
                 onEditorViewReady={handleEditorViewReady}
                 onContextMenu={handleContextMenu}
                 onModeChange={setEditorMode}

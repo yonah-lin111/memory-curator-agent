@@ -1,7 +1,9 @@
 import type React from "react";
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { MdEditor, config } from "md-editor-rt";
 import type { ExposeParam, UploadImgEvent } from "md-editor-rt";
+import { Check, X } from "lucide-react";
 import "md-editor-rt/lib/style.css";
 import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
@@ -18,6 +20,8 @@ export type MarkdownEditorChangeBlock = {
   id: string;
   originalLines: string[];
   candidateLines: string[];
+  beforeContext?: string[];
+  afterContext?: string[];
   beforeLine?: string;
   afterLine?: string;
   status?: "pending" | "conflict";
@@ -30,6 +34,7 @@ type InlineDiffActions = {
 
 type PositionedInlineDiffBlock = MarkdownEditorChangeBlock & { from: number; to: number };
 type InlineDiffState = { decorations: DecorationSet; blocks: PositionedInlineDiffBlock[] };
+type InlineDiffDecoration = PositionedInlineDiffBlock & { decoration: Decoration };
 
 const PROMPT_DESIGN_EDITOR_ID = "prompt-design-editor";
 const setInlineDiffEffect = StateEffect.define<{ blocks: MarkdownEditorChangeBlock[]; actions: InlineDiffActions }>();
@@ -47,37 +52,21 @@ const getPositionedInlineDiffBlocks = (doc: string, blocks: MarkdownEditorChange
   return blocks.flatMap((block) => {
     const originalLength = block.originalLines.length;
 
-    // 优先尝试包含上下文锚点的严格匹配
+    // 仅接受完整多行上下文的唯一匹配，避免重复文本导致错误覆盖。
+    const matchedIndexes: number[] = [];
     for (let index = 0; index <= lines.length - originalLength; index += 1) {
       const isOriginalMatch = block.originalLines.every((line, offset) => lines[index + offset] === line);
-      const hasBeforeAnchor = block.beforeLine === undefined || lines[index - 1] === block.beforeLine;
-      const hasAfterAnchor = block.afterLine === undefined || lines[index + originalLength] === block.afterLine;
-      if (isOriginalMatch && hasBeforeAnchor && hasAfterAnchor) {
-        const from = index === lines.length ? doc.length : lineOffsets[index];
-        const to = originalLength === 0 ? from : lineOffsets[index + originalLength - 1] + block.originalLines[originalLength - 1].length;
-        return [{ ...block, from, to }];
-      }
+      const beforeContext = block.beforeContext ?? (block.beforeLine === undefined ? [] : [block.beforeLine]);
+      const afterContext = block.afterContext ?? (block.afterLine === undefined ? [] : [block.afterLine]);
+      const hasBeforeContext = beforeContext.every((line, offset) => lines[index - beforeContext.length + offset] === line);
+      const hasAfterContext = afterContext.every((line, offset) => lines[index + originalLength + offset] === line);
+      if (isOriginalMatch && hasBeforeContext && hasAfterContext) matchedIndexes.push(index);
     }
-
-    // 退避方案：若严格匹配失败，且原始非空行在文档中唯一，允许无锚点匹配
-    if (originalLength > 0) {
-      let matchIndex = -1;
-      let matchCount = 0;
-      for (let index = 0; index <= lines.length - originalLength; index += 1) {
-        const isOriginalMatch = block.originalLines.every((line, offset) => lines[index + offset] === line);
-        if (isOriginalMatch) {
-          matchCount += 1;
-          matchIndex = index;
-        }
-      }
-      if (matchCount === 1) {
-        const from = lineOffsets[matchIndex];
-        const to = lineOffsets[matchIndex + originalLength - 1] + block.originalLines[originalLength - 1].length;
-        return [{ ...block, from, to }];
-      }
-    }
-
-    return [];
+    if (matchedIndexes.length !== 1) return [];
+    const index = matchedIndexes[0];
+    const from = index === lines.length ? doc.length : lineOffsets[index];
+    const to = originalLength === 0 ? from : lineOffsets[index + originalLength - 1] + block.originalLines[originalLength - 1].length;
+    return [{ ...block, from, to }];
   });
 };
 
@@ -100,20 +89,26 @@ class InlineDiffWidget extends WidgetType {
     root.className = "cm-ai-diff-block";
     const controls = document.createElement("div");
     controls.className = "cm-ai-diff-controls";
-    const createButton = (label: string, className: string, handler: () => void): HTMLButtonElement => {
+    const createButton = (
+      label: string,
+      className: string,
+      icon: typeof Check,
+      handler: () => void,
+    ): HTMLButtonElement => {
       const button = document.createElement("button");
+      const Icon = icon;
       button.type = "button";
       button.className = className;
       button.title = label;
       button.setAttribute("aria-label", label);
-      button.textContent = label;
+      button.innerHTML = `${renderToStaticMarkup(<Icon className="cm-ai-diff-icon" aria-hidden="true" />)}<span>${label}</span>`;
       button.addEventListener("mousedown", (event) => event.preventDefault());
       button.addEventListener("click", handler);
       return button;
     };
     controls.append(
-      createButton("接受", "cm-ai-diff-accept", () => this.actions.onAccept(this.block.id)),
-      createButton("拒绝", "cm-ai-diff-reject", () => this.actions.onReject(this.block.id)),
+      createButton("Accept", "cm-ai-diff-accept", Check, () => this.actions.onAccept(this.block.id)),
+      createButton("Reject", "cm-ai-diff-reject", X, () => this.actions.onReject(this.block.id)),
     );
     root.append(controls);
     const appendLines = (linesToAppend: string[], className: string, prefix: string): void => {
@@ -156,15 +151,30 @@ const createInlineDiffExtension = () => {
         };
       }
       const positionedBlocks = getPositionedInlineDiffBlocks(transaction.state.doc.toString(), effect.value.blocks);
-      // RangeSetBuilder 要求加入的范围必须按 from (必要时 to) 升序排列，否则会抛出异常。
-      const sortedBlocks = [...positionedBlocks].sort((a, b) => a.from - b.from || a.to - b.to);
+      const decorations = positionedBlocks.map((block): InlineDiffDecoration => ({
+        ...block,
+        decoration: block.from === block.to
+          ? Decoration.widget({ widget: new InlineDiffWidget(block, effect.value.actions), block: true, side: 1 })
+          : Decoration.replace({ widget: new InlineDiffWidget(block, effect.value.actions), block: true }),
+      }));
+      // 重叠建议仅保留最后生成的一项，避免过期建议覆盖最新工具结果。
+      const nonOverlappingDecorations = decorations.reduceRight<InlineDiffDecoration[]>((result, decoration) => {
+        const overlaps = result.some((item) => decoration.from < item.to && item.from < decoration.to
+          || decoration.from === decoration.to && item.from === item.to && decoration.from === item.from
+          || decoration.from === decoration.to && decoration.from >= item.from && decoration.from < item.to
+          || item.from === item.to && item.from >= decoration.from && item.from < decoration.to);
+        if (!overlaps) result.push(decoration);
+        return result;
+      }, []);
+      // RangeSetBuilder 要求加入的范围按 from 与装饰 startSide 升序排列。
+      const sortedDecorations = nonOverlappingDecorations.sort((a, b) =>
+        a.from - b.from || a.decoration.startSide - b.decoration.startSide,
+      );
       const builder = new RangeSetBuilder<Decoration>();
-      sortedBlocks.forEach((block) => {
-        const widget = new InlineDiffWidget(block, effect.value.actions);
-        if (block.from === block.to) builder.add(block.from, block.from, Decoration.widget({ widget, block: true, side: 1 }));
-        else builder.add(block.from, block.to, Decoration.replace({ widget, block: true }));
+      sortedDecorations.forEach((item) => {
+        builder.add(item.from, item.to, item.decoration);
       });
-      return { decorations: builder.finish(), blocks: sortedBlocks };
+      return { decorations: builder.finish(), blocks: sortedDecorations };
     },
     provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
   });
@@ -486,6 +496,8 @@ export interface MarkdownEditorProps {
   onContextMenu?: (event: React.MouseEvent<HTMLDivElement>, view: EditorView) => void;
   // 编辑器显示模式变化回调。
   onModeChange?: (mode: "edit" | "preview" | "split") => void;
+  // 递增时清空撤销与重做历史。
+  historyResetVersion?: number;
 }
 
 /**
@@ -508,6 +520,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   onEditorViewReady,
   onContextMenu,
   onModeChange,
+  historyResetVersion,
 }, ref): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
@@ -545,6 +558,16 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
       }),
     });
   }, [aiChangeBlocks, id, onAcceptAiChange, onRejectAiChange]);
+
+  useEffect(() => {
+    if (historyResetVersion === undefined) return;
+
+    // 等待受控 value 同步至 md-editor-rt 后再清空历史。
+    const frameId = requestAnimationFrame(() => {
+      editorRef.current?.resetHistory();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [historyResetVersion]);
 
   // 注册全局/组件级快捷键
   useEffect(() => {

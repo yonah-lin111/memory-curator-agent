@@ -67,6 +67,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_glob: "Glob",
   prompt_grep: "Grep",
   prompt_editor_replace: "Replace editor",
+  prompt_editor_insert_lines: "Insert editor lines",
   prompt_editor_replace_lines: "Replace editor lines",
   prompt_editor_delete_lines: "Delete editor lines",
 };
@@ -182,7 +183,7 @@ const updateLastAssistantMessage = (
 export const usePromptAiChatController = (
   designItemId: string,
   currentDocument: string,
-  onEditorSuggestion: (originalContent: string, candidateContent: string) => void,
+  onEditorSuggestion: (originalContent: string, candidateContent: string) => boolean,
 ) => {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
@@ -195,15 +196,16 @@ export const usePromptAiChatController = (
     references: [] as PromptDesignReference[],
   });
   const currentDocumentRef = useRef(currentDocument);
+  const documentVersionRef = useRef(0);
   const pendingRunDocumentRef = useRef<string | null>(null);
-  const runEditorContentRef = useRef(new Map<string, string>());
   const activeRunIdRef = useRef<string | null>(null);
   const latestUserPromptRef = useRef<string | null>(null);
   latestUserPromptRef.current = [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
-
-  useEffect(() => {
+  // 在渲染阶段同步，保证读取工具始终获得最新候选正文。
+  if (currentDocumentRef.current !== currentDocument) {
     currentDocumentRef.current = currentDocument;
-  }, [currentDocument]);
+    documentVersionRef.current += 1;
+  }
   const [currentDocumentTruncated, setCurrentDocumentTruncated] = useState(false);
 
   const fetchSessions = useCallback(async () => {
@@ -259,7 +261,6 @@ export const usePromptAiChatController = (
       if (event.sessionId !== sessionId) return;
 
       if (event.type === "run_started") {
-        runEditorContentRef.current.set(event.runId, pendingRunDocumentRef.current ?? currentDocumentRef.current);
         pendingRunDocumentRef.current = null;
         setCurrentDocumentTruncated(event.currentDocumentTruncated === true);
         setIsGenerating(true);
@@ -288,15 +289,6 @@ export const usePromptAiChatController = (
           ],
         })));
       } else if (event.type === "tool_finished") {
-        if (
-          typeof event.data === "object" &&
-          event.data !== null &&
-          "operation" in event.data &&
-          "content" in event.data &&
-          typeof event.data.content === "string"
-        ) {
-          onEditorSuggestion(runEditorContentRef.current.get(event.runId) ?? currentDocumentRef.current, event.data.content);
-        }
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,
           toolSteps: message.toolSteps?.map((step) => step.id === event.toolStepId
@@ -313,7 +305,6 @@ export const usePromptAiChatController = (
       } else if (event.type === "done") {
         setIsGenerating(false);
         if (event.runId === activeRunIdRef.current) activeRunIdRef.current = null;
-        runEditorContentRef.current.delete(event.runId);
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,
           parts: message.parts?.map((part) => part.kind === "reasoning" ? { ...part, status: "done" } : part),
@@ -329,6 +320,47 @@ export const usePromptAiChatController = (
 
     return unlisten;
   }, [fetchSessions, onEditorSuggestion, sessionId]);
+
+  useEffect(() => window.api.promptAi!.onEditorReadRequest((request) => {
+    if (request.designItemId !== designItemId) return;
+    void window.api.promptAi!.respondEditorRead({
+      ...request,
+      content: currentDocumentRef.current,
+      version: documentVersionRef.current,
+    });
+  }), [designItemId]);
+
+  /**
+   * 仅在候选正文仍基于同一版本时应用主进程写请求，并以 ACK 作为工具成功条件。
+   */
+  useEffect(() => window.api.promptAi!.onEditorApplyRequest((request) => {
+    if (request.designItemId !== designItemId) return;
+    if (request.baseVersion !== documentVersionRef.current) {
+      void window.api.promptAi!.respondEditorApply({
+        ...request,
+        content: currentDocumentRef.current,
+        version: documentVersionRef.current,
+      });
+      return;
+    }
+    const workingContent = currentDocumentRef.current;
+    if (!onEditorSuggestion(workingContent, request.content)) {
+      void window.api.promptAi!.respondEditorApply({
+        ...request,
+        content: workingContent,
+        version: documentVersionRef.current,
+      });
+      return;
+    }
+    // 在响应 ACK 前同步更新 ref，阻止连续 IPC 读取到旧候选正文。
+    currentDocumentRef.current = request.content;
+    documentVersionRef.current += 1;
+    void window.api.promptAi!.respondEditorApply({
+      ...request,
+      content: request.content,
+      version: documentVersionRef.current,
+    });
+  }), [designItemId, onEditorSuggestion]);
 
   const LATEST_ASSISTANT_TOP_OFFSET = 4;
 
@@ -408,7 +440,6 @@ export const usePromptAiChatController = (
     const [providerId, modelId] = selectedModel?.split("::") ?? [];
     const time = new Date().toISOString();
     const referenceSnapshot = options?.references?.map((reference) => ({ ...reference }));
-    const currentDocumentSnapshot = currentDocumentRef.current;
     latestUserPromptRef.current = text;
     setReferences([]);
     setMessages((previous) => [...previous,
@@ -418,10 +449,10 @@ export const usePromptAiChatController = (
     setIsGenerating(true);
     setCurrentDocumentTruncated(false);
     setRequestContext({
-      currentDocument: currentDocumentSnapshot,
+      currentDocument: "",
       references: referenceSnapshot ?? [],
     });
-    pendingRunDocumentRef.current = currentDocumentSnapshot;
+    pendingRunDocumentRef.current = currentDocumentRef.current;
 
     const { itemName } = usePromptDesignStore.getState();
 
@@ -432,9 +463,8 @@ export const usePromptAiChatController = (
         message: text,
         provider: providerId,
         model: modelId,
-        currentDocument: currentDocumentSnapshot,
         currentDocumentName: itemName,
-        references: referenceSnapshot
+        references: referenceSnapshot,
       });
       activeRunIdRef.current = runId;
       await fetchSessions();

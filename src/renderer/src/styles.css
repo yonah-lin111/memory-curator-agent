@@ -309,9 +309,9 @@ html:hover::-webkit-scrollbar-thumb,
 .md-editor .cm-ai-diff-block {
   box-sizing: border-box;
   position: relative;
+  display: flex;
+  flex-direction: column;
   margin: 4px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
   overflow: hidden;
   font-family: var(--md-font-code, monospace);
   font-size: 12px;
@@ -319,15 +319,19 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 .md-editor .cm-ai-diff-controls {
+  order: 1;
   display: flex;
   justify-content: flex-end;
   gap: 4px;
   padding: 4px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: #212121;
 }
 
 .md-editor .cm-ai-diff-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 0;
   border-radius: 6px;
   padding: 3px 7px;
@@ -335,6 +339,11 @@ html:hover::-webkit-scrollbar-thumb,
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+
+.md-editor .cm-ai-diff-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .md-editor .cm-ai-diff-accept {

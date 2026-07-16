@@ -1054,6 +1054,10 @@ type AppAPI = {
     deleteTurn: (sessionId: string, messageId: string) => Promise<PromptAiChatSession | null>
     startChat: (payload: PromptAiChatStartPayload) => Promise<{ runId: string }>
     cancelChat: (runId: string) => Promise<void>
+    respondEditorRead: (payload: PromptEditorReadResponse) => Promise<void>
+    onEditorReadRequest: (listener: (request: PromptEditorReadRequest) => void) => () => void
+    respondEditorApply: (payload: PromptEditorApplyResponse) => Promise<void>
+    onEditorApplyRequest: (listener: (request: PromptEditorApplyRequest) => void) => () => void
     submitAskAnswer: (payload: AiAskAnswerPayload) => Promise<void>
     submitToolConfirmationAnswer: (payload: { requestId: string; action: "confirm" | "cancel" }) => Promise<void>
     onChatEvent: (listener: (event: PromptAiChatEvent) => void) => () => void
@@ -1085,10 +1089,18 @@ type PromptAiChatStartPayload = {
   message: string
   provider?: string
   model?: string
-  currentDocument?: string
   currentDocumentName?: string
   references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
+
+type PromptEditorReadRequest = { runId: string; designItemId: string }
+type PromptEditorReadResponse = PromptEditorReadRequest & { content: string; version: number }
+type PromptEditorApplyRequest = PromptEditorReadRequest & {
+  content: string
+  baseVersion: number
+  operation: 'replace' | 'insert_lines' | 'replace_lines' | 'delete_lines'
+}
+type PromptEditorApplyResponse = PromptEditorReadRequest & { content: string; version: number }
 
 type PromptAiChatMessage = CuratorMessage & {
   sessionId: string

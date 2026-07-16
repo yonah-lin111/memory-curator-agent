@@ -537,10 +537,18 @@ type PromptAiChatStartPayload = {
   message: string
   provider?: string
   model?: string
-  currentDocument?: string
   currentDocumentName?: string
   references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
+
+type PromptEditorReadRequest = { runId: string; designItemId: string }
+type PromptEditorReadResponse = PromptEditorReadRequest & { content: string; version: number }
+type PromptEditorApplyRequest = PromptEditorReadRequest & {
+  content: string
+  baseVersion: number
+  operation: 'replace' | 'insert_lines' | 'replace_lines' | 'delete_lines'
+}
+type PromptEditorApplyResponse = PromptEditorReadRequest & { content: string; version: number }
 
 // 提示词 AI 持久化消息。
 type PromptAiChatMessage = AiChatMessage & {
@@ -981,6 +989,20 @@ const api = {
       ipcRenderer.invoke('prompt-ai:chat:start', payload),
     cancelChat: (runId: string): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:chat:cancel', runId),
+    respondEditorRead: (payload: PromptEditorReadResponse): Promise<void> =>
+      ipcRenderer.invoke('prompt-ai:editor:read:response', payload),
+    onEditorReadRequest: (listener: (request: PromptEditorReadRequest) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, request: PromptEditorReadRequest): void => listener(request)
+      ipcRenderer.on('prompt-ai:editor:read', wrappedListener)
+      return () => ipcRenderer.removeListener('prompt-ai:editor:read', wrappedListener)
+    },
+    respondEditorApply: (payload: PromptEditorApplyResponse): Promise<void> =>
+      ipcRenderer.invoke('prompt-ai:editor:apply:response', payload),
+    onEditorApplyRequest: (listener: (request: PromptEditorApplyRequest) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, request: PromptEditorApplyRequest): void => listener(request)
+      ipcRenderer.on('prompt-ai:editor:apply', wrappedListener)
+      return () => ipcRenderer.removeListener('prompt-ai:editor:apply', wrappedListener)
+    },
     submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
       ipcRenderer.invoke('prompt-ai:chat:ask-answer', payload),
     submitToolConfirmationAnswer: (payload: { requestId: string; action: 'confirm' | 'cancel' }): Promise<void> =>
