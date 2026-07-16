@@ -143,7 +143,7 @@ export const Header = ({
           key={`right-zone-${rightZoneKey}`}
           className="flex items-center gap-1.5 animate-slide-in-from-right"
         >
-          {!isChatOpen && settingsState && (
+          {!isChatOpen && !isPromptsOpen && settingsState && (
             <div className="flex items-center gap-2 mr-2 border-r border-white/5 pr-2">
               <span
                 className={`text-xs ${

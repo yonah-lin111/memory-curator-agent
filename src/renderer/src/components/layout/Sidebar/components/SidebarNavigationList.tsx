@@ -244,6 +244,7 @@ export const SidebarNavigationList = ({
             </button>
           </Tooltip>
           <Tooltip
+            key={shouldUseCollapsedLayout ? "collapsed" : "expanded"}
             content={shouldUseCollapsedLayout ? "展开" : "收起"}
             placement="right"
             className="order-1"
