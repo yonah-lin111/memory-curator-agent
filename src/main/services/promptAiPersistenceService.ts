@@ -11,6 +11,23 @@ import type {
 
 import type Database from "better-sqlite3";
 
+// 清理旧版本把 Agent 引用上下文写入用户消息正文的数据。
+const removePersistedReferenceBlock = (
+  content: string,
+  references: Extract<AiChatMessagePart, { kind: "reference" }>[],
+): string => {
+  if (!references.length) return content;
+
+  let cleanedContent = content.replace(/\n\n<references>[\s\S]*?<\/references>\s*$/, "");
+  for (const reference of [...references].reverse()) {
+    const legacyBlock = `\n\n第${reference.startLine}–${reference.endLine}行:\n${reference.content}`;
+    if (cleanedContent.endsWith(legacyBlock)) {
+      cleanedContent = cleanedContent.slice(0, -legacyBlock.length);
+    }
+  }
+  return cleanedContent;
+};
+
 export type EnsurePromptAiSessionInput = {
   id: string;
   designItemId: string;
@@ -186,13 +203,14 @@ export class PromptAiPersistenceService {
       const toolSteps = row.tool_steps_json
         ? (JSON.parse(row.tool_steps_json) as AiToolStep[])
         : [];
+      const references = parts.filter((part) => part.kind === "reference");
       return {
         id: row.external_id,
         sessionId: row.session_id,
         role: row.role as AiChatMessageRole,
-        content: row.content,
+        content: removePersistedReferenceBlock(row.content, references),
         parts: parts.length > 0 ? parts : undefined,
-        references: parts.filter((part) => part.kind === "reference"),
+        references,
         toolSteps: toolSteps.length > 0 ? toolSteps : undefined,
         answer: row.answer ?? undefined,
         model: row.model ?? undefined,

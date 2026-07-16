@@ -259,7 +259,8 @@ async function runPromptAiChat(
     id: userMessageId,
     sessionId: payload.sessionId,
     role: "user",
-    content: agentMessage,
+    // 持久化用户实际输入，引用内容仅作为 Agent 上下文传递。
+    content: payload.message,
     timestamp: now,
     references: payload.references?.map((reference) => ({ id: reference.id, kind: "reference" as const, startLine: reference.startLine, endLine: reference.endLine, content: reference.content })),
   });
@@ -348,7 +349,11 @@ async function runPromptAiChat(
           });
         }
       } else {
-        agentMessages.push({ role, content: m.content, parts: m.parts });
+        agentMessages.push({
+          role,
+          content: m.id === userMessageId ? agentMessage : m.content,
+          parts: m.parts,
+        });
       }
     }
   }
