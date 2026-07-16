@@ -7,9 +7,15 @@ export type ExecutionSequencePart =
       // 片段唯一标识。
       id: string;
       // 片段类型。
-      kind: "tool" | "reasoning";
+      kind: "tool";
       // 是否为交互型工具。
       isInteractionTool?: boolean;
+    }
+  | {
+      // 片段唯一标识。
+      id: string;
+      // 片段类型。
+      kind: "reasoning";
     }
   | {
       // 片段唯一标识。
@@ -56,7 +62,7 @@ export const groupExecutionParts = (
       return;
     }
 
-    if (part.isInteractionTool) {
+    if (part.kind === "tool" && part.isInteractionTool) {
       flush();
       groups.push({
         kind: "execution",
@@ -95,6 +101,11 @@ type ExecutionGroupBlockProps = {
   isGenerating?: boolean;
   // 渲染单个执行片段。
   renderPart: (part: ExecutionGroup["parts"][number], connectsToNextExecution: boolean) => React.JSX.Element;
+  // 渲染连续的工具片段。
+  renderToolParts: (
+    parts: Extract<ExecutionSequencePart, { kind: "tool" }>[],
+    connectsToNextExecution: boolean,
+  ) => React.JSX.Element;
   // 展开折叠回调。
   onToggle?: () => void;
 };
@@ -106,6 +117,7 @@ export const ExecutionGroupBlock = ({
   group,
   isGenerating: _isGenerating = false,
   renderPart,
+  renderToolParts,
   onToggle,
 }: ExecutionGroupBlockProps): React.JSX.Element => {
   // 判定是否为真正可聚合的分组：
@@ -151,13 +163,43 @@ export const ExecutionGroupBlock = ({
     };
   }, [isExpanded]);
 
+  /**
+   * 将连续工具片段批量交给工具调用块，保留思考与工具的原始交替顺序。
+   */
+  const renderGroupedParts = (): React.JSX.Element[] => {
+    const renderedParts: React.JSX.Element[] = [];
+    let toolParts: Extract<ExecutionSequencePart, { kind: "tool" }>[] = [];
+
+    const flushToolParts = (connectsToNextExecution: boolean): void => {
+      if (toolParts.length === 0) return;
+      renderedParts.push(renderToolParts(toolParts, connectsToNextExecution));
+      toolParts = [];
+    };
+
+    group.parts.forEach((part, index) => {
+      if (part.kind === "tool") {
+        toolParts.push(part);
+        return;
+      }
+
+      flushToolParts(true);
+      renderedParts.push(
+        renderPart(
+          part,
+          index < group.parts.length - 1 || group.connectsToNextExecution,
+        ),
+      );
+    });
+
+    flushToolParts(group.connectsToNextExecution);
+    return renderedParts;
+  };
+
 
   if (!isCollapsible) {
     return (
       <div className="flex flex-col gap-1.5 w-full">
-        {group.parts.map((part, index) =>
-          renderPart(part, index < group.parts.length - 1 || group.connectsToNextExecution),
-        )}
+        {renderGroupedParts()}
       </div>
     );
   }
@@ -212,9 +254,7 @@ export const ExecutionGroupBlock = ({
           className="overflow-hidden"
         >
           <div ref={innerRef} className="flex flex-col gap-1.5">
-            {group.parts.map((part, index) =>
-              renderPart(part, index < group.parts.length - 1 || group.connectsToNextExecution),
-            )}
+            {renderGroupedParts()}
           </div>
         </div>
       </div>

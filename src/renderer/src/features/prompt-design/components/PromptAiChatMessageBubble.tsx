@@ -188,6 +188,15 @@ export const PromptAiChatMessageBubble = ({
             const step = part && findToolStepByPart(message.toolSteps, part);
             return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={connectsToNextExecution} /> : <></>;
           }}
+          renderToolParts={(toolParts, connectsToNextExecution) => {
+            const steps = toolParts.flatMap((toolPart) => {
+              const part = visibleMessageParts.find((candidate) => candidate.id === toolPart.id);
+              const step = findToolStepByPart(message.toolSteps, part);
+              return step ? [step] : [];
+            });
+
+            return steps.length > 0 ? <CuratorToolCallBlock key={toolParts[0].id} steps={steps} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+          }}
         />,
       ];
     });

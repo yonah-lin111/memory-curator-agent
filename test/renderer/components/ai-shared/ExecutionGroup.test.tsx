@@ -25,6 +25,11 @@ const renderExecutionGroup = (parts: ExecutionGroup["parts"]): void => {
     <ExecutionGroupBlock
       group={{ id: "group", parts, connectsToNextExecution: false }}
       renderPart={(part) => <div key={part.id}>{part.id}</div>}
+      renderToolParts={(toolParts) => (
+        <div key={toolParts[0].id}>
+          {toolParts.map((part) => part.id).join(",")}
+        </div>
+      )}
     />,
   );
 };
@@ -51,5 +56,37 @@ describe("ExecutionGroupBlock", () => {
 
     expect(screen.getByText("2 tool calls")).toBeInTheDocument();
     expect(screen.queryByText(/thoughts/)).not.toBeInTheDocument();
+  });
+
+  it("将连续工具片段批量交给工具渲染器", () => {
+    const renderToolParts = vi.fn((toolParts: Extract<ExecutionGroup["parts"][number], { kind: "tool" }>[]) => (
+      <div key={toolParts[0].id}>{toolParts.map((part) => part.id).join(",")}</div>
+    ));
+
+    render(
+      <ExecutionGroupBlock
+        group={{
+          id: "group",
+          parts: [
+            { id: "read-1", kind: "tool" },
+            { id: "read-2", kind: "tool" },
+            { id: "reasoning", kind: "reasoning" },
+            { id: "read-3", kind: "tool" },
+          ],
+          connectsToNextExecution: false,
+        }}
+        renderPart={(part) => <div key={part.id}>{part.id}</div>}
+        renderToolParts={renderToolParts}
+      />,
+    );
+
+    const combinedReadParts = renderToolParts.mock.calls.find((call) =>
+      call[0].some((part) => part.id === "read-2"),
+    );
+
+    expect(combinedReadParts?.[0].map((part) => part.id)).toEqual([
+      "read-1",
+      "read-2",
+    ]);
   });
 });
