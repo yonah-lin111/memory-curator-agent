@@ -1,5 +1,4 @@
 import type React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CuratorHistoryList } from "./components/CuratorHistoryList";
 import { PromptSidebarList } from "./components/PromptSidebarList";
 import type { CuratorSession } from "@/features/curator/types";
@@ -113,6 +112,7 @@ export const Sidebar = ({
         >
           <SidebarNavigationList
             isCollapsed={isCollapsed}
+            onCollapsedChange={onCollapsedChange}
             activePage={activePage}
             onPageChange={onPageChange}
           />
@@ -164,21 +164,6 @@ export const Sidebar = ({
         </div>
       </aside>
 
-      {mode === "navigation" && (
-        <button
-          type="button"
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!isCollapsed}
-          onClick={() => onCollapsedChange(!isCollapsed)}
-          className="absolute top-1/2 right-0 z-20 flex h-6 w-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#212121] text-white/75 shadow-[0_4px_12px_rgba(0,0,0,0.5)] transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-3 w-3" />
-          ) : (
-            <ChevronLeft className="h-3 w-3" />
-          )}
-        </button>
-      )}
     </div>
   );
 };

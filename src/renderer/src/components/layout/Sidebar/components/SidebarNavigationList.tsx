@@ -4,6 +4,8 @@ import {
   BookOpen,
   CalendarDays,
   CheckSquare,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Home,
   Layers,
@@ -16,6 +18,7 @@ import {
   User,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IconButton } from "@/components/ui/IconButton";
 import type { SidebarPageId } from "../Sidebar";
 import type { PersonalProfile } from "@/pages/personal-info/components/personalInfoShared";
 
@@ -149,6 +152,8 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
 type SidebarNavigationListProps = {
   // 是否折叠。
   isCollapsed: boolean;
+  // 折叠状态改变回调。
+  onCollapsedChange: (collapsed: boolean) => void;
   // 当前激活的页面标识。
   activePage: SidebarPageId;
   // 页面切换回调函数。
@@ -160,6 +165,7 @@ type SidebarNavigationListProps = {
  */
 export const SidebarNavigationList = ({
   isCollapsed,
+  onCollapsedChange,
   activePage,
   onPageChange,
 }: SidebarNavigationListProps): React.JSX.Element => {
@@ -206,12 +212,20 @@ export const SidebarNavigationList = ({
       >
         {/* 用户头像与信息（替换了原来的产品标识头） */}
         <div
-          className={`flex items-center gap-3 px-1 ${shouldUseCollapsedLayout ? "justify-center" : ""}`}
+          className={`flex px-1 ${
+            shouldUseCollapsedLayout
+              ? "flex-col items-center gap-2"
+              : "items-center justify-between gap-3"
+          }`}
         >
-          <Tooltip content={profile?.name || "My Profile"} placement="right">
+          <Tooltip
+            content={profile?.name || "My Profile"}
+            placement="right"
+            className={shouldUseCollapsedLayout ? "order-2" : "order-3"}
+          >
             <button
               onClick={() => onPageChange("personal-info")}
-              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 overflow-hidden ${
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                 activePage === "personal-info"
                   ? "bg-white/20"
                   : "bg-white/5 hover:bg-white/10"
@@ -229,13 +243,22 @@ export const SidebarNavigationList = ({
               )}
             </button>
           </Tooltip>
-          {!shouldUseCollapsedLayout && (
-            <div className="flex flex-col">
-              <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
-                MEMORY CURATOR
-              </h2>
-            </div>
-          )}
+          <Tooltip
+            content={shouldUseCollapsedLayout ? "展开" : "收起"}
+            placement="right"
+            className="order-1"
+          >
+            <IconButton
+              aria-label={shouldUseCollapsedLayout ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => onCollapsedChange(!shouldUseCollapsedLayout)}
+            >
+              {shouldUseCollapsedLayout ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </IconButton>
+          </Tooltip>
         </div>
 
         {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
