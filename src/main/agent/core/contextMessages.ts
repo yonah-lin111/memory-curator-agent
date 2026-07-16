@@ -55,6 +55,14 @@ type SelectedContextItem = AgentContextPayloadItem & {
   estimatedTokens: number
 }
 
+// 上下文构造结果，供调用方展示关键上下文被截断的状态。
+export type ContextAgentMessagesResult = {
+  // 最终发送给模型的消息。
+  messages: AgentMessage[]
+  // 因预算被截断或未选中的上下文键。
+  truncatedContextKeys: string[]
+}
+
 // 可按预算整体选择的上下文分组。
 type ContextSelectionGroup = {
   // 分组内上下文条目。
@@ -412,7 +420,44 @@ const selectContextItems = (
   let remainingTokens = Math.max(availableTokens, 0)
   const selected: SelectedContextItem[] = []
 
-  for (const group of [...groups].reverse()) {
+  // 当前请求必须保留的上下文优先于历史消息，避免大历史挤掉当前文档和引用。
+  const requiredGroups = groups
+    .filter((group) => group.items.some((item) => item.meta?.required === true))
+    // 选区引用是用户显式聚焦的内容，优先完整保留；文档可使用剩余预算截断。
+    .sort((left, right) => {
+      const leftIsDocument = left.items.some((item) => item.key === 'current-document')
+      const rightIsDocument = right.items.some((item) => item.key === 'current-document')
+      return Number(leftIsDocument) - Number(rightIsDocument)
+    })
+  const historyGroups = groups.filter((group) =>
+    !group.items.some((item) => item.meta?.required === true)
+  )
+
+  for (const [index, group] of requiredGroups.entries()) {
+    if (remainingTokens < MIN_COMPRESSED_TOKENS) {
+      continue
+    }
+
+    const reservedTokens = (requiredGroups.length - index - 1) * MIN_COMPRESSED_TOKENS
+    const groupBudget = Math.max(remainingTokens - reservedTokens, MIN_COMPRESSED_TOKENS)
+
+    if (group.estimatedTokens <= groupBudget) {
+      selected.push(
+        ...group.items.map((item) => ({
+          ...item,
+          estimatedTokens: estimateTokens(item.content)
+        }))
+      )
+      remainingTokens -= group.estimatedTokens
+      continue
+    }
+
+    const compressedItems = compressGroupItems(group, groupBudget)
+    selected.push(...compressedItems)
+    remainingTokens -= compressedItems.reduce((sum, item) => sum + item.estimatedTokens, 0)
+  }
+
+  for (const group of [...historyGroups].reverse()) {
     if (remainingTokens <= 0) {
       break
     }
@@ -438,9 +483,9 @@ const selectContextItems = (
 }
 
 /**
- * 构造带上下文的 Agent 消息列表。
+ * 构造带上下文的 Agent 消息，并返回受预算影响的上下文键。
  */
-export const buildContextAgentMessages = ({
+export const buildContextAgentMessagesWithResult = ({
   systemMessage,
   userMessage,
   userParts,
@@ -449,8 +494,7 @@ export const buildContextAgentMessages = ({
   outputLimit,
   toolOutputMaxChars = DEFAULT_TOOL_OUTPUT_MAX_CHARS,
   recentToolResultLimit = DEFAULT_RECENT_TOOL_RESULT_LIMIT
-}: BuildContextAgentMessagesInput): AgentMessage[] => {
-  // 分离手动挂载的技能（作为高特权系统指令合入系统提示词中）
+}: BuildContextAgentMessagesInput): ContextAgentMessagesResult => {
   const skillItems = contextItems.filter((item) => item.kind === 'skill')
   const nonSkillContextItems = contextItems.filter((item) => item.kind !== 'skill')
 
@@ -473,18 +517,50 @@ export const buildContextAgentMessages = ({
     toolOutputMaxChars,
     recentToolResultLimit
   )
-  const contextMessages = selectedItems.flatMap(toContextAgentMessages)
+  const truncatedContextKeys = nonSkillContextItems
+    .filter((item) => {
+      const selected = selectedItems.find((candidate) => candidate.key === item.key)
+      return !selected || selected.estimatedTokens < estimateTokens(normalizeContextContent(item, toolOutputMaxChars))
+    })
+    .map((item) => item.key)
 
-  return [
-    finalSystemMessage,
-    ...contextMessages,
-    {
-      role: 'user',
-      content: userMessage,
-      parts: userParts
-    }
-  ]
+  return {
+    messages: [
+      finalSystemMessage,
+      ...selectedItems.flatMap(toContextAgentMessages),
+      {
+        role: 'user',
+        content: userMessage,
+        parts: userParts
+      }
+    ],
+    truncatedContextKeys
+  }
 }
+
+/**
+ * 构造带上下文的 Agent 消息列表。
+ */
+export const buildContextAgentMessages = ({
+  systemMessage,
+  userMessage,
+  userParts,
+  contextItems = [],
+  contextLimit,
+  outputLimit,
+  toolOutputMaxChars = DEFAULT_TOOL_OUTPUT_MAX_CHARS,
+  recentToolResultLimit = DEFAULT_RECENT_TOOL_RESULT_LIMIT
+}: BuildContextAgentMessagesInput): AgentMessage[] =>
+  buildContextAgentMessagesWithResult({
+    systemMessage,
+    userMessage,
+    userParts,
+    contextItems,
+    contextLimit,
+    outputLimit,
+    toolOutputMaxChars,
+    recentToolResultLimit
+  }).messages
 
 /**
  * 以 assistant 消息（含 toolCalls）为轮边界，分割消息为轮次列表。

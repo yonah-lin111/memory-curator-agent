@@ -7,6 +7,8 @@ import type { CuratorMessage, CuratorMessagePart, CuratorToolStep } from "@/feat
 
 import type { PromptDesignReference } from "@/features/prompt-design/types";
 
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+
 export type PromptAiPart = Extract<CuratorMessagePart, { kind: "text" | "reasoning" | "tool" }>;
 
 type PromptAiPersistedMessage = {
@@ -30,7 +32,7 @@ type PromptAiSession = {
 };
 
 type PromptAiEvent =
-  | { type: "run_started"; runId: string; sessionId: string; model?: string }
+  | { type: "run_started"; runId: string; sessionId: string; model?: string; currentDocumentTruncated?: boolean }
   | { type: "text_delta" | "reasoning_delta"; runId: string; sessionId: string; delta: string }
   | { type: "tool_started"; runId: string; sessionId: string; toolStep: CuratorToolStep }
   | { type: "tool_finished"; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }
@@ -179,7 +181,7 @@ const updateLastAssistantMessage = (
  */
 export const usePromptAiChatController = (
   designItemId: string,
-  editorContent: string,
+  currentDocument: string,
   onEditorSuggestion: (originalContent: string, candidateContent: string) => void,
 ) => {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
@@ -188,15 +190,21 @@ export const usePromptAiChatController = (
   const [sessionInitialized, setSessionInitialized] = useState(false);
   const [sessions, setSessions] = useState<PromptAiSession[]>([]);
   const [references, setReferences] = useState<PromptDesignReference[]>([]);
-  const editorContentRef = useRef(editorContent);
+  const [requestContext, setRequestContext] = useState({
+    currentDocument,
+    references: [] as PromptDesignReference[],
+  });
+  const currentDocumentRef = useRef(currentDocument);
+  const pendingRunDocumentRef = useRef<string | null>(null);
   const runEditorContentRef = useRef(new Map<string, string>());
   const activeRunIdRef = useRef<string | null>(null);
   const latestUserPromptRef = useRef<string | null>(null);
   latestUserPromptRef.current = [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
 
   useEffect(() => {
-    editorContentRef.current = editorContent;
-  }, [editorContent]);
+    currentDocumentRef.current = currentDocument;
+  }, [currentDocument]);
+  const [currentDocumentTruncated, setCurrentDocumentTruncated] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     if (!designItemId) return;
@@ -251,7 +259,9 @@ export const usePromptAiChatController = (
       if (event.sessionId !== sessionId) return;
 
       if (event.type === "run_started") {
-        runEditorContentRef.current.set(event.runId, editorContentRef.current);
+        runEditorContentRef.current.set(event.runId, pendingRunDocumentRef.current ?? currentDocumentRef.current);
+        pendingRunDocumentRef.current = null;
+        setCurrentDocumentTruncated(event.currentDocumentTruncated === true);
         setIsGenerating(true);
         if (event.model) {
           setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({ ...message, model: event.model })));
@@ -285,7 +295,7 @@ export const usePromptAiChatController = (
           "content" in event.data &&
           typeof event.data.content === "string"
         ) {
-          onEditorSuggestion(runEditorContentRef.current.get(event.runId) ?? editorContentRef.current, event.data.content);
+          onEditorSuggestion(runEditorContentRef.current.get(event.runId) ?? currentDocumentRef.current, event.data.content);
         }
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,
@@ -398,10 +408,7 @@ export const usePromptAiChatController = (
     const [providerId, modelId] = selectedModel?.split("::") ?? [];
     const time = new Date().toISOString();
     const referenceSnapshot = options?.references?.map((reference) => ({ ...reference }));
-    const referenceBlocks = referenceSnapshot?.map((reference) =>
-      `\n\n第${reference.startLine}–${reference.endLine}行:\n${reference.content}`,
-    ).join("") ?? "";
-    const agentText = `${text}${referenceBlocks}`;
+    const currentDocumentSnapshot = currentDocumentRef.current;
     latestUserPromptRef.current = text;
     setReferences([]);
     setMessages((previous) => [...previous,
@@ -409,16 +416,34 @@ export const usePromptAiChatController = (
       { id: `msg-${Date.now()}-ai`, role: "assistant", content: "", model: modelId, time, parts: [] },
     ]);
     setIsGenerating(true);
+    setCurrentDocumentTruncated(false);
+    setRequestContext({
+      currentDocument: currentDocumentSnapshot,
+      references: referenceSnapshot ?? [],
+    });
+    pendingRunDocumentRef.current = currentDocumentSnapshot;
+
+    const { itemName } = usePromptDesignStore.getState();
 
     try {
-      const { runId } = await window.api.promptAi!.startChat({ sessionId, designItemId, message: agentText, provider: providerId, model: modelId, editorContent, references: referenceSnapshot });
+      const { runId } = await window.api.promptAi!.startChat({
+        sessionId,
+        designItemId,
+        message: text,
+        provider: providerId,
+        model: modelId,
+        currentDocument: currentDocumentSnapshot,
+        currentDocumentName: itemName,
+        references: referenceSnapshot
+      });
       activeRunIdRef.current = runId;
       await fetchSessions();
     } catch (error) {
       console.error("Failed to send message", error);
+      pendingRunDocumentRef.current = null;
       setIsGenerating(false);
     }
-  }, [designItemId, editorContent, fetchSessions, isGenerating, sessionId, sessionInitialized]);
+  }, [designItemId, fetchSessions, isGenerating, sessionId, sessionInitialized]);
 
   const handleSubmitAskAnswer = useCallback(async (payload: CuratorAskAnswerSubmitPayload) => {
     await window.api.promptAi!.submitAskAnswer(payload);
@@ -458,6 +483,10 @@ export const usePromptAiChatController = (
     handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
     handleDeleteTurn, handleRegenerateLatestAnswer, handleEditAndResendUserMessage,
     handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, isGenerating,
-    references, setReferences,    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
+    references, setReferences,
+    contextDocument: isGenerating ? requestContext.currentDocument : currentDocument,
+    contextReferences: isGenerating ? requestContext.references : references,
+    currentDocumentTruncated,
+    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
   };
 };

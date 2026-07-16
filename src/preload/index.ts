@@ -537,7 +537,8 @@ type PromptAiChatStartPayload = {
   message: string
   provider?: string
   model?: string
-  editorContent?: string
+  currentDocument?: string
+  currentDocumentName?: string
   references?: { id: string; startLine: number; endLine: number; content: string }[]
 }
 
@@ -561,7 +562,7 @@ type PromptAiChatSession = {
 
 // 提示词 AI 流式事件。
 type PromptAiChatEvent =
-  | { type: 'run_started'; runId: string; sessionId: string; model?: string }
+  | { type: 'run_started'; runId: string; sessionId: string; model?: string; currentDocumentTruncated?: boolean }
   | { type: 'text_delta' | 'reasoning_delta'; runId: string; sessionId: string; delta: string }
   | { type: 'tool_started'; runId: string; sessionId: string; toolStep: AiToolStep }
   | { type: 'tool_finished'; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }

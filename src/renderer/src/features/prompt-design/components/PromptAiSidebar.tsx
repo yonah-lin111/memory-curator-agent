@@ -47,8 +47,11 @@ export const PromptAiSidebar = ({
         tokens += msg.toolSteps.reduce((tSum, step) => tSum + estimateCuratorContextTokens(step.observation), 0);
       }
       return sum + tokens;
-    }, 0);
-  }, [controller.messages]);
+    }, 0) + estimateCuratorContextTokens(controller.contextDocument) + controller.contextReferences.reduce(
+      (sum, reference) => sum + estimateCuratorContextTokens(reference.content),
+      0,
+    );
+  }, [controller.contextDocument, controller.contextReferences, controller.messages]);
 
   const contextLimit = useMemo(() => {
     if (!selectedModel) return undefined;
@@ -425,6 +428,11 @@ export const PromptAiSidebar = ({
                   </IconButton>
                 </Tooltip>
               </div>
+            </div>
+          )}
+          {isOpen && controller.currentDocumentTruncated && (
+            <div className="shrink-0 border-b border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-200">
+              当前文档未完整注入
             </div>
           )}
           {isOpen && (
