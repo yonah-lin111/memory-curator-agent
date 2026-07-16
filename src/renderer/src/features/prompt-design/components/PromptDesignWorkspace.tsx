@@ -5,6 +5,7 @@ import { StateEffect } from "@codemirror/state";
 import { Bot } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { useToast } from "@/components/ui/Toast";
 import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSidebar";
 import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
@@ -12,6 +13,9 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
 import type { PromptDesignReference } from "@/features/prompt-design/types";
+
+// 设计项切换 loading 最短展示时长（ms），与 AI 侧栏保持一致。
+const MIN_SWITCH_LOADING_MS = 500;
 
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
@@ -384,6 +388,9 @@ export const PromptDesignWorkspace = ({
   // 初始化加载当前 activeDesignId 的数据
   useEffect(() => {
     let isMounted = true;
+    let loadingTimer: ReturnType<typeof setTimeout> | null = null;
+    if (!isOpen) return;
+
     if (!activeDesignId) {
       setSavedContent("");
       setIsSaving(false);
@@ -392,6 +399,17 @@ export const PromptDesignWorkspace = ({
     }
 
     setIsInitializing(true);
+    const loadingStartTime = Date.now();
+    const finishInitializing = (): void => {
+      const remaining = Math.max(
+        0,
+        MIN_SWITCH_LOADING_MS - (Date.now() - loadingStartTime),
+      );
+      loadingTimer = setTimeout(() => {
+        if (isMounted) setIsInitializing(false);
+      }, remaining);
+    };
+
     void window.api.promptDesign?.designs.list().then((designs) => {
       if (!isMounted) return;
       const design = designs.find((d) => d.id === activeDesignId);
@@ -410,19 +428,20 @@ export const PromptDesignWorkspace = ({
         setChangeBlocks([]);
       }
       setIsSaving(false);
-      setIsInitializing(false);
+      finishInitializing();
     }).catch((error) => {
       if (!isMounted) return;
       console.error(`加载提示词设计失败[${activeDesignId}]:`, error);
       toastRef.current.error("加载提示词设计失败");
-      setIsInitializing(false);
+      finishInitializing();
     });
 
     return () => {
       isMounted = false;
+      if (loadingTimer) clearTimeout(loadingTimer);
       flushSave(); // <-- 改在这里，卸载前冲刷（顺便在 flushSave 内部会清空 timer）
     };
-  }, [activeDesignId, flushSave]);
+  }, [activeDesignId, flushSave, isOpen]);
 
   // 使用 setBeforeDesignSwitch 在切换设计时冲刷当前设计
   useEffect(() => {
@@ -529,8 +548,9 @@ export const PromptDesignWorkspace = ({
     <div className="flex h-full w-full overflow-hidden bg-[#000000]">
       <div className="flex min-w-0 flex-1 flex-col rounded-[6px] border border-white/5 bg-[#212121] shadow-inner overflow-hidden">
         <div className="min-h-0 flex-1 relative flex flex-col">
-          {activeDesignId && !isInitializing ? (
+          {activeDesignId ? (
             <>
+              <LoadingOverlay isLoading={isInitializing} text="Loading prompt..." />
               <MarkdownEditor
                 aiChangeBlocks={changeBlocks}
                 id="prompt-design-editor"
