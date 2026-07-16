@@ -1,5 +1,5 @@
 import type React from "react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { MdEditor, config } from "md-editor-rt";
 import type { ExposeParam, UploadImgEvent } from "md-editor-rt";
 import "md-editor-rt/lib/style.css";
@@ -491,7 +491,7 @@ export interface MarkdownEditorProps {
 /**
  * MarkdownEditor - 项目统一 Markdown 编辑器。
  */
-export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
+export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
   id,
   value,
   onChange,
@@ -683,6 +683,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
     </div>
   );
-});
+}));
 
 MarkdownEditor.displayName = "MarkdownEditor";

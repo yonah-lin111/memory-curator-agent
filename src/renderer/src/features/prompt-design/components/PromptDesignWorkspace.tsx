@@ -189,6 +189,9 @@ export const PromptDesignWorkspace = ({
   onClosePromptAiSidebar,
 }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
   const toast = useToast();
+  // 保持最新通知方法，避免通知状态变化触发编辑器初始化流程。
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [content, setContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -221,14 +224,14 @@ export const PromptDesignWorkspace = ({
           return true;
         } catch (error) {
           console.error(`保存提示词设计失败[${id}]:`, error);
-          toast.error("保存提示词设计失败，请稍后重试");
+          toastRef.current.error("保存提示词设计失败，请稍后重试");
           return false;
         }
       });
       updatePromisesRef.current[id] = nextPromise;
       return nextPromise;
     },
-    [toast],
+    [],
   );
 
   // 保存最新待保存内容，避免切换设计项时读到旧闭包。
@@ -411,7 +414,7 @@ export const PromptDesignWorkspace = ({
     }).catch((error) => {
       if (!isMounted) return;
       console.error(`加载提示词设计失败[${activeDesignId}]:`, error);
-      toast.error("加载提示词设计失败");
+      toastRef.current.error("加载提示词设计失败");
       setIsInitializing(false);
     });
 
@@ -419,7 +422,7 @@ export const PromptDesignWorkspace = ({
       isMounted = false;
       flushSave(); // <-- 改在这里，卸载前冲刷（顺便在 flushSave 内部会清空 timer）
     };
-  }, [activeDesignId, flushSave, toast]);
+  }, [activeDesignId, flushSave]);
 
   // 使用 setBeforeDesignSwitch 在切换设计时冲刷当前设计
   useEffect(() => {
