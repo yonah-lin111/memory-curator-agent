@@ -461,6 +461,8 @@ type AiSettingsConfig = {
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 是否显示 Agent 思考内容。
+  showAgentThinking: boolean
   // Agent 非密钥行为配置。
   agent: AiAgentOption
 }

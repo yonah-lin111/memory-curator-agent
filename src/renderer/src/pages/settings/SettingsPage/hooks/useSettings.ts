@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { useHeaderStore } from "@/lib/headerStore";
+import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 import { DEFAULT_CONFIG_PATH } from "../constants";
 import {
   cloneSettings,
@@ -27,6 +28,7 @@ export const useSettings = () => {
   const [expandedModelKeys, setExpandedModelKeys] = useState<Record<string, boolean>>({});
 
   const toast = useToast();
+  const setShowAgentThinking = useAiSettingsStore((state) => state.setShowAgentThinking);
 
   const toggleModelExpanded = useCallback((modelKey: string): void => {
     setExpandedModelKeys((prev) => ({
@@ -52,13 +54,14 @@ export const useSettings = () => {
       const nextSettings = await api.get();
       setBaseline(cloneSettings(nextSettings));
       setSettings(cloneSettings(nextSettings));
+      setShowAgentThinking(nextSettings.showAgentThinking);
       setSelectedProviderKey(Object.keys(nextSettings.providers)[0] ?? "");
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "加载配置失败");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setShowAgentThinking]);
 
   useEffect(() => {
     void loadSettings();
@@ -84,6 +87,7 @@ export const useSettings = () => {
       const saved = await api.save(payload);
       setBaseline(cloneSettings(saved));
       setSettings(cloneSettings(saved));
+      setShowAgentThinking(saved.showAgentThinking);
       setSelectedProviderKey(Object.keys(saved.providers)[0] ?? "");
       toast.success("设置已保存");
     } catch (error) {
@@ -91,7 +95,7 @@ export const useSettings = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [settings, toast]);
+  }, [settings, setShowAgentThinking, toast]);
 
   const setSettingsState = useHeaderStore((state) => state.setSettingsState);
   const setCustomTitle = useHeaderStore((state) => state.setCustomTitle);

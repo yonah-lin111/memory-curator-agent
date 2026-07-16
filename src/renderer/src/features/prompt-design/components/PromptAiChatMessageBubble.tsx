@@ -16,6 +16,7 @@ import {
 } from "@/components/ai-shared/ExecutionGroup";
 import { Tag } from "@/components/ui/Tag";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 import type { CuratorToolStep } from "@/features/curator/types";
 import type { PromptAiMessage, PromptAiPart } from "@/features/prompt-design/components/usePromptAiChatController";
 import { MdPreview } from "md-editor-rt";
@@ -117,6 +118,7 @@ export const PromptAiChatMessageBubble = ({
   onEditAndResendUserMessage,
   onSubmitToolConfirmationAnswer,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
+  const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
   const isUser = message.role === "user";
   const [isEditing, setIsEditing] = React.useState(false);
   const [editText, setEditText] = React.useState(message.content);
@@ -142,7 +144,10 @@ export const PromptAiChatMessageBubble = ({
   };
 
   const renderAssistantParts = (): React.JSX.Element[] => {
-    const sequenceParts: ExecutionSequencePart[] = messageParts.map((part) => {
+    const visibleMessageParts = showAgentThinking
+      ? messageParts
+      : messageParts.filter((part) => part.kind !== "reasoning");
+    const sequenceParts: ExecutionSequencePart[] = visibleMessageParts.map((part) => {
       if (part.kind === "text") return { id: part.id, kind: "text" };
       if (part.kind === "reasoning") return { id: part.id, kind: "reasoning" };
       const step = findToolStepByPart(message.toolSteps, part);
@@ -162,7 +167,7 @@ export const PromptAiChatMessageBubble = ({
 
     return groupExecutionParts(sequenceParts).flatMap((item) => {
       if (item.kind === "text") {
-        const part = messageParts.find((candidate) => candidate.id === item.id);
+        const part = visibleMessageParts.find((candidate) => candidate.id === item.id);
         return part?.kind === "text" && part.content
           ? [<div key={`${message.id}-${part.id}`} className="markdown-preview-container curator-markdown-preview select-text max-w-full"><MdPreview theme="dark" modelValue={part.content} previewTheme="default" codeTheme="atom" style={{ backgroundColor: "transparent" }} autoFoldThreshold={isGenerating ? Infinity : 0} showCodeRowNumber={false} /></div>]
           : [];
@@ -176,7 +181,7 @@ export const PromptAiChatMessageBubble = ({
           isGenerating={isGenerating}
           onToggle={undefined}
           renderPart={(sequencePart, connectsToNextExecution) => {
-            const part = messageParts.find((candidate) => candidate.id === sequencePart.id);
+            const part = visibleMessageParts.find((candidate) => candidate.id === sequencePart.id);
             if (part?.kind === "reasoning" && part.content) {
               return <CuratorThinkingBlock key={part.id} content={part.content} isGenerating={part.status === "streaming" || (isGenerating && part.id === messageParts.at(-1)?.id)} connectsToNextExecution={connectsToNextExecution} />;
             }

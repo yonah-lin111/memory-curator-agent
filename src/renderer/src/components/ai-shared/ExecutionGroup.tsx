@@ -164,6 +164,9 @@ export const ExecutionGroupBlock = ({
 
   const toolCount = group.parts.filter((part) => part.kind === "tool").length;
   const reasoningCount = group.parts.filter((part) => part.kind === "reasoning").length;
+  const summary = reasoningCount > 0
+    ? `${toolCount} tool calls, ${reasoningCount} thoughts`
+    : `${toolCount} tool calls`;
 
   return (
     <div className="flex w-full gap-2.5 pl-1 my-1.5">
@@ -189,7 +192,7 @@ export const ExecutionGroupBlock = ({
           }}
           aria-expanded={isExpanded}
         >
-          <span>工具调用 {toolCount} 个，思考 {reasoningCount} 次</span>
+          <span>{summary}</span>
           <ChevronDown
             className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`}
           />

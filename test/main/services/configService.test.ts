@@ -49,6 +49,7 @@ const createSettings = (): AiSettingsConfig => ({
     model: 'gemini-3.5-flash'
   },
   enabledProviders: ['gemini'],
+  showAgentThinking: false,
   providers: {
     gemini: {
       id: 'gemini',
@@ -153,6 +154,7 @@ describe('configService', () => {
       model: 'gemini-3.5-flash'
     })
     expect(settings.enabledProviders).toEqual(['gemini'])
+    expect(settings.showAgentThinking).toBe(false)
     expect(settings.providers.gemini.id).toBe('gemini')
     expect(settings.providers.gemini.type).toBe('google')
     expect(settings.providers.gemini.options.apiKey).toBe('secret')
@@ -181,7 +183,8 @@ describe('configService', () => {
         provider: 'gemini',
         model: 'gemini-3.5-flash'
       },
-      enabled_providers: ['gemini']
+      enabled_providers: ['gemini'],
+      showAgentThinking: false
     })
   })
 
@@ -238,6 +241,22 @@ describe('configService', () => {
     expect(settings.configPath).toBe(configPath)
     expect(Object.keys(settings.providers)).toEqual(['bailian'])
     expect(settings.enabledProviders).toEqual(['bailian'])
+    expect(settings.showAgentThinking).toBe(false)
+  })
+
+  it('保存并读取 Agent 思考显示设置', () => {
+    const configPath = writeTempConfig({ ai: { providers: {} } })
+    const settings = createSettings()
+    settings.showAgentThinking = true
+
+    const saved = saveAiSettingsConfig(settings, configPath)
+    const persisted = JSON.parse(readFileSync(configPath, 'utf8')) as {
+      ai: { showAgentThinking: boolean }
+    }
+
+    expect(saved.showAgentThinking).toBe(true)
+    expect(persisted.ai.showAgentThinking).toBe(true)
+    expect(readAiSettingsConfig(configPath).showAgentThinking).toBe(true)
   })
 
   it('拒绝没有启用 provider 的配置', () => {

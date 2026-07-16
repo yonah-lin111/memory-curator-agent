@@ -56,6 +56,8 @@ export type AiSettingsConfig = {
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 是否显示 Agent 思考内容。
+  showAgentThinking: boolean
   // Agent 非密钥行为配置。
   agent: AgentConfig
 }
@@ -96,6 +98,8 @@ type RawAiConfig = {
   enabled_providers?: string[]
   // Provider 配置表。
   providers?: Record<string, RawProviderConfig>
+  // 是否显示 Agent 思考内容。
+  showAgentThinking?: boolean
   // Agent 非密钥行为配置。
   agent?: Partial<AgentConfig>
 }
@@ -140,6 +144,7 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
       }
     }
   },
+  showAgentThinking: false,
   agent: DEFAULT_AGENT_CONFIG
 }
 
@@ -332,6 +337,7 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     weeklySummary: normalizeSelection(rawAi.weeklySummary, undefined, providers, defaultModel),
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
+    showAgentThinking: rawAi.showAgentThinking === true,
     agent: normalizeAgent(rawAi.agent)
   }
 }
@@ -428,6 +434,10 @@ const validateSettings = (settings: AiSettingsConfig): void => {
   validateSelection('标题总结模型', settings.titleSummary, settings.providers)
   validateSelection('周度总结模型', settings.weeklySummary, settings.providers)
 
+  if (typeof settings.showAgentThinking !== 'boolean') {
+    throw new Error('showAgentThinking 必须为布尔值')
+  }
+
   if (!isPositiveInteger(settings.agent.context.toolOutputMaxChars)) {
     throw new Error('toolOutputMaxChars 必须为正整数')
   }
@@ -475,6 +485,7 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   titleSummary: settings.titleSummary,
   weeklySummary: settings.weeklySummary,
   enabled_providers: settings.enabledProviders,
+  showAgentThinking: settings.showAgentThinking,
   providers: Object.fromEntries(
     Object.values(settings.providers).map((provider) => [
       provider.id,

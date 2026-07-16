@@ -6,12 +6,21 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CuratorMessageBubble } from "@/features/curator/components/CuratorMessageBubble";
 import type { CuratorMessage } from "@/features/curator/types";
+import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 
 vi.mock("md-editor-rt", () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => (
     <div data-testid="md-preview">{modelValue}</div>
   ),
 }));
+
+class ResizeObserverMock {
+  observe = (): void => undefined;
+  unobserve = (): void => undefined;
+  disconnect = (): void => undefined;
+}
+
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
 /**
  * 测试渲染默认不关心右键菜单打开行为。
@@ -21,6 +30,7 @@ const noopContextMenu = (): void => undefined;
 describe("CuratorMessageBubble", () => {
   afterEach(() => {
     cleanup();
+    useAiSettingsStore.setState({ showAgentThinking: false });
   });
 
   it("工具调用后隐藏回答中泄漏的工具 JSON，只展示工具摘要与最终结论", () => {
@@ -203,6 +213,7 @@ describe("CuratorMessageBubble", () => {
   });
 
   it("用独立思考组件渲染 reasoning 片段并锁定 13px 字号", () => {
+    useAiSettingsStore.setState({ showAgentThinking: true });
     const message: CuratorMessage = {
       id: "a-reasoning",
       role: "assistant",
@@ -245,6 +256,7 @@ describe("CuratorMessageBubble", () => {
   });
 
   it("正文里重复出现的 reasoning 段落只展示一次", () => {
+    useAiSettingsStore.setState({ showAgentThinking: true });
     const message: CuratorMessage = {
       id: "a-reasoning-duplicate",
       role: "assistant",
@@ -340,6 +352,7 @@ describe("CuratorMessageBubble", () => {
   });
 
   it("工具前后重复出现的 reasoning 片段只展示一次", () => {
+    useAiSettingsStore.setState({ showAgentThinking: true });
     const repeatedReasoning =
       "用户问我的女朋友是谁，我通过people_tool_query查询了relationship为女朋友的人员，找到了1条记录。";
     const message: CuratorMessage = {
@@ -394,6 +407,7 @@ describe("CuratorMessageBubble", () => {
   });
 
   it("消息仍在生成时已结束的 reasoning 显示完成态", () => {
+    useAiSettingsStore.setState({ showAgentThinking: true });
     const message: CuratorMessage = {
       id: "a-reasoning-done-while-generating",
       role: "assistant",

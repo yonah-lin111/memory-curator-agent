@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { Image } from "@/components/ui/Image";
 import { TextFile } from "@/components/ui/TextFile";
 import { IconButton } from "@/components/ui/IconButton";
+import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Tag } from "@/components/ui/Tag";
 import type {
@@ -492,6 +493,7 @@ export const CuratorMessageBubble = ({
   onToolConfirmationToggle,
   onUserEditStateChange,
 }: CuratorMessageBubbleProps): React.JSX.Element => {
+  const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
   const isUser = message.role === "user";
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -928,7 +930,10 @@ export const CuratorMessageBubble = ({
           ) : (
             <div className="flex flex-col gap-1.5 max-w-full">
               {(() => {
-                const sequenceParts: ExecutionSequencePart[] = messageParts.map((part) => {
+                const visibleMessageParts = showAgentThinking
+                  ? messageParts
+                  : messageParts.filter((part) => part.kind !== "reasoning");
+                const sequenceParts: ExecutionSequencePart[] = visibleMessageParts.map((part) => {
                   if (part.kind === "text") return { id: part.id, kind: "text" };
                   if (part.kind === "reasoning") {
                     return { id: part.id, kind: "reasoning" };
@@ -950,7 +955,7 @@ export const CuratorMessageBubble = ({
 
                 return groupExecutionParts(sequenceParts).flatMap((item) => {
                   if (item.kind === "text") {
-                    const part = messageParts.find((candidate) => candidate.id === item.id);
+                    const part = visibleMessageParts.find((candidate) => candidate.id === item.id);
                     const displayText = part ? dedupedRenderablePartContents[messageParts.indexOf(part)] ?? "" : "";
                     return displayText ? [<CuratorMarkdownPreview key={`${message.id}-${item.id}`} content={displayText} isGenerating={isGenerating} />] : [];
                   }

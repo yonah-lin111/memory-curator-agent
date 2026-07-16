@@ -27,6 +27,7 @@ import { PromptDesignWorkspace } from "@/features/prompt-design/components/Promp
 import { useCuratorController } from "@/features/curator/useCuratorController";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import type { CuratorInputCommandId } from "@/features/curator/components/CuratorInput/types";
+import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 
 // 侧边栏支持的页面标识列表。
 const VALID_PAGES: SidebarPageId[] = [
@@ -129,6 +130,7 @@ const renderPageById = (pageId: SidebarPageId): React.JSX.Element => {
  * 通过左侧导航与中间页面区域组织日输入、策展回顾和 Agent 编写页面。
  */
 const AppContent = (): React.JSX.Element => {
+  const setShowAgentThinking = useAiSettingsStore((state) => state.setShowAgentThinking);
   // 左侧导航栏折叠状态。
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
@@ -143,6 +145,18 @@ const AppContent = (): React.JSX.Element => {
     useState<SidebarPageId>(getPageFromPathname);
 
   const { projectName, itemName } = usePromptDesignStore();
+
+  // 首次加载全局显示设置，确保未访问设置页时也使用持久化配置。
+  useEffect(() => {
+    const loadAiDisplaySettings = async (): Promise<void> => {
+      const settings = await window.api?.config?.ai.get();
+      if (settings) {
+        setShowAgentThinking(settings.showAgentThinking);
+      }
+    };
+
+    void loadAiDisplaySettings().catch(() => undefined);
+  }, [setShowAgentThinking]);
 
   // 主内容页面切换时的 Loading 状态。
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true);

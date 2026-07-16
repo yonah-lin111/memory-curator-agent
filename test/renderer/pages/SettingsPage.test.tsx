@@ -30,6 +30,7 @@ const createSettings = (): AiSettingsConfig => ({
     model: 'gemini-3.5-flash'
   },
   enabledProviders: ['gemini'],
+  showAgentThinking: false,
   providers: {
     gemini: {
       id: 'gemini',
@@ -121,6 +122,23 @@ describe('SettingsPage', () => {
             }
           }
         })
+      )
+    })
+  })
+
+  it('开启显示 Agent 思考后保存设置', async () => {
+    const user = userEvent.setup()
+    renderSettingsPage()
+
+    await screen.findByText('/Users/yonah/.mc/config.json')
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    expect(screen.getByRole('switch', { name: '显示 Agent 思考' })).not.toBeChecked()
+    await user.click(screen.getByRole('switch', { name: '显示 Agent 思考' }))
+    await user.click(screen.getByRole('button', { name: '保存设置' }))
+
+    await waitFor(() => {
+      expect(window.api.config?.ai.save).toHaveBeenCalledWith(
+        expect.objectContaining({ showAgentThinking: true })
       )
     })
   })
