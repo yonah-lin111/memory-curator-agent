@@ -124,7 +124,7 @@ export const SettingsPage = (): React.JSX.Element => {
             <AgentSection settings={settings} updateSettings={updateSettings} />
           )}
           {activeSection === "skills" && (
-            <SkillsSection />
+            <SkillsSection settings={settings} updateSettings={updateSettings} />
           )}
         </div>
       </div>

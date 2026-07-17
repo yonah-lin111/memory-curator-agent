@@ -6,8 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // 缓存相关的模块级 state，并在测试开始前 mock 掉存储路径
 let tempDir: string
 
+const mocks = vi.hoisted(() => ({
+  readAiSettingsConfig: vi.fn()
+}))
+
 vi.mock('@/paths', () => ({
   getSkillsDir: () => tempDir
+}))
+
+vi.mock('@/services/configService', () => ({
+  readAiSettingsConfig: mocks.readAiSettingsConfig
 }))
 
 import { loadSkills, getAvailableSkillsForAgent, clearSkillsCache } from './skillsService'
@@ -15,6 +23,7 @@ import { loadSkills, getAvailableSkillsForAgent, clearSkillsCache } from './skil
 describe('skillsService', () => {
   beforeEach(async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'mc-skills-test-'))
+    mocks.readAiSettingsConfig.mockReturnValue({ disabledSkillIds: [] })
     clearSkillsCache()
   })
 
@@ -40,8 +49,8 @@ Optimize the following code structure following the strict principles.
     await writeFile(join(skillDir, 'skill.md'), skillContent, 'utf8')
 
     const skills = await loadSkills(true)
-    expect(skills).toHaveLength(1)
-    expect(skills[0]).toEqual({
+    expect(skills).toHaveLength(2)
+    expect(skills.find((skill) => skill.id === 'refactor')).toEqual({
       id: 'refactor',
       name: 'Code Refactoring',
       description: 'Optimize and simplify complex components',
@@ -79,7 +88,7 @@ Craft excellent system prompts.
 
     // 1. 获取 prompt-design 代理的可行技能：应当包括全局和专属
     const designSkills = await getAvailableSkillsForAgent('prompt-design')
-    expect(designSkills.map(s => s.id)).toEqual(['global', 'design'])
+    expect(designSkills.map(s => s.id)).toEqual(['global', 'grill-me', 'design'])
 
     // 2. 获取 common 代理的可行技能：应当仅包含全局技能
     const commonSkills = await getAvailableSkillsForAgent('common')
@@ -151,8 +160,7 @@ Do things.
 `, 'utf8')
 
     const skills = await loadSkills(true)
-    expect(skills).toHaveLength(1)
-    expect(skills[0].id).toBe('my-skill')
+    expect(skills.map((skill) => skill.id)).toContain('my-skill')
   })
 
   it('skips directories without skill.md', async () => {
@@ -161,6 +169,22 @@ Do things.
     await mkdir(emptyDir, { recursive: true })
 
     const skills = await loadSkills(true)
-    expect(skills).toHaveLength(0)
+    expect(skills.map((skill) => skill.id)).toEqual(['grill-me'])
+  })
+
+  it('loads the built-in grill-me skill for prompt-design only', async () => {
+    const designSkills = await getAvailableSkillsForAgent('prompt-design')
+    const commonSkills = await getAvailableSkillsForAgent('common')
+
+    expect(designSkills.map((skill) => skill.id)).toContain('grill-me')
+    expect(commonSkills.map((skill) => skill.id)).not.toContain('grill-me')
+  })
+
+  it('excludes disabled skills from agent availability', async () => {
+    mocks.readAiSettingsConfig.mockReturnValue({ disabledSkillIds: ['grill-me'] })
+
+    const designSkills = await getAvailableSkillsForAgent('prompt-design')
+
+    expect(designSkills.map((skill) => skill.id)).not.toContain('grill-me')
   })
 })

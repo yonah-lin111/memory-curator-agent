@@ -80,6 +80,9 @@
     "files": [
       "out/**"
     ],
+    "extraResources": [
+      "resources/**"
+    ],
     "mac": {
       "target": "dmg"
     }

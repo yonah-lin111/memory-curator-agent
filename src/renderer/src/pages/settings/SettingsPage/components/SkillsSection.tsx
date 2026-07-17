@@ -2,6 +2,8 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Cpu, RefreshCcw, FileText, Info } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { Switch } from "@/components/ui/Switch";
+import type { AiSettingsConfig } from "../types";
 
 interface AiAgentSkill {
   id: string;
@@ -12,10 +14,18 @@ interface AiAgentSkill {
   location: string;
 }
 
+// Skills 设置板块属性。
+interface SkillsSectionProps {
+  // 当前 AI 设置。
+  settings: AiSettingsConfig;
+  // 更新 AI 设置。
+  updateSettings: (updater: (current: AiSettingsConfig) => AiSettingsConfig) => void;
+}
+
 /**
  * SkillsSection - 智能体技能展示、热重载管理设置板块。
  */
-export const SkillsSection = (): React.JSX.Element => {
+export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps): React.JSX.Element => {
   const toast = useToast();
   const [skills, setSkills] = useState<AiAgentSkill[]>([]);
   const [selectedSkill, setSelectedSkill] = useState<AiAgentSkill | null>(null);
@@ -61,6 +71,18 @@ export const SkillsSection = (): React.JSX.Element => {
     }
   };
 
+  /**
+   * 切换单个 Skill 的可用状态，实际持久化由设置页统一保存。
+   */
+  const toggleSkillEnabled = (skillId: string, enabled: boolean): void => {
+    updateSettings((current) => ({
+      ...current,
+      disabledSkillIds: enabled
+        ? current.disabledSkillIds.filter((id) => id !== skillId)
+        : Array.from(new Set([...current.disabledSkillIds, skillId]))
+    }));
+  };
+
   return (
     <div className="flex h-full flex-col gap-3">
       {/* 头部工具栏 */}
@@ -96,6 +118,7 @@ export const SkillsSection = (): React.JSX.Element => {
           ) : (
             skills.map((skill) => {
               const isSelected = selectedSkill?.id === skill.id;
+              const isDisabled = settings.disabledSkillIds.includes(skill.id);
               return (
                 <button
                   key={skill.id}
@@ -104,7 +127,7 @@ export const SkillsSection = (): React.JSX.Element => {
                   className={`flex flex-col gap-1 rounded-[6px] px-3 py-2 text-left transition-colors ${
                     isSelected
                       ? "bg-white text-black"
-                      : "hover:bg-white/5 text-white/85"
+                      : isDisabled ? "text-white/35 hover:bg-white/5" : "hover:bg-white/5 text-white/85"
                   }`}
                 >
                   <span className="block text-xs font-semibold truncate w-full">
@@ -117,6 +140,7 @@ export const SkillsSection = (): React.JSX.Element => {
                   >
                     {skill.description || "暂无描述"}
                   </span>
+                  {isDisabled && <span className="text-[10px] text-amber-200/70">已禁用</span>}
                 </button>
               );
             })
@@ -128,7 +152,18 @@ export const SkillsSection = (): React.JSX.Element => {
           {selectedSkill ? (
             <div className="flex flex-col gap-3 flex-1">
               <div>
-                <h3 className="text-sm font-bold text-white">{selectedSkill.name}</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold text-white">{selectedSkill.name}</h3>
+                  <label className="flex items-center gap-2 text-xs text-white/60" htmlFor={`skill-enabled-${selectedSkill.id}`}>
+                    启用
+                    <Switch
+                      id={`skill-enabled-${selectedSkill.id}`}
+                      aria-label={`启用技能 ${selectedSkill.name}`}
+                      checked={!settings.disabledSkillIds.includes(selectedSkill.id)}
+                      onChange={(enabled) => toggleSkillEnabled(selectedSkill.id, enabled)}
+                    />
+                  </label>
+                </div>
                 <p className="mt-1 text-xs text-white/50">{selectedSkill.description}</p>
               </div>
 

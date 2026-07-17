@@ -15,7 +15,7 @@ import type { ModelProvider } from "@/agent/types";
 import type { AiToolStep } from "@/db/schema";
 import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService";
 import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry";
-import { loadSkills, getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
+import { getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
 import { createSkillTool } from "@/agent/tools/skillTool";
 import {
   type AiChatStartPayload,
@@ -245,8 +245,8 @@ export const startAiChat = async (
             loadedSkills.push(...skillsForAgent);
           }
         } else {
-          // 无 agent 选择时，加载所有 skill（全局可用）
-          loadedSkills.push(...(await loadSkills()));
+          // 无 agent 选择时按默认 common agent 筛选，避免专属 Skill 泄漏到 curator 对话。
+          loadedSkills.push(...(await getAvailableSkillsForAgent("common")));
         }
         // 去重
         loadedUniqueSkills = Array.from(

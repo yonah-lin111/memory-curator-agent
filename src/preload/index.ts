@@ -360,6 +360,8 @@ type AiSettingsConfig = {
   providers: Record<string, AiSettingsProvider>
   // 是否显示 Agent 思考内容。
   showAgentThinking: boolean
+  // 已禁用的 Skill 标识列表。
+  disabledSkillIds: string[]
   // Agent 非密钥行为配置。
   agent: AiAgentOption
 }

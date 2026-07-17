@@ -50,6 +50,7 @@ const createSettings = (): AiSettingsConfig => ({
   },
   enabledProviders: ['gemini'],
   showAgentThinking: false,
+  disabledSkillIds: [],
   providers: {
     gemini: {
       id: 'gemini',

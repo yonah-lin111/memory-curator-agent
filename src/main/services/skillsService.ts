@@ -4,6 +4,15 @@ import { join } from 'node:path'
 import matter from 'gray-matter'
 import { getSkillsDir } from '@/paths'
 import { isAiChatAgentId } from '@/agent/core/agentHints'
+import { readAiSettingsConfig } from '@/services/configService'
+
+// 项目内置 Skill 根目录；生产包由 electron-builder 复制到 Resources。
+const getBuiltinSkillsDir = (): string => {
+  const packagedSkillsDir = process.resourcesPath
+    ? join(process.resourcesPath, 'resources', 'skills')
+    : ''
+  return existsSync(packagedSkillsDir) ? packagedSkillsDir : join(process.cwd(), 'resources', 'skills')
+}
 
 // AI Agent 技能数据模型。
 export interface AiAgentSkill {
@@ -53,50 +62,60 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
     return skillsCache
   }
 
-  const dir = await ensureSkillsDir()
-  const entries = await readdir(dir)
   const skills: AiAgentSkill[] = []
 
-  for (const entry of entries) {
-    const entryPath = join(dir, entry)
-    let stats
+  const loadSkillsFromDir = async (dir: string): Promise<void> => {
+    let entries: string[]
     try {
-      stats = await stat(entryPath)
+      entries = await readdir(dir)
     } catch {
-      continue
-    }
-    // 跳过非目录项
-    if (!stats.isDirectory()) {
-      continue
+      return
     }
 
-    const skillMdPath = join(entryPath, 'skill.md')
-    try {
-      const fileContent = await readFile(skillMdPath, 'utf8')
-      const { data, content } = matter(fileContent)
-      const frontmatter = data as SkillFrontmatter
+    for (const entry of entries) {
+      const entryPath = join(dir, entry)
+      let stats
+      try {
+        stats = await stat(entryPath)
+      } catch {
+        continue
+      }
+      // 跳过非目录项和已由内置目录加载的同名 Skill。
+      if (!stats.isDirectory() || skills.some((skill) => skill.id === entry)) {
+        continue
+      }
 
-      // 目录名作为 id，frontmatter 中的 name/id 优先作为显示名
-      const id = entry
-      const name = frontmatter.name || id
-      const description = frontmatter.description || ''
-      const supportedAgents = Array.isArray(frontmatter.supportedAgents)
-        ? frontmatter.supportedAgents.map(String)
-        : undefined
+      const skillMdPath = join(entryPath, 'skill.md')
+      try {
+        const fileContent = await readFile(skillMdPath, 'utf8')
+        const { data, content } = matter(fileContent)
+        const frontmatter = data as SkillFrontmatter
 
-      skills.push({
-        id,
-        name,
-        description,
-        supportedAgents,
-        content: content.trim(),
-        location: skillMdPath
-      })
-    } catch (error) {
-      // 容错处理：不因为单个 Skill 文件语法错误崩溃。
-      console.error(`Failed to parse skill file ${skillMdPath}:`, error)
+        // 目录名作为 id，frontmatter 中的 name/id 优先作为显示名。
+        const id = entry
+        const name = frontmatter.name || id
+        const description = frontmatter.description || ''
+        const supportedAgents = Array.isArray(frontmatter.supportedAgents)
+          ? frontmatter.supportedAgents.map(String)
+          : undefined
+
+        skills.push({
+          id,
+          name,
+          description,
+          supportedAgents,
+          content: content.trim(),
+          location: skillMdPath
+        })
+      } catch (error) {
+        // 容错处理：不因为单个 Skill 文件语法错误崩溃。
+        console.error(`Failed to parse skill file ${skillMdPath}:`, error)
+      }
     }
   }
+
+  await loadSkillsFromDir(getBuiltinSkillsDir())
+  await loadSkillsFromDir(await ensureSkillsDir())
 
   // 按名称字母排序，确保下拉列表的一致性。
   skillsCache = skills.sort((a, b) => a.name.localeCompare(b.name))
@@ -115,7 +134,11 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
  */
 export const getAvailableSkillsForAgent = async (agentId: string): Promise<AiAgentSkill[]> => {
   const allSkills = await loadSkills()
+  const disabledSkillIds = new Set(readAiSettingsConfig().disabledSkillIds)
   return allSkills.filter((skill) => {
+    if (disabledSkillIds.has(skill.id)) {
+      return false
+    }
     // 未指定或空 → 全局可用
     if (!skill.supportedAgents || skill.supportedAgents.length === 0) {
       return true

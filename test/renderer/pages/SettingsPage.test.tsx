@@ -31,6 +31,7 @@ const createSettings = (): AiSettingsConfig => ({
   },
   enabledProviders: ['gemini'],
   showAgentThinking: false,
+  disabledSkillIds: [],
   providers: {
     gemini: {
       id: 'gemini',
@@ -84,6 +85,20 @@ describe('SettingsPage', () => {
           get: vi.fn().mockResolvedValue(createSettings()),
           save: vi.fn().mockImplementation(async (payload: AiSettingsConfig) => payload)
         }
+      },
+      skills: {
+        list: vi.fn().mockResolvedValue([
+          {
+            id: 'grill-me',
+            name: 'grill-me',
+            description: '方案盘问',
+            supportedAgents: ['prompt-design'],
+            content: 'Skill content',
+            location: '/app/resources/skills/grill-me/skill.md'
+          }
+        ]),
+        getAvailableForAgent: vi.fn(),
+        clearCache: vi.fn()
       }
     } as unknown as Window['api']
   })
@@ -139,6 +154,22 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(window.api.config?.ai.save).toHaveBeenCalledWith(
         expect.objectContaining({ showAgentThinking: true })
+      )
+    })
+  })
+
+  it('禁用 Skill 后保存禁用列表', async () => {
+    const user = userEvent.setup()
+    renderSettingsPage()
+
+    await screen.findByText('/Users/yonah/.mc/config.json')
+    await user.click(screen.getByRole('button', { name: 'Agent 技能' }))
+    await user.click(await screen.findByRole('switch', { name: '启用技能 grill-me' }))
+    await user.click(screen.getByRole('button', { name: '保存设置' }))
+
+    await waitFor(() => {
+      expect(window.api.config?.ai.save).toHaveBeenCalledWith(
+        expect.objectContaining({ disabledSkillIds: ['grill-me'] })
       )
     })
   })

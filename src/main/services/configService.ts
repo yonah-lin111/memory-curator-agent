@@ -58,6 +58,8 @@ export type AiSettingsConfig = {
   providers: Record<string, AiSettingsProvider>
   // 是否显示 Agent 思考内容。
   showAgentThinking: boolean
+  // 已禁用的 Skill 标识列表。
+  disabledSkillIds: string[]
   // Agent 非密钥行为配置。
   agent: AgentConfig
 }
@@ -100,6 +102,8 @@ type RawAiConfig = {
   providers?: Record<string, RawProviderConfig>
   // 是否显示 Agent 思考内容。
   showAgentThinking?: boolean
+  // 已禁用的 Skill 标识列表。
+  disabled_skill_ids?: string[]
   // Agent 非密钥行为配置。
   agent?: Partial<AgentConfig>
 }
@@ -145,6 +149,7 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
     }
   },
   showAgentThinking: false,
+  disabledSkillIds: [],
   agent: DEFAULT_AGENT_CONFIG
 }
 
@@ -338,6 +343,9 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
     showAgentThinking: rawAi.showAgentThinking === true,
+    disabledSkillIds: Array.from(
+      new Set((rawAi.disabled_skill_ids ?? []).filter((skillId): skillId is string => typeof skillId === 'string'))
+    ),
     agent: normalizeAgent(rawAi.agent)
   }
 }
@@ -438,6 +446,10 @@ const validateSettings = (settings: AiSettingsConfig): void => {
     throw new Error('showAgentThinking 必须为布尔值')
   }
 
+  if (settings.disabledSkillIds.some((skillId) => !skillId.trim())) {
+    throw new Error('disabledSkillIds 不能包含空值')
+  }
+
   if (!isPositiveInteger(settings.agent.context.toolOutputMaxChars)) {
     throw new Error('toolOutputMaxChars 必须为正整数')
   }
@@ -486,6 +498,7 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   weeklySummary: settings.weeklySummary,
   enabled_providers: settings.enabledProviders,
   showAgentThinking: settings.showAgentThinking,
+  disabled_skill_ids: settings.disabledSkillIds,
   providers: Object.fromEntries(
     Object.values(settings.providers).map((provider) => [
       provider.id,

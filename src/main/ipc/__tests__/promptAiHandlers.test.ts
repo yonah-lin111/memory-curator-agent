@@ -12,7 +12,10 @@ describe("Prompt Design system prompt requirements", () => {
       "prompt_editor_replace",
       "prompt_editor_replace_lines",
       "prompt_editor_delete_lines",
-      "without repeating the document content"
+      "without repeating the document content",
+      "getAvailableSkillsForAgent(\"prompt-design\")",
+      "createSkillTool(availableSkills)",
+      "### Available Skills"
     ];
     
     // Instead of mocking the whole file, we can read the source file directly for a lightweight verification
