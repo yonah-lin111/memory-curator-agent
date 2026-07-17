@@ -548,6 +548,12 @@ export type AiToolStep = {
   observation: string;
   // 工具返回的结构化数据。
   data?: unknown;
+  // MCP 工具来源，普通工具不设置。
+  mcp?: {
+    serverId: string;
+    serverName: string;
+    toolName: string;
+  };
 };
 
 // AI 对话会话类型。

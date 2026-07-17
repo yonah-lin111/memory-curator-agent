@@ -80,7 +80,7 @@ const mapBackendToolStep = (raw: CuratorToolStep): CuratorToolStep => {
   return {
     ...raw,
     title: raw.title || `Tool result: ${TOOL_DISPLAY_NAMES[toolName] || toolName}`,
-    tool: TOOL_DISPLAY_NAMES[toolName] || toolName,
+    tool: raw.mcp?.toolName || TOOL_DISPLAY_NAMES[toolName] || toolName,
     observation: raw.observation ?? "",
   };
 };

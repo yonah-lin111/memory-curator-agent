@@ -9,6 +9,7 @@ import {
 } from "@/components/ai-shared/AskRequestPanel";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
 import {
   ExecutionGroupBlock,
   groupExecutionParts,
@@ -147,25 +148,7 @@ export const PromptAiChatMessageBubble = ({
     const visibleMessageParts = showAgentThinking
       ? messageParts
       : messageParts.filter((part) => part.kind !== "reasoning");
-    const sequenceParts: ExecutionSequencePart[] = visibleMessageParts.map((part) => {
-      if (part.kind === "text") return { id: part.id, kind: "text" };
-      if (part.kind === "reasoning") return { id: part.id, kind: "reasoning" };
-      const step = findToolStepByPart(message.toolSteps, part);
-      return {
-        id: part.id,
-        kind: "tool",
-        isInteractionTool: Boolean(
-          step && (
-            isCuratorAskRequest(step.data) ||
-            isCuratorToolConfirmationRequest(step.data) ||
-            isCuratorAskAnswer(step.data) ||
-            isCuratorToolConfirmationAnswer(step.data)
-          ),
-        ),
-      };
-    });
-
-    return groupExecutionParts(sequenceParts).flatMap((item) => {
+    const renderExecutionParts = (sequenceParts: ExecutionSequencePart[]): React.JSX.Element[] => groupExecutionParts(sequenceParts).flatMap((item) => {
       if (item.kind === "text") {
         const part = visibleMessageParts.find((candidate) => candidate.id === item.id);
         return part?.kind === "text" && part.content
@@ -200,6 +183,54 @@ export const PromptAiChatMessageBubble = ({
         />,
       ];
     });
+
+    const renderedParts: React.JSX.Element[] = [];
+    let executionParts: ExecutionSequencePart[] = [];
+    const flushExecutionParts = (): void => {
+      if (executionParts.length > 0) {
+        renderedParts.push(...renderExecutionParts(executionParts));
+        executionParts = [];
+      }
+    };
+
+    for (let index = 0; index < visibleMessageParts.length; index += 1) {
+      const part = visibleMessageParts[index];
+      const step = findToolStepByPart(message.toolSteps, part);
+
+      if (step?.mcp) {
+        flushExecutionParts();
+        const mcpSteps = [step];
+        let nextIndex = index + 1;
+        while (nextIndex < visibleMessageParts.length) {
+          const nextStep = findToolStepByPart(message.toolSteps, visibleMessageParts[nextIndex]);
+          if (!nextStep?.mcp || nextStep.mcp.serverId !== step.mcp.serverId) break;
+          mcpSteps.push(nextStep);
+          nextIndex += 1;
+        }
+        const nextPart = visibleMessageParts[nextIndex];
+        renderedParts.push(<PromptAiMcpCallBlock key={`${message.id}-${part.id}`} steps={mcpSteps} connectsToNextExecution={nextPart?.kind === "tool" || nextPart?.kind === "reasoning"} />);
+        index = nextIndex - 1;
+        continue;
+      }
+
+      if (part.kind === "text") executionParts.push({ id: part.id, kind: "text" });
+      else if (part.kind === "reasoning") executionParts.push({ id: part.id, kind: "reasoning" });
+      else {
+        executionParts.push({
+          id: part.id,
+          kind: "tool",
+          isInteractionTool: Boolean(step && (
+            isCuratorAskRequest(step.data) ||
+            isCuratorToolConfirmationRequest(step.data) ||
+            isCuratorAskAnswer(step.data) ||
+            isCuratorToolConfirmationAnswer(step.data)
+          )),
+        });
+      }
+    }
+
+    flushExecutionParts();
+    return renderedParts;
   };
 
   return (

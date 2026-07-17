@@ -5,6 +5,7 @@ import type {
   AgentConfig,
   CompactionConfig,
   ModelConfig,
+  McpServerConfig,
   NormalizedAiConfig,
   NormalizedProviderConfig,
   ProviderTransportType,
@@ -54,6 +55,20 @@ type RawAgentConfig = {
   }
 }
 
+// 原始 MCP 服务配置形状。
+type RawMcpServerConfig = {
+  // 服务类型，仅支持本地标准输入输出服务。
+  type?: 'local'
+  // 是否启用服务。
+  enabled?: boolean
+  // 服务展示名称。
+  name?: string
+  // 单次请求超时时间，单位毫秒。
+  timeout?: number
+  // 启动命令和参数。
+  command?: string[]
+}
+
 // 原始模型选择配置形状。
 type RawModelSelectionConfig = {
   // 模型所属 provider 标识。
@@ -86,8 +101,42 @@ type RawConfigFile = {
     // Agent 行为配置。
     agent?: RawAgentConfig
   }
+  // MCP 服务配置。
+  mcp?: Record<string, RawMcpServerConfig>
   // 兼容顶层 provider 配置。
   [key: string]: unknown
+}
+
+/**
+ * 归一化已启用的本地 MCP 服务。
+ */
+const normalizeMcpServers = (mcp: Record<string, RawMcpServerConfig> | undefined): McpServerConfig[] => {
+  if (!mcp) {
+    return []
+  }
+
+  return Object.entries(mcp).flatMap(([id, server]) => {
+    if (server.enabled === false) {
+      return []
+    }
+
+    if (server.type && server.type !== 'local') {
+      throw new Error(`MCP server ${id} must use the local transport`)
+    }
+
+    const [command, ...args] = server.command ?? []
+    if (!command || !server.command?.every((part) => typeof part === 'string' && part.trim())) {
+      throw new Error(`MCP server ${id} must provide a non-empty command array`)
+    }
+
+    return [{
+      id,
+      name: server.name?.trim() || id,
+      command,
+      args,
+      timeout: normalizePositiveInteger(server.timeout, 30_000)
+    }]
+  })
 }
 
 /**
@@ -294,6 +343,7 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     enabledProviders: providerIds,
     providers,
     agent: normalizeAgentConfig(rawConfig.ai?.agent),
+    mcp: normalizeMcpServers(rawConfig.mcp),
     compaction: rawConfig.ai?.compaction
       ? normalizeCompactionConfig(rawConfig.ai.compaction, providers, defaultProvider, defaultModel)
       : undefined

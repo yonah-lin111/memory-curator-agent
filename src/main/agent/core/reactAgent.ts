@@ -423,7 +423,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
         type: 'tool_started',
         id: toolCall.id,
         name: toolCall.name,
-        input: toolInput
+        input: toolInput,
+        mcp: tool.mcp
       }
 
       executedAnyNonDoomLoop = true
@@ -476,7 +477,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           id: toolCall.id,
           name: toolCall.name,
           observation: result.observation,
-          data: result.data
+          data: result.data,
+          mcp: tool.mcp
         }
 
         pendingToolConfirmationCompletion =
@@ -535,7 +537,8 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
           id: toolCall.id,
           name: toolCall.name,
           input: toolInput,
-          error: errorMessage
+          error: errorMessage,
+          mcp: tool.mcp
         }
 
         if (isAskCancelled) {

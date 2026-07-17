@@ -13,6 +13,7 @@ import { createPromptEditorTools } from "@/agent/tools/promptEditorTools";
 import type { PromptEditorDocument } from "@/agent/tools/promptEditorTools";
 import { createAskTool } from "@/agent/tools/askTool";
 import { createSkillTool } from "@/agent/tools/skillTool";
+import { createPromptDesignMcpTools } from "@/agent/tools/mcpToolService";
 import { cancelAiChatAsk, pendingToolConfirmations, waitForAskAnswer, waitForToolConfirmation } from "@/ipc/ai/state";
 import { submitAskAnswer, type AskAnswerPayload } from "@/ipc/ai/ask";
 import type { AiToolStep, AiChatMessagePart } from "@/db/schema";
@@ -363,11 +364,13 @@ async function runPromptAiChat(
   });
 
   const availableSkills = await getAvailableSkillsForAgent("prompt-design");
+  const mcp = await createPromptDesignMcpTools(providerConfig.mcp, projectRoot || null);
   const tools = [
     createAskTool(),
     ...createPromptFileTools(projectRoot || ""),
     ...createPromptEditorTools({ readDocument, applyDocument }),
     ...(availableSkills.length > 0 ? [createSkillTool(availableSkills)] : []),
+    ...mcp.tools,
   ];
 
   // 工具步骤和片段累积（流式写入结束后持久化）
@@ -519,6 +522,26 @@ The Prompt Design editor document is not included in this request. Call \`prompt
           model: modelId,
           currentDocumentTruncated,
         });
+        for (const failure of mcp.failures) {
+          const step: AiToolStep = {
+            id: createCompactUuid(),
+            title: `MCP connection failed: ${failure.server.name}`,
+            tool: "MCP",
+            status: "failed",
+            observation: failure.error,
+            mcp: {
+              serverId: failure.server.id,
+              serverName: failure.server.name,
+              toolName: "connection"
+            }
+          };
+          assistantToolSteps.push(step);
+          assistantParts.push({ id: createCompactUuid(), kind: "tool", stepId: step.id });
+          sender.send("prompt-ai:chat:event", { type: "tool_started", runId, sessionId: payload.sessionId, toolStep: step });
+        }
+        if (mcp.failures.length > 0) {
+          db.upsertToolSteps(assistantMessageId, assistantToolSteps, assistantParts);
+        }
       } else if (event.type === "text_delta") {
         finalContent += event.delta;
         appendStreamPart(assistantParts, "text", event.delta);
@@ -546,6 +569,7 @@ The Prompt Design editor document is not included in this request. Call \`prompt
           status: "running",
           input: event.input,
           observation: "Starting...",
+          mcp: event.mcp,
         };
         assistantToolSteps.push(step);
         assistantParts.push({
@@ -578,6 +602,7 @@ The Prompt Design editor document is not included in this request. Call \`prompt
             tool: displayName,
             input: event.input,
             observation: "Tool is running.",
+            mcp: event.mcp,
           },
         });
       } else if (event.type === "tool_finished") {
@@ -695,6 +720,7 @@ The Prompt Design editor document is not included in this request. Call \`prompt
       timestamp: new Date().toISOString(),
     });
   } finally {
+    await mcp.close();
     activePromptAiRuns.delete(runId);
   }
 }

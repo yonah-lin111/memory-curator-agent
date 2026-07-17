@@ -110,6 +110,54 @@ describe('providerConfig', () => {
     rmSync(directory, { recursive: true, force: true })
   })
 
+  it('读取已启用的本地 MCP 服务配置', () => {
+    const directory = join(tmpdir(), `mc-config-mcp-${Date.now()}`)
+    const configPath = join(directory, 'config.json')
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        ai: {
+          defaultProvider: 'bailian',
+          defaultModel: 'MiniMax-M2.5',
+          providers: {
+            bailian: {
+              name: 'Bailian',
+              options: { apiKey: 'test-key', baseURL: 'https://example.com/v1' },
+              models: { 'MiniMax-M2.5': { name: 'MiniMax-M2.5' } }
+            }
+          }
+        },
+        mcp: {
+          'codebase-memory-mcp': {
+            type: 'local',
+            enabled: true,
+            name: 'Codebase Memory',
+            timeout: 15_000,
+            command: ['/usr/local/bin/codebase-memory-mcp']
+          },
+          codegraph: {
+            type: 'local',
+            enabled: false,
+            command: ['codegraph', 'serve', '--mcp']
+          }
+        }
+      })
+    )
+
+    expect(loadProviderConfig(configPath).mcp).toEqual([
+      {
+        id: 'codebase-memory-mcp',
+        name: 'Codebase Memory',
+        command: '/usr/local/bin/codebase-memory-mcp',
+        args: [],
+        timeout: 15_000
+      }
+    ])
+
+    rmSync(directory, { recursive: true, force: true })
+  })
+
   it('兼容旧版 defaultProvider 与 defaultModel 字符串配置', () => {
     const directory = join(tmpdir(), `mc-config-legacy-default-${Date.now()}`)
     const configPath = join(directory, 'config.json')

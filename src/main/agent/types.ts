@@ -51,6 +51,30 @@ export type AgentConfig = {
   context: AgentContextPolicyConfig
 }
 
+// 本地 MCP 服务配置。
+export type McpServerConfig = {
+  // 服务唯一标识。
+  id: string
+  // 服务展示名称。
+  name: string
+  // 服务启动命令。
+  command: string
+  // 服务启动参数。
+  args: string[]
+  // 单次请求超时时间，单位毫秒。
+  timeout: number
+}
+
+// MCP 工具来源元数据。
+export type McpToolMetadata = {
+  // MCP 服务标识。
+  serverId: string
+  // MCP 服务展示名称。
+  serverName: string
+  // 服务原始工具名称。
+  toolName: string
+}
+
 // 标题总结模型配置。
 export type TitleSummaryConfig = {
   // 标题总结使用的 provider 标识。
@@ -105,6 +129,8 @@ export type NormalizedAiConfig = {
   providers: Record<string, NormalizedProviderConfig>
   // Agent 行为配置。
   agent: AgentConfig
+  // 已启用的本地 MCP 服务。
+  mcp: McpServerConfig[]
   // Compaction 模型配置，未配置时 fallback 到当前对话模型。
   compaction?: CompactionConfig
 }
@@ -184,6 +210,8 @@ export type AgentTool = {
   prompt?: AgentToolPrompt
   // 需要执行前内部确认时使用的配置。
   confirmation?: ToolConfirmationConfig
+  // MCP 工具来源，普通内置工具不设置。
+  mcp?: McpToolMetadata
   // 工具参数 Schema。
   parameters: JsonSchema
   /**
@@ -322,6 +350,8 @@ export type AgentStreamEvent =
       name: string
       // 工具输入。
       input: unknown
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
@@ -334,6 +364,8 @@ export type AgentStreamEvent =
       observation: string
       // 工具结构化数据。
       data: unknown
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
@@ -346,6 +378,8 @@ export type AgentStreamEvent =
       input: unknown
       // 工具错误信息。
       error: string
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
@@ -597,5 +631,3 @@ export type BillSummaryToolResult = AgentToolResult & {
   // 账单条目列表。
   items: BillQueryToolItem[]
 }
-
-
