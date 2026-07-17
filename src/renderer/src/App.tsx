@@ -145,6 +145,36 @@ const AppContent = (): React.JSX.Element => {
     useState<SidebarPageId>(getPageFromPathname);
 
   const { projectName, itemName } = usePromptDesignStore();
+  const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
+  const [mcpStatus, setMcpStatus] = useState<{
+    total: number;
+    connected: number;
+    failed: number;
+    names: string[];
+    failedNames: string[];
+  } | null>(null);
+
+  // 每次打开提示词设计页或切换设计项时重新检查 MCP 连接状态。
+  useEffect(() => {
+    if (activeOverlay !== "prompts") {
+      setMcpStatus(null);
+      return;
+    }
+
+    let isMounted = true;
+    setMcpStatus(null);
+    void window.api?.promptAi?.checkMcpStatus({ designItemId: activeDesignId ?? "" })
+      .then((status) => {
+        if (isMounted) setMcpStatus(status);
+      })
+      .catch(() => {
+        if (isMounted) setMcpStatus({ total: 0, connected: 0, failed: 1, names: [], failedNames: [] });
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeDesignId, activeOverlay]);
 
   // 首次加载全局显示设置，确保未访问设置页时也使用持久化配置。
   useEffect(() => {
@@ -334,7 +364,7 @@ const AppContent = (): React.JSX.Element => {
               />
             }
             promptsContent={
-              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} isPromptAiSidebarOpen={isPromptAiSidebarOpen} onClosePromptAiSidebar={() => {
+              <PromptDesignWorkspace isOpen={activeOverlay === "prompts"} mcpStatus={mcpStatus ?? undefined} isPromptAiSidebarOpen={isPromptAiSidebarOpen} onClosePromptAiSidebar={() => {
                 setIsPromptAiSidebarOpen(false);
               }} />
             }

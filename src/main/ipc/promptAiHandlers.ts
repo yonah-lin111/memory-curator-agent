@@ -127,6 +127,28 @@ export type PromptAiChatStartPayload = {
   references?: PromptDesignReference[];
 };
 
+// MCP 工具列表的渲染端传输结构。
+type PromptAiMcpServerPayload = {
+  id: string;
+  name: string;
+  tools: Array<{ name: string; description: string }>;
+};
+
+// MCP 命令写入后返回的本地消息快照。
+type PromptAiMcpCommandResult = {
+  command: { id: string; content: string; time: string };
+  result: { id: string; servers: PromptAiMcpServerPayload[]; time: string };
+};
+
+// MCP 连接状态传输结构。
+type PromptAiMcpStatusResult = {
+  total: number;
+  connected: number;
+  failed: number;
+  names: string[];
+  failedNames: string[];
+};
+
 let persistenceService: PromptAiPersistenceService | null = null;
 
 function getPersistence(): PromptAiPersistenceService {
@@ -149,6 +171,87 @@ const activePromptAiRuns = new Map<
 >();
 
 export function registerPromptAiHandlers(): void {
+  ipcMain.handle("prompt-ai:mcp:status", async (_, payload: { designItemId: string }): Promise<PromptAiMcpStatusResult> => {
+    const providerConfig = loadProviderConfig();
+    const total = providerConfig.mcp.length;
+    const names = providerConfig.mcp.map((server) => server.name);
+    if (total === 0) {
+      return { total: 0, connected: 0, failed: 0, names, failedNames: [] };
+    }
+
+    const projectRoot = promptDesignService.getProjectPathByDesignItemId(payload.designItemId);
+    if (!projectRoot) {
+      return { total, connected: 0, failed: total, names, failedNames: names };
+    }
+
+    const { failures, close } = await createPromptDesignMcpTools(providerConfig.mcp, projectRoot);
+    try {
+      const failedIds = new Set(failures.map((failure) => failure.server.id));
+      const connected = providerConfig.mcp.filter((server) => !failedIds.has(server.id)).length;
+      const failedNames = providerConfig.mcp
+        .filter((server) => failedIds.has(server.id))
+        .map((server) => server.name);
+      return { total, connected, failed: total - connected, names, failedNames };
+    } finally {
+      await close();
+    }
+  });
+
+  ipcMain.handle("prompt-ai:mcp:list", async (_, payload: { sessionId: string; designItemId: string }): Promise<PromptAiMcpCommandResult> => {
+    const providerConfig = loadProviderConfig();
+    const projectRoot = promptDesignService.getProjectPathByDesignItemId(payload.designItemId);
+    const { tools, close } = await createPromptDesignMcpTools(providerConfig.mcp, projectRoot);
+
+    try {
+      const servers: PromptAiMcpServerPayload[] = providerConfig.mcp.flatMap((server) => {
+        const serverTools = tools.flatMap((tool) =>
+          tool.mcp?.serverId === server.id
+            ? [{ name: tool.mcp.toolName, description: tool.description }]
+            : [],
+        );
+
+        return serverTools.length > 0
+          ? [{ id: server.id, name: server.name, tools: serverTools }]
+          : [];
+      });
+
+      const persistence = getPersistence();
+      const existingSession = persistence.getSession(payload.sessionId);
+      const timestamp = new Date().toISOString();
+      persistence.ensureSession({
+        id: payload.sessionId,
+        designItemId: payload.designItemId,
+        title: existingSession?.title ?? "New chat",
+        status: existingSession?.status ?? "idle",
+        timestamp,
+      });
+      const commandId = createCompactUuid();
+      const resultId = createCompactUuid();
+      persistence.appendMessage({
+        id: commandId,
+        sessionId: payload.sessionId,
+        role: "system_command",
+        content: "/mcp",
+        timestamp,
+      });
+      persistence.appendMessage({
+        id: resultId,
+        sessionId: payload.sessionId,
+        role: "system",
+        content: "",
+        parts: [{ id: createCompactUuid(), kind: "mcp-overview", servers }],
+        timestamp,
+      });
+
+      return {
+        command: { id: commandId, content: "/mcp", time: timestamp },
+        result: { id: resultId, servers, time: timestamp },
+      };
+    } finally {
+      await close();
+    }
+  });
+
   ipcMain.handle(
     "prompt-ai:chat:start",
     async (event: IpcMainInvokeEvent, payload: PromptAiChatStartPayload) => {

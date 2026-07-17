@@ -43,6 +43,7 @@ export type AppendPromptAiMessageInput = {
   content: string;
   model?: string;
   references?: AiChatMessagePart[];
+  parts?: AiChatMessagePart[];
   timestamp: string;
 };
 
@@ -151,7 +152,11 @@ export class PromptAiPersistenceService {
       input.sessionId,
       input.role,
       input.content,
-      input.references?.length ? JSON.stringify(input.references) : "[]",
+      input.parts?.length
+        ? JSON.stringify(input.parts)
+        : input.references?.length
+          ? JSON.stringify(input.references)
+          : "[]",
       "[]",
       input.timestamp,
       input.model ?? null,
@@ -192,7 +197,7 @@ export class PromptAiPersistenceService {
     if (!sessionRow) return null;
 
     const messagesStmt = this.db.prepare(`
-      SELECT * FROM prompt_ai_chat_messages WHERE session_id = ? ORDER BY created_at ASC
+      SELECT * FROM prompt_ai_chat_messages WHERE session_id = ? ORDER BY created_at ASC, rowid ASC
     `);
     const messageRows = messagesStmt.all(sessionId) as PromptAiChatMessageRow[];
 
@@ -274,7 +279,9 @@ export class PromptAiPersistenceService {
       `);
       const messages = messagesStmt.all(sessionId) as { row_order: number; external_id: string; role: string; created_at: string }[];
 
-      const turnStartIndex = [...messages].reverse().findIndex((m) => m.role === 'user');
+      const turnStartIndex = [...messages].reverse().findIndex(
+        (message) => message.role === "user" || message.role === "system_command",
+      );
       if (turnStartIndex < 0) return;
 
       const resolvedTurnStartIndex = messages.length - 1 - turnStartIndex;

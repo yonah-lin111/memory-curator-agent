@@ -20,6 +20,13 @@ type PromptAiSidebarProps = {
   isTransitionEnabled?: boolean;
   onClose?: () => void;
   controller: ReturnType<typeof usePromptAiChatController>;
+  mcpStatus?: {
+    total: number;
+    connected: number;
+    failed: number;
+    names: string[];
+    failedNames: string[];
+  };
 };
 
 export const PromptAiSidebar = ({
@@ -27,6 +34,7 @@ export const PromptAiSidebar = ({
   isTransitionEnabled = true,
   onClose,
   controller,
+  mcpStatus,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
@@ -440,6 +448,7 @@ export const PromptAiSidebar = ({
               <LoadingOverlay isLoading={isSwitching} text="Loading session..." />
               <PromptAiChatWorkspace
                 ref={workspaceRef}
+                mcpStatus={mcpStatus}
                 controller={{
                   ...controller,
                   handleSessionChange: handleSessionSwitch,

@@ -9,7 +9,7 @@ import { usePromptAiChatController } from "@/features/prompt-design/components/u
 // 底部占位计算所需的 DOM 参数。
 type BottomSpacerParams = {
   container: HTMLDivElement;
-  userMessage: HTMLDivElement;
+  triggerMessage: HTMLDivElement;
   currentSpacerHeight: number;
   topOffset: number;
 };
@@ -19,12 +19,12 @@ type BottomSpacerParams = {
  */
 const calculateBottomSpacerHeight = ({
   container,
-  userMessage,
+  triggerMessage,
   currentSpacerHeight,
   topOffset,
 }: BottomSpacerParams): number => {
   const viewportHeight = container.clientHeight;
-  const targetScrollTop = Math.max(userMessage.offsetTop - topOffset, 0);
+  const targetScrollTop = Math.max(triggerMessage.offsetTop - topOffset, 0);
 
   return Math.round(
     Math.max(
@@ -45,15 +45,22 @@ export const PromptAiChatWorkspace = forwardRef<
   PromptAiChatWorkspaceHandle,
   {
     controller: ReturnType<typeof usePromptAiChatController>;
+    mcpStatus?: {
+      total: number;
+      connected: number;
+      failed: number;
+      names: string[];
+      failedNames: string[];
+    };
   }
->(({ controller }, ref) => {
+>(({ controller, mcpStatus }, ref) => {
   const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } =
     controller;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const latestUserMessageRef = useRef<HTMLDivElement>(null);
-  const prevScrolledUserMessageIdRef = useRef<string | null>(null);
+  const latestTriggerMessageRef = useRef<HTMLDivElement>(null);
+  const prevScrolledTriggerMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
   const [injectedText, setInjectedText] = useState<string | undefined>(undefined);
   const [messageContextMenu, setMessageContextMenu] = useState<PromptAiMessageContextMenuRequest | null>(null);
@@ -61,10 +68,10 @@ export const PromptAiChatWorkspace = forwardRef<
   const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toast = useToast();
 
-  const latestUserMessageId = useMemo(() => {
+  const latestTriggerMessageId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
-      if (message.role === "user") {
+      if (message.role === "user" || message.role === "system_command") {
         return message.id;
       }
     }
@@ -132,24 +139,24 @@ export const PromptAiChatWorkspace = forwardRef<
     };
   }, [handleCancelEsc, isGenerating]);
 
-  const getUserMessageTargetTop = (userMessage: HTMLDivElement): number => {
-    return Math.max(userMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
+  const getTriggerMessageTargetTop = (triggerMessage: HTMLDivElement): number => {
+    return Math.max(triggerMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
   };
 
   const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void) => {
     const container = scrollContainerRef.current;
-    const userMessage = latestUserMessageRef.current;
-    if (!container || !userMessage) {
+    const triggerMessage = latestTriggerMessageRef.current;
+    if (!container || !triggerMessage) {
       onComplete?.();
       return;
     }
 
-    const targetTop = getUserMessageTargetTop(userMessage);
+    const targetTop = getTriggerMessageTargetTop(triggerMessage);
     
     // 如果需要底部留白才能滚到该位置，先计算
     const requiredSpacer = calculateBottomSpacerHeight({
       container,
-      userMessage,
+      triggerMessage,
       currentSpacerHeight: bottomSpacerHeight,
       topOffset: LATEST_ASSISTANT_TOP_OFFSET,
     });
@@ -185,20 +192,20 @@ export const PromptAiChatWorkspace = forwardRef<
   }));
 
   useLayoutEffect(() => {
-    if (!latestUserMessageId) {
+    if (!latestTriggerMessageId) {
       setBottomSpacerHeight(0);
-      prevScrolledUserMessageIdRef.current = null;
+      prevScrolledTriggerMessageIdRef.current = null;
       return;
     }
 
     const container = scrollContainerRef.current;
-    const userMessage = latestUserMessageRef.current;
+    const triggerMessage = latestTriggerMessageRef.current;
 
-    if (container && userMessage) {
+    if (container && triggerMessage) {
       setBottomSpacerHeight((prev) => {
         const requiredSpacer = calculateBottomSpacerHeight({
           container,
-          userMessage,
+          triggerMessage,
           currentSpacerHeight: prev,
           topOffset: LATEST_ASSISTANT_TOP_OFFSET,
         });
@@ -206,18 +213,18 @@ export const PromptAiChatWorkspace = forwardRef<
         return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
       });
     }
-  }, [latestUserMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useEffect(() => {
     const handleResize = () => {
       const container = scrollContainerRef.current;
-      const userMessage = latestUserMessageRef.current;
+      const triggerMessage = latestTriggerMessageRef.current;
 
-      if (container && userMessage && latestUserMessageId) {
+      if (container && triggerMessage && latestTriggerMessageId) {
         setBottomSpacerHeight((prev) =>
           calculateBottomSpacerHeight({
             container,
-            userMessage,
+            triggerMessage,
             currentSpacerHeight: prev,
             topOffset: LATEST_ASSISTANT_TOP_OFFSET,
           }),
@@ -229,16 +236,16 @@ export const PromptAiChatWorkspace = forwardRef<
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [latestUserMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    const userMessage = latestUserMessageRef.current;
+    const triggerMessage = latestTriggerMessageRef.current;
 
     if (
-      !latestUserMessageId ||
+      !latestTriggerMessageId ||
       !container ||
-      !userMessage ||
+      !triggerMessage ||
       typeof window.ResizeObserver === "undefined"
     ) {
       return undefined;
@@ -256,7 +263,7 @@ export const PromptAiChatWorkspace = forwardRef<
         setBottomSpacerHeight((prev) => {
           const requiredSpacer = calculateBottomSpacerHeight({
             container,
-            userMessage,
+            triggerMessage,
             currentSpacerHeight: prev,
             topOffset: LATEST_ASSISTANT_TOP_OFFSET,
           });
@@ -286,19 +293,19 @@ export const PromptAiChatWorkspace = forwardRef<
         cancelAnimationFrame(pendingRafId);
       }
     };
-  }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useLayoutEffect(() => {
     if (
-      latestUserMessageId &&
-      latestUserMessageRef.current &&
+      latestTriggerMessageId &&
+      latestTriggerMessageRef.current &&
       scrollContainerRef.current
     ) {
-      if (prevScrolledUserMessageIdRef.current === latestUserMessageId) {
+      if (prevScrolledTriggerMessageIdRef.current === latestTriggerMessageId) {
         return;
       }
 
-      const targetTop = getUserMessageTargetTop(latestUserMessageRef.current);
+      const targetTop = getTriggerMessageTargetTop(latestTriggerMessageRef.current);
       const animationFrame = requestAnimationFrame(() => {
         scrollContainerRef.current?.scrollTo({
           top: targetTop,
@@ -306,7 +313,7 @@ export const PromptAiChatWorkspace = forwardRef<
         });
       });
 
-      prevScrolledUserMessageIdRef.current = latestUserMessageId;
+      prevScrolledTriggerMessageIdRef.current = latestTriggerMessageId;
 
       return () => {
         cancelAnimationFrame(animationFrame);
@@ -314,7 +321,7 @@ export const PromptAiChatWorkspace = forwardRef<
     }
 
     return undefined;
-  }, [latestUserMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
 
   useEffect(() => {
     if (!messageContextMenu) return undefined;
@@ -405,8 +412,9 @@ export const PromptAiChatWorkspace = forwardRef<
                 </div>
               ) : (
                 messages.map((message) => {
-                  const isLatestUser =
-                    message.role === "user" && message.id === latestUserMessageId;
+                  const isLatestTriggerMessage =
+                    (message.role === "user" || message.role === "system_command") &&
+                    message.id === latestTriggerMessageId;
                   const isGeneratingMessage =
                     isGenerating &&
                     message.role !== "user" &&
@@ -415,7 +423,7 @@ export const PromptAiChatWorkspace = forwardRef<
                   return (
                     <div
                       key={message.id}
-                      ref={isLatestUser ? latestUserMessageRef : null}
+                      ref={isLatestTriggerMessage ? latestTriggerMessageRef : null}
                     >
                       <PromptAiChatMessageBubble
                         message={message as any}
@@ -449,11 +457,13 @@ export const PromptAiChatWorkspace = forwardRef<
 
           {/* 输入区域 */}
           <PromptAiChatInput
+            mcpStatus={mcpStatus}
             onSend={handleSend}
             disabled={isGenerating}
             onNewChat={controller.handleNewChat}
             onUndo={controller.handleUndo}
             onSessionChange={controller.handleSessionChange}
+            onMcp={controller.showMcpTools}
             chatSessions={controller.sessions}
             injectedText={injectedText}
             onInjectedTextConsumed={() => setInjectedText(undefined)}

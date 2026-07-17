@@ -19,6 +19,13 @@ const MIN_SWITCH_LOADING_MS = 500;
 
 interface PromptDesignWorkspaceProps {
   isOpen: boolean;
+  mcpStatus?: {
+    total: number;
+    connected: number;
+    failed: number;
+    names: string[];
+    failedNames: string[];
+  };
   isPromptAiSidebarOpen?: boolean;
   onClosePromptAiSidebar?: () => void;
 }
@@ -172,6 +179,7 @@ const applyChangeBlock = (
  */
 export const PromptDesignWorkspace = ({
   isOpen,
+  mcpStatus,
   isPromptAiSidebarOpen = true,
   onClosePromptAiSidebar,
 }: PromptDesignWorkspaceProps): React.JSX.Element | null => {
@@ -642,6 +650,7 @@ export const PromptDesignWorkspace = ({
       {contextMenu && <PromptDesignContextMenu x={contextMenu.x} y={contextMenu.y} isEditMode={contextMenu.mode !== "preview"} canPaste={contextMenu.mode !== "preview"} canQuote={contextMenu.mode !== "preview" && contextMenu.view.state.selection.main.from !== contextMenu.view.state.selection.main.to} onCopy={() => void copySelection(contextMenu.view)} onPaste={() => { void navigator.clipboard.readText().then((text) => contextMenu.view.dispatch(contextMenu.view.state.replaceSelection(text))).catch(() => toast.error("剪贴板操作失败")); setContextMenu(null); }} onCut={() => void copySelection(contextMenu.view, true)} onQuote={handleQuote} onClose={() => setContextMenu(null)} />}
       <PromptAiSidebar
         isOpen={isPromptAiSidebarOpen}
+        mcpStatus={mcpStatus}
         onClose={onClosePromptAiSidebar}
         controller={controller}
       />

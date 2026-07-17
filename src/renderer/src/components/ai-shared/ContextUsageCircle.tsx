@@ -43,7 +43,7 @@ export const ContextUsageCircle = ({
       : circleCircumference * (1 - contextUsageValue / 100);
 
   return (
-    <Tooltip content={contextTooltipLabel} placement="top">
+    <Tooltip content={contextTooltipLabel} placement="bottom">
       <div
         aria-label={contextTooltipLabel}
         className="flex h-6 w-6 shrink-0 items-center justify-center text-white/50 cursor-help"

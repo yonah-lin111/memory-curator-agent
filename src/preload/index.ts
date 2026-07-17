@@ -480,6 +480,12 @@ type AiToolStep = {
 // AI 消息片段类型。
 type AiChatMessagePart =
   | {
+      // MCP 服务及工具快照。
+      id: string
+      kind: 'mcp-overview'
+      servers: PromptAiMcpServer[]
+    }
+  | {
       // 片段唯一标识。
       id: string
       // 片段类型。
@@ -543,6 +549,28 @@ type PromptAiChatStartPayload = {
   model?: string
   currentDocumentName?: string
   references?: { id: string; startLine: number; endLine: number; content: string }[]
+}
+
+// MCP 工具列表传输结构。
+type PromptAiMcpServer = {
+  id: string
+  name: string
+  tools: Array<{ name: string; description: string }>
+}
+
+// MCP 命令写入后的本地消息快照。
+type PromptAiMcpCommandResult = {
+  command: { id: string; content: string; time: string }
+  result: { id: string; servers: PromptAiMcpServer[]; time: string }
+}
+
+// MCP 连接状态传输结构。
+type PromptAiMcpStatusResult = {
+  total: number
+  connected: number
+  failed: number
+  names: string[]
+  failedNames: string[]
 }
 
 type PromptEditorReadRequest = { runId: string; designItemId: string }
@@ -975,6 +1003,10 @@ const api = {
       ipcRenderer.invoke('prompt-design:files:search', { directory, query })
   },
   promptAi: {
+    checkMcpStatus: (payload: { designItemId: string }): Promise<PromptAiMcpStatusResult> =>
+      ipcRenderer.invoke('prompt-ai:mcp:status', payload),
+    listMcpTools: (payload: { sessionId: string; designItemId: string }): Promise<PromptAiMcpCommandResult> =>
+      ipcRenderer.invoke('prompt-ai:mcp:list', payload),
     listSessions: (designItemId: string): Promise<PromptAiChatSession[]> =>
       ipcRenderer.invoke('prompt-ai:sessions:list', designItemId),
     createSession: (designItemId: string): Promise<PromptAiChatSession | null> =>

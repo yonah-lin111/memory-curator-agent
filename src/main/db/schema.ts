@@ -232,7 +232,7 @@ export type PersonalProfileItem = PersonalProfileUpdateInput & {
 };
 
 // AI 对话消息角色。
-export type AiChatMessageRole = "user" | "assistant";
+export type AiChatMessageRole = "user" | "assistant" | "system" | "system_command";
 
 // AI Agent run 状态。
 export type AiAgentRunStatus = "running" | "completed" | "failed";
@@ -278,6 +278,16 @@ export type AiChatMessagePart =
       startLine: number;
       endLine: number;
       content: string;
+    }
+  | {
+      // MCP 服务及工具快照。
+      id: string;
+      kind: "mcp-overview";
+      servers: Array<{
+        id: string;
+        name: string;
+        tools: Array<{ name: string; description: string }>;
+      }>;
     }
   | {
       // 图片片段。

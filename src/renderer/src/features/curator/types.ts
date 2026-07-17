@@ -246,10 +246,20 @@ export type CuratorEvent =
     };
 
 // 消息发送者类型，描述消息归属。
-export type CuratorMessageRole = "user" | "assistant";
+export type CuratorMessageRole = "user" | "assistant" | "system" | "system_command";
 
 // AI 消息片段类型，用于保留文本与工具调用的真实交错顺序。
 export type CuratorMessagePart =
+  | {
+      // MCP 服务及工具快照。
+      id: string;
+      kind: "mcp-overview";
+      servers: Array<{
+        id: string;
+        name: string;
+        tools: Array<{ name: string; description: string }>;
+      }>;
+    }
   | {
       // 片段唯一标识。
       id: string;

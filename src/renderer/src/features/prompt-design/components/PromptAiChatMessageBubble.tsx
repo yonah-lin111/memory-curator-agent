@@ -10,6 +10,7 @@ import {
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
 import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
+import { PromptAiMcpOverview } from "@/features/prompt-design/components/PromptAiMcpOverview";
 import {
   ExecutionGroupBlock,
   groupExecutionParts,
@@ -121,6 +122,8 @@ export const PromptAiChatMessageBubble = ({
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
   const isUser = message.role === "user";
+  const isSystem = message.role === "system";
+  const isSystemCommand = message.role === "system_command";
   const [isEditing, setIsEditing] = React.useState(false);
   const [editText, setEditText] = React.useState(message.content);
   const messageParts = resolveMessageParts(message);
@@ -237,10 +240,12 @@ export const PromptAiChatMessageBubble = ({
     return renderedParts;
   };
 
+  const isNonTimedSystemMessage = isSystem || isSystemCommand;
+
   return (
     <div className={`flex gap-3 w-full scroll-mt-4 group/msg-bubble-container ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`} onContextMenu={handleOpenContextMenu}>
-      <div className={`flex flex-col gap-1 min-w-0 ${isUser ? "items-end" : "flex-1"}`}>
-        <div className={`rounded-[6px] px-1 py-1 text-sm leading-relaxed break-words w-fit max-w-full ${isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "text-white/80"} ${message.cancelled ? "line-through opacity-50" : ""}`}>
+      <div className={`flex flex-col gap-1 min-w-0 ${isNonTimedSystemMessage ? "w-full" : isUser ? "items-end" : "flex-1"}`}>
+        <div className={`rounded-[6px] px-1 py-1 text-sm leading-relaxed break-words max-w-full ${isNonTimedSystemMessage ? "w-full" : "w-fit"} ${isUser ? "bg-transparent text-white font-medium whitespace-pre-wrap" : "text-white/80"} ${message.cancelled ? "line-through opacity-50" : ""}`}>
           {isUser ? (
             isEditing ? (
               <div className="flex w-[400px] max-w-full flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2.5">
@@ -251,11 +256,20 @@ export const PromptAiChatMessageBubble = ({
                 </div>
               </div>
             ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"><div className="mb-1">{message.content}</div>{message.references?.length ? <div className="flex flex-wrap gap-1">{message.references.map((reference) => <Tooltip key={reference.id} content={<pre className="max-h-60 max-w-[360px] overflow-auto whitespace-pre-wrap text-xs">{reference.content}</pre>}><Tag size="small">第{reference.startLine}–{reference.endLine}行</Tag></Tooltip>)}</div> : null}</div>
+          ) : isSystemCommand ? (
+            <div className="flex w-full items-center gap-3 py-1 text-white/45">
+              <span className="h-px flex-1 bg-white/10" />
+              <span className="shrink-0 text-xs font-bold italic">{message.content}</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
           ) : (
-            <div className="flex flex-col gap-1.5 max-w-full">{renderAssistantParts()}</div>
+            <div className="flex flex-col gap-1.5 max-w-full">
+              {isSystem ? <div className="px-1 text-xs font-mono uppercase text-white/40">System Message · MCP Tools</div> : null}
+              {message.mcpServers ? <PromptAiMcpOverview servers={message.mcpServers} /> : renderAssistantParts()}
+            </div>
           )}
         </div>
-        <div className={`text-xs font-mono mt-0.5 px-1 text-white/30 flex items-center gap-1.5 min-h-[1.25rem] ${isUser ? "justify-end text-right" : "justify-start text-left"}`}>
+        {!isNonTimedSystemMessage ? <div className={`text-xs font-mono mt-0.5 px-1 text-white/30 flex items-center gap-1.5 min-h-[1.25rem] ${isUser ? "justify-end text-right" : "justify-start text-left"}`}>
           <span>{isGenerating ? (
             <span className="relative flex h-1.5 w-1.5 my-1 ml-0.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/40 opacity-75" />
@@ -263,7 +277,7 @@ export const PromptAiChatMessageBubble = ({
             </span>
           ) : message.time.includes("T") ? new Date(message.time).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : message.time.slice(11, 16) || message.time}</span>
           {!isUser && message.model && <Tag size="default" color="default" bgClass="border-white/5 bg-white/[0.03] text-white/30 select-none" className="scale-90 origin-left">{message.model}</Tag>}
-        </div>
+        </div> : null}
       </div>
     </div>
   );

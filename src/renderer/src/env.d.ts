@@ -583,6 +583,12 @@ type AiToolStep = {
 // AI 消息片段类型。
 type CuratorMessagePart =
   | {
+      // MCP 服务及工具快照。
+      id: string
+      kind: 'mcp-overview'
+      servers: PromptAiMcpServer[]
+    }
+  | {
       // 片段唯一标识。
       id: string
       // 片段类型。
@@ -644,7 +650,7 @@ type CuratorMessage = {
   // 消息唯一标识。
   id: string
   // 消息发送者。
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system' | 'system_command'
   // 消息正文。
   content: string
   // 消息显示时间。
@@ -1050,6 +1056,10 @@ type AppAPI = {
     searchFiles: (directory: string, query: string) => Promise<string[]>
   }
   promptAi?: {
+    // 检查当前提示词设计页的 MCP 服务连接状态。
+    checkMcpStatus: (payload: { designItemId: string }) => Promise<PromptAiMcpStatusResult>
+    // 读取当前可用 MCP 服务及其工具。
+    listMcpTools: (payload: { sessionId: string; designItemId: string }) => Promise<PromptAiMcpCommandResult>
     listSessions: (designItemId: string) => Promise<PromptAiChatSession[]>
     getSession: (sessionId: string) => Promise<PromptAiChatSession | null>
     updateSessionTitle: (sessionId: string, title: string) => Promise<void>
@@ -1085,6 +1095,26 @@ type AppAPI = {
     }>>
     clearCache: () => Promise<void>
   }
+}
+
+type PromptAiMcpServer = {
+  id: string
+  name: string
+  tools: Array<{ name: string; description: string }>
+}
+
+type PromptAiMcpCommandResult = {
+  command: { id: string; content: string; time: string }
+  result: { id: string; servers: PromptAiMcpServer[]; time: string }
+}
+
+// MCP 连接状态传输结构。
+type PromptAiMcpStatusResult = {
+  total: number
+  connected: number
+  failed: number
+  names: string[]
+  failedNames: string[]
 }
 
 type PromptAiChatStartPayload = {

@@ -1,8 +1,23 @@
-import { useState, useRef, useLayoutEffect, useCallback, useMemo, useEffect } from "react";
-import { Paperclip, RotateCcw, SendHorizontal, FileText, Bot, MessageSquare } from "lucide-react";
+import {
+  useState,
+  useRef,
+  useLayoutEffect,
+  useCallback,
+  useMemo,
+  useEffect,
+} from "react";
+import {
+  Paperclip,
+  RotateCcw,
+  SendHorizontal,
+  FileText,
+  Bot,
+  MessageSquare,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import {
@@ -17,10 +32,31 @@ import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
 import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
 import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory";
 import type { CuratorSession } from "@/features/curator/types";
-import type { PromptAiSendOptions, PromptAiUndoResult } from "@/features/prompt-design/components/usePromptAiChatController";
+import type { CuratorInputCommand } from "@/lib/ai-shared/types";
+import type {
+  PromptAiSendOptions,
+  PromptAiUndoResult,
+} from "@/features/prompt-design/components/usePromptAiChatController";
 import { Tag } from "@/components/ui/Tag";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
+
+// Prompt AI 专用 MCP 命令。
+const MCP_COMMAND = {
+  id: "mcp",
+  name: "/mcp",
+  aliases: [],
+  description: "List available MCP servers and tools",
+  addToContext: false,
+} as const;
+
+/**
+ * 判断当前斜杠输入是否匹配 Prompt AI 专用 MCP 命令。
+ */
+const isMcpCommandMatch = (value: string): boolean => {
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue.startsWith("/") && "/mcp".startsWith(normalizedValue);
+};
 
 export const PromptAiChatInput = ({
   onSend,
@@ -28,37 +64,64 @@ export const PromptAiChatInput = ({
   onNewChat,
   onUndo,
   onSessionChange,
+  onMcp,
   chatSessions,
   injectedText,
   onInjectedTextConsumed,
   references = [],
   onReferenceRemove,
+  mcpStatus,
 }: {
-  onSend?: (text: string, selectedModel?: string, options?: PromptAiSendOptions) => void;
+  onSend?: (
+    text: string,
+    selectedModel?: string,
+    options?: PromptAiSendOptions,
+  ) => void;
   disabled?: boolean;
   onNewChat?: () => void;
   onUndo?: () => Promise<PromptAiUndoResult>;
   onSessionChange?: (sessionId: string) => void;
+  onMcp?: () => Promise<void>;
   chatSessions?: CuratorSession[];
   injectedText?: string;
   onInjectedTextConsumed?: () => void;
-  references?: { id: string; startLine: number; endLine: number; content: string }[];
+  references?: {
+    id: string;
+    startLine: number;
+    endLine: number;
+    content: string;
+  }[];
   onReferenceRemove?: (id: string) => void;
+  mcpStatus?: {
+    total: number;
+    connected: number;
+    failed: number;
+    names: string[];
+    failedNames: string[];
+  };
 }) => {
   const toast = useToast();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { selectedModel, hasModelOptions, selectOptions, handleModelChange, modelOptions } =
-    useActiveCuratorModels();
+  const {
+    selectedModel,
+    hasModelOptions,
+    selectOptions,
+    handleModelChange,
+    modelOptions,
+  } = useActiveCuratorModels();
 
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
-  const matchedCommands = useMemo(() => {
-    return getMatchedCommands(inputText).filter((cmd) => 
-      ["clear", "undo", "model", "session"].includes(cmd.id)
+  const matchedCommands = useMemo<
+    Array<CuratorInputCommand | typeof MCP_COMMAND>
+  >(() => {
+    const commands = getMatchedCommands(inputText).filter((cmd) =>
+      ["clear", "undo", "model", "session"].includes(cmd.id),
     );
+    return isMcpCommandMatch(inputText) ? [...commands, MCP_COMMAND] : commands;
   }, [inputText]);
 
   const {
@@ -74,7 +137,8 @@ export const PromptAiChatInput = ({
     modelOptions,
     textareaRef,
     () => {},
-    (selection) => handleModelChange(`${selection.provider}::${selection.model}`)
+    (selection) =>
+      handleModelChange(`${selection.provider}::${selection.model}`),
   );
 
   const {
@@ -90,7 +154,7 @@ export const PromptAiChatInput = ({
     chatSessions || [],
     textareaRef,
     () => {},
-    (sessionId) => onSessionChange?.(sessionId)
+    (sessionId) => onSessionChange?.(sessionId),
   );
 
   const adjustTextareaHeight = useCallback(() => {
@@ -124,7 +188,12 @@ export const PromptAiChatInput = ({
     canMovePromptHistory,
     resetHistoryCursor,
     updateDraftInput,
-  } = useCuratorHistory("prompt-design", setInputText, textareaRef, adjustTextareaHeight);
+  } = useCuratorHistory(
+    "prompt-design",
+    setInputText,
+    textareaRef,
+    adjustTextareaHeight,
+  );
 
   useEffect(() => {
     if (injectedText === undefined) {
@@ -156,90 +225,116 @@ export const PromptAiChatInput = ({
     adjustTextareaHeight,
   );
 
-  const executeCommand = useCallback(async (commandId: string) => {
-    setIsCommandPanelOpen(false);
-    if (commandId === "clear") {
-      if (disabled) {
-        toast.warning("AI 正在生成，请稍后再试");
-        return;
-      }
-      setInputText("");
-      onNewChat?.();
-      toast.success("已新建对话");
-    } else if (commandId === "undo") {
-      if (disabled) {
-        toast.warning("AI 正在生成，不能撤销消息");
-        return;
-      }
-      if (onUndo) {
-        const res = await onUndo();
-        if (res === false) {
-          toast.error("撤销对话失败");
-        } else if (res.status === "empty") {
-          toast.warning("没有可撤销的对话");
-        } else if (res.status === "deleted_empty") {
-          setInputText(res.prompt ?? "");
-          resetHistoryCursor();
-          toast.success("已撤销上一轮并删除空对话");
-        } else if (res.status === "undone") {
-          setInputText(res.prompt ?? "");
-          resetHistoryCursor();
-          toast.success("已撤销上一轮对话");
-        }
-      }
-    } else if (commandId === "model") {
-      setInputText("/model ");
-      toast.info("请选择要切换的 AI 模型");
-    } else if (commandId === "session") {
-      setInputText("/session ");
-      toast.info("请选择要切换的对话");
-    }
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [onNewChat, onUndo, disabled, resetHistoryCursor, toast]);
-
-  const moveActiveCommand = useCallback((direction: 1 | -1): void => {
-    setActiveCommandIndex((currentIndex) => {
-      if (matchedCommands.length === 0) {
-        return 0;
-      }
-      return (
-        (currentIndex + direction + matchedCommands.length) %
-        matchedCommands.length
-      );
-    });
-  }, [matchedCommands.length]);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const nextValue = e.target.value;
-    setInputText(nextValue);
-    updateDraftInput(nextValue);
-    resetHistoryCursor();
-    
-    // Commands check
-    const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ");
-    const isNextSessionMode = nextValue === "/session" || nextValue.startsWith("/session ") || nextValue === "/resume" || nextValue.startsWith("/resume ");
-    
-    if (isNextModelMode || isNextSessionMode) {
+  const executeCommand = useCallback(
+    async (commandId: string) => {
       setIsCommandPanelOpen(false);
-      closeFileMentionPanel();
-      return;
-    }
+      if (commandId === "clear") {
+        if (disabled) {
+          toast.warning("AI 正在生成，请稍后再试");
+          return;
+        }
+        setInputText("");
+        onNewChat?.();
+        toast.success("已新建对话");
+      } else if (commandId === "undo") {
+        if (disabled) {
+          toast.warning("AI 正在生成，不能撤销消息");
+          return;
+        }
+        if (onUndo) {
+          const res = await onUndo();
+          if (res === false) {
+            toast.error("撤销对话失败");
+          } else if (res.status === "empty") {
+            toast.warning("没有可撤销的对话");
+          } else if (res.status === "deleted_empty") {
+            setInputText(res.prompt ?? "");
+            resetHistoryCursor();
+            toast.success("已撤销上一轮并删除空对话");
+          } else if (res.status === "undone") {
+            setInputText(res.prompt ?? "");
+            resetHistoryCursor();
+            toast.success("已撤销上一轮对话");
+          }
+        }
+      } else if (commandId === "model") {
+        setInputText("/model ");
+        toast.info("请选择要切换的 AI 模型");
+      } else if (commandId === "session") {
+        setInputText("/session ");
+        toast.info("请选择要切换的对话");
+      } else if (commandId === "mcp") {
+        setInputText("");
+        await onMcp?.();
+      }
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    },
+    [onMcp, onNewChat, onUndo, disabled, resetHistoryCursor, toast],
+  );
 
-    const nextMatchedCommands = getMatchedCommands(nextValue).filter((cmd) => 
-      ["clear", "undo", "model", "session"].includes(cmd.id)
-    );
+  const moveActiveCommand = useCallback(
+    (direction: 1 | -1): void => {
+      setActiveCommandIndex((currentIndex) => {
+        if (matchedCommands.length === 0) {
+          return 0;
+        }
+        return (
+          (currentIndex + direction + matchedCommands.length) %
+          matchedCommands.length
+        );
+      });
+    },
+    [matchedCommands.length],
+  );
 
-    const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0;
-    setIsCommandPanelOpen(shouldOpenCommandPanel);
-    setActiveCommandIndex(0);
-    
-    if (shouldOpenCommandPanel) {
-      closeFileMentionPanel();
-      return;
-    }
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const nextValue = e.target.value;
+      setInputText(nextValue);
+      updateDraftInput(nextValue);
+      resetHistoryCursor();
 
-    syncFileMentionPanel(nextValue, e.target.selectionStart);
-  }, [closeFileMentionPanel, resetHistoryCursor, syncFileMentionPanel, updateDraftInput]);
+      // Commands check
+      const isNextModelMode =
+        nextValue === "/model" || nextValue.startsWith("/model ");
+      const isNextSessionMode =
+        nextValue === "/session" ||
+        nextValue.startsWith("/session ") ||
+        nextValue === "/resume" ||
+        nextValue.startsWith("/resume ");
+
+      if (isNextModelMode || isNextSessionMode) {
+        setIsCommandPanelOpen(false);
+        closeFileMentionPanel();
+        return;
+      }
+
+      const commands = getMatchedCommands(nextValue).filter((cmd) =>
+        ["clear", "undo", "model", "session"].includes(cmd.id),
+      );
+      const nextMatchedCommands = isMcpCommandMatch(nextValue)
+        ? [...commands, MCP_COMMAND]
+        : commands;
+
+      const shouldOpenCommandPanel =
+        isCommandInput(nextValue) && nextMatchedCommands.length > 0;
+      setIsCommandPanelOpen(shouldOpenCommandPanel);
+      setActiveCommandIndex(0);
+
+      if (shouldOpenCommandPanel) {
+        closeFileMentionPanel();
+        return;
+      }
+
+      syncFileMentionPanel(nextValue, e.target.selectionStart);
+    },
+    [
+      closeFileMentionPanel,
+      resetHistoryCursor,
+      syncFileMentionPanel,
+      updateDraftInput,
+    ],
+  );
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -252,11 +347,16 @@ export const PromptAiChatInput = ({
     textareaRef.current?.focus();
   };
 
-  const handleSend = () => {
+  const handleSend = async (): Promise<void> => {
     if (disabled) {
       toast.warning("请等待 AI 输出完成");
       return;
     }
+    if (inputText.trim() === "/mcp") {
+      await executeCommand("mcp");
+      return;
+    }
+
     if (inputText.trim() && onSend) {
       // 发送前清理无用的前缀
       const cleanedText = inputText
@@ -293,7 +393,9 @@ export const PromptAiChatInput = ({
           renderItem={(cmd) => (
             <div className="flex items-center gap-3 w-full">
               <span className="text-sm font-medium shrink-0">{cmd.name}</span>
-              <span className="text-xs text-white/50 truncate flex-1 text-left">{cmd.description}</span>
+              <span className="text-xs text-white/50 truncate flex-1 text-left">
+                {cmd.description}
+              </span>
             </div>
           )}
           idPrefix="prompt-slash-command"
@@ -309,8 +411,12 @@ export const PromptAiChatInput = ({
           renderItem={(model) => (
             <div className="flex items-center gap-2 w-full">
               <Bot className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate text-sm font-medium">{model.modelName}</span>
-              <span className="text-xs text-white/30 ml-auto shrink-0">{model.providerName}</span>
+              <span className="truncate text-sm font-medium">
+                {model.modelName}
+              </span>
+              <span className="text-xs text-white/30 ml-auto shrink-0">
+                {model.providerName}
+              </span>
             </div>
           )}
           idPrefix="prompt-model-select"
@@ -326,7 +432,9 @@ export const PromptAiChatInput = ({
           renderItem={(session) => (
             <div className="flex items-center gap-2 w-full">
               <MessageSquare className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate text-sm font-medium flex-1 text-left">{session.title}</span>
+              <span className="truncate text-sm font-medium flex-1 text-left">
+                {session.title}
+              </span>
             </div>
           )}
           idPrefix="prompt-session-select"
@@ -341,15 +449,21 @@ export const PromptAiChatInput = ({
           onItemSelect={(item) => selectFileMention(item.path)}
           renderItem={(item) => {
             const lastSlash = item.path.lastIndexOf("/");
-            const baseName = lastSlash !== -1 ? item.path.substring(lastSlash + 1) : item.path;
-            const dirPath = lastSlash !== -1 ? item.path.substring(0, lastSlash) : "";
+            const baseName =
+              lastSlash !== -1 ? item.path.substring(lastSlash + 1) : item.path;
+            const dirPath =
+              lastSlash !== -1 ? item.path.substring(0, lastSlash) : "";
             return (
               <div className="flex items-center gap-2 overflow-hidden w-full py-0.5">
                 <FileText className="h-4 w-4 shrink-0 opacity-50" />
                 <div className="flex flex-col min-w-0 flex-1 text-left">
-                  <span className="truncate text-sm text-white font-medium">{baseName}</span>
+                  <span className="truncate text-sm text-white font-medium">
+                    {baseName}
+                  </span>
                   {dirPath && (
-                    <span className="truncate text-xs text-white/35">{dirPath}</span>
+                    <span className="truncate text-xs text-white/35">
+                      {dirPath}
+                    </span>
                   )}
                 </div>
               </div>
@@ -359,7 +473,19 @@ export const PromptAiChatInput = ({
         />
 
         {/* 引用标签 */}
-        {references.length > 0 && <div className="flex flex-wrap gap-1 px-1">{references.map((reference) => <Tag key={reference.id} size="small" onClose={() => onReferenceRemove?.(reference.id)}>第{reference.startLine}–{reference.endLine}行</Tag>)}</div>}
+        {references.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-1">
+            {references.map((reference) => (
+              <Tag
+                key={reference.id}
+                size="small"
+                onClose={() => onReferenceRemove?.(reference.id)}
+              >
+                第{reference.startLine}–{reference.endLine}行
+              </Tag>
+            ))}
+          </div>
+        )}
 
         {/* 输入框 */}
         <textarea
@@ -375,39 +501,78 @@ export const PromptAiChatInput = ({
           }}
           onKeyDown={(e) => {
             if (isSessionMode && matchedSessions.length > 0) {
-              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveSession(1); return; }
-              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveSession(-1); return; }
-              if (e.key === "Escape") { e.preventDefault(); setInputText(""); return; }
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                moveActiveSession(1);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                moveActiveSession(-1);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setInputText("");
+                return;
+              }
               if (e.key === "Enter") {
                 if (e.nativeEvent.isComposing) return;
                 e.preventDefault();
-                const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0];
+                const activeSession =
+                  matchedSessions[activeSessionIndex] ?? matchedSessions[0];
                 if (activeSession) selectSession(activeSession);
                 return;
               }
             }
-        
+
             if (isModelMode && matchedModels.length > 0) {
-              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveModel(1); return; }
-              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveModel(-1); return; }
-              if (e.key === "Escape") { e.preventDefault(); setInputText(""); return; }
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                moveActiveModel(1);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                moveActiveModel(-1);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setInputText("");
+                return;
+              }
               if (e.key === "Enter") {
                 if (e.nativeEvent.isComposing) return;
                 e.preventDefault();
-                const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0];
+                const activeModel =
+                  matchedModels[activeModelIndex] ?? matchedModels[0];
                 if (activeModel) selectModel(activeModel);
                 return;
               }
             }
-        
+
             if (isCommandPanelOpen) {
-              if (e.key === "ArrowDown") { e.preventDefault(); moveActiveCommand(1); return; }
-              if (e.key === "ArrowUp") { e.preventDefault(); moveActiveCommand(-1); return; }
-              if (e.key === "Escape") { e.preventDefault(); setIsCommandPanelOpen(false); return; }
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                moveActiveCommand(1);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                moveActiveCommand(-1);
+                return;
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setIsCommandPanelOpen(false);
+                return;
+              }
               if (e.key === "Enter") {
                 if (e.nativeEvent.isComposing) return;
                 e.preventDefault();
-                const cmd = matchedCommands[activeCommandIndex] ?? matchedCommands[0];
+                const cmd =
+                  matchedCommands[activeCommandIndex] ?? matchedCommands[0];
                 if (cmd) executeCommand(cmd.id);
                 return;
               }
@@ -447,7 +612,7 @@ export const PromptAiChatInput = ({
                 return;
               }
               e.preventDefault();
-              handleSend();
+              void handleSend();
             }
           }}
           onCompositionStart={handleCompositionStart}
@@ -477,6 +642,55 @@ export const PromptAiChatInput = ({
             >
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
+
+            {mcpStatus && (
+              <Tooltip
+                placement="top"
+                contentClassName="!p-2 !whitespace-normal"
+                content={
+                  <div className="flex min-w-[150px] flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-white/50">
+                      MCP servers
+                    </span>
+                    {mcpStatus.names.length > 0 ? (
+                      mcpStatus.names.map((name, index) => (
+                        <span
+                          key={`${name}-${index}`}
+                          className={`truncate text-xs ${
+                            mcpStatus.failedNames.includes(name)
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                          }`}
+                        >
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-white/40">
+                        No MCP servers configured
+                      </span>
+                    )}
+                  </div>
+                }
+              >
+                <div
+                  className="flex items-center gap-1.5 px-1 text-xs"
+                  aria-label="MCP connection status"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      mcpStatus.total > 0 &&
+                      mcpStatus.connected === mcpStatus.total
+                        ? "bg-emerald-400"
+                        : mcpStatus.failed > 0 && mcpStatus.connected > 0
+                          ? "bg-amber-400"
+                          : "bg-red-400"
+                    }`}
+                  />
+                </div>
+              </Tooltip>
+            )}
           </div>
 
           {/* 右侧发送与清空按钮 */}

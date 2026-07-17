@@ -11,9 +11,16 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 
 export type PromptAiPart = Extract<CuratorMessagePart, { kind: "text" | "reasoning" | "tool" }>;
 
+// MCP 工具展示数据。
+export type PromptAiMcpServer = {
+  id: string;
+  name: string;
+  tools: Array<{ name: string; description: string }>;
+};
+
 type PromptAiPersistedMessage = {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system" | "system_command";
   content: string;
   createdAt: string;
   model?: string;
@@ -43,7 +50,7 @@ type PromptAiEvent =
 
 export type PromptAiMessage = {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system" | "system_command";
   content: string;
   time: string;
   model?: string;
@@ -53,6 +60,7 @@ export type PromptAiMessage = {
   toolSteps?: CuratorToolStep[];
   cancelled?: boolean;
   references?: PromptDesignReference[];
+  mcpServers?: PromptAiMcpServer[];
 };
 
 export type PromptAiSendOptions = { references?: PromptDesignReference[] };
@@ -121,6 +129,12 @@ const resolveMessageParts = (message: PromptAiPersistedMessage): PromptAiPart[] 
 
   return nextParts;
 };
+
+/**
+ * 从持久化片段中提取 MCP 工具快照。
+ */
+const resolveMcpServers = (parts: CuratorMessagePart[] | undefined): PromptAiMcpServer[] | undefined =>
+  parts?.find((part) => part.kind === "mcp-overview")?.servers;
 
 /**
  * 避免思考块在切换到后续片段时因状态未闭合而持续处于加载态。
@@ -237,6 +251,7 @@ export const usePromptAiChatController = (
         .join(""),
       toolSteps: message.toolSteps?.map(mapBackendToolStep),
       references: message.references,
+      mcpServers: resolveMcpServers(message.parts),
     })));
   }, []);
 
@@ -400,7 +415,10 @@ export const usePromptAiChatController = (
   const handleUndo = useCallback(async (): Promise<PromptAiUndoResult> => {
     if (isGenerating) return false;
     if (!messages.length) return { status: "empty" };
-    const prompt = [...messages].reverse().find((message) => message.role === "user")?.content;
+    const latestTurnStart = [...messages].reverse().find(
+      (message) => message.role === "user" || message.role === "system_command",
+    );
+    const prompt = latestTurnStart?.role === "user" ? latestTurnStart.content : undefined;
 
     try {
       const updated = await window.api.promptAi!.undoLastTurn(sessionId);
@@ -475,6 +493,63 @@ export const usePromptAiChatController = (
     }
   }, [designItemId, fetchSessions, isGenerating, sessionId, sessionInitialized]);
 
+  /**
+   * 读取可连接的 MCP 服务并以本地助手消息展示，避免命令进入模型上下文。
+   */
+  const showMcpTools = useCallback(async (): Promise<void> => {
+    if (isGenerating) return;
+
+    const time = new Date().toISOString();
+    try {
+      const mcpCommand = await window.api.promptAi!.listMcpTools({ sessionId, designItemId });
+      if (mcpCommand) {
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: mcpCommand.command.id,
+            role: "system_command",
+            content: mcpCommand.command.content,
+            time: mcpCommand.command.time,
+          },
+          {
+            id: mcpCommand.result.id,
+            role: "system",
+            content: "",
+            time: mcpCommand.result.time,
+            mcpServers: mcpCommand.result.servers,
+          },
+        ]);
+        return;
+      }
+
+      // 兼容主进程热更新前仍返回空值的 IPC 处理器。
+      const session = await window.api.promptAi!.getSession(sessionId);
+      const command = session?.messages.at(-2);
+      const result = session?.messages.at(-1);
+      const mcpServers = resolveMcpServers(result?.parts);
+      if (command?.role !== "system_command" || result?.role !== "system" || !mcpServers) {
+        throw new Error("MCP command result is unavailable");
+      }
+      setMessages((previous) => [
+        ...previous,
+        { id: command.id, role: "system_command", content: command.content, time: command.createdAt },
+        { id: result.id, role: "system", content: result.content, time: result.createdAt, mcpServers },
+      ]);
+    } catch (error) {
+      console.error("Failed to load MCP tools:", error);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `mcp-${Date.now()}`,
+          role: "system",
+          content: "Unable to load MCP tools.",
+          time,
+          parts: [{ id: `mcp-${Date.now()}-error`, kind: "text", content: "Unable to load MCP tools." }],
+        },
+      ]);
+    }
+  }, [designItemId, isGenerating, sessionId]);
+
   const handleSubmitAskAnswer = useCallback(async (payload: CuratorAskAnswerSubmitPayload) => {
     await window.api.promptAi!.submitAskAnswer(payload);
   }, []);
@@ -512,7 +587,7 @@ export const usePromptAiChatController = (
     activeSessionId: sessionId, messages, sessions, sendMessage, handleNewChat,
     handleSessionChange, handleRenameChat, handleDeleteChat, handleUndo,
     handleDeleteTurn, handleRegenerateLatestAnswer, handleEditAndResendUserMessage,
-    handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, isGenerating,
+    handleCancelGeneration, handleSubmitAskAnswer, handleSubmitToolConfirmationAnswer, showMcpTools, isGenerating,
     references, setReferences,
     contextDocument: isGenerating ? requestContext.currentDocument : currentDocument,
     contextReferences: isGenerating ? requestContext.references : references,
