@@ -206,9 +206,8 @@ export const ExecutionGroupBlock = ({
 
   const toolCount = group.parts.filter((part) => part.kind === "tool").length;
   const reasoningCount = group.parts.filter((part) => part.kind === "reasoning").length;
-  const summary = reasoningCount > 0
-    ? `${toolCount} tool calls, ${reasoningCount} thoughts`
-    : `${toolCount} tool calls`;
+  const toolSummary = `${toolCount} tool ${toolCount === 1 ? "call" : "calls"}`;
+  const reasoningSummary = `${reasoningCount} ${reasoningCount === 1 ? "thought" : "thoughts"}`;
 
   return (
     <div className="flex w-full gap-2.5 pl-1 my-1.5">
@@ -234,9 +233,9 @@ export const ExecutionGroupBlock = ({
           }}
           aria-expanded={isExpanded}
         >
-          <span>{summary}</span>
+          <span className="text-white/70">Execution details</span>
           <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`}
+            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`}
           />
         </button>
         <div
@@ -256,6 +255,25 @@ export const ExecutionGroupBlock = ({
           <div ref={innerRef} className="flex flex-col gap-1.5">
             {renderGroupedParts()}
           </div>
+        </div>
+        <div className="flex items-center gap-1 pl-1 text-xs leading-relaxed text-white/40">
+          <svg
+            className="h-3 w-3 shrink-0 stroke-current"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 1v5h7"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>
+            {toolSummary}
+            {reasoningCount > 0 ? `, ${reasoningSummary}` : ""}
+          </span>
         </div>
       </div>
     </div>
