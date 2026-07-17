@@ -666,13 +666,13 @@ export const CuratorToolCallBlock = ({
                       >
                         {isExpanded ? (
                           <span>
-                            收起余下{" "}
-                            {group.steps.length - DEFAULT_VISIBLE_COUNT} 项
+                            Hide{" "}
+                            {group.steps.length - DEFAULT_VISIBLE_COUNT} more
                           </span>
                         ) : (
                           <span>
-                            展开余下{" "}
-                            {group.steps.length - DEFAULT_VISIBLE_COUNT} 项...
+                            Show{" "}
+                            {group.steps.length - DEFAULT_VISIBLE_COUNT} more...
                           </span>
                         )}
                       </button>

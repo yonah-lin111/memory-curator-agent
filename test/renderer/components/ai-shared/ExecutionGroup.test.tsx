@@ -45,7 +45,7 @@ describe("ExecutionGroupBlock", () => {
       { id: "reasoning", kind: "reasoning" },
     ]);
 
-    expect(screen.getByText("1 tool calls, 1 thoughts")).toBeInTheDocument();
+    expect(screen.getByText("1 tool call, 1 thought")).toBeInTheDocument();
   });
 
   it("没有可见思考时不显示思考数量", () => {

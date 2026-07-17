@@ -50,6 +50,7 @@ export const PromptAiMcpCallBlock = ({
   connectsToNextExecution = false,
 }: PromptAiMcpCallBlockProps): React.JSX.Element | null => {
   const [expandedStepIds, setExpandedStepIds] = useState<Set<string>>(new Set());
+  const [isCallListExpanded, setIsCallListExpanded] = useState(false);
   const serverName = steps[0]?.mcp?.serverName;
 
   if (!serverName) {
@@ -64,6 +65,10 @@ export const PromptAiMcpCallBlock = ({
       return next;
     });
   };
+  const collapseThreshold = 2;
+  const hasMoreSteps = steps.length > collapseThreshold;
+  const visibleSteps = hasMoreSteps && !isCallListExpanded ? steps.slice(0, collapseThreshold) : steps;
+  const hiddenStepCount = steps.length - collapseThreshold;
 
   return (
     <div className="relative flex w-full gap-2.5 pl-1 my-1.5">
@@ -76,7 +81,7 @@ export const PromptAiMcpCallBlock = ({
       <div className="min-w-0 flex-1 flex flex-col gap-1.5">
         <div className="text-xs font-mono font-bold text-cyan-100">MCP · {serverName}</div>
         <div className="flex flex-col gap-1.5">
-          {steps.map((step) => {
+          {visibleSteps.map((step) => {
             const presentation = getStatusPresentation(step.status);
             const isExpanded = expandedStepIds.has(step.id);
             const toolName = step.mcp?.toolName ?? step.tool;
@@ -103,6 +108,15 @@ export const PromptAiMcpCallBlock = ({
             );
           })}
         </div>
+        {hasMoreSteps ? (
+          <button
+            type="button"
+            className="w-fit text-xs [transform:skewX(-8deg)] font-medium text-cyan-100/50 transition-colors hover:text-cyan-100/80"
+            onClick={() => setIsCallListExpanded((previous) => !previous)}
+          >
+            {isCallListExpanded ? `Hide ${hiddenStepCount} more` : `Show ${hiddenStepCount} more...`}
+          </button>
+        ) : null}
       </div>
     </div>
   );

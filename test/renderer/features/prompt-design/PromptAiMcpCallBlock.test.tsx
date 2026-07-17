@@ -2,13 +2,17 @@
  * @vitest-environment jsdom
  */
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
 import type { CuratorToolStep } from "@/features/curator/types";
 
 describe("PromptAiMcpCallBlock", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("按服务展示 MCP 调用并按需展开完整详情", async () => {
     const steps: CuratorToolStep[] = [
       {
@@ -33,5 +37,26 @@ describe("PromptAiMcpCallBlock", () => {
 
     expect(screen.getByText((_, element) => element?.tagName === "PRE")).toHaveTextContent('"query": "prompt"');
     expect(screen.getByText((_, element) => element?.tagName === "PRE")).toHaveTextContent('"total": 3');
+  });
+
+  it("连续 MCP 调用默认显示两项并允许展开余下项", async () => {
+    const steps: CuratorToolStep[] = ["search_graph", "get_code_snippet", "trace_path"].map((toolName, index) => ({
+      id: `mcp-${index}`,
+      title: "MCP result",
+      status: "done",
+      tool: toolName,
+      observation: "Completed.",
+      mcp: { serverId: "codebase-memory-mcp", serverName: "Codebase Memory", toolName },
+    }));
+
+    render(<PromptAiMcpCallBlock steps={steps} />);
+
+    expect(screen.getByText("search_graph")).toBeInTheDocument();
+    expect(screen.getByText("get_code_snippet")).toBeInTheDocument();
+    expect(screen.queryByText("trace_path")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Show 1 more..."));
+
+    expect(screen.getByText("trace_path")).toBeInTheDocument();
   });
 });

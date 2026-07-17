@@ -148,7 +148,10 @@ export const PromptAiChatMessageBubble = ({
     const visibleMessageParts = showAgentThinking
       ? messageParts
       : messageParts.filter((part) => part.kind !== "reasoning");
-    const renderExecutionParts = (sequenceParts: ExecutionSequencePart[]): React.JSX.Element[] => groupExecutionParts(sequenceParts).flatMap((item) => {
+    const renderExecutionParts = (
+      sequenceParts: ExecutionSequencePart[],
+      connectsToNextExecution = false,
+    ): React.JSX.Element[] => groupExecutionParts(sequenceParts).flatMap((item, itemIndex, groups) => {
       if (item.kind === "text") {
         const part = visibleMessageParts.find((candidate) => candidate.id === item.id);
         return part?.kind === "text" && part.content
@@ -163,22 +166,22 @@ export const PromptAiChatMessageBubble = ({
           group={group}
           isGenerating={isGenerating}
           onToggle={undefined}
-          renderPart={(sequencePart, connectsToNextExecution) => {
+          renderPart={(sequencePart, nextExecution) => {
             const part = visibleMessageParts.find((candidate) => candidate.id === sequencePart.id);
             if (part?.kind === "reasoning" && part.content) {
-              return <CuratorThinkingBlock key={part.id} content={part.content} isGenerating={part.status === "streaming" || (isGenerating && part.id === messageParts.at(-1)?.id)} connectsToNextExecution={connectsToNextExecution} />;
+              return <CuratorThinkingBlock key={part.id} content={part.content} isGenerating={part.status === "streaming" || (isGenerating && part.id === messageParts.at(-1)?.id)} connectsToNextExecution={nextExecution} />;
             }
             const step = part && findToolStepByPart(message.toolSteps, part);
-            return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+            return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={nextExecution} /> : <></>;
           }}
-          renderToolParts={(toolParts, connectsToNextExecution) => {
+          renderToolParts={(toolParts, nextExecution) => {
             const steps = toolParts.flatMap((toolPart) => {
               const part = visibleMessageParts.find((candidate) => candidate.id === toolPart.id);
               const step = findToolStepByPart(message.toolSteps, part);
               return step ? [step] : [];
             });
 
-            return steps.length > 0 ? <CuratorToolCallBlock key={toolParts[0].id} steps={steps} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+            return steps.length > 0 ? <CuratorToolCallBlock key={toolParts[0].id} steps={steps} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} connectsToNextExecution={nextExecution || (itemIndex === groups.length - 1 && connectsToNextExecution)} /> : <></>;
           }}
         />,
       ];
@@ -186,9 +189,9 @@ export const PromptAiChatMessageBubble = ({
 
     const renderedParts: React.JSX.Element[] = [];
     let executionParts: ExecutionSequencePart[] = [];
-    const flushExecutionParts = (): void => {
+    const flushExecutionParts = (connectsToNextExecution = false): void => {
       if (executionParts.length > 0) {
-        renderedParts.push(...renderExecutionParts(executionParts));
+        renderedParts.push(...renderExecutionParts(executionParts, connectsToNextExecution));
         executionParts = [];
       }
     };
@@ -198,7 +201,8 @@ export const PromptAiChatMessageBubble = ({
       const step = findToolStepByPart(message.toolSteps, part);
 
       if (step?.mcp) {
-        flushExecutionParts();
+        const previousPart = visibleMessageParts[index - 1];
+        flushExecutionParts(previousPart?.kind === "tool" || previousPart?.kind === "reasoning");
         const mcpSteps = [step];
         let nextIndex = index + 1;
         while (nextIndex < visibleMessageParts.length) {
