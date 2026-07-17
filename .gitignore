@@ -53,3 +53,5 @@ pnpm-debug.log*
 .claude/
 
 .codegraph/
+
+.codebase-memory/

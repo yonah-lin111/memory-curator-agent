@@ -196,6 +196,7 @@ export const PromptDesignWorkspace = ({
   const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  const lastShiftTimeRef = useRef(0);
   const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">("edit");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; view: EditorView; mode: "edit" | "preview" | "split" } | null>(null);
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
@@ -485,6 +486,32 @@ export const PromptDesignWorkspace = ({
     });
     return unsubscribe;
   }, [flushSave]);
+
+  useEffect(() => {
+    if (!inlineInputView) return;
+
+    lastShiftTimeRef.current = 0;
+    const handleInlineInputKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Shift" || event.repeat) return;
+
+      const now = Date.now();
+      if (!lastShiftTimeRef.current || now - lastShiftTimeRef.current > 500) {
+        lastShiftTimeRef.current = now;
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      lastShiftTimeRef.current = 0;
+      setInlineInputView(null);
+      requestAnimationFrame(() => inlineInputView.focus());
+    };
+
+    document.addEventListener("keydown", handleInlineInputKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleInlineInputKeyDown, true);
+    };
+  }, [inlineInputView]);
 
   const handleEditorViewReady = useCallback((view: EditorView): void => {
     if (editorViewRef.current === view) return;
