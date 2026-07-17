@@ -1,5 +1,5 @@
 import type React from "react";
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MdEditor, config } from "md-editor-rt";
 import type { ExposeParam, UploadImgEvent } from "md-editor-rt";
@@ -14,6 +14,9 @@ import { MarkdownEditorToolbar } from "@/components/ui/MarkdownEditorToolbar";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
+
+// Markdown 编辑器显示模式。
+type MarkdownEditorMode = "edit" | "preview" | "split";
 
 // AI 内联审阅的单个连续文本变更块。
 export type MarkdownEditorChangeBlock = {
@@ -495,7 +498,7 @@ export interface MarkdownEditorProps {
   // 编辑器右键菜单回调。
   onContextMenu?: (event: React.MouseEvent<HTMLDivElement>, view: EditorView) => void;
   // 编辑器显示模式变化回调。
-  onModeChange?: (mode: "edit" | "preview" | "split") => void;
+  onModeChange?: (mode: MarkdownEditorMode) => void;
   // 递增时清空撤销与重做历史。
   historyResetVersion?: number;
 }
@@ -524,6 +527,19 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
 }, ref): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
+  // 当前显示模式，用于同步工具栏高亮状态。
+  const [editorMode, setEditorMode] = useState<MarkdownEditorMode>(defaultMode ?? "edit");
+  // 进入仅预览前的模式，用于快捷键退出后恢复原布局。
+  const modeBeforePreviewRef = useRef<Exclude<MarkdownEditorMode, "preview">>(
+    defaultMode === "split" ? "split" : "edit",
+  );
+  /**
+   * 更新编辑器显示模式，并通知外部调用方。
+   */
+  const changeEditorMode = useCallback((mode: MarkdownEditorMode): void => {
+    setEditorMode(mode);
+    onModeChange?.(mode);
+  }, [onModeChange]);
   useImperativeHandle(ref, () => ({
     execCommand: (command) => editorRef.current?.execCommand(command),
     togglePreview: (status) => editorRef.current?.togglePreview(status),
@@ -579,17 +595,26 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
         e.stopPropagation();
-        editorRef.current?.togglePreviewOnly();
+        if (editorMode === "preview") {
+          editorRef.current?.togglePreviewOnly(false);
+          changeEditorMode(modeBeforePreviewRef.current);
+        } else {
+          modeBeforePreviewRef.current = editorMode;
+          editorRef.current?.togglePreviewOnly(true);
+          changeEditorMode("preview");
+        }
       } 
       // cmd + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
       else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "e") {
         e.preventDefault();
         e.stopPropagation();
-        // 若当前在全屏预览模式下，则先退出全屏预览，再判断是否需要切换双栏状态
-        if (el.classList.contains("md-editor-previewOnly")) {
-          editorRef.current?.togglePreviewOnly();
+        // 仅预览模式恢复进入前布局，其他模式在编辑与双栏间切换。
+        if (editorMode === "preview") {
+          editorRef.current?.togglePreviewOnly(false);
+          changeEditorMode(modeBeforePreviewRef.current);
         } else {
           editorRef.current?.togglePreview();
+          changeEditorMode(editorMode === "split" ? "edit" : "split");
         }
       }
     };
@@ -597,7 +622,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
     // 使用捕获阶段，确保能优先拦截
     el.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => el.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [id]);
+  }, [changeEditorMode, editorMode, id]);
 
   // 编辑器内联高度，兼容像素数值与 CSS 高度。
   const editorStyle = useMemo<React.CSSProperties>(
@@ -626,24 +651,10 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
     } else if (defaultMode === "split") {
       editorRef.current.togglePreview(true);
     }
+    if (defaultMode) {
+      setEditorMode(defaultMode);
+    }
   }, [defaultMode]);
-
-  useEffect(() => {
-    const root = document.getElementById(id);
-    if (!root || !onModeChange) return;
-    const reportMode = (): void => {
-      const mode = root.classList.contains("md-editor-previewOnly")
-        ? "preview"
-        : root.classList.contains("md-editor-preview")
-          ? "split"
-          : "edit";
-      onModeChange(mode);
-    };
-    reportMode();
-    const observer = new MutationObserver(reportMode);
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
-  }, [id, onModeChange]);
 
   // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
   const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
@@ -675,7 +686,7 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
         if (view && onContextMenu) onContextMenu(event, view);
       }}
     >
-      <MarkdownEditorToolbar defaultMode={defaultMode} editorRef={editorRef} />
+      <MarkdownEditorToolbar editorRef={editorRef} mode={editorMode} onModeChange={changeEditorMode} />
       <div className="min-h-0 flex-1">
         <MdEditor
           ref={editorRef}

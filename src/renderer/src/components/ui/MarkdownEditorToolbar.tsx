@@ -17,7 +17,7 @@ import {
   Table2,
   Undo2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { RefObject } from "react";
 import { IconButton } from "@/components/ui/IconButton";
 import type { MarkdownEditorHandle } from "@/components/ui/MarkdownEditor";
@@ -35,8 +35,10 @@ type MarkdownToolbarCommand = Parameters<
 interface MarkdownEditorToolbarProps {
   // Markdown 编辑器控制句柄。
   editorRef: RefObject<MarkdownEditorHandle | null>;
-  // 编辑器默认预览模式。
-  defaultMode?: "edit" | "preview" | "split";
+  // 编辑器当前显示模式。
+  mode: MarkdownPreviewMode;
+  // 编辑器显示模式变更回调。
+  onModeChange: (mode: MarkdownPreviewMode) => void;
 }
 
 // Markdown 编辑器预览模式。
@@ -114,14 +116,10 @@ const MarkdownToolbarAction = ({
  */
 export const MarkdownEditorToolbar = ({
   editorRef,
-  defaultMode = "edit",
+  mode,
+  onModeChange,
 }: MarkdownEditorToolbarProps): React.JSX.Element => {
-  const [previewMode, setPreviewMode] = useState<MarkdownPreviewMode>(defaultMode);
   const [tableSize, setTableSize] = useState<MarkdownTableSize | null>(null);
-
-  useEffect(() => {
-    setPreviewMode(defaultMode);
-  }, [defaultMode]);
 
   /**
    * 设置编辑器预览模式，并同步工具栏按钮高亮状态。
@@ -133,7 +131,7 @@ export const MarkdownEditorToolbar = ({
       editorRef.current?.togglePreviewOnly(false);
       editorRef.current?.togglePreview(mode === "split");
     }
-    setPreviewMode(mode);
+    onModeChange(mode);
   };
 
   /**
@@ -244,15 +242,15 @@ export const MarkdownEditorToolbar = ({
     {
       icon: SquareSplitHorizontal,
       label: "双栏预览",
-      onClick: () => changePreviewMode(previewMode === "split" ? "edit" : "split"),
+      onClick: () => changePreviewMode(mode === "split" ? "edit" : "split"),
       alignRight: true,
-      highlighted: previewMode === "split",
+      highlighted: mode === "split",
     },
     {
       icon: Eye,
       label: "仅预览",
-      onClick: () => changePreviewMode(previewMode === "preview" ? "edit" : "preview"),
-      highlighted: previewMode === "preview",
+      onClick: () => changePreviewMode(mode === "preview" ? "edit" : "preview"),
+      highlighted: mode === "preview",
     },
   ];
 
