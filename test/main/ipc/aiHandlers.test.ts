@@ -31,14 +31,8 @@ vi.mock('../../../src/main/agent/core/reactAgent', () => ({
   runReactAgent: vi.fn()
 }))
 
-vi.mock('../../../src/main/agent/providers/providerConfig', () => ({
-  DEFAULT_MC_CONFIG_PATH: '/tmp/memory-curator-agent-test-mc-config.json',
-  DEFAULT_AGENT_CONFIG: {
-    context: {
-      toolOutputMaxChars: 8000,
-      recentToolResultLimit: 6
-    }
-  },
+vi.mock('../../../src/main/agent/providers/providerConfig', async (importOriginal) => ({
+  ...(await importOriginal()),
   loadProviderConfig: vi.fn(() => ({
     defaultProvider: 'bailian',
     defaultModel: 'MiniMax-M2.5',
