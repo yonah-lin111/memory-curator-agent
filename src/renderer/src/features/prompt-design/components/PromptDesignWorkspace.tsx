@@ -597,6 +597,32 @@ export const PromptDesignWorkspace = ({
     pendingCandidateContentRef.current = nextBlocks.length > 0 ? nextCandidateContent : null;
   }, [changeBlocks]);
 
+  /**
+   * 接受当前候选正文中的全部变更，并将结果加入保存队列。
+   */
+  const handleAcceptAllChanges = useCallback((): void => {
+    const candidateContent = pendingCandidateContentRef.current;
+    if (candidateContent === null || changeBlocks.length === 0) return;
+
+    pendingProgrammaticContentsRef.current.add(candidateContent);
+    contentRef.current = candidateContent;
+    setContent(candidateContent);
+    setChangeBlocks([]);
+    setPendingCandidateContent(null);
+    pendingCandidateContentRef.current = null;
+    if (activeDesignId) scheduleSave(activeDesignId, candidateContent);
+  }, [activeDesignId, changeBlocks.length, scheduleSave]);
+
+  /**
+   * 丢弃当前候选正文中的全部变更。
+   */
+  const handleRejectAllChanges = useCallback((): void => {
+    if (changeBlocks.length === 0) return;
+    setChangeBlocks([]);
+    setPendingCandidateContent(null);
+    pendingCandidateContentRef.current = null;
+  }, [changeBlocks.length]);
+
   if (!isOpen) return null;
 
   return (
@@ -612,9 +638,11 @@ export const PromptDesignWorkspace = ({
                 showSaveStatus
                 isSaved={!isInitializing && !isSaving && content === savedContent}
                 onAcceptAiChange={handleAcceptChange}
+                onAcceptAllAiChanges={handleAcceptAllChanges}
                 onBlur={handleEditorBlur}
                 onChange={handleEditorContentChange}
                 onRejectAiChange={handleRejectChange}
+                onRejectAllAiChanges={handleRejectAllChanges}
                 placeholder="在此编辑提示词内容..."
                 height="100%"
                 defaultMode="edit"

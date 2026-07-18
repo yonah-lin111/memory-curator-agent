@@ -493,6 +493,10 @@ export interface MarkdownEditorProps {
   onAcceptAiChange?: (id: string) => void;
   // 拒绝 AI 变更块。
   onRejectAiChange?: (id: string) => void;
+  // 接受全部 AI 变更块。
+  onAcceptAllAiChanges?: () => void;
+  // 拒绝全部 AI 变更块。
+  onRejectAllAiChanges?: () => void;
   // 编辑器实例就绪回调。
   onEditorViewReady?: (view: EditorView) => void;
   // 编辑器右键菜单回调。
@@ -520,6 +524,8 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   aiChangeBlocks = [],
   onAcceptAiChange,
   onRejectAiChange,
+  onAcceptAllAiChanges,
+  onRejectAllAiChanges,
   onEditorViewReady,
   onContextMenu,
   onModeChange,
@@ -710,7 +716,10 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
         />
       </div>
       <MarkdownEditorFooter
+        aiChangeCount={aiChangeBlocks.length}
         isSaved={isSaved}
+        onAcceptAllAiChanges={onAcceptAllAiChanges}
+        onRejectAllAiChanges={onRejectAllAiChanges}
         showSaveStatus={showSaveStatus}
         value={value}
       />

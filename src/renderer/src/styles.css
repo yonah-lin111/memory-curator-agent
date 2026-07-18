@@ -322,23 +322,29 @@ html:hover::-webkit-scrollbar-thumb,
   order: 1;
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: 6px;
+  padding: 6px 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: #212121;
+  background: rgba(33, 33, 33, 0.96);
 }
 
 .md-editor .cm-ai-diff-controls button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: 0;
+  gap: 5px;
+  border: 1px solid transparent;
   border-radius: 6px;
-  padding: 3px 7px;
-  color: rgba(255, 255, 255, 0.8);
+  padding: 4px 8px;
+  color: rgba(255, 255, 255, 0.72);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.md-editor .cm-ai-diff-controls button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
 }
 
 .md-editor .cm-ai-diff-icon {
@@ -347,19 +353,27 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 .md-editor .cm-ai-diff-accept {
-  background: rgba(74, 222, 128, 0.16);
+  border-color: rgba(74, 222, 128, 0.22);
+  background: rgba(74, 222, 128, 0.1);
+  color: rgba(134, 239, 172, 0.92);
 }
 
 .md-editor .cm-ai-diff-reject {
-  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.1);
+  color: rgba(252, 165, 165, 0.92);
 }
 
 .md-editor .cm-ai-diff-accept:hover {
-  background: rgba(74, 222, 128, 0.28);
+  border-color: rgba(74, 222, 128, 0.38);
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
 }
 
 .md-editor .cm-ai-diff-reject:hover {
-  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.38);
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
 }
 
 .md-editor .cm-ai-diff-deleted,
