@@ -803,6 +803,7 @@ The Prompt Design editor document is not included in this request. Call \`prompt
       db.updateMessageContent(assistantMessageId, finalContent);
       db.updateAgentRunStatus(runId, "failed", "Aborted by user");
       db.cancelMessage(assistantMessageId);
+      db.cancelLatestUserMessage(payload.sessionId);
     } else {
       console.error("Prompt AI error:", err);
       db.updateAgentRunStatus(runId, "failed", err.message);

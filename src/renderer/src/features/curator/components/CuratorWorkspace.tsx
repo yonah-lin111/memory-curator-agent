@@ -166,8 +166,6 @@ export const CuratorWorkspace = ({
   // 当前打开的消息右键菜单；工作区内只允许存在一个菜单实例。
   const [messageContextMenu, setMessageContextMenu] =
     useState<CuratorMessageContextMenuRequest | null>(null);
-  // 外部注入到输入框的文本（取消生成时回显提示词）。
-  const [injectedInputText, setInjectedInputText] = useState<string | undefined>(undefined);
   // 双击 Esc 取消状态：idle = 初始，pending = 第一次按下等待二次确认。
   const escCancelStateRef = useRef<"idle" | "pending">("idle");
   // 双击 Esc 超时计时器。
@@ -751,7 +749,7 @@ export const CuratorWorkspace = ({
   /**
    * 双击 Esc 取消生成：
    * - 第一次按 Esc 时提示用户，进入 pending 状态（2s 内有效）；
-   * - 2s 内再次按 Esc 时执行取消，回显提示词并标记 QA 为已取消。
+   * - 2s 内再次按 Esc 时执行取消并标记 QA 为已取消。
    */
   const handleCancelEsc = useCallback((): void => {
     if (session.status !== "running" || !onCancelGeneration) {
@@ -777,15 +775,9 @@ export const CuratorWorkspace = ({
         escCancelTimerRef.current = null;
       }
 
-      // 将最新用户消息内容注入输入框
-      const latestUserMsg = [...session.messages].reverse().find((m) => m.role === "user");
-      if (latestUserMsg?.content) {
-        setInjectedInputText(latestUserMsg.content);
-      }
-
       onCancelGeneration();
     }
-  }, [session.status, session.messages, onCancelGeneration, toast]);
+  }, [session.status, onCancelGeneration, toast]);
 
   // 监听全局键盘事件，处理双击 Esc 取消逻辑。
   useEffect(() => {
@@ -964,8 +956,6 @@ export const CuratorWorkspace = ({
             contextTokens={contextBudget.totalTokens}
             contextLimit={contextBudget.contextLimit}
             isGenerating={session.status === "running"}
-            injectedText={injectedInputText}
-            onInjectedTextConsumed={() => setInjectedInputText(undefined)}
             onSendMessage={onSendMessage}
             onCommandExecute={onCommandExecute}
             onModelChange={onModelChange}

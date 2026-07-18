@@ -188,6 +188,24 @@ export class PromptAiPersistenceService {
     stmt.run(messageId);
   }
 
+  /**
+   * 将会话中最后一条用户消息标记为已取消。
+   */
+  public cancelLatestUserMessage(sessionId: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE prompt_ai_chat_messages
+      SET cancelled = 1
+      WHERE rowid = (
+        SELECT rowid
+        FROM prompt_ai_chat_messages
+        WHERE session_id = ? AND role = 'user'
+        ORDER BY created_at DESC, rowid DESC
+        LIMIT 1
+      )
+    `);
+    stmt.run(sessionId);
+  }
+
   public getSession(sessionId: string): PromptAiChatSessionItem | null {
     const sessionStmt = this.db.prepare(`
       SELECT * FROM prompt_ai_chat_sessions WHERE external_id = ?

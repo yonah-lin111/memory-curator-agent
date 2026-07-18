@@ -213,12 +213,6 @@ export const usePromptAiChatController = (
   const documentVersionRef = useRef(0);
   const pendingRunDocumentRef = useRef<string | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
-  const latestUserPromptRef = useRef<string | null>(null);
-  const latestUserReferencesRef = useRef<PromptDesignReference[]>([]);
-  latestUserPromptRef.current = [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
-  latestUserReferencesRef.current = [...messages].reverse().find(
-    (message) => message.role === "user",
-  )?.references ?? latestUserReferencesRef.current;
   // 在渲染阶段同步，保证读取工具始终获得最新候选正文。
   if (currentDocumentRef.current !== currentDocument) {
     currentDocumentRef.current = currentDocument;
@@ -256,6 +250,7 @@ export const usePromptAiChatController = (
       toolSteps: message.toolSteps?.map(mapBackendToolStep),
       references: message.references,
       mcpServers: resolveMcpServers(message.parts),
+      cancelled: message.cancelled,
     })));
   }, []);
 
@@ -445,22 +440,25 @@ export const usePromptAiChatController = (
   }, [handleDeleteChat, isGenerating, loadSession, messages, sessionId]);
 
   /**
-   * 取消当前生成，并保留最后一条用户提示词供输入框恢复。
+   * 取消当前生成，并标记当前问答为已取消。
    */
-  const handleCancelGeneration = useCallback(async (): Promise<string | null> => {
-    if (!isGenerating || !activeRunIdRef.current) return null;
-    const prompt = latestUserPromptRef.current;
-    const referenceSnapshot = latestUserReferencesRef.current.map((reference) => ({ ...reference }));
+  const handleCancelGeneration = useCallback(async (): Promise<void> => {
+    if (!isGenerating || !activeRunIdRef.current) return;
     try {
       await window.api.promptAi!.cancelChat(activeRunIdRef.current);
       setIsGenerating(false);
       activeRunIdRef.current = null;
-      setReferences(referenceSnapshot);
-      setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({ ...message, cancelled: true })));
-      return prompt;
+      setMessages((previous) => {
+        const lastUserIndex = previous.findLastIndex((message) => message.role === "user");
+
+        return previous.map((message, index) => (
+          index === lastUserIndex || index === previous.length - 1
+            ? { ...message, cancelled: true }
+            : message
+        ));
+      });
     } catch (error) {
       console.error("Failed to cancel AI chat:", error);
-      return null;
     }
   }, [isGenerating]);
 
@@ -469,8 +467,6 @@ export const usePromptAiChatController = (
     const [providerId, modelId] = selectedModel?.split("::") ?? [];
     const time = new Date().toISOString();
     const referenceSnapshot = options?.references?.map((reference) => ({ ...reference }));
-    latestUserPromptRef.current = text;
-    latestUserReferencesRef.current = referenceSnapshot ?? [];
     setReferences([]);
     setMessages((previous) => [...previous,
       { id: `msg-${Date.now()}`, role: "user", content: text, time, references: referenceSnapshot },

@@ -64,7 +64,6 @@ export const PromptAiChatWorkspace = forwardRef<
   const latestTriggerMessageRef = useRef<HTMLDivElement>(null);
   const prevScrolledTriggerMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
-  const [injectedText, setInjectedText] = useState<string | undefined>(undefined);
   const [messageContextMenu, setMessageContextMenu] = useState<PromptAiMessageContextMenuRequest | null>(null);
   const escCancelStateRef = useRef<"idle" | "pending">("idle");
   const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,11 +107,7 @@ export const PromptAiChatWorkspace = forwardRef<
       clearTimeout(escCancelTimerRef.current);
       escCancelTimerRef.current = null;
     }
-    void controller.handleCancelGeneration().then((prompt) => {
-      if (prompt) {
-        setInjectedText(prompt);
-      }
-    });
+    void controller.handleCancelGeneration();
   }, [controller.handleCancelGeneration, isGenerating, toast]);
 
   useEffect(() => {
@@ -468,8 +463,6 @@ export const PromptAiChatWorkspace = forwardRef<
             onSessionChange={controller.handleSessionChange}
             onMcp={controller.showMcpTools}
             chatSessions={controller.sessions}
-            injectedText={injectedText}
-            onInjectedTextConsumed={() => setInjectedText(undefined)}
             references={controller.references}
             onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
             onReferencesClear={() => controller.setReferences([])}

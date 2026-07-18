@@ -4,7 +4,6 @@ import {
   useLayoutEffect,
   useCallback,
   useMemo,
-  useEffect,
 } from "react";
 import {
   Paperclip,
@@ -66,8 +65,6 @@ export const PromptAiChatInput = ({
   onSessionChange,
   onMcp,
   chatSessions,
-  injectedText,
-  onInjectedTextConsumed,
   references = [],
   onReferenceRemove,
   onReferencesClear,
@@ -85,8 +82,6 @@ export const PromptAiChatInput = ({
   onSessionChange?: (sessionId: string) => void;
   onMcp?: () => Promise<void>;
   chatSessions?: CuratorSession[];
-  injectedText?: string;
-  onInjectedTextConsumed?: () => void;
   references?: {
     id: string;
     startLine: number;
@@ -203,17 +198,6 @@ export const PromptAiChatInput = ({
     textareaRef,
     adjustTextareaHeight,
   );
-
-  useEffect(() => {
-    if (injectedText === undefined) {
-      return;
-    }
-
-    setInputText(injectedText);
-    resetHistoryCursor();
-    onInjectedTextConsumed?.();
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [injectedText, onInjectedTextConsumed, resetHistoryCursor]);
 
   const {
     activeFileIndex,

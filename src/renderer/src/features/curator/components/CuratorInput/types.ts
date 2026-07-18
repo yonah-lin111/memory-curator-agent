@@ -39,8 +39,4 @@ export interface CuratorInputProps {
   isLoadingMoreChatSessions?: boolean;
   // 加载更多历史会话回调。
   onLoadMoreChatSessions?: () => Promise<void>;
-  // 外部注入的输入文本（如取消生成后回显提示词），消费后应调用 onInjectedTextConsumed 清空。
-  injectedText?: string;
-  // 注入文本消费完成回调。
-  onInjectedTextConsumed?: () => void;
 }

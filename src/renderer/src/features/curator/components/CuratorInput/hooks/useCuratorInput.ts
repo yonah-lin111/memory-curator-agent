@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/ui/Toast";
 import type { CuratorMessagePart } from "@/features/curator/types";
 import {
@@ -86,8 +86,6 @@ export const useCuratorInput = (props: CuratorInputProps) => {
     onSendMessage,
     onCommandExecute,
     onModelChange,
-    injectedText,
-    onInjectedTextConsumed,
   } = props;
 
   const toast = useToast();
@@ -97,15 +95,6 @@ export const useCuratorInput = (props: CuratorInputProps) => {
   const [inputText, setInputText] = useState("");
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
-
-  // 外部注入文本时（如取消生成回显提示词），同步写入输入框并通知上游消费完成。
-  useEffect(() => {
-    if (injectedText !== undefined) {
-      setInputText(injectedText);
-      onInjectedTextConsumed?.();
-      requestAnimationFrame(() => textareaRef.current?.focus());
-    }
-  }, [injectedText, onInjectedTextConsumed]);
 
   const selectedModelValue = selectedModel
     ? `${selectedModel.provider}::${selectedModel.model}`
