@@ -32,6 +32,13 @@ vi.mock('../../../src/main/agent/core/reactAgent', () => ({
 }))
 
 vi.mock('../../../src/main/agent/providers/providerConfig', () => ({
+  DEFAULT_MC_CONFIG_PATH: '/tmp/memory-curator-agent-test-mc-config.json',
+  DEFAULT_AGENT_CONFIG: {
+    context: {
+      toolOutputMaxChars: 8000,
+      recentToolResultLimit: 6
+    }
+  },
   loadProviderConfig: vi.fn(() => ({
     defaultProvider: 'bailian',
     defaultModel: 'MiniMax-M2.5',
@@ -96,10 +103,10 @@ describe('aiHandlers', () => {
     const systemPrompt = createSystemPrompt().content
 
     expect(systemPrompt).not.toContain('people_tool_query')
-    expect(systemPrompt).toContain('已授权工具')
-    expect(systemPrompt).toContain('工具边界：')
-    expect(systemPrompt).toContain('事实边界：')
-    expect(systemPrompt).toContain('图片输出：')
+    expect(systemPrompt).toContain('<system>')
+    expect(systemPrompt).toContain('<tool-boundary>')
+    expect(systemPrompt).toContain('<fact-boundary>')
+    expect(systemPrompt).toContain('<output-format>')
     expect(systemPrompt).toContain('![](...)')
   })
 
