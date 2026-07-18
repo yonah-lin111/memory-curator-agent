@@ -171,7 +171,7 @@ type PromptHistoryScope = 'curator' | 'prompt-design'
 // AI 对话 agent hint 类型。
 type AiChatAgentHint = {
   // Agent 唯一标识。
-  id: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+  id: 'people' | 'personal' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
   // 本轮 agent 优先级，数字越小越优先。
   priority: number
 }
@@ -537,7 +537,7 @@ type AiChatMessagePart =
       // 片段类型。
       kind: 'agent'
       // Agent 唯一标识。
-      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
+      agentId: 'people' | 'personal' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
     }
 
 // 提示词 AI 对话启动载荷。

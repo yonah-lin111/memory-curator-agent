@@ -1,7 +1,7 @@
 import type { CuratorMessagePart } from "@/features/curator/types";
 
 // AI 输入框可选择的 agent 标识。
-export type CuratorAgentId = "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
+export type CuratorAgentId = "people" | "personal" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
 
 // AI 输入框 agent mention 选项。
 export type CuratorAgentMentionOption = {
@@ -82,6 +82,12 @@ export const CURATOR_AGENT_MENTION_OPTIONS: CuratorAgentMentionOption[] = [
     description: "检索人物背景，关联社交网络与人脉档案",
   },
   {
+    id: "personal",
+    token: "@personal[tool]",
+    label: "personal",
+    description: "查询、创建或更新自己的个人档案，不支持删除",
+  },
+  {
     id: "todo",
     token: "@todo[tool]",
     label: "todo",
@@ -126,12 +132,14 @@ export const CURATOR_AGENT_MENTION_OPTIONS: CuratorAgentMentionOption[] = [
 ];
 
 // Tool token 匹配表达式，只接受空白边界包围的带有 [tool] 后缀的完整 token。
-const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|person|todos?|snippets?|journals?|notes?|today|bills?|common)\[tool\])(?=$|\s)/g;
+const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|person|personal|profile|todos?|snippets?|journals?|notes?|today|bills?|common)\[tool\])(?=$|\s)/g;
 
 // 提及关键字到内置 CuratorAgentId 的归一化映射。
 const NORMALIZE_ID_MAP: Record<string, CuratorAgentId> = {
   person: "people",
   people: "people",
+  personal: "personal",
+  profile: "personal",
   todo: "todo",
   todos: "todo",
   snippet: "snippets",

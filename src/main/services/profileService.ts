@@ -45,6 +45,42 @@ export const getProfile = (): PersonalProfileItem | null => {
 }
 
 /**
+ * 创建个人信息档案。
+ */
+export const createProfile = (payload: PersonalProfileUpdateInput): PersonalProfileItem => {
+  if (getProfile()) {
+    throw new Error('个人信息档案已存在')
+  }
+
+  return updateProfile(payload)
+}
+
+/**
+ * 按字段更新个人信息；档案不存在时创建。
+ */
+export const updateProfilePartial = (
+  payload: Partial<PersonalProfileUpdateInput>,
+): PersonalProfileItem => {
+  const existing = getProfile()
+  const profile: PersonalProfileUpdateInput = {
+    avatar: payload.avatar ?? existing?.avatar ?? '',
+    name: payload.name ?? existing?.name ?? '',
+    gender: payload.gender ?? existing?.gender ?? '',
+    status: payload.status ?? existing?.status ?? '',
+    birthday: payload.birthday ?? existing?.birthday ?? '',
+    contact: payload.contact ?? existing?.contact ?? '',
+    tags: payload.tags ?? existing?.tags ?? [],
+    details: payload.details ?? existing?.details ?? '',
+  }
+
+  if (!profile.name.trim()) {
+    throw new Error('个人信息档案需要姓名')
+  }
+
+  return updateProfile(profile)
+}
+
+/**
  * 更新或创建个人信息。
  */
 export const updateProfile = (payload: PersonalProfileUpdateInput): PersonalProfileItem => {

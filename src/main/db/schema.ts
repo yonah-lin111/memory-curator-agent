@@ -316,6 +316,7 @@ export type AiChatMessagePart =
       // Agent 唯一标识。
       agentId:
         | "people"
+        | "personal"
         | "todo"
         | "snippets"
         | "journal"

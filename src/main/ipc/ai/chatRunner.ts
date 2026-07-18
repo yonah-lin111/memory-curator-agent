@@ -17,6 +17,8 @@ import { type createAiChatPersistenceService } from "@/services/aiChatPersistenc
 import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry";
 import { getAvailableSkillsForAgent, type AiAgentSkill } from "@/services/skillsService";
 import { createSkillTool } from "@/agent/tools/skillTool";
+import { getProfile } from "@/services/profileService";
+import { createPersonalInfoContext } from "@/ipc/ai/personalInfoContext";
 import {
   type AiChatStartPayload,
   type AiChatIpcEvent,
@@ -272,13 +274,12 @@ export const startAiChat = async (
         createSystemPrompt(),
         agentHints,
       );
+      const personalInfoContext = createPersonalInfoContext(getProfile());
 
-      const systemMessage = autoSkillsContent
-        ? {
-            ...baseSystemPrompt,
-            content: `${baseSystemPrompt.content}${autoSkillsContent}`,
-          }
-        : baseSystemPrompt;
+      const systemMessage = {
+        ...baseSystemPrompt,
+        content: `${baseSystemPrompt.content}\n\n${personalInfoContext}${autoSkillsContent}`,
+      };
 
       // 将 load_skill 工具动态注入到本轮 tools 中
       let finalTools = tools;

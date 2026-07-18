@@ -1,7 +1,7 @@
 import type { AgentMessage } from '@/agent/types'
 
 // AI 对话 agent 标识。
-export type AiChatAgentId = 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
+export type AiChatAgentId = 'people' | 'personal' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
 
 // AI 对话 agent hint。
 export type AiChatAgentHint = {
@@ -30,6 +30,12 @@ const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
     token: 'people_agent',
     description: 'Prefer People-related profile facts, relationship memory, and People tools first.',
     tools: ['people_tool_query', 'people_tool_add', 'people_tool_update', 'people_tool_delete']
+  },
+  {
+    id: 'personal',
+    token: 'personal_agent',
+    description: 'Prefer the current user personal profile and its dedicated tools first.',
+    tools: ['profile_tool_query', 'profile_tool_create', 'profile_tool_update']
   },
   {
     id: 'todo',

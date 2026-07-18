@@ -10,6 +10,7 @@ import { createThemeTools } from '@/agent/tools/themeTool'
 import { createBillsTools } from '@/agent/tools/billsTool'
 import { createTodayTool } from '@/agent/tools/todayTool'
 import { createSkillTool } from '@/agent/tools/skillTool'
+import { createProfileTools } from '@/agent/tools/profileTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
 import type { AiAgentSkill } from '@/services/skillsService'
 import type { NotesService } from '@/services/notesService'
@@ -75,6 +76,7 @@ const builtinToolFactories: AgentToolFactory[] = [
   ({ notesService }) => createNoteTools(notesService),
   ({ journalsService }) => createJournalTools(journalsService),
   ({ peopleService }) => createPeopleTools(peopleService),
+  () => createProfileTools(),
   ({ todosService }) => createTodoTools(todosService),
   ({ snippetsService }) => createSnippetTools(snippetsService),
   ({ noteCategoryService }) => createNoteCategoryTools(noteCategoryService),

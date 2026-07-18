@@ -51,7 +51,7 @@ export type CuratorStartContextItem = {
 // AI 对话 agent hint 类型。
 export type CuratorAgentHint = {
   // Agent 唯一标识。
-  id: "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
+  id: "people" | "personal" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
   // 本轮 agent 优先级，数字越小越优先。
   priority: number;
 };
@@ -314,7 +314,7 @@ export type CuratorMessagePart =
       // 片段类型。
       kind: "agent";
       // Agent 唯一标识。
-      agentId: "people" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
+      agentId: "people" | "personal" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
     };
 
 // AI 对话消息类型，描述聊天气泡所需数据。
