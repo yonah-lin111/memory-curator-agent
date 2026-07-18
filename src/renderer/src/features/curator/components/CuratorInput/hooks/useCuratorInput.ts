@@ -364,8 +364,9 @@ export const useCuratorInput = (props: CuratorInputProps) => {
     clearFiles();
     closeAgentMentionPanel();
     setIsCommandPanelOpen(false);
+    toast.success("已清空输入内容");
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [resetHistoryCursor, clearFiles, closeAgentMentionPanel]);
+  }, [resetHistoryCursor, clearFiles, closeAgentMentionPanel, toast]);
 
   /**
    * 执行指定斜杠命令，并清理命令输入态。

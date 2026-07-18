@@ -70,6 +70,7 @@ export const PromptAiChatInput = ({
   onInjectedTextConsumed,
   references = [],
   onReferenceRemove,
+  onReferencesClear,
   onReferenceSelect,
   mcpStatus,
 }: {
@@ -93,6 +94,7 @@ export const PromptAiChatInput = ({
     content: string;
   }[];
   onReferenceRemove?: (id: string) => void;
+  onReferencesClear?: () => void;
   onReferenceSelect?: (reference: {
     id: string;
     startLine: number;
@@ -709,10 +711,12 @@ export const PromptAiChatInput = ({
               onClick={() => {
                 setInputText("");
                 resetHistoryCursor();
+                onReferencesClear?.();
+                toast.success("已清空输入内容");
               }}
-              disabled={!inputText}
+              disabled={!inputText && references.length === 0}
               className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
-                inputText
+                inputText || references.length > 0
                   ? "text-white/45 hover:text-white"
                   : "text-white/10 cursor-not-allowed"
               }`}

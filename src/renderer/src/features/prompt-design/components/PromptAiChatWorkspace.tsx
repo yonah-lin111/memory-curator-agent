@@ -472,6 +472,7 @@ export const PromptAiChatWorkspace = forwardRef<
             onInjectedTextConsumed={() => setInjectedText(undefined)}
             references={controller.references}
             onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
+            onReferencesClear={() => controller.setReferences([])}
             onReferenceSelect={onReferenceSelect}
           />
         </div>
