@@ -573,13 +573,21 @@ export const usePromptAiChatController = (
   const handleDeleteTurn = useCallback(async (messageId: string): Promise<void> => {
     if (isGenerating) return;
     try {
-      await window.api.promptAi!.deleteTurn(sessionId, messageId);
+      const localMessageIndex = messages.findIndex((message) => message.id === messageId);
+      const persistedSession = await window.api.promptAi!.getSession(sessionId);
+      const persistedMessage =
+        localMessageIndex >= 0 &&
+        persistedSession?.messages[localMessageIndex]?.role === messages[localMessageIndex].role
+          ? persistedSession.messages[localMessageIndex]
+          : undefined;
+
+      await window.api.promptAi!.deleteTurn(sessionId, persistedMessage?.id ?? messageId);
       await loadSession(sessionId);
       await fetchSessions();
     } catch (error) {
       console.error("Failed to delete AI chat turn:", error);
     }
-  }, [fetchSessions, isGenerating, loadSession, sessionId]);
+  }, [fetchSessions, isGenerating, loadSession, messages, sessionId]);
 
   const handleRegenerateLatestAnswer = useCallback(async (): Promise<void> => {
     if (isGenerating) return;
