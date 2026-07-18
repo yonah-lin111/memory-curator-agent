@@ -542,6 +542,36 @@ export const PromptDesignWorkspace = ({
   }, []);
 
   /**
+   * 通过 CodeMirror 事务应用 Agent 已确认的正文，保留选区与滚动位置。
+   * 避免 md-editor-rt 受控 value 的全量回写将选区映射到文末，污染后续撤回与重做的视图位置。
+   */
+  const applyAcceptedContent = useCallback((nextContent: string): void => {
+    const view = editorViewRef.current;
+    if (!view) {
+      pendingProgrammaticContentsRef.current.add(nextContent);
+      contentRef.current = nextContent;
+      setContent(nextContent);
+      return;
+    }
+
+    const { anchor, head } = view.state.selection.main;
+    const scrollTop = view.scrollDOM.scrollTop;
+    pendingProgrammaticContentsRef.current.add(nextContent);
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: nextContent },
+      selection: {
+        anchor: Math.min(anchor, nextContent.length),
+        head: Math.min(head, nextContent.length),
+      },
+    });
+
+    requestAnimationFrame(() => {
+      const maxScrollTop = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
+      view.scrollDOM.scrollTop = Math.min(scrollTop, Math.max(0, maxScrollTop));
+    });
+  }, []);
+
+  /**
    * 仅在变更块仍可定位到原文时应用，防止静默覆盖。
    */
   const handleAcceptChange = useCallback(
@@ -551,9 +581,7 @@ export const PromptDesignWorkspace = ({
 
       const nextContent = applyChangeBlock(contentRef.current, block);
       if (nextContent !== null) {
-        pendingProgrammaticContentsRef.current.add(nextContent);
-        contentRef.current = nextContent;
-        setContent(nextContent);
+        applyAcceptedContent(nextContent);
 
         if (activeDesignId) {
           scheduleSave(activeDesignId, nextContent);
@@ -576,7 +604,7 @@ export const PromptDesignWorkspace = ({
         ),
       );
     },
-    [changeBlocks, scheduleSave, activeDesignId],
+    [applyAcceptedContent, changeBlocks, scheduleSave, activeDesignId],
   );
 
   const handleRejectChange = useCallback((id: string): void => {
@@ -604,14 +632,12 @@ export const PromptDesignWorkspace = ({
     const candidateContent = pendingCandidateContentRef.current;
     if (candidateContent === null || changeBlocks.length === 0) return;
 
-    pendingProgrammaticContentsRef.current.add(candidateContent);
-    contentRef.current = candidateContent;
-    setContent(candidateContent);
+    applyAcceptedContent(candidateContent);
     setChangeBlocks([]);
     setPendingCandidateContent(null);
     pendingCandidateContentRef.current = null;
     if (activeDesignId) scheduleSave(activeDesignId, candidateContent);
-  }, [activeDesignId, changeBlocks.length, scheduleSave]);
+  }, [activeDesignId, applyAcceptedContent, changeBlocks.length, scheduleSave]);
 
   /**
    * 丢弃当前候选正文中的全部变更。
