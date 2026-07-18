@@ -1,6 +1,7 @@
 import {
   useState,
   useRef,
+  useEffect,
   useLayoutEffect,
   useCallback,
   useMemo,
@@ -69,6 +70,7 @@ export const PromptAiChatInput = ({
   onReferenceRemove,
   onReferencesClear,
   onReferenceSelect,
+  focusVersion,
   mcpStatus,
 }: {
   onSend?: (
@@ -96,6 +98,7 @@ export const PromptAiChatInput = ({
     endLine: number;
     content: string;
   }) => void;
+  focusVersion?: number;
   mcpStatus?: {
     total: number;
     connected: number;
@@ -107,6 +110,11 @@ export const PromptAiChatInput = ({
   const toast = useToast();
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!focusVersion) return;
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [focusVersion]);
 
   const {
     selectedModel,

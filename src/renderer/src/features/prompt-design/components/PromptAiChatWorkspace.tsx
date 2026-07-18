@@ -47,6 +47,7 @@ export const PromptAiChatWorkspace = forwardRef<
   {
     controller: ReturnType<typeof usePromptAiChatController>;
     onReferenceSelect?: (reference: PromptDesignReference) => void;
+    chatInputFocusVersion?: number;
     mcpStatus?: {
       total: number;
       connected: number;
@@ -55,7 +56,7 @@ export const PromptAiChatWorkspace = forwardRef<
       failedNames: string[];
     };
   }
->(({ controller, mcpStatus, onReferenceSelect }, ref) => {
+>(({ controller, mcpStatus, onReferenceSelect, chatInputFocusVersion }, ref) => {
   const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } =
     controller;
 
@@ -467,6 +468,7 @@ export const PromptAiChatWorkspace = forwardRef<
             onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
             onReferencesClear={() => controller.setReferences([])}
             onReferenceSelect={onReferenceSelect}
+            focusVersion={chatInputFocusVersion}
           />
         </div>
       </div>

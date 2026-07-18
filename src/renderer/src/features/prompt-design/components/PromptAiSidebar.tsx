@@ -22,6 +22,7 @@ type PromptAiSidebarProps = {
   onClose?: () => void;
   controller: ReturnType<typeof usePromptAiChatController>;
   onReferenceSelect?: (reference: PromptDesignReference) => void;
+  chatInputFocusVersion?: number;
   mcpStatus?: {
     total: number;
     connected: number;
@@ -38,6 +39,7 @@ export const PromptAiSidebar = ({
   controller,
   mcpStatus,
   onReferenceSelect,
+  chatInputFocusVersion,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
@@ -453,6 +455,7 @@ export const PromptAiSidebar = ({
                 ref={workspaceRef}
                 mcpStatus={mcpStatus}
                 onReferenceSelect={onReferenceSelect}
+                chatInputFocusVersion={chatInputFocusVersion}
                 controller={{
                   ...controller,
                   handleSessionChange: handleSessionSwitch,

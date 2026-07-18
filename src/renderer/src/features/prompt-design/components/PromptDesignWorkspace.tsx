@@ -204,6 +204,8 @@ export const PromptDesignWorkspace = ({
   const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  // 用于通知侧栏聊天输入框主动获取焦点。
+  const [chatInputFocusVersion, setChatInputFocusVersion] = useState(0);
   const lastShiftTimeRef = useRef(0);
   const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">("edit");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; view: EditorView; mode: "edit" | "preview" | "split" } | null>(null);
@@ -405,11 +407,19 @@ export const PromptDesignWorkspace = ({
     setContextMenu(null);
   }, [toast]);
 
-  const handleQuote = useCallback((): void => {
-    if (!contextMenu) return;
-    const reference = getReferenceRange(contextMenu.view);
-    if (!reference) { toast.warning("引用最多支持200行"); return; }
-    // use controllerRef to ensure we use the latest function
+  /**
+   * 将编辑器选区加入当前 AI 对话引用，并合并相邻区间。
+   */
+  const addSelectionReference = useCallback((view: EditorView): boolean => {
+    const selection = view.state.selection.main;
+    if (selection.from === selection.to) return false;
+
+    const reference = getReferenceRange(view);
+    if (!reference) {
+      toast.warning("引用最多支持200行");
+      return false;
+    }
+
     controllerRef.current?.setReferences((previous) => {
       const merged = [...previous, reference].sort((a, b) => a.startLine - b.startLine);
       const result: PromptDesignReference[] = [];
@@ -417,13 +427,24 @@ export const PromptDesignWorkspace = ({
         const last = result.at(-1);
         if (last && item.startLine <= last.endLine + 1) {
           last.endLine = Math.max(last.endLine, item.endLine);
-          last.content = contextMenu.view.state.doc.line(last.startLine).from <= contextMenu.view.state.doc.length ? contextMenu.view.state.doc.sliceString(contextMenu.view.state.doc.line(last.startLine).from, contextMenu.view.state.doc.line(last.endLine).to) : last.content;
+          last.content = view.state.doc.line(last.startLine).from <= view.state.doc.length ? view.state.doc.sliceString(view.state.doc.line(last.startLine).from, view.state.doc.line(last.endLine).to) : last.content;
         } else result.push({ ...item });
       }
       return result.slice(0, 10);
     });
+    return true;
+  }, [getReferenceRange, toast]);
+
+  /**
+   * 通过右键菜单添加引用后，将焦点转交给侧栏聊天输入框。
+   */
+  const handleQuote = useCallback((): void => {
+    if (!contextMenu) return;
+    if (addSelectionReference(contextMenu.view)) {
+      setChatInputFocusVersion((version) => version + 1);
+    }
     setContextMenu(null);
-  }, [contextMenu, getReferenceRange, toast]);
+  }, [addSelectionReference, contextMenu]);
 
   /**
    * 定位引用对应的编辑器内容，并在原文未变更时选中该范围。
@@ -564,13 +585,14 @@ export const PromptDesignWorkspace = ({
             const previous = editorView.dom.dataset.promptShiftTime;
             editorView.dom.dataset.promptShiftTime = String(now);
             if (!previous || now - Number(previous) > 500) return false;
+            addSelectionReference(editorView);
             setInlineInputView(editorView);
             return true;
           },
         }),
       ),
     });
-  }, []);
+  }, [addSelectionReference]);
 
   /**
    * 通过 CodeMirror 事务应用 Agent 已确认的正文，保留选区与滚动位置。
@@ -739,6 +761,7 @@ export const PromptDesignWorkspace = ({
         onClose={onClosePromptAiSidebar}
         controller={controller}
         onReferenceSelect={handleReferenceSelect}
+        chatInputFocusVersion={chatInputFocusVersion}
       />
     </div>
   );
