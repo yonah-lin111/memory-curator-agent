@@ -9,6 +9,7 @@ import {
 } from "@/components/ai-shared/AskRequestPanel";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import { CuratorSkillCallBlock } from "@/components/ai-shared/SkillCallBlock";
 import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
 import { PromptAiMcpOverview } from "@/features/prompt-design/components/PromptAiMcpOverview";
 import {
@@ -220,12 +221,30 @@ export const PromptAiChatMessageBubble = ({
         continue;
       }
 
+      if (step?.tool === "load_skill") {
+        const previousPart = visibleMessageParts[index - 1];
+        flushExecutionParts(previousPart?.kind === "tool" || previousPart?.kind === "reasoning");
+        const skillSteps = [step];
+        let nextIndex = index + 1;
+        while (nextIndex < visibleMessageParts.length) {
+          const nextStep = findToolStepByPart(message.toolSteps, visibleMessageParts[nextIndex]);
+          if (nextStep?.tool !== "load_skill") break;
+          skillSteps.push(nextStep);
+          nextIndex += 1;
+        }
+        const nextPart = visibleMessageParts[nextIndex];
+        renderedParts.push(<CuratorSkillCallBlock key={`${message.id}-${part.id}`} steps={skillSteps} connectsToNextExecution={nextPart?.kind === "tool" || nextPart?.kind === "reasoning"} />);
+        index = nextIndex - 1;
+        continue;
+      }
+
       if (part.kind === "text") executionParts.push({ id: part.id, kind: "text" });
       else if (part.kind === "reasoning") executionParts.push({ id: part.id, kind: "reasoning" });
       else {
         executionParts.push({
           id: part.id,
           kind: "tool",
+          isSkillTool: step?.tool === "load_skill",
           isInteractionTool: Boolean(step && (
             isCuratorAskRequest(step.data) ||
             isCuratorToolConfirmationRequest(step.data) ||

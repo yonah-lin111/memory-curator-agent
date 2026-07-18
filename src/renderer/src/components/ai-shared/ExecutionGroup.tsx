@@ -10,6 +10,8 @@ export type ExecutionSequencePart =
       kind: "tool";
       // 是否为交互型工具。
       isInteractionTool?: boolean;
+      // 是否为 Skill 加载工具，Skill 不参与普通执行聚合。
+      isSkillTool?: boolean;
     }
   | {
       // 片段唯一标识。
@@ -63,6 +65,19 @@ export const groupExecutionParts = (
     }
 
     if (part.kind === "tool" && part.isInteractionTool) {
+      flush();
+      groups.push({
+        kind: "execution",
+        group: {
+          id: part.id,
+          parts: [part],
+          connectsToNextExecution: parts[index + 1]?.kind === "tool" || parts[index + 1]?.kind === "reasoning",
+        },
+      });
+      return;
+    }
+
+    if (part.kind === "tool" && part.isSkillTool) {
       flush();
       groups.push({
         kind: "execution",

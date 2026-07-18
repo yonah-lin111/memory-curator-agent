@@ -150,13 +150,6 @@ const formatToolObservation = (step: CuratorToolStep): string => {
   const fileSummary = formatFileToolSummary(step.data);
   if (fileSummary) return fileSummary;
 
-  // 如果是技能加载工具，直接提取并显示技能显示名
-  if (step.tool === "load_skill") {
-    return (
-      (step.data as { name?: string } | undefined)?.name || step.observation
-    );
-  }
-
   const normalizedObservation = (step.observation ?? "").trim();
   const sqlRowsMatch = normalizedObservation.match(
     SQL_RAW_ROWS_OBSERVATION_PATTERN,
