@@ -5,6 +5,7 @@ import { PromptAiChatMessageBubble, type PromptAiMessageContextMenuRequest } fro
 import { PromptAiMessageContextMenu } from "@/features/prompt-design/components/PromptAiMessageContextMenu";
 import { PromptAiChatInput } from "@/features/prompt-design/components/PromptAiChatInput";
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
+import type { PromptDesignReference } from "@/features/prompt-design/types";
 
 // 底部占位计算所需的 DOM 参数。
 type BottomSpacerParams = {
@@ -45,6 +46,7 @@ export const PromptAiChatWorkspace = forwardRef<
   PromptAiChatWorkspaceHandle,
   {
     controller: ReturnType<typeof usePromptAiChatController>;
+    onReferenceSelect?: (reference: PromptDesignReference) => void;
     mcpStatus?: {
       total: number;
       connected: number;
@@ -53,7 +55,7 @@ export const PromptAiChatWorkspace = forwardRef<
       failedNames: string[];
     };
   }
->(({ controller, mcpStatus }, ref) => {
+>(({ controller, mcpStatus, onReferenceSelect }, ref) => {
   const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } =
     controller;
 
@@ -439,6 +441,7 @@ export const PromptAiChatWorkspace = forwardRef<
                         onSubmitToolConfirmationAnswer={
                           controller.handleSubmitToolConfirmationAnswer
                         }
+                        onReferenceSelect={onReferenceSelect}
                       />
                     </div>
                   );
@@ -469,6 +472,7 @@ export const PromptAiChatWorkspace = forwardRef<
             onInjectedTextConsumed={() => setInjectedText(undefined)}
             references={controller.references}
             onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
+            onReferenceSelect={onReferenceSelect}
           />
         </div>
       </div>

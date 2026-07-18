@@ -70,6 +70,7 @@ export const PromptAiChatInput = ({
   onInjectedTextConsumed,
   references = [],
   onReferenceRemove,
+  onReferenceSelect,
   mcpStatus,
 }: {
   onSend?: (
@@ -92,6 +93,12 @@ export const PromptAiChatInput = ({
     content: string;
   }[];
   onReferenceRemove?: (id: string) => void;
+  onReferenceSelect?: (reference: {
+    id: string;
+    startLine: number;
+    endLine: number;
+    content: string;
+  }) => void;
   mcpStatus?: {
     total: number;
     connected: number;
@@ -479,6 +486,7 @@ export const PromptAiChatInput = ({
               <Tag
                 key={reference.id}
                 size="small"
+                onClick={() => onReferenceSelect?.(reference)}
                 onClose={() => onReferenceRemove?.(reference.id)}
               >
                 第{reference.startLine}–{reference.endLine}行

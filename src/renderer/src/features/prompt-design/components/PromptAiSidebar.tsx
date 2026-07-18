@@ -11,6 +11,7 @@ import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
 import { resolveCuratorSelectedModelOption, estimateCuratorContextTokens } from "@/lib/ai-shared/contextBuilder";
 import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle";
 import { useToast } from "@/components/ui/Toast";
+import type { PromptDesignReference } from "@/features/prompt-design/types";
 
 // 会话切换 loading 最短展示时长（ms），避免闪烁。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -20,6 +21,7 @@ type PromptAiSidebarProps = {
   isTransitionEnabled?: boolean;
   onClose?: () => void;
   controller: ReturnType<typeof usePromptAiChatController>;
+  onReferenceSelect?: (reference: PromptDesignReference) => void;
   mcpStatus?: {
     total: number;
     connected: number;
@@ -35,6 +37,7 @@ export const PromptAiSidebar = ({
   onClose,
   controller,
   mcpStatus,
+  onReferenceSelect,
 }: PromptAiSidebarProps): React.JSX.Element => {
   const toast = useToast();
   const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
@@ -449,6 +452,7 @@ export const PromptAiSidebar = ({
               <PromptAiChatWorkspace
                 ref={workspaceRef}
                 mcpStatus={mcpStatus}
+                onReferenceSelect={onReferenceSelect}
                 controller={{
                   ...controller,
                   handleSessionChange: handleSessionSwitch,

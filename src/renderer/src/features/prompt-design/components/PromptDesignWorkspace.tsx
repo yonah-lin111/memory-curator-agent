@@ -294,12 +294,19 @@ export const PromptDesignWorkspace = ({
       } else {
         const previousLines = toLines(previousContent);
         const nextLines = toLines(nextContent);
-        controllerRef.current?.setReferences((previous) => previous.filter((reference) =>
-          previousLines.slice(reference.startLine - 1, reference.endLine).join("\n") ===
-            nextLines.slice(reference.startLine - 1, reference.endLine).join("\n") &&
-          previousLines.slice(0, reference.startLine - 1).join("\n") ===
-            nextLines.slice(0, reference.startLine - 1).join("\n"),
-        ));
+        controllerRef.current?.setReferences((previous) => {
+          const nextReferences = previous.filter((reference) =>
+            previousLines.slice(reference.startLine - 1, reference.endLine).join("\n") ===
+              nextLines.slice(reference.startLine - 1, reference.endLine).join("\n") &&
+            previousLines.slice(0, reference.startLine - 1).join("\n") ===
+              nextLines.slice(0, reference.startLine - 1).join("\n"),
+          );
+          const removedCount = previous.length - nextReferences.length;
+          if (removedCount > 0) {
+            toastRef.current.warning(`文档内容已改变，已移除 ${removedCount} 个失效引用`);
+          }
+          return nextReferences;
+        });
         const currentWorkingContent = pendingCandidateContentRef.current ?? previousContent;
         let nextWorkingContent = currentWorkingContent;
         let hasSyncConflict = false;
@@ -417,6 +424,30 @@ export const PromptDesignWorkspace = ({
     });
     setContextMenu(null);
   }, [contextMenu, getReferenceRange, toast]);
+
+  /**
+   * 定位引用对应的编辑器内容，并在原文未变更时选中该范围。
+   */
+  const handleReferenceSelect = useCallback((reference: PromptDesignReference): void => {
+    const view = editorViewRef.current;
+    if (!view || reference.startLine < 1 || reference.endLine > view.state.doc.lines) {
+      toast.warning("引用内容已改变，无法定位");
+      return;
+    }
+
+    const from = view.state.doc.line(reference.startLine).from;
+    const to = view.state.doc.line(reference.endLine).to;
+    if (view.state.doc.sliceString(from, to) !== reference.content) {
+      toast.warning("引用内容已改变，无法定位");
+      return;
+    }
+
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    view.focus();
+  }, [toast]);
 
   // 初始化加载当前 activeDesignId 的数据
   useEffect(() => {
@@ -707,6 +738,7 @@ export const PromptDesignWorkspace = ({
         mcpStatus={mcpStatus}
         onClose={onClosePromptAiSidebar}
         controller={controller}
+        onReferenceSelect={handleReferenceSelect}
       />
     </div>
   );

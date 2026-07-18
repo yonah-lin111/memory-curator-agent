@@ -22,6 +22,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useAiSettingsStore } from "@/lib/aiSettingsStore";
 import type { CuratorToolStep } from "@/features/curator/types";
 import type { PromptAiMessage, PromptAiPart } from "@/features/prompt-design/components/usePromptAiChatController";
+import type { PromptDesignReference } from "@/features/prompt-design/types";
 import { MdPreview } from "md-editor-rt";
 import "md-editor-rt/lib/preview.css";
 
@@ -57,6 +58,7 @@ type PromptAiChatMessageBubbleProps = {
   ) => void | Promise<void>;
   onOpenContextMenu: (request: PromptAiMessageContextMenuRequest) => void;
   onEditAndResendUserMessage?: (messageId: string, text: string) => void | Promise<void>;
+  onReferenceSelect?: (reference: PromptDesignReference) => void;
   onSubmitToolConfirmationAnswer?: (
     payload: CuratorToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
@@ -119,6 +121,7 @@ export const PromptAiChatMessageBubble = ({
   onSubmitAskAnswer,
   onOpenContextMenu,
   onEditAndResendUserMessage,
+  onReferenceSelect,
   onSubmitToolConfirmationAnswer,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
@@ -274,7 +277,7 @@ export const PromptAiChatMessageBubble = ({
                   <button type="button" className="rounded-[4px] bg-white/10 px-2 py-1 text-xs text-white hover:bg-white/15 disabled:opacity-40" disabled={!editText.trim() || editText.trim() === message.content.trim() || isGenerating} onClick={() => { setIsEditing(false); void onEditAndResendUserMessage?.(message.id, editText.trim()); }}>发送并重新生成</button>
                 </div>
               </div>
-            ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"><div className="mb-1">{message.content}</div>{message.references?.length ? <div className="flex flex-wrap gap-1">{message.references.map((reference) => <Tooltip key={reference.id} content={<pre className="max-h-60 max-w-[360px] overflow-auto whitespace-pre-wrap text-xs">{reference.content}</pre>}><Tag size="small">第{reference.startLine}–{reference.endLine}行</Tag></Tooltip>)}</div> : null}</div>
+            ) : <div className="overflow-hidden w-fit max-w-full select-text pr-1 text-left"><div className="mb-1">{message.content}</div>{message.references?.length ? <div className="flex flex-wrap justify-end gap-1">{message.references.map((reference) => <Tooltip key={reference.id} content={<pre className="max-h-60 max-w-[360px] overflow-auto whitespace-pre-wrap text-xs">{reference.content}</pre>}><Tag size="small" onClick={() => onReferenceSelect?.(reference)}>第{reference.startLine}–{reference.endLine}行</Tag></Tooltip>)}</div> : null}</div>
           ) : isSystemCommand ? (
             <div className="flex w-full items-center gap-3 py-1 text-white/45">
               <span className="h-px flex-1 bg-white/10" />
