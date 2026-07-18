@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, ChevronDown, LoaderCircle, Server, X } from "lucide-react";
+import { Check, LoaderCircle, Server, X } from "lucide-react";
 import type { CuratorToolStep } from "@/features/curator/types";
 
 type PromptAiMcpCallBlockProps = {
@@ -10,36 +10,20 @@ type PromptAiMcpCallBlockProps = {
 };
 
 /**
- * 安全序列化 MCP 调用详情。
+ * 返回 MCP 调用状态的图标与样式。
  */
-const stringifyValue = (value: unknown): string => {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return "Unable to serialize MCP data.";
-  }
-};
-
-/**
- * 截断 MCP 摘要，完整内容由详情面板承载。
- */
-const getSummary = (observation: string): string => {
-  const normalized = observation.trim();
-  return normalized.length > 160 ? `${normalized.slice(0, 160)}...` : normalized || "No output.";
-};
-
-/**
- * 返回 MCP 步骤的状态图标与样式。
- */
-const getStatusPresentation = (status: CuratorToolStep["status"]): {
+const getMcpStatusPresentation = (
+  status: CuratorToolStep["status"],
+): {
   Icon: React.ComponentType<{ className?: string }>;
   className: string;
-  label: string;
 } => {
-  if (status === "running") return { Icon: LoaderCircle, className: "animate-spin text-amber-400", label: "运行中" };
-  if (status === "failed") return { Icon: X, className: "text-red-400", label: "失败" };
-  if (status === "cancelled") return { Icon: X, className: "text-white/35", label: "已取消" };
-  return { Icon: Check, className: "text-emerald-400", label: "完成" };
+  if (status === "running") {
+    return { Icon: LoaderCircle, className: "animate-spin text-amber-400" };
+  }
+  if (status === "failed") return { Icon: X, className: "text-red-400" };
+  if (status === "cancelled") return { Icon: X, className: "text-white/35" };
+  return { Icon: Check, className: "text-emerald-400" };
 };
 
 /**
@@ -49,7 +33,6 @@ export const PromptAiMcpCallBlock = ({
   steps,
   connectsToNextExecution = false,
 }: PromptAiMcpCallBlockProps): React.JSX.Element | null => {
-  const [expandedStepIds, setExpandedStepIds] = useState<Set<string>>(new Set());
   const [isCallListExpanded, setIsCallListExpanded] = useState(false);
   const serverName = steps[0]?.mcp?.serverName;
 
@@ -57,17 +40,12 @@ export const PromptAiMcpCallBlock = ({
     return null;
   }
 
-  const toggleDetails = (stepId: string): void => {
-    setExpandedStepIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(stepId)) next.delete(stepId);
-      else next.add(stepId);
-      return next;
-    });
-  };
   const collapseThreshold = 2;
   const hasMoreSteps = steps.length > collapseThreshold;
-  const visibleSteps = hasMoreSteps && !isCallListExpanded ? steps.slice(0, collapseThreshold) : steps;
+  const visibleSteps =
+    hasMoreSteps && !isCallListExpanded
+      ? steps.slice(0, collapseThreshold)
+      : steps;
   const hiddenStepCount = steps.length - collapseThreshold;
 
   return (
@@ -82,28 +60,20 @@ export const PromptAiMcpCallBlock = ({
         <div className="text-xs font-mono font-bold text-cyan-100">MCP · {serverName}</div>
         <div className="flex flex-col gap-1.5">
           {visibleSteps.map((step) => {
-            const presentation = getStatusPresentation(step.status);
-            const isExpanded = expandedStepIds.has(step.id);
             const toolName = step.mcp?.toolName ?? step.tool;
+            const presentation = getMcpStatusPresentation(step.status);
 
             return (
-              <div key={step.id} className="min-w-0 border-l border-cyan-200/15 pl-2.5">
-                <button
-                  type="button"
-                  className="flex w-full items-start gap-1.5 text-left"
-                  onClick={() => toggleDetails(step.id)}
-                  aria-expanded={isExpanded}
-                >
-                  <presentation.Icon className={`mt-0.5 h-3 w-3 shrink-0 ${presentation.className}`} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-all font-mono text-xs text-white/80">{toolName}</span>
-                    <span className="block break-words text-xs leading-relaxed text-white/45">{getSummary(step.observation)}</span>
-                  </span>
-                  <ChevronDown className={`mt-0.5 h-3 w-3 shrink-0 text-white/35 transition-transform ${isExpanded ? "" : "-rotate-90"}`} />
-                </button>
-                {isExpanded ? (
-                  <pre className="mt-1.5 max-h-72 overflow-auto whitespace-pre-wrap break-words border-t border-white/5 pt-1.5 text-xs leading-relaxed text-white/50 custom-scrollbar">{stringifyValue({ input: step.input ?? {}, output: step.data ?? null })}</pre>
-                ) : null}
+              <div key={step.id} className="flex min-w-0 items-start gap-1 text-xs leading-relaxed text-white/45">
+                <span className="inline-flex h-[1.625em] w-3 shrink-0 items-center justify-center select-none">
+                  <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
+                    <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span className="min-w-0 break-all font-mono text-xs text-white/80">{toolName}</span>
+                <presentation.Icon
+                  className={`mt-0.5 h-3 w-3 shrink-0 ${presentation.className}`}
+                />
               </div>
             );
           })}
@@ -114,7 +84,9 @@ export const PromptAiMcpCallBlock = ({
             className="w-fit text-xs [transform:skewX(-8deg)] font-medium text-cyan-100/50 transition-colors hover:text-cyan-100/80"
             onClick={() => setIsCallListExpanded((previous) => !previous)}
           >
-            {isCallListExpanded ? `Hide ${hiddenStepCount} more` : `Show ${hiddenStepCount} more...`}
+            {isCallListExpanded
+              ? `Hide ${hiddenStepCount} more`
+              : `Show ${hiddenStepCount} more...`}
           </button>
         ) : null}
       </div>
