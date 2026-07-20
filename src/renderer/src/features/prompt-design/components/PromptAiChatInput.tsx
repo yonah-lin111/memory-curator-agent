@@ -22,6 +22,7 @@ import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
 import {
   PromptAiFileMentionPanel,
   PromptAiSlashCommandPanel,
+  type PromptAiInputCommand,
 } from "@/features/prompt-design/components/PromptAiInputPanels";
 import {
   FALLBACK_LINE_HEIGHT,
@@ -35,12 +36,18 @@ import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
 import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
 import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory";
 import type { CuratorSession } from "@/features/curator/types";
-import type { CuratorInputCommand } from "@/lib/ai-shared/types";
 import type {
   PromptAiSendOptions,
   PromptAiUndoResult,
 } from "@/features/prompt-design/components/usePromptAiChatController";
 import { Tag } from "@/components/ui/Tag";
+import {
+  executePromptChangeCommand,
+  applyPromptAction,
+  getPromptCommandOptions,
+  getPromptCommandTemplate,
+  isPromptChangeCommand,
+} from "@/features/prompt-design/lib/promptCommand";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
@@ -50,6 +57,14 @@ const MCP_COMMAND = {
   name: "/mcp",
   aliases: [],
   description: "List available MCP servers and tools",
+  addToContext: false,
+} as const;
+
+const PROMPT_COMMAND = {
+  id: "prompt",
+  name: "/prompt",
+  aliases: [],
+  description: "创建模块或设计",
   addToContext: false,
 } as const;
 
@@ -132,13 +147,21 @@ export const PromptAiChatInput = ({
   const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
-  const matchedCommands = useMemo<
-    Array<CuratorInputCommand | typeof MCP_COMMAND>
-  >(() => {
+  const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
+    const promptCommands = getPromptCommandOptions(inputText);
+    if (promptCommands.length > 0) {
+      return promptCommands;
+    }
     const commands = getMatchedCommands(inputText).filter((cmd) =>
       ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
     );
-    return isMcpCommandMatch(inputText) ? [...commands, MCP_COMMAND] : commands;
+    const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(inputText)
+      ? [MCP_COMMAND]
+      : [];
+    if ("/prompt".startsWith(inputText.trim().toLowerCase())) {
+      customCommands.push(PROMPT_COMMAND);
+    }
+    return [...commands, ...customCommands];
   }, [inputText]);
 
   const {
@@ -275,10 +298,33 @@ export const PromptAiChatInput = ({
       } else if (commandId === "suggest") {
         setInputText("");
         onSuggestQuestions?.();
+      } else if (commandId === "prompt") {
+        setInputText("/prompt ");
+        setIsCommandPanelOpen(true);
+      } else if (commandId === "module" || commandId === "design") {
+        const template = getPromptCommandTemplate(commandId);
+        setInputText(template);
+        requestAnimationFrame(() => {
+          const cursorPosition = template.length - 1;
+          textareaRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+        });
+      } else if (commandId === "root") {
+        setInputText(applyPromptAction(inputText, "root"));
+      } else if (commandId === "change") {
+        setInputText(applyPromptAction(inputText, "change"));
       }
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
-    [onMcp, onNewChat, onSuggestQuestions, onUndo, disabled, resetHistoryCursor, toast],
+    [
+      disabled,
+      inputText,
+      onMcp,
+      onNewChat,
+      onSuggestQuestions,
+      onUndo,
+      resetHistoryCursor,
+      toast,
+    ],
   );
 
   const moveActiveCommand = useCallback(
@@ -318,12 +364,30 @@ export const PromptAiChatInput = ({
         return;
       }
 
+      if (isPromptChangeCommand(nextValue)) {
+        setIsCommandPanelOpen(false);
+        closeFileMentionPanel();
+        return;
+      }
+
+      const promptCommands = getPromptCommandOptions(nextValue);
+      if (promptCommands.length > 0) {
+        setIsCommandPanelOpen(true);
+        setActiveCommandIndex(0);
+        closeFileMentionPanel();
+        return;
+      }
+
       const commands = getMatchedCommands(nextValue).filter((cmd) =>
         ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
       );
-      const nextMatchedCommands = isMcpCommandMatch(nextValue)
-        ? [...commands, MCP_COMMAND]
-        : commands;
+      const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(nextValue)
+        ? [MCP_COMMAND]
+        : [];
+      if ("/prompt".startsWith(nextValue.trim().toLowerCase())) {
+        customCommands.push(PROMPT_COMMAND);
+      }
+      const nextMatchedCommands = [...commands, ...customCommands];
 
       const shouldOpenCommandPanel =
         isCommandInput(nextValue) && nextMatchedCommands.length > 0;
@@ -363,6 +427,16 @@ export const PromptAiChatInput = ({
     }
     if (inputText.trim() === "/mcp") {
       await executeCommand("mcp");
+      return;
+    }
+    if (isPromptChangeCommand(inputText)) {
+      try {
+        const designCreated = await executePromptChangeCommand(inputText);
+        setInputText("");
+        toast.success(designCreated ? "已创建并打开设计" : "已创建模块");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "创建设计失败");
+      }
       return;
     }
 
@@ -693,11 +767,11 @@ export const PromptAiChatInput = ({
             </button>
             <IconButton
               aria-label="Send message"
-              disabled={!inputText.trim()}
-              highlighted={!!inputText.trim()}
+              disabled={!inputText.trim() || isPromptChangeCommand(inputText)}
+              highlighted={Boolean(inputText.trim()) && !isPromptChangeCommand(inputText)}
               onClick={handleSend}
               className={`rounded-full flex items-center justify-center transition-all ${
-                inputText.trim()
+                inputText.trim() && !isPromptChangeCommand(inputText)
                   ? "bg-white text-black hover:bg-white/90"
                   : "bg-white/10 text-white/30 cursor-not-allowed"
               }`}

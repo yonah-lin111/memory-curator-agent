@@ -7,6 +7,10 @@ interface PromptDesignState {
   setItemName: (name: string) => void;
   activeProjectId: string | null;
   setActiveProjectId: (id: string | null) => void;
+  // 当前活动模块标识。
+  activeModuleId: string | null;
+  // 设置当前活动模块。
+  setActiveModuleId: (id: string | null) => void;
   activeDesignId: string | null;
   setActiveDesignId: (id: string | null) => void;
   // 切换设计项前触发的回调集合。
@@ -24,6 +28,8 @@ export const usePromptDesignStore = create<PromptDesignState>((set, get) => ({
   setItemName: (name: string) => set({ itemName: name }),
   activeProjectId: null,
   setActiveProjectId: (id: string | null) => set({ activeProjectId: id }),
+  activeModuleId: null,
+  setActiveModuleId: (id: string | null) => set({ activeModuleId: id }),
   activeDesignId: null,
   setActiveDesignId: (id: string | null) => set({ activeDesignId: id }),
   beforeDesignSwitchCallbacks: [],

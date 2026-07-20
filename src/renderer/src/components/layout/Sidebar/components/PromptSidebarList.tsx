@@ -6,6 +6,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+import { PROMPT_DESIGN_CREATED_EVENT } from "@/features/prompt-design/lib/promptCommand";
 import { PromptSidebarContextMenu } from "./PromptSidebarContextMenu";
 
 type PromptSidebarProps = {
@@ -66,6 +67,9 @@ export const PromptSidebarList = ({
   const setActiveDesignId = usePromptDesignStore(
     (state) => state.setActiveDesignId,
   );
+  const setActiveModuleId = usePromptDesignStore(
+    (state) => state.setActiveModuleId,
+  );
   const setProjectName = usePromptDesignStore((state) => state.setProjectName);
   const setItemName = usePromptDesignStore((state) => state.setItemName);
 
@@ -88,8 +92,19 @@ export const PromptSidebarList = ({
   useEffect(() => {
     fetchData();
     const handleClick = () => setContextMenu(null);
+    const handlePromptDesignCreated = () => {
+      void fetchData();
+      const projectId = usePromptDesignStore.getState().activeProjectId;
+      if (projectId) {
+        setCollapsedProjects((previous) => ({ ...previous, [projectId]: false }));
+      }
+    };
     window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
+    window.addEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
+    return () => {
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
+    };
   }, []);
 
   const handleContextMenu = (
@@ -522,6 +537,7 @@ export const PromptSidebarList = ({
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
                               onClick={() => {
                                 if (editingId !== module.id) toggleModule(module.id);
+                                setActiveModuleId(module.id);
                               }}
                               onContextMenu={(event) =>
                                 handleContextMenu(event, "module", module, proj.id)
@@ -565,6 +581,7 @@ export const PromptSidebarList = ({
                                     console.error("Failed to check or create session:", error);
                                   }
                                   setActiveProjectId(proj.id);
+                                  setActiveModuleId(module.id);
                                   const useStore = usePromptDesignStore.getState();
                                   if (useStore.setActiveDesignIdSafe) {
                                     const success = await useStore.setActiveDesignIdSafe(prompt.id);
@@ -621,6 +638,7 @@ export const PromptSidebarList = ({
                               console.error("Failed to check or create session:", error);
                             }
                             setActiveProjectId(proj.id);
+                            setActiveModuleId(null);
                             const useStore = usePromptDesignStore.getState();
                             if (useStore.setActiveDesignIdSafe) {
                               const success = await useStore.setActiveDesignIdSafe(prompt.id);

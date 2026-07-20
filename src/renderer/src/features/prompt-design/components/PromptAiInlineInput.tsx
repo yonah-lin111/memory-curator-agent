@@ -15,6 +15,13 @@ import {
 } from "@/features/prompt-design/components/PromptAiInputPanels";
 import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
 import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
+import {
+  executePromptChangeCommand,
+  applyPromptAction,
+  getPromptCommandOptions,
+  getPromptCommandTemplate,
+  isPromptChangeCommand,
+} from "@/features/prompt-design/lib/promptCommand";
 
 type InlineInputPosition = { left: number; top: number | "auto"; bottom: number | "auto" };
 type PanelDirection = "up" | "down";
@@ -32,6 +39,12 @@ const MCP_COMMAND: PromptAiInputCommand = {
   id: "mcp",
   name: "/mcp",
   description: "列出可用的 MCP 服务和工具",
+};
+
+const PROMPT_COMMAND: PromptAiInputCommand = {
+  id: "prompt",
+  name: "/prompt",
+  description: "创建模块或设计",
 };
 
 /**
@@ -60,11 +73,19 @@ export const PromptAiInlineInput = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mention = useFileMention(inputText, setInputText, textareaRef, () => undefined);
   const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
+    const promptCommands = getPromptCommandOptions(inputText);
+    if (promptCommands.length > 0) {
+      return promptCommands;
+    }
     const commands = getMatchedCommands(inputText).filter((command) =>
       INLINE_COMMAND_IDS.includes(command.id),
     );
 
-    return isMcpCommandMatch(inputText) ? [...commands, MCP_COMMAND] : commands;
+    const customCommands = isMcpCommandMatch(inputText) ? [MCP_COMMAND] : [];
+    if ("/prompt".startsWith(inputText.trim().toLowerCase())) {
+      customCommands.push(PROMPT_COMMAND);
+    }
+    return [...commands, ...customCommands];
   }, [inputText]);
   const {
     activeSessionIndex,
@@ -105,11 +126,23 @@ export const PromptAiInlineInput = ({
   const handleSend = useCallback((): void => {
     const text = inputText.trim();
     if (!text || controller.isGenerating) return;
+    if (isPromptChangeCommand(text)) {
+      void (async (): Promise<void> => {
+        try {
+          const designCreated = await executePromptChangeCommand(text);
+          setInputText("");
+          toast.success(designCreated ? "已创建并打开设计" : "已创建模块");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "创建设计失败");
+        }
+      })();
+      return;
+    }
     void controller.sendMessage(text, undefined, { references: controller.references });
     setInputText("");
     mention.closeFileMentionPanel();
     restoreEditorFocus();
-  }, [controller, inputText, mention, restoreEditorFocus]);
+  }, [controller, inputText, mention, restoreEditorFocus, toast]);
 
   /**
    * 清空当前草稿与引用，保持与聊天输入框一致的清空语义。
@@ -148,10 +181,24 @@ export const PromptAiInlineInput = ({
     } else if (commandId === "mcp") {
       setInputText("");
       await controller.showMcpTools();
+    } else if (commandId === "prompt") {
+      setInputText("/prompt ");
+      setIsCommandPanelOpen(true);
+    } else if (commandId === "module" || commandId === "design") {
+      const template = getPromptCommandTemplate(commandId);
+      setInputText(template);
+      requestAnimationFrame(() => {
+        const cursorPosition = template.length - 1;
+        textareaRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+      });
+    } else if (commandId === "root") {
+      setInputText(applyPromptAction(inputText, "root"));
+    } else if (commandId === "change") {
+      setInputText(applyPromptAction(inputText, "change"));
     }
 
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [controller, toast]);
+  }, [controller, inputText, toast]);
 
   /**
    * 在命令候选项中循环移动当前激活项。
@@ -177,12 +224,28 @@ export const PromptAiInlineInput = ({
       return;
     }
 
+    if (isPromptChangeCommand(nextValue)) {
+      setIsCommandPanelOpen(false);
+      mention.closeFileMentionPanel();
+      return;
+    }
+
+    const promptCommands = getPromptCommandOptions(nextValue);
+    if (promptCommands.length > 0) {
+      setIsCommandPanelOpen(true);
+      setActiveCommandIndex(0);
+      mention.closeFileMentionPanel();
+      return;
+    }
+
     const commands = getMatchedCommands(nextValue).filter((command) =>
       INLINE_COMMAND_IDS.includes(command.id),
     );
-    const nextMatchedCommands = isMcpCommandMatch(nextValue)
-      ? [...commands, MCP_COMMAND]
-      : commands;
+    const customCommands = isMcpCommandMatch(nextValue) ? [MCP_COMMAND] : [];
+    if ("/prompt".startsWith(nextValue.trim().toLowerCase())) {
+      customCommands.push(PROMPT_COMMAND);
+    }
+    const nextMatchedCommands = [...commands, ...customCommands];
     const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0;
     setIsCommandPanelOpen(shouldOpenCommandPanel);
     setActiveCommandIndex(0);
@@ -365,10 +428,10 @@ export const PromptAiInlineInput = ({
         </button>
         <IconButton
           aria-label="发送消息"
-          disabled={!inputText.trim() || controller.isGenerating}
-          highlighted={Boolean(inputText.trim())}
+          disabled={!inputText.trim() || isPromptChangeCommand(inputText) || controller.isGenerating}
+          highlighted={Boolean(inputText.trim()) && !isPromptChangeCommand(inputText)}
           onClick={handleSend}
-          className={`flex items-center justify-center rounded-full transition-all ${inputText.trim() ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/30"}`}
+          className={`flex items-center justify-center rounded-full transition-all ${inputText.trim() && !isPromptChangeCommand(inputText) ? "bg-white text-black hover:bg-white/90" : "cursor-not-allowed bg-white/10 text-white/30"}`}
         >
           <SendHorizontal className="h-3.5 w-3.5" />
         </IconButton>
