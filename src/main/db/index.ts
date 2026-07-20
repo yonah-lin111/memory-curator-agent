@@ -1082,19 +1082,37 @@ export const createPromptDesignTables = (database: Database.Database): void => {
       updated_at TIMESTAMP NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS prompt_design_items (
+    CREATE TABLE IF NOT EXISTS prompt_design_modules (
       id INTEGER PRIMARY KEY,
       external_id TEXT NOT NULL UNIQUE,
       project_id TEXT NOT NULL,
       name TEXT NOT NULL,
-      design_data TEXT,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     );
 
+    CREATE INDEX IF NOT EXISTS idx_prompt_design_modules_project_id
+    ON prompt_design_modules(project_id);
+
+    CREATE TABLE IF NOT EXISTS prompt_design_items (
+      id INTEGER PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      project_id TEXT NOT NULL,
+      module_id TEXT,
+      name TEXT NOT NULL,
+      design_data TEXT,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE,
+      FOREIGN KEY (module_id) REFERENCES prompt_design_modules(external_id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_prompt_design_items_project_id
     ON prompt_design_items(project_id);
+
+    CREATE INDEX IF NOT EXISTS idx_prompt_design_items_module_id
+    ON prompt_design_items(module_id);
   `)
 }
 
@@ -1226,7 +1244,7 @@ export const initDatabase = (): Database.Database => {
   createThemeItemsTable(sqlite)
   createBillsTable(sqlite)
 
-  // 一次性彻底清空并重建所有提示词设计与 AI 相关的表数据（升级到数据库版本 1，强制应用正确的外键约束）
+  // 提示词设计数据库结构版本。
   const currentVersion = sqlite.pragma('user_version', { simple: true }) as number
   if (currentVersion < 1) {
     const tablesToDrop = [
@@ -1248,13 +1266,49 @@ export const initDatabase = (): Database.Database => {
       }
     }
     sqlite.pragma('user_version = 1')
-  } else {
-      try {
-        // v1 -> v2 (or unversioned minor upgrade): drop obsolete prompt_active_nodes
-        sqlite.exec(`DROP TABLE IF EXISTS prompt_active_nodes;`)
-      } catch (e) {
-        // ignore
-      }
+  }
+
+  if (currentVersion < 2) {
+    // 升级模块层级时按产品要求清空提示词设计及其关联 AI 数据，保留项目配置。
+    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    sqlite.exec(`
+      DROP TABLE IF EXISTS prompt_ai_agent_context_snapshots;
+      DROP TABLE IF EXISTS prompt_ai_agent_tool_calls;
+      DROP TABLE IF EXISTS prompt_ai_agent_runs;
+      DROP TABLE IF EXISTS prompt_ai_chat_messages;
+      DROP TABLE IF EXISTS prompt_ai_chat_sessions;
+      DROP TABLE IF EXISTS prompt_design_items;
+      DROP TABLE IF EXISTS prompt_design_modules;
+      DROP TABLE IF EXISTS prompt_active_nodes;
+    `)
+    sqlite.pragma('user_version = 2')
+  }
+
+  if (currentVersion === 2) {
+    // 允许提示词设计直接归属项目，不要求关联模块，并保留既有设计与 AI 会话。
+    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    sqlite.exec(`
+      CREATE TABLE prompt_design_items_new (
+        id INTEGER PRIMARY KEY,
+        external_id TEXT NOT NULL UNIQUE,
+        project_id TEXT NOT NULL,
+        module_id TEXT,
+        name TEXT NOT NULL,
+        design_data TEXT,
+        created_at TIMESTAMP NOT NULL,
+        updated_at TIMESTAMP NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE,
+        FOREIGN KEY (module_id) REFERENCES prompt_design_modules(external_id) ON DELETE CASCADE
+      );
+
+      INSERT INTO prompt_design_items_new (id, external_id, project_id, module_id, name, design_data, created_at, updated_at)
+      SELECT id, external_id, project_id, module_id, name, design_data, created_at, updated_at
+      FROM prompt_design_items;
+
+      DROP TABLE prompt_design_items;
+      ALTER TABLE prompt_design_items_new RENAME TO prompt_design_items;
+    `)
+    sqlite.pragma('user_version = 3')
   }
 
   createPromptDesignTables(sqlite)

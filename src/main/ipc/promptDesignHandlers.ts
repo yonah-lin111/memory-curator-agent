@@ -95,6 +95,27 @@ export const registerPromptDesignHandlers = (): void => {
     promptDesignService.deleteProject(id)
   })
 
+  // 模块
+  ipcMain.handle("prompt-design:modules:list", (_, projectId) => {
+    return promptDesignService.listModules(projectId)
+  })
+
+  ipcMain.handle("prompt-design:modules:create", (_, input) => {
+    return promptDesignService.createModule(input)
+  })
+
+  ipcMain.handle("prompt-design:modules:rename", (_, id, name) => {
+    promptDesignService.renameModule(id, name)
+  })
+
+  ipcMain.handle("prompt-design:modules:update", (_, id, input) => {
+    promptDesignService.updateModule(id, input)
+  })
+
+  ipcMain.handle("prompt-design:modules:delete", (_, id) => {
+    promptDesignService.deleteModule(id)
+  })
+
   // 设计
   ipcMain.handle("prompt-design:designs:list", (_, projectId) => {
     return promptDesignService.listDesigns(projectId)

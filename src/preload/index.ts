@@ -1011,6 +1011,13 @@ const api = {
       update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:projects:update', id, input),
       delete: (id: string) => ipcRenderer.invoke('prompt-design:projects:delete', id)
     },
+    modules: {
+      list: (projectId?: string) => ipcRenderer.invoke('prompt-design:modules:list', projectId),
+      create: (input: any) => ipcRenderer.invoke('prompt-design:modules:create', input),
+      rename: (id: string, name: string) => ipcRenderer.invoke('prompt-design:modules:rename', id, name),
+      update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:modules:update', id, input),
+      delete: (id: string) => ipcRenderer.invoke('prompt-design:modules:delete', id)
+    },
     designs: {
       list: (projectId?: string) => ipcRenderer.invoke('prompt-design:designs:list', projectId),
       create: (input: any) => ipcRenderer.invoke('prompt-design:designs:create', input),

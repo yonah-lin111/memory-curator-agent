@@ -1,6 +1,6 @@
 import type React from "react";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Search, Plus, Import } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Search, Plus, Import } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Modal } from "@/components/ui/Modal";
@@ -24,9 +24,13 @@ export const PromptSidebarList = ({
   const [searchKeyword, setSearchKeyword] = useState<string>("");
 
   const [projects, setProjects] = useState<any[]>([]);
+  const [modules, setModules] = useState<any[]>([]);
   const [designs, setDesigns] = useState<any[]>([]);
 
   const [collapsedProjects, setCollapsedProjects] = useState<
+    Record<string, boolean>
+  >({});
+  const [collapsedModules, setCollapsedModules] = useState<
     Record<string, boolean>
   >({});
   const [newProjectName, setNewProjectName] = useState<string>("");
@@ -43,7 +47,7 @@ export const PromptSidebarList = ({
   /** 记录哪些项目名称已检测为截断（scrollWidth > clientWidth） */
   const [truncatedIds, setTruncatedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{
-    type: "project" | "prompt";
+    type: "project" | "module" | "prompt";
     id: string;
     title: string;
     projectId?: string;
@@ -71,8 +75,10 @@ export const PromptSidebarList = ({
         return;
       }
       const p = await (window.api as any).promptDesign.projects.list();
+      const m = await (window.api as any).promptDesign.modules.list();
       const d = await (window.api as any).promptDesign.designs.list();
       setProjects(p);
+      setModules(m);
       setDesigns(d);
     } catch (e) {
       console.error(e);
@@ -88,7 +94,7 @@ export const PromptSidebarList = ({
 
   const handleContextMenu = (
     e: React.MouseEvent,
-    type: "project" | "prompt",
+    type: "project" | "module" | "prompt",
     item: { id: string; name: string; path?: string },
     projectId?: string,
   ) => {
@@ -111,6 +117,13 @@ export const PromptSidebarList = ({
     }));
   };
 
+  const toggleModule = (moduleId: string) => {
+    setCollapsedModules((previous) => ({
+      ...previous,
+      [moduleId]: !previous[moduleId],
+    }));
+  };
+
   const handleRenameCommit = async () => {
     if (!editingId || !editingName.trim()) {
       setEditingId(null);
@@ -118,9 +131,13 @@ export const PromptSidebarList = ({
     }
 
     try {
-      const isProject = projects.some((p) => p.id === editingId);
-      if (isProject) {
+      if (projects.some((project) => project.id === editingId)) {
         await (window.api as any).promptDesign.projects.rename(
+          editingId,
+          editingName.trim(),
+        );
+      } else if (modules.some((module) => module.id === editingId)) {
+        await (window.api as any).promptDesign.modules.rename(
           editingId,
           editingName.trim(),
         );
@@ -177,9 +194,17 @@ export const PromptSidebarList = ({
   // 按搜索关键字过滤显示
   const keyword = searchKeyword.trim().toLowerCase();
 
-  const mergedProjects = projects.map((proj) => ({
-    ...proj,
-    prompts: designs.filter((d) => d.projectId === proj.id),
+  const mergedProjects = projects.map((project) => ({
+    ...project,
+    modules: modules
+      .filter((module) => module.projectId === project.id)
+      .map((module) => ({
+        ...module,
+        prompts: designs.filter((design) => design.moduleId === module.id),
+      })),
+    directPrompts: designs.filter(
+      (design) => design.projectId === project.id && !design.moduleId,
+    ),
   }));
 
   const filteredProjects = mergedProjects
@@ -187,12 +212,30 @@ export const PromptSidebarList = ({
       if (proj.name.toLowerCase().includes(keyword)) {
         return proj;
       }
-      const filteredPrompts = proj.prompts.filter((p: any) =>
-        p.name.toLowerCase().includes(keyword),
-      );
-      if (filteredPrompts.length > 0) {
-        return { ...proj, prompts: filteredPrompts };
+      const filteredModules = proj.modules
+        .map((module: any) => {
+          if (module.name.toLowerCase().includes(keyword)) {
+            return module;
+          }
+          const prompts = module.prompts.filter((prompt: any) =>
+            prompt.name.toLowerCase().includes(keyword),
+          );
+          return prompts.length > 0 ? { ...module, prompts } : null;
+        })
+        .filter(Boolean);
+      if (filteredModules.length > 0) {
+        return {
+          ...proj,
+          modules: filteredModules,
+          directPrompts: proj.directPrompts.filter((prompt: any) =>
+            prompt.name.toLowerCase().includes(keyword),
+          ),
+        };
       }
+      const directPrompts = proj.directPrompts.filter((prompt: any) =>
+        prompt.name.toLowerCase().includes(keyword),
+      );
+      if (directPrompts.length > 0) return { ...proj, directPrompts };
       return null;
     })
     .filter(Boolean) as any[];
@@ -421,7 +464,9 @@ export const PromptSidebarList = ({
                               onChange={(e) => setEditingPath(e.target.value)}
                               onBlur={handlePathCommit}
                               onKeyDown={(e) =>
-                                e.key === "Enter" && handlePathCommit()
+                                e.key === "Enter" &&
+                                !e.nativeEvent.isComposing &&
+                                handlePathCommit()
                               }
                               onClick={(e) => e.stopPropagation()}
                               placeholder="/path/to/project"
@@ -436,7 +481,9 @@ export const PromptSidebarList = ({
                               onChange={(e) => setEditingName(e.target.value)}
                               onBlur={handleRenameCommit}
                               onKeyDown={(e) =>
-                                e.key === "Enter" && handleRenameCommit()
+                                e.key === "Enter" &&
+                                !e.nativeEvent.isComposing &&
+                                handleRenameCommit()
                               }
                               onClick={(e) => e.stopPropagation()}
                               className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
@@ -468,78 +515,154 @@ export const PromptSidebarList = ({
                   </div>
                   {!isCollapsed && (
                     <div className="flex flex-col gap-0.5">
-                      {proj.prompts.length > 0 ? (
-                        proj.prompts.map((prompt) => (
-                          <div
-                            key={prompt.id}
-                            className={`w-full text-left flex items-center gap-2.5 p-2 rounded-[6px] transition-all duration-150 cursor-pointer group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "hover:bg-white/[0.02] text-white/70"}`}
-                            onClick={async () => {
-                              try {
-                                const sessions = await (
-                                  window.api as any
-                                ).promptAi.listSessions(prompt.id);
-                                if (!sessions || sessions.length === 0) {
-                                  await (
-                                    window.api as any
-                                  ).promptAi.createSession(prompt.id);
-                                }
-                              } catch (err) {
-                                console.error(
-                                  "Failed to check or create session:",
-                                  err,
-                                );
-                              }
-                              setActiveProjectId(proj.id);
-                              
-                              const useStore = usePromptDesignStore.getState();
-                              if (useStore.setActiveDesignIdSafe) {
-                                const success = await useStore.setActiveDesignIdSafe(prompt.id);
-                                if (!success) return;
-                              } else {
-                                setActiveDesignId(prompt.id);
-                              }
-
-                              setProjectName(proj.name);
-                              setItemName(prompt.name);
-                              onDesignSelected?.();
-                            }}
-                            onContextMenu={(e) =>
-                              handleContextMenu(e, "prompt", prompt, proj.id)
-                            }
-                          >
+                      {proj.modules.length > 0 ? (
+                        proj.modules.map((module: any) => (
+                          <div key={module.id} className="flex flex-col gap-0.5">
                             <div
-                              className={`w-1.5 h-1.5 rounded-full transition-colors flex-shrink-0 mx-1 ${activeDesignId === prompt.id ? "bg-white/50" : "bg-white/10 group-hover:bg-white/30"}`}
-                            />
-                            <span
-                              className={`flex-1 min-w-0 text-xs truncate transition-colors ${activeDesignId === prompt.id ? "text-white" : "group-hover:text-white"}`}
+                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
+                              onClick={() => {
+                                if (editingId !== module.id) toggleModule(module.id);
+                              }}
+                              onContextMenu={(event) =>
+                                handleContextMenu(event, "module", module, proj.id)
+                              }
                             >
-                              {editingId === prompt.id ? (
+                              <span className="h-1.5 w-1.5 flex-shrink-0 rounded-[1px] bg-white/20" />
+                              {editingId === module.id ? (
                                 <input
                                   // eslint-disable-next-line jsx-a11y/no-autofocus
                                   autoFocus
-                                  onFocus={(e) => e.target.select()}
+                                  onFocus={(event) => event.target.select()}
                                   value={editingName}
-                                  onChange={(e) =>
-                                    setEditingName(e.target.value)
-                                  }
+                                  onChange={(event) => setEditingName(event.target.value)}
                                   onBlur={handleRenameCommit}
-                                  onKeyDown={(e) =>
-                                    e.key === "Enter" && handleRenameCommit()
+                                  onKeyDown={(event) =>
+                                    event.key === "Enter" &&
+                                    !event.nativeEvent.isComposing &&
+                                    handleRenameCommit()
                                   }
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="bg-transparent border-b border-white/20 outline-none text-white/80 w-full"
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
                                 />
                               ) : (
-                                prompt.name
+                                <span className="min-w-0 flex-1 truncate">{module.name}</span>
                               )}
-                            </span>
+                              <ChevronRight
+                                className={`h-3.5 w-3.5 text-white/30 transition-transform ${collapsedModules[module.id] ? "" : "rotate-90"}`}
+                              />
+                            </div>
+                            {!collapsedModules[module.id] && module.prompts.map((prompt: any) => (
+                              <div
+                                key={prompt.id}
+                                className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] py-2 pr-2 pl-5 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
+                                onClick={async () => {
+                                  try {
+                                    const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
+                                    if (!sessions || sessions.length === 0) {
+                                      await (window.api as any).promptAi.createSession(prompt.id);
+                                    }
+                                  } catch (error) {
+                                    console.error("Failed to check or create session:", error);
+                                  }
+                                  setActiveProjectId(proj.id);
+                                  const useStore = usePromptDesignStore.getState();
+                                  if (useStore.setActiveDesignIdSafe) {
+                                    const success = await useStore.setActiveDesignIdSafe(prompt.id);
+                                    if (!success) return;
+                                  } else {
+                                    setActiveDesignId(prompt.id);
+                                  }
+                                  setProjectName(proj.name);
+                                  setItemName(prompt.name);
+                                  onDesignSelected?.();
+                                }}
+                                onContextMenu={(event) =>
+                                  handleContextMenu(event, "prompt", prompt, proj.id)
+                                }
+                              >
+                                <svg className="h-3 w-3 flex-shrink-0 stroke-current text-white/35" viewBox="0 0 12 12" fill="none">
+                                  <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <span className="min-w-0 flex-1 truncate text-xs">
+                                  {editingId === prompt.id ? (
+                                    <input
+                                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                                      autoFocus
+                                      onFocus={(event) => event.target.select()}
+                                      value={editingName}
+                                      onChange={(event) => setEditingName(event.target.value)}
+                                      onBlur={handleRenameCommit}
+                                      onKeyDown={(event) =>
+                                        event.key === "Enter" &&
+                                        !event.nativeEvent.isComposing &&
+                                        handleRenameCommit()
+                                      }
+                                      onClick={(event) => event.stopPropagation()}
+                                      className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
+                                    />
+                                  ) : prompt.name}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         ))
-                      ) : (
-                        <div className="px-3 py-2 text-xs text-white/20 text-center select-none">
-                          暂无设计，请右键新建
+                      ) : null}
+                      {proj.directPrompts.map((prompt: any) => (
+                        <div
+                          key={prompt.id}
+                          className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
+                          onClick={async () => {
+                            try {
+                              const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
+                              if (!sessions || sessions.length === 0) {
+                                await (window.api as any).promptAi.createSession(prompt.id);
+                              }
+                            } catch (error) {
+                              console.error("Failed to check or create session:", error);
+                            }
+                            setActiveProjectId(proj.id);
+                            const useStore = usePromptDesignStore.getState();
+                            if (useStore.setActiveDesignIdSafe) {
+                              const success = await useStore.setActiveDesignIdSafe(prompt.id);
+                              if (!success) return;
+                            } else {
+                              setActiveDesignId(prompt.id);
+                            }
+                            setProjectName(proj.name);
+                            setItemName(prompt.name);
+                            onDesignSelected?.();
+                          }}
+                          onContextMenu={(event) =>
+                            handleContextMenu(event, "prompt", prompt, proj.id)
+                          }
+                        >
+                          <FileText className="h-3.5 w-3.5 flex-shrink-0 text-white/35" />
+                          <span className="min-w-0 flex-1 truncate text-xs">
+                            {editingId === prompt.id ? (
+                              <input
+                                // eslint-disable-next-line jsx-a11y/no-autofocus
+                                autoFocus
+                                onFocus={(event) => event.target.select()}
+                                value={editingName}
+                                onChange={(event) => setEditingName(event.target.value)}
+                                onBlur={handleRenameCommit}
+                                onKeyDown={(event) =>
+                                  event.key === "Enter" &&
+                                  !event.nativeEvent.isComposing &&
+                                  handleRenameCommit()
+                                }
+                                onClick={(event) => event.stopPropagation()}
+                                className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
+                              />
+                            ) : prompt.name}
+                          </span>
                         </div>
-                      )}
+                      ))}
+                      {proj.modules.length === 0 && proj.directPrompts.length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-white/20 text-center select-none">
+                          暂无模块，请右键新建
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -559,18 +682,56 @@ export const PromptSidebarList = ({
           title={contextMenu.title}
           x={contextMenu.x}
           y={contextMenu.y}
+          onAddModule={async () => {
+            try {
+              const created = await (window.api as any).promptDesign.modules.create({
+                projectId: contextMenu.id,
+                name: "新模块",
+              });
+              await fetchData();
+              setCollapsedProjects((prev) => ({ ...prev, [contextMenu.id]: false }));
+              if (created?.id) {
+                setEditingId(created.id);
+                setEditingName(created.name || "新模块");
+              }
+            } catch (error) {
+              console.error("Add module failed", error);
+            }
+            setContextMenu(null);
+          }}
+          onAddProjectDesign={async () => {
+            try {
+              const created = await (window.api as any).promptDesign.designs.create({
+                projectId: contextMenu.id,
+                name: "新提示词设计",
+              });
+              await fetchData();
+              setCollapsedProjects((previous) => ({
+                ...previous,
+                [contextMenu.id]: false,
+              }));
+              if (created?.id) {
+                setEditingId(created.id);
+                setEditingName(created.name || "新提示词设计");
+              }
+            } catch (error) {
+              console.error("Add project design failed", error);
+            }
+            setContextMenu(null);
+          }}
           onAddDesign={async () => {
             try {
               const created = await (
                 window.api as any
               ).promptDesign.designs.create({
-                projectId: contextMenu.id,
+                projectId: contextMenu.projectId,
+                moduleId: contextMenu.id,
                 name: "新提示词设计",
               });
               await fetchData();
               setCollapsedProjects((prev) => ({
                 ...prev,
-                [contextMenu.id]: false,
+                [contextMenu.projectId || ""]: false,
               }));
               // 新建后自动进入编辑名称状态
               if (created?.id) {
@@ -602,6 +763,11 @@ export const PromptSidebarList = ({
                 );
                 if (activeProjectId === contextMenu.id) {
                   setActiveProjectId(null);
+                  setActiveDesignId(null);
+                }
+              } else if (contextMenu.type === "module") {
+                await (window.api as any).promptDesign.modules.delete(contextMenu.id);
+                if (designs.some((design) => design.moduleId === contextMenu.id && design.id === activeDesignId)) {
                   setActiveDesignId(null);
                 }
               } else {

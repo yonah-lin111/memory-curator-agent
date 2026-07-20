@@ -7,6 +7,10 @@ import {
   PromptDesignProjectUpdateInput,
   PromptDesign,
   PromptDesignCreateInput,
+  PromptDesignModule,
+  PromptDesignModuleCreateInput,
+  PromptDesignModuleRow,
+  PromptDesignModuleUpdateInput,
   PromptDesignRow,
   PromptDesignUpdateInput,
 } from "../db/schema"
@@ -89,6 +93,55 @@ export const promptDesignService = {
     db.prepare("DELETE FROM prompt_design_projects WHERE external_id = ?").run(id)
   },
 
+  // ==================== 模块 ====================
+
+  listModules: (projectId?: string): PromptDesignModule[] => {
+    const db = getDatabase()
+    const rows = projectId
+      ? db.prepare("SELECT * FROM prompt_design_modules WHERE project_id = ? ORDER BY created_at ASC").all(projectId) as PromptDesignModuleRow[]
+      : db.prepare("SELECT * FROM prompt_design_modules ORDER BY created_at ASC").all() as PromptDesignModuleRow[]
+
+    return rows.map((row) => ({
+      id: row.external_id,
+      projectId: row.project_id,
+      name: row.name,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }))
+  },
+
+  createModule: (input: PromptDesignModuleCreateInput): PromptDesignModule => {
+    const db = getDatabase()
+    const id = input.id || createCompactUuid()
+    const now = new Date().toISOString()
+
+    db.prepare(
+      "INSERT INTO prompt_design_modules (external_id, project_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+    ).run(id, input.projectId, input.name, now, now)
+
+    return { id, projectId: input.projectId, name: input.name, createdAt: now, updatedAt: now }
+  },
+
+  renameModule: (id: string, name: string): void => {
+    const db = getDatabase()
+    db.prepare("UPDATE prompt_design_modules SET name = ?, updated_at = ? WHERE external_id = ?").run(
+      name,
+      new Date().toISOString(),
+      id
+    )
+  },
+
+  updateModule: (id: string, input: PromptDesignModuleUpdateInput): void => {
+    if (input.name !== undefined) {
+      promptDesignService.renameModule(id, input.name)
+    }
+  },
+
+  deleteModule: (id: string): void => {
+    const db = getDatabase()
+    db.prepare("DELETE FROM prompt_design_modules WHERE external_id = ?").run(id)
+  },
+
   // ==================== 设计 ====================
 
   listDesigns: (projectId?: string): PromptDesign[] => {
@@ -104,6 +157,7 @@ export const promptDesignService = {
     return rows.map((row) => ({
       id: row.external_id,
       projectId: row.project_id,
+      moduleId: row.module_id || undefined,
       name: row.name,
       designData: row.design_data ?? "",
       createdAt: row.created_at,
@@ -118,12 +172,13 @@ export const promptDesignService = {
     const designDataStr = input.designData ?? ""
 
     db.prepare(
-      "INSERT INTO prompt_design_items (external_id, project_id, name, design_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(id, input.projectId, input.name, designDataStr, now, now)
+      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, now, now)
 
     return {
       id,
       projectId: input.projectId,
+      moduleId: input.moduleId,
       name: input.name,
       designData: designDataStr,
       createdAt: now,

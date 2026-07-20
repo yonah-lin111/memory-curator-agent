@@ -365,11 +365,43 @@ export type PromptDesignProjectUpdateInput = {
   path?: string;
 };
 
+/** 提示词设计模块数据库行 */
+export type PromptDesignModuleRow = {
+  id: number;
+  external_id: string;
+  project_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 提示词设计模块 */
+export type PromptDesignModule = {
+  id: string;
+  projectId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** 提示词设计模块创建输入 */
+export type PromptDesignModuleCreateInput = {
+  id?: string;
+  projectId: string;
+  name: string;
+};
+
+/** 提示词设计模块更新输入 */
+export type PromptDesignModuleUpdateInput = {
+  name?: string;
+};
+
 /** 提示词设计数据库行 */
 export type PromptDesignRow = {
   id: number;
   external_id: string;
   project_id: string;
+  module_id: string | null;
   name: string;
   design_data: string;
   created_at: string;
@@ -380,6 +412,7 @@ export type PromptDesignRow = {
 export type PromptDesign = {
   id: string;
   projectId: string;
+  moduleId?: string;
   name: string;
   designData: string;
   createdAt: string;
@@ -388,8 +421,9 @@ export type PromptDesign = {
 
 /** 提示词设计创建输入 */
 export type PromptDesignCreateInput = {
-  id: string;
+  id?: string;
   projectId: string;
+  moduleId?: string;
   name: string;
   designData?: string;
 };

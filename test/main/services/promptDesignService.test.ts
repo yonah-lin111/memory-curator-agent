@@ -25,6 +25,11 @@ describe('promptDesignService', () => {
       INSERT INTO prompt_design_projects (external_id, name, type, created_at, updated_at)
       VALUES ('p-1', 'Test Project', 'virtual', '2026-05-31', '2026-05-31')
     `).run()
+
+    testDb.prepare(`
+      INSERT INTO prompt_design_modules (external_id, project_id, name, created_at, updated_at)
+      VALUES ('m-1', 'p-1', 'Test Module', '2026-05-31', '2026-05-31')
+    `).run()
   })
 
   afterEach(() => {
@@ -36,6 +41,7 @@ describe('promptDesignService', () => {
     const design = promptDesignService.createDesign({
       id: 'd-1',
       projectId: 'p-1',
+      moduleId: 'm-1',
       name: 'Test Design'
     })
 
@@ -55,5 +61,42 @@ describe('promptDesignService', () => {
     expect(designRow.name).toBe('Updated Name')
     expect(designRow.design_data).toEqual(designData)
 
+  })
+
+  it('cascades prompt designs when deleting a module', () => {
+    const module = promptDesignService.createModule({
+      id: 'm-2',
+      projectId: 'p-1',
+      name: 'Second Module'
+    })
+
+    promptDesignService.createDesign({
+      id: 'd-2',
+      projectId: 'p-1',
+      moduleId: module.id,
+      name: 'Second Design'
+    })
+
+    promptDesignService.deleteModule(module.id)
+
+    expect(promptDesignService.listModules('p-1')).not.toContainEqual(
+      expect.objectContaining({ id: module.id })
+    )
+    expect(promptDesignService.listDesigns('p-1')).not.toContainEqual(
+      expect.objectContaining({ id: 'd-2' })
+    )
+  })
+
+  it('creates a prompt design directly under a project', () => {
+    const design = promptDesignService.createDesign({
+      id: 'd-3',
+      projectId: 'p-1',
+      name: 'Project Design'
+    })
+
+    expect(design.moduleId).toBeUndefined()
+    expect(promptDesignService.listDesigns('p-1')).toContainEqual(
+      expect.objectContaining({ id: 'd-3', moduleId: undefined })
+    )
   })
 })

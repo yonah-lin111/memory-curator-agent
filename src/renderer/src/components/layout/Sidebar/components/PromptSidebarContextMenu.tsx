@@ -3,13 +3,15 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Edit3, Trash2, Plus } from "lucide-react";
 
-type ContextMenuType = "project" | "prompt";
+type ContextMenuType = "project" | "module" | "prompt";
 
 type PromptSidebarContextMenuProps = {
   type: ContextMenuType;
   title: string;
   x: number;
   y: number;
+  onAddModule?: () => void;
+  onAddProjectDesign?: () => void;
   onAddDesign?: () => void;
   onEditProject?: () => void;
   onRename?: () => void;
@@ -30,7 +32,7 @@ const getMenuPosition = (
   y: number,
   type: ContextMenuType,
 ): { left: number; top: number } => {
-  const MENU_HEIGHT = type === "project" ? 120 : 82;
+  const MENU_HEIGHT = type === "project" ? 158 : type === "module" ? 120 : 82;
   const maxLeft = Math.max(
     VIEWPORT_PADDING,
     window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING,
@@ -54,6 +56,8 @@ export const PromptSidebarContextMenu = ({
   title,
   x,
   y,
+  onAddModule,
+  onAddProjectDesign,
   onAddDesign,
   onEditProject,
   onRename,
@@ -112,7 +116,29 @@ export const PromptSidebarContextMenu = ({
         </button>
       )}
 
-      {type === "project" && (
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onAddModule}
+        >
+          <Plus className="h-3.5 w-3.5 text-white/45" />
+          <span>新增模块</span>
+        </button>
+      ) : null}
+
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onAddProjectDesign}
+        >
+          <Plus className="h-3.5 w-3.5 text-white/45" />
+          <span>新增设计</span>
+        </button>
+      ) : type === "module" ? (
         <button
           className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
           role="menuitem"
@@ -122,7 +148,7 @@ export const PromptSidebarContextMenu = ({
           <Plus className="h-3.5 w-3.5 text-white/45" />
           <span>新增设计</span>
         </button>
-      )}
+      ) : null}
       <button
         className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400/45 ${
           isConfirmingDelete
@@ -143,7 +169,9 @@ export const PromptSidebarContextMenu = ({
             ? "确认删除"
             : type === "project"
               ? "删除项目"
-              : "删除设计"}
+              : type === "module"
+                ? "删除模块"
+                : "删除设计"}
         </span>
       </button>
     </div>

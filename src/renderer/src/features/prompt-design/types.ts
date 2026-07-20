@@ -10,6 +10,7 @@ export type Project = {
 export type PromptDesign = {
   id: string;
   projectId: string;
+  moduleId?: string;
   name: string;
   designData: any;
   createdAt: string;
