@@ -496,6 +496,9 @@ export const PromptAiChatWorkspace = forwardRef<
               }
               setManualSuggestedQuestionMessageId(latestAssistantMessageId);
               setSuggestedQuestionGenerationVersion((version) => version + 1);
+              requestAnimationFrame(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+              });
             }}
             chatSessions={controller.sessions}
             references={controller.references}

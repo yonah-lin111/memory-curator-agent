@@ -1003,6 +1003,9 @@ export const CuratorWorkspace = ({
                 if (latestAssistantMessageId) {
                   setSuggestedQuestionMessageId(latestAssistantMessageId);
                   setSuggestedQuestionGenerationVersion((version) => version + 1);
+                  requestAnimationFrame(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                  });
                 }
                 return;
               }
