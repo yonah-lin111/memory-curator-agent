@@ -20,7 +20,7 @@ import { TodayJournalPanel } from "@/pages/today/components/TodayJournalPanel";
 import type { TodoItem } from "@/pages/todo/components/todoShared";
 import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
 import { useHeaderStore } from "@/lib/headerStore";
-import { getEntryMonth, shiftEntryDate } from "@/lib/dailyShared";
+import { getEntryMonth } from "@/lib/dailyShared";
 import {
   TodayBillPanel,
   type TodaySummary,
@@ -547,43 +547,44 @@ export const TodayPage = (): React.JSX.Element => {
   };
 
   /**
-   * 转移指定待办项到下一天。
+   * 移动指定待办项到目标日期。
    */
-  const handleTransferTodos = async (ids: number[]): Promise<boolean> => {
+  const handleMoveTodo = async (
+    id: number,
+    targetEntryDate: string,
+  ): Promise<boolean> => {
+    if (targetEntryDate === entryDate) {
+      return true;
+    }
+
     setTodayError(null);
 
     try {
-      const nextDate = shiftEntryDate(entryDate, 1);
-
       if (!hasDailyApi) {
         setTodos((currentTodos) =>
-          currentTodos.filter((todo) => !ids.includes(todo.id)),
+          currentTodos.filter((todo) => todo.id !== id),
         );
-        toast.success(`已转移 ${ids.length} 个待办至下一天 (${nextDate})`);
+        toast.success(`已移动待办至 ${targetEntryDate}`);
         return true;
       }
 
-      for (const id of ids) {
-        const todo = todos.find((t) => t.id === id);
-        if (todo) {
-          await window.api.daily.updateTodo(id, {
-            text: todo.text,
-            priority: todo.priority,
-            completed: todo.completed,
-            entryDate: nextDate,
-          });
-        }
+      const todo = todos.find((item) => item.id === id);
+      if (!todo) {
+        return false;
       }
 
-      setTodos((currentTodos) =>
-        currentTodos.filter((todo) => !ids.includes(todo.id)),
-      );
-
-      toast.success(`已转移 ${ids.length} 个待办至下一天 (${nextDate})`);
+      await window.api.daily.updateTodo(id, {
+        text: todo.text,
+        priority: todo.priority,
+        completed: todo.completed,
+        entryDate: targetEntryDate,
+      });
+      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+      toast.success(`已移动待办至 ${targetEntryDate}`);
       return true;
     } catch {
-      setTodayError("转移待办失败，请稍后重试");
-      toast.error("转移待办失败，请稍后重试");
+      setTodayError("移动待办失败，请稍后重试");
+      toast.error("移动待办失败，请稍后重试");
       return false;
     }
   };
@@ -775,13 +776,14 @@ export const TodayPage = (): React.JSX.Element => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 h-[360px] flex-shrink-0">
           <TodayTodoPanel
+            entryDate={entryDate}
             errorMessage={todayError}
             isLoading={isTodayLoading}
             onCreateTodo={handleCreateTodo}
             onDeleteTodo={handleDeleteTodo}
             onSortTodos={handleSortTodos}
             onUpdateTodo={handleUpdateTodo}
-            onTransferTodos={handleTransferTodos}
+            onMoveTodo={handleMoveTodo}
             todos={todos}
           />
 

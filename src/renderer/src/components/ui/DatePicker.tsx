@@ -287,7 +287,8 @@ export const DatePicker = ({
       "data-open": isOpen ? "true" : "false",
       "aria-expanded": isOpen,
       mode: child.props.mode || mode,
-      disabled: child.props.disabled !== undefined ? child.props.disabled : disabled,
+      disabled:
+        child.props.disabled !== undefined ? child.props.disabled : disabled,
     });
   } else if (!children) {
     const getDisplayValue = (): string => {
@@ -339,6 +340,7 @@ export const DatePicker = ({
               opacity: coords ? undefined : 0, // 避免闪烁
             }}
             role="dialog"
+            onMouseDown={(event) => event.stopPropagation()}
           >
             {mode === "month" ? (
               /* 月份选择器视图 */

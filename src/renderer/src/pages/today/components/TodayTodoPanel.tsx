@@ -1,16 +1,11 @@
 import type React from "react";
 import { useRef, useState } from "react";
-import {
-  ArrowRight,
-  ArrowUpDown,
-  CheckSquare,
-  ListTodo,
-  Square,
-  X,
-} from "lucide-react";
+import { ArrowUpDown, CheckSquare, Ellipsis, Square } from "lucide-react";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { IconButton } from "@/components/ui/IconButton";
-import { useToast } from "@/components/ui/Toast";
 import { Input } from "@/components/ui/Input";
+import { Radio, RadioGroup } from "@/components/ui/Radio";
+import { Tooltip } from "@/components/ui/Tooltip";
 import {
   getNextTodoPriority,
   type TodoItem,
@@ -19,6 +14,8 @@ import {
 
 // Todo 面板属性，交由页面层托管真实持久化状态。
 interface TodayTodoPanelProps {
+  // 当前页面日期。
+  entryDate: string;
   // 当前待办列表。
   todos: TodoItem[];
   // 是否正在加载。
@@ -39,8 +36,8 @@ interface TodayTodoPanelProps {
   onDeleteTodo: (id: number) => Promise<boolean>;
   // 手动排序回调。
   onSortTodos: () => Promise<boolean>;
-  // 转移待办到下一天回调。
-  onTransferTodos: (ids: number[]) => Promise<boolean>;
+  // 移动待办到指定日期回调。
+  onMoveTodo: (id: number, entryDate: string) => Promise<boolean>;
 }
 
 // 新建待办草稿，仅保留必要字段。
@@ -57,6 +54,20 @@ interface EditingTodoDraft {
   id: number;
   // 正在编辑的文本。
   text: string;
+}
+
+// 单条待办操作菜单属性。
+interface TodoActionMenuProps {
+  // 待办 ID。
+  id: number;
+  // 待办标题。
+  text: string;
+  // 当前待办所属日期。
+  entryDate: string;
+  // 移动待办回调。
+  onMove: (entryDate: string) => void;
+  // 删除待办回调。
+  onDelete: () => void;
 }
 
 // 不同优先级在激活态下的视觉样式。
@@ -82,10 +93,83 @@ const getPriorityClassName = (
 };
 
 /**
+ * 单条待办的更多操作菜单。
+ */
+const TodoActionMenu = ({
+  id,
+  text,
+  entryDate,
+  onMove,
+  onDelete,
+}: TodoActionMenuProps): React.JSX.Element => {
+  // 移动目标日期。
+  const [targetDate, setTargetDate] = useState(entryDate);
+  // 是否在确认时删除待办，默认关闭以避免误删。
+  const [shouldDelete, setShouldDelete] = useState(false);
+
+  return (
+    <Tooltip
+      form={
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-white/80">待办操作</span>
+          <div className="flex flex-col gap-1 text-left">
+            <span className="text-[11px] font-semibold text-white/40">
+              移动到指定日期
+            </span>
+            <DatePicker
+              className="w-full"
+              triggerClassName="w-full"
+              value={targetDate}
+              onChange={setTargetDate}
+            />
+          </div>
+          <div className="flex flex-col gap-1 text-left">
+            <span className="text-[11px] font-semibold text-white/40">
+              todo状态
+            </span>
+            <RadioGroup
+              className="flex items-center gap-3"
+              name={`delete-todo-${id}`}
+              value={shouldDelete ? "yes" : "no"}
+              onChange={(value) => setShouldDelete(value === "yes")}
+            >
+              <Radio
+                label={<span className="text-rose-300">删除</span>}
+                value="yes"
+              />
+              <Radio label="保留" value="no" />
+            </RadioGroup>
+          </div>
+        </div>
+      }
+      placement="left"
+      trigger="click"
+      onCancel={() => setShouldDelete(false)}
+      onConfirm={() => {
+        if (shouldDelete) {
+          onDelete();
+          return;
+        }
+        onMove(targetDate);
+      }}
+    >
+      <IconButton
+        aria-label={`More actions for ${text}`}
+        className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        title="更多操作"
+      >
+        <Ellipsis className="h-3.5 w-3.5" />
+      </IconButton>
+    </Tooltip>
+  );
+};
+
+/**
  * TodayTodoPanel - 提供更轻量的主流 todo 交互。
  * 常驻快速录入、点击文本编辑、点击优先级切换、完成项自动沉底。
  */
 export const TodayTodoPanel = ({
+  entryDate,
   todos,
   isLoading,
   errorMessage,
@@ -93,10 +177,8 @@ export const TodayTodoPanel = ({
   onUpdateTodo,
   onDeleteTodo,
   onSortTodos,
-  onTransferTodos,
+  onMoveTodo,
 }: TodayTodoPanelProps): React.JSX.Element => {
-  // 全局提示实例。
-  const toast = useToast();
   // 快速录入草稿。
   const [composerDraft, setComposerDraft] = useState<TodoComposerDraft>({
     text: "",
@@ -111,43 +193,8 @@ export const TodayTodoPanel = ({
   // 快速录入输入框引用，用于头部按钮聚焦。
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // 是否处于批量选择模式。
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  // 选中的待办 ID 列表。
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-
   // 已完成统计，避免重复遍历表达式散落在 JSX 里。
   const completedCount = todos.filter((todo) => todo.completed).length;
-  // 未完成待办列表。
-  const uncompletedTodos = todos.filter((todo) => !todo.completed);
-
-  /**
-   * 全选 / 取消全选.
-   */
-  const handleToggleSelectAll = (): void => {
-    const allUncompletedSelected = uncompletedTodos.every((todo) =>
-      selectedIds.includes(todo.id),
-    );
-    if (allUncompletedSelected) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(uncompletedTodos.map((todo) => todo.id));
-    }
-  };
-
-  /**
-   * 批量转移所选项到下一天.
-   */
-  const handleBatchTransfer = async (): Promise<void> => {
-    if (selectedIds.length === 0) {
-      return;
-    }
-    const success = await onTransferTodos(selectedIds);
-    if (success) {
-      setIsSelectionMode(false);
-      setSelectedIds([]);
-    }
-  };
 
   /**
    * 聚焦快速录入框，维持主流列表的单入口添加体验。
@@ -280,83 +327,35 @@ export const TodayTodoPanel = ({
             每日待办计划
           </span>
         </div>
-        {isSelectionMode ? (
-          <div className="flex items-center gap-1.5">
-            <span className="font-mono text-xs text-violet-400 font-bold mr-1">
-              已选 {selectedIds.length} 项
-            </span>
-            <IconButton
-              aria-label="Select all todos"
-              onClick={handleToggleSelectAll}
-              title={
-                selectedIds.length === uncompletedTodos.length &&
-                uncompletedTodos.length > 0
-                  ? "取消全选"
-                  : "全选"
-              }
-            >
-              <CheckSquare className="h-3.5 w-3.5 text-white/60" />
-            </IconButton>
-            <IconButton
-              aria-label="Move selected todos to next day"
-              onClick={() => void handleBatchTransfer()}
-              disabled={selectedIds.length === 0}
-              title="转移下一天"
-            >
-              <ArrowRight className="h-3.5 w-3.5" />
-            </IconButton>
-            <IconButton
-              aria-label="Cancel selection mode"
-              onClick={() => {
-                setIsSelectionMode(false);
-                setSelectedIds([]);
-              }}
-              title="取消"
-            >
-              <X className="h-3.5 w-3.5" />
-            </IconButton>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-white/40">
-              已完成 {completedCount}/{todos.length}
-            </span>
-            <IconButton
-              aria-label="Toggle selection mode"
-              onClick={() => {
-                setIsSelectionMode(true);
-                setSelectedIds([]);
-              }}
-              title="批量操作"
-            >
-              <ListTodo className="h-3.5 w-3.5" />
-            </IconButton>
-            <IconButton
-              aria-label="One-click sort"
-              onClick={() => void onSortTodos()}
-              title="手动排序"
-            >
-              <ArrowUpDown className="h-3.5 w-3.5" />
-            </IconButton>
-            <IconButton
-              aria-label="Toggle add todo composer"
-              preset="add"
-              className={showComposer ? "bg-white/5 text-white" : ""}
-              onClick={() => {
-                setShowComposer((prev) => {
-                  const next = !prev;
-                  if (next) {
-                    window.setTimeout(() => {
-                      focusComposer();
-                    }, 50);
-                  }
-                  return next;
-                });
-              }}
-              title="添加待办"
-            />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-white/40">
+            已完成 {completedCount}/{todos.length}
+          </span>
+          <IconButton
+            aria-label="One-click sort"
+            onClick={() => void onSortTodos()}
+            title="手动排序"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+          </IconButton>
+          <IconButton
+            aria-label="Toggle add todo composer"
+            preset="add"
+            className={showComposer ? "bg-white/5 text-white" : ""}
+            onClick={() => {
+              setShowComposer((prev) => {
+                const next = !prev;
+                if (next) {
+                  window.setTimeout(() => {
+                    focusComposer();
+                  }, 50);
+                }
+                return next;
+              });
+            }}
+            title="添加待办"
+          />
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-0.5">
@@ -434,8 +433,6 @@ export const TodayTodoPanel = ({
         {todos.map((todo) => {
           const isEditing = editingTodo?.id === todo.id;
           const isDeleting = deletingIds.includes(todo.id);
-          const isSelected = selectedIds.includes(todo.id);
-
           return (
             <div
               key={todo.id}
@@ -447,87 +444,42 @@ export const TodayTodoPanel = ({
                 todo.completed
                   ? "border-white/[0.03] bg-white/[0.02]"
                   : "border-transparent bg-white/[0.02] hover:border-white/8 hover:bg-white/[0.04]"
-              } ${isSelected ? "border-violet-500/20 bg-violet-500/4" : ""}`}
+              }`}
               data-testid="today-todo-item"
             >
-              {isSelectionMode ? (
-                <button
-                  aria-label={isSelected ? "Deselect item" : "Select item"}
-                  className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
+              <button
+                aria-label={
+                  todo.completed ? "Mark as incomplete" : "Mark as completed"
+                }
+                className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
+                  todo.completed
+                    ? "text-emerald-500"
+                    : "text-white/35 hover:text-white"
+                }`}
+                type="button"
+                onClick={() => void handleToggleTodo(todo)}
+              >
+                <Square
+                  className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
                     todo.completed
-                      ? "opacity-40 cursor-not-allowed text-white/20"
-                      : isSelected
-                        ? "text-violet-400"
-                        : "text-violet-500/40 hover:text-violet-400"
+                      ? "scale-0 opacity-0 rotate-45"
+                      : "scale-100 opacity-100 rotate-0"
                   }`}
-                  type="button"
-                  onClick={() => {
-                    if (todo.completed) {
-                      toast.warning("已完成的待办不能被选择");
-                      return;
-                    }
-                    setSelectedIds((prev) =>
-                      prev.includes(todo.id)
-                        ? prev.filter((id) => id !== todo.id)
-                        : [...prev, todo.id],
-                    );
-                  }}
-                >
-                  <Square
-                    className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
-                      isSelected
-                        ? "scale-0 opacity-0 rotate-45"
-                        : "scale-100 opacity-100 rotate-0"
-                    }`}
-                  />
-                  <CheckSquare
-                    className={`absolute h-4 w-4 text-violet-400 transition-all duration-300 ease-out ${
-                      isSelected
-                        ? "scale-100 opacity-100 rotate-0"
-                        : "scale-0 opacity-0 -rotate-45"
-                    }`}
-                  />
-                </button>
-              ) : (
-                <button
-                  aria-label={
-                    todo.completed ? "Mark as incomplete" : "Mark as completed"
-                  }
-                  className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
+                />
+                <CheckSquare
+                  className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${
                     todo.completed
-                      ? "text-emerald-500"
-                      : "text-white/35 hover:text-white"
+                      ? "scale-100 opacity-100 rotate-0"
+                      : "scale-0 opacity-0 -rotate-45"
                   }`}
-                  type="button"
-                  onClick={() => void handleToggleTodo(todo)}
-                >
-                  <Square
-                    className={`absolute h-4 w-4 transition-all duration-300 ease-out ${
-                      todo.completed
-                        ? "scale-0 opacity-0 rotate-45"
-                        : "scale-100 opacity-100 rotate-0"
-                    }`}
-                  />
-                  <CheckSquare
-                    className={`absolute h-4 w-4 text-emerald-500 transition-all duration-300 ease-out ${
-                      todo.completed
-                        ? "scale-100 opacity-100 rotate-0"
-                        : "scale-0 opacity-0 -rotate-45"
-                    }`}
-                  />
-                </button>
-              )}
+                />
+              </button>
 
               <button
                 aria-label={`Toggle priority of ${todo.text}`}
                 className={`flex-shrink-0 w-[30px] h-[18px] flex items-center justify-center p-0 rounded-[4px] border text-[10px] font-mono font-bold leading-none transition-colors duration-300 ${getPriorityClassName(todo.priority, todo.completed)}`}
                 type="button"
-                onClick={() => {
-                  if (!isSelectionMode) {
-                    void handleCycleTodoPriority(todo);
-                  }
-                }}
-                disabled={isSelectionMode}
+                onClick={() => void handleCycleTodoPriority(todo)}
               >
                 {todo.priority}
               </button>
@@ -583,31 +535,20 @@ export const TodayTodoPanel = ({
                   }`}
                   style={{ fontSize: "13px", lineHeight: "19.5px" }}
                   type="button"
-                  onClick={() => {
-                    if (isSelectionMode) {
-                      if (todo.completed) {
-                        toast.warning("已完成的待办不能被选择");
-                        return;
-                      }
-                      setSelectedIds((prev) =>
-                        prev.includes(todo.id)
-                          ? prev.filter((id) => id !== todo.id)
-                          : [...prev, todo.id],
-                      );
-                    } else {
-                      handleStartEdit(todo);
-                    }
-                  }}
+                  onClick={() => handleStartEdit(todo)}
                 >
                   <span className="break-words">{todo.text}</span>
                 </button>
               )}
 
-              <IconButton
-                aria-label={`Delete todo ${todo.text}`}
-                preset="delete"
-                className={`opacity-0 group-hover:opacity-100 ${isSelectionMode ? "pointer-events-none !opacity-0" : ""}`}
-                onClick={() => handleDeleteTodo(todo.id)}
+              <TodoActionMenu
+                entryDate={entryDate}
+                id={todo.id}
+                text={todo.text}
+                onDelete={() => handleDeleteTodo(todo.id)}
+                onMove={(nextEntryDate) =>
+                  void onMoveTodo(todo.id, nextEntryDate)
+                }
               />
             </div>
           );
