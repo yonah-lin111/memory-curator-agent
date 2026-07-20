@@ -15,6 +15,7 @@ import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
 import { SuggestedQuestions } from "@/lib/ai-shared/SuggestedQuestions";
 import { CuratorSkillCallBlock } from "@/components/ai-shared/SkillCallBlock";
+import { CuratorWebSearchCallBlock } from "@/components/ai-shared/WebSearchCallBlock";
 import {
   ExecutionGroupBlock,
   groupExecutionParts,
@@ -1007,6 +1008,9 @@ export const CuratorMessageBubble = ({
                         if (step?.tool === "load_skill") {
                           return <CuratorSkillCallBlock key={part.id} steps={[step]} connectsToNextExecution={connectsToNextExecution} />;
                         }
+                        if (step?.tool === "web_search") {
+                          return <CuratorWebSearchCallBlock key={part.id} steps={[step]} connectsToNextExecution={connectsToNextExecution} />;
+                        }
                         return step ? <CuratorToolCallBlock key={part.id} steps={[step]} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} onToolConfirmationToggle={onToolConfirmationToggle} connectsToNextExecution={connectsToNextExecution} /> : <></>;
                       }}
                       renderToolParts={(toolParts, connectsToNextExecution) => {
@@ -1018,6 +1022,9 @@ export const CuratorMessageBubble = ({
 
                         if (steps.every((step) => step.tool === "load_skill")) {
                           return steps.length > 0 ? <CuratorSkillCallBlock key={toolParts[0].id} steps={steps} connectsToNextExecution={connectsToNextExecution} /> : <></>;
+                        }
+                        if (steps.every((step) => step.tool === "web_search")) {
+                          return steps.length > 0 ? <CuratorWebSearchCallBlock key={toolParts[0].id} steps={steps} connectsToNextExecution={connectsToNextExecution} /> : <></>;
                         }
                         return steps.length > 0 ? <CuratorToolCallBlock key={toolParts[0].id} steps={steps} onSubmitAskAnswer={onSubmitAskAnswer} onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer} onToolConfirmationToggle={onToolConfirmationToggle} connectsToNextExecution={connectsToNextExecution} /> : <></>;
                       }}

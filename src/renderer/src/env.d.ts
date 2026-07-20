@@ -447,6 +447,14 @@ type AiSettingsProvider = {
   models: Record<string, AiSettingsModel>
 }
 
+// 联网搜索服务密钥配置。
+type AiWebSearchConfig = {
+  // Exa API Key。
+  exaApiKey: string
+  // Tavily API Key。
+  tavilyApiKey: string
+}
+
 // Settings 页面完整 AI 配置。
 type AiSettingsConfig = {
   // 配置文件绝对路径。
@@ -465,6 +473,8 @@ type AiSettingsConfig = {
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 联网搜索服务配置。
+  webSearch: AiWebSearchConfig
   // 是否显示 Agent 思考内容。
   showAgentThinking: boolean
   // 已禁用的 Skill 标识列表。

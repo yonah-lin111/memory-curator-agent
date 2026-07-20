@@ -35,6 +35,10 @@ const createSettings = (): AiSettingsConfig => ({
   },
   suggestedQuestionsEnabled: true,
   enabledProviders: ['gemini'],
+  webSearch: {
+    exaApiKey: 'exa-secret',
+    tavilyApiKey: 'tavily-secret',
+  },
   showAgentThinking: false,
   disabledSkillIds: [],
   providers: {
@@ -159,6 +163,30 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(window.api.config?.ai.save).toHaveBeenCalledWith(
         expect.objectContaining({ showAgentThinking: true })
+      )
+    })
+  })
+
+  it('修改联网搜索密钥后保存设置', async () => {
+    const user = userEvent.setup()
+    renderSettingsPage()
+
+    await screen.findByText('/Users/yonah/.mc/config.json')
+    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    await user.clear(screen.getByLabelText('Exa API Key'))
+    await user.type(screen.getByLabelText('Exa API Key'), 'new-exa-key')
+    await user.clear(screen.getByLabelText('Tavily API Key'))
+    await user.type(screen.getByLabelText('Tavily API Key'), 'new-tavily-key')
+    await user.click(screen.getByRole('button', { name: '保存设置' }))
+
+    await waitFor(() => {
+      expect(window.api.config?.ai.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          webSearch: {
+            exaApiKey: 'new-exa-key',
+            tavilyApiKey: 'new-tavily-key',
+          },
+        })
       )
     })
   })

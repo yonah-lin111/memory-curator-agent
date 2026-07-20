@@ -31,6 +31,46 @@ export const AgentSection = ({
         }}
       />
     </label>
+    <div className="mt-4 border-t border-white/8 pt-4">
+      <h4 className="text-sm font-bold text-white">联网搜索</h4>
+      <p className="mt-1 text-xs text-white/35">留空时将尝试使用服务提供的匿名访问</p>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <label className="grid gap-1.5 text-xs text-white/45">
+          Exa API Key
+          <Input
+            aria-label="Exa API Key"
+            type="password"
+            value={settings.webSearch.exaApiKey}
+            onChange={(event) =>
+              updateSettings((current) => ({
+                ...current,
+                webSearch: {
+                  ...current.webSearch,
+                  exaApiKey: event.target.value,
+                },
+              }))
+            }
+          />
+        </label>
+        <label className="grid gap-1.5 text-xs text-white/45">
+          Tavily API Key
+          <Input
+            aria-label="Tavily API Key"
+            type="password"
+            value={settings.webSearch.tavilyApiKey}
+            onChange={(event) =>
+              updateSettings((current) => ({
+                ...current,
+                webSearch: {
+                  ...current.webSearch,
+                  tavilyApiKey: event.target.value,
+                },
+              }))
+            }
+          />
+        </label>
+      </div>
+    </div>
     <div className="mt-4 grid gap-3 lg:grid-cols-2">
       <label className="grid gap-1.5 text-xs text-white/45">
         Tool output max chars

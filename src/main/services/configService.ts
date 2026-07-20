@@ -42,6 +42,14 @@ export type AiSettingsProvider = {
   models: Record<string, AiSettingsModel>
 }
 
+// 联网搜索服务密钥配置。
+export type AiWebSearchConfig = {
+  // Exa API Key。
+  exaApiKey: string
+  // Tavily API Key。
+  tavilyApiKey: string
+}
+
 // Settings 页面完整 AI 配置。
 export type AiSettingsConfig = {
   // 配置文件绝对路径。
@@ -60,6 +68,8 @@ export type AiSettingsConfig = {
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 联网搜索服务配置。
+  webSearch: AiWebSearchConfig
   // 是否显示 Agent 思考内容。
   showAgentThinking: boolean
   // 已禁用的 Skill 标识列表。
@@ -106,6 +116,8 @@ type RawAiConfig = {
   enabled_providers?: string[]
   // Provider 配置表。
   providers?: Record<string, RawProviderConfig>
+  // 联网搜索服务配置。
+  webSearch?: Partial<AiWebSearchConfig>
   // 是否显示 Agent 思考内容。
   showAgentThinking?: boolean
   // 已禁用的 Skill 标识列表。
@@ -158,6 +170,10 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
         }
       }
     }
+  },
+  webSearch: {
+    exaApiKey: '',
+    tavilyApiKey: ''
   },
   showAgentThinking: false,
   disabledSkillIds: [],
@@ -263,6 +279,14 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): AiSettingsP
 })
 
 /**
+ * 归一化联网搜索服务配置。
+ */
+const normalizeWebSearch = (webSearch: Partial<AiWebSearchConfig> | undefined): AiWebSearchConfig => ({
+  exaApiKey: webSearch?.exaApiKey ?? '',
+  tavilyApiKey: webSearch?.tavilyApiKey ?? ''
+})
+
+/**
  * 读取原始 AI 配置。
  */
 const readRawAiConfig = (rawConfig: RawConfigFile): RawAiConfig => {
@@ -355,6 +379,7 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     suggestedQuestionsEnabled: rawAi.suggestedQuestionsEnabled !== false,
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
+    webSearch: normalizeWebSearch(rawAi.webSearch),
     showAgentThinking: rawAi.showAgentThinking === true,
     disabledSkillIds: Array.from(
       new Set((rawAi.disabled_skill_ids ?? []).filter((skillId): skillId is string => typeof skillId === 'string'))
@@ -486,6 +511,10 @@ const preserveExistingApiKeys = (
   existing: AiSettingsConfig
 ): AiSettingsConfig => ({
   ...settings,
+  webSearch: {
+    exaApiKey: settings.webSearch.exaApiKey.trim() || existing.webSearch.exaApiKey,
+    tavilyApiKey: settings.webSearch.tavilyApiKey.trim() || existing.webSearch.tavilyApiKey
+  },
   providers: Object.fromEntries(
     Object.entries(settings.providers).map(([providerKey, provider]) => {
       const existingApiKey = existing.providers[provider.id]?.options.apiKey ?? existing.providers[providerKey]?.options.apiKey
@@ -513,6 +542,7 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   suggestedQuestions: settings.suggestedQuestions,
   suggestedQuestionsEnabled: settings.suggestedQuestionsEnabled,
   enabled_providers: settings.enabledProviders,
+  webSearch: settings.webSearch,
   showAgentThinking: settings.showAgentThinking,
   disabled_skill_ids: settings.disabledSkillIds,
   providers: Object.fromEntries(

@@ -83,11 +83,11 @@ export const startAiChat = async (
   let tools = services.toolRegistry.all();
   const agentHints = normalizeAiChatAgentHints(payload.agents);
 
-  // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具和 load_skill
+  // 如果选择了 common agent，则物理过滤，只保留通用工具、联网搜索和 load_skill。
   const hasCommonAgent = agentHints.some((hint) => hint.id === "common");
   if (hasCommonAgent) {
     tools = tools.filter(
-      (tool) => tool.name.startsWith("common_tool_") || tool.name === "load_skill"
+      (tool) => tool.name.startsWith("common_tool_") || tool.name === "web_search" || tool.name === "load_skill"
     );
   }
   const modelConfig = providerConfig.models[modelId];

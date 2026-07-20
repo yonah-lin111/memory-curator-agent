@@ -13,6 +13,7 @@ import { createPromptEditorTools } from "@/agent/tools/promptEditorTools";
 import type { PromptEditorDocument } from "@/agent/tools/promptEditorTools";
 import { createAskTool } from "@/agent/tools/askTool";
 import { createSkillTool } from "@/agent/tools/skillTool";
+import { createWebSearchTool } from "@/agent/tools/webSearchTool";
 import { createPromptDesignMcpTools } from "@/agent/tools/mcpToolService";
 import { cancelAiChatAsk, pendingToolConfirmations, waitForAskAnswer, waitForToolConfirmation } from "@/ipc/ai/state";
 import { submitAskAnswer, type AskAnswerPayload } from "@/ipc/ai/ask";
@@ -33,6 +34,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   prompt_editor_replace_lines: "Replace editor lines",
   prompt_editor_delete_lines: "Delete editor lines",
   common_tool_ask: "Ask",
+  web_search: "Web search",
 };
 
 /**
@@ -501,6 +503,7 @@ async function runPromptAiChat(
     createAskTool(),
     ...fileTools,
     ...createPromptEditorTools({ readDocument, applyDocument }),
+    createWebSearchTool(),
     ...(availableSkills.length > 0 ? [createSkillTool(availableSkills)] : []),
     ...mcp.tools,
   ];

@@ -11,6 +11,7 @@ import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
 import { SuggestedQuestions } from "@/lib/ai-shared/SuggestedQuestions";
 import { CuratorSkillCallBlock } from "@/components/ai-shared/SkillCallBlock";
+import { CuratorWebSearchCallBlock } from "@/components/ai-shared/WebSearchCallBlock";
 import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
 import { PromptAiMcpOverview } from "@/features/prompt-design/components/PromptAiMcpOverview";
 import {
@@ -248,6 +249,23 @@ export const PromptAiChatMessageBubble = ({
         }
         const nextPart = visibleMessageParts[nextIndex];
         renderedParts.push(<PromptAiMcpCallBlock key={`${message.id}-${part.id}`} steps={mcpSteps} connectsToNextExecution={nextPart?.kind === "tool" || nextPart?.kind === "reasoning"} />);
+        index = nextIndex - 1;
+        continue;
+      }
+
+      if (step?.tool === "web_search") {
+        const previousPart = visibleMessageParts[index - 1];
+        flushExecutionParts(previousPart?.kind === "tool" || previousPart?.kind === "reasoning");
+        const searchSteps = [step];
+        let nextIndex = index + 1;
+        while (nextIndex < visibleMessageParts.length) {
+          const nextStep = findToolStepByPart(message.toolSteps, visibleMessageParts[nextIndex]);
+          if (nextStep?.tool !== "web_search") break;
+          searchSteps.push(nextStep);
+          nextIndex += 1;
+        }
+        const nextPart = visibleMessageParts[nextIndex];
+        renderedParts.push(<CuratorWebSearchCallBlock key={`${message.id}-${part.id}`} steps={searchSteps} connectsToNextExecution={nextPart?.kind === "tool" || nextPart?.kind === "reasoning"} />);
         index = nextIndex - 1;
         continue;
       }

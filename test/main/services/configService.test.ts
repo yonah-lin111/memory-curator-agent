@@ -54,6 +54,10 @@ const createSettings = (): AiSettingsConfig => ({
   },
   suggestedQuestionsEnabled: true,
   enabledProviders: ['gemini'],
+  webSearch: {
+    exaApiKey: 'exa-secret',
+    tavilyApiKey: 'tavily-secret'
+  },
   showAgentThinking: false,
   disabledSkillIds: [],
   providers: {
@@ -165,6 +169,7 @@ describe('configService', () => {
     expect(settings.providers.gemini.type).toBe('google')
     expect(settings.providers.gemini.options.apiKey).toBe('secret')
     expect(settings.providers.gemini.models['gemini-3.5-flash'].id).toBe('gemini-3.5-flash')
+    expect(settings.webSearch).toEqual({ exaApiKey: '', tavilyApiKey: '' })
     expect(settings.agent.context.toolOutputMaxChars).toBe(4096)
   })
 
@@ -235,6 +240,29 @@ describe('configService', () => {
       }
     }
     expect(persisted.ai.providers.gemini.options.apiKey).toBe('original-secret')
+  })
+
+  it('保存时空联网搜索 API Key 会保留已有密钥', () => {
+    const configPath = writeTempConfig({
+      ai: {
+        webSearch: {
+          exaApiKey: 'original-exa-secret',
+          tavilyApiKey: 'original-tavily-secret'
+        }
+      }
+    })
+    const settings = createSettings()
+    settings.webSearch = { exaApiKey: '', tavilyApiKey: '' }
+
+    saveAiSettingsConfig(settings, configPath)
+
+    const persisted = JSON.parse(readFileSync(configPath, 'utf8')) as {
+      ai: { webSearch: { exaApiKey: string; tavilyApiKey: string } }
+    }
+    expect(persisted.ai.webSearch).toEqual({
+      exaApiKey: 'original-exa-secret',
+      tavilyApiKey: 'original-tavily-secret'
+    })
   })
 
   it('缺失配置文件时返回默认可编辑配置', () => {

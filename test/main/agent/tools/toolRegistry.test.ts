@@ -205,6 +205,9 @@ describe('toolRegistry', () => {
       'people_tool_batch_add',
       'people_tool_batch_update',
       'people_tool_batch_delete',
+      'profile_tool_query',
+      'profile_tool_create',
+      'profile_tool_update',
       'todos_tool_query',
       'todos_tool_add',
       'todos_tool_update',
@@ -228,8 +231,10 @@ describe('toolRegistry', () => {
       'bills_tool_add',
       'bills_tool_update',
       'bills_tool_delete',
+      'today_tool_summary',
       'common_tool_time_now',
-      'common_tool_date_offset'
+      'common_tool_date_offset',
+      'web_search'
     ])
     expect(registry.get('common_tool_ask')?.description).toContain('structured clarification')
     expect(registry.get('common_tool.explain')).toBeUndefined()
@@ -252,7 +257,8 @@ describe('toolRegistry', () => {
     expect(registry.get('bills_tool_delete')?.description).toContain('Delete an existing bill record')
     expect(registry.get('common_tool_time_now')?.description).toContain('current date')
     expect(registry.get('common_tool_date_offset')?.description).toContain('date offsets')
-    expect(registry.all()).toHaveLength(47)
+    expect(registry.get('web_search')?.description).toContain('public web')
+    expect(registry.all()).toHaveLength(52)
   })
 
   it('拒绝重复工具名，避免模型调用歧义', () => {

@@ -11,6 +11,7 @@ import { createBillsTools } from '@/agent/tools/billsTool'
 import { createTodayTool } from '@/agent/tools/todayTool'
 import { createSkillTool } from '@/agent/tools/skillTool'
 import { createProfileTools } from '@/agent/tools/profileTool'
+import { createWebSearchTool } from '@/agent/tools/webSearchTool'
 import type { AgentMessage, AgentTool, AgentToolPrompt, JsonSchema } from '@/agent/types'
 import type { AiAgentSkill } from '@/services/skillsService'
 import type { NotesService } from '@/services/notesService'
@@ -85,6 +86,7 @@ const builtinToolFactories: AgentToolFactory[] = [
   (context) => createTodayTool(context),
   () => createTimeNowTool(),
   () => createDateOffsetTool(),
+  () => createWebSearchTool(),
   ({ skills }) => (skills && skills.length > 0 ? createSkillTool(skills) : [])
 ]
 
