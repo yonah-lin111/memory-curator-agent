@@ -30,6 +30,13 @@ export const CURATOR_INPUT_COMMANDS: CuratorInputCommand[] = [
     description: "快速搜索历史对话并进行切换",
     addToContext: false,
   },
+  {
+    id: "suggest",
+    name: "/suggest",
+    aliases: [],
+    description: "重新生成不重复的后续问题建议",
+    addToContext: false,
+  },
 ];
 
 // 输入框最小显示行数。

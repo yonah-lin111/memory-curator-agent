@@ -202,6 +202,8 @@ export const CuratorWorkspace = ({
   }, [session.messages]);
   // 仅保存当前打开会话中刚完成生成的助手消息标识。
   const [suggestedQuestionMessageId, setSuggestedQuestionMessageId] = useState<string | null>(null);
+  // 手动刷新建议问题时递增，用于通知对应消息气泡重新请求。
+  const [suggestedQuestionGenerationVersion, setSuggestedQuestionGenerationVersion] = useState(0);
   const previousSuggestedQuestionSessionRef = useRef({
     id: session.id,
     status: session.status,
@@ -968,6 +970,7 @@ export const CuratorWorkspace = ({
                               .map((item) => ({ role: item.role, content: item.content }))
                             : undefined
                         }
+                        suggestedQuestionGenerationVersion={suggestedQuestionGenerationVersion}
                         onSendSuggestedQuestion={(question) => onSendMessage({ text: question, agents: [] })}
                       />
                     </div>
@@ -995,7 +998,16 @@ export const CuratorWorkspace = ({
             contextLimit={contextBudget.contextLimit}
             isGenerating={session.status === "running"}
             onSendMessage={onSendMessage}
-            onCommandExecute={onCommandExecute}
+            onCommandExecute={(command) => {
+              if (command === "suggest") {
+                if (latestAssistantMessageId) {
+                  setSuggestedQuestionMessageId(latestAssistantMessageId);
+                  setSuggestedQuestionGenerationVersion((version) => version + 1);
+                }
+                return;
+              }
+              onCommandExecute(command);
+            }}
             onModelChange={onModelChange}
             chatSessions={chatSessions}
             onActiveSessionChange={onActiveSessionChange}

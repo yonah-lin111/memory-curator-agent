@@ -65,6 +65,7 @@ type PromptAiChatMessageBubbleProps = {
     payload: CuratorToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
   suggestedQuestionContext?: Array<{ role: "user" | "assistant"; content: string }>;
+  suggestedQuestionGenerationVersion?: number;
   onSendSuggestedQuestion?: (question: string) => void;
 };
 
@@ -128,6 +129,7 @@ export const PromptAiChatMessageBubble = ({
   onReferenceSelect,
   onSubmitToolConfirmationAnswer,
   suggestedQuestionContext,
+  suggestedQuestionGenerationVersion = 0,
   onSendSuggestedQuestion,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
@@ -140,6 +142,7 @@ export const PromptAiChatMessageBubble = ({
   const markdownContent = isUser ? message.content : messageParts.filter((part): part is Extract<PromptAiPart, { kind: "text" }> => part.kind === "text").map((part) => part.content).join("\n\n").trim() || message.content;
   const plainTextContent = stripMarkdownSyntax(markdownContent);
   const [suggestedQuestions, setSuggestedQuestions] = React.useState<string[]>([]);
+  const suggestedQuestionHistoryRef = React.useRef<string[]>([]);
   const [isLoadingSuggestedQuestions, setIsLoadingSuggestedQuestions] = React.useState(false);
   const suggestedQuestionContextKey = suggestedQuestionContext?.map((item) => `${item.role}:${item.content}`).join("\u0000") ?? "";
   const stableSuggestedQuestionContext = React.useMemo(
@@ -153,15 +156,19 @@ export const PromptAiChatMessageBubble = ({
       return;
     }
     let active = true;
-    setSuggestedQuestions([]);
     setIsLoadingSuggestedQuestions(true);
-    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext).then((questions) => {
-      if (active) setSuggestedQuestions(questions);
+    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext, suggestedQuestionHistoryRef.current).then((questions) => {
+      if (active) {
+        const excludedQuestions = new Set(suggestedQuestionHistoryRef.current.map((question) => question.trim()));
+        const nextQuestions = questions.filter((question) => !excludedQuestions.has(question.trim()));
+        suggestedQuestionHistoryRef.current = [...suggestedQuestionHistoryRef.current, ...nextQuestions];
+        setSuggestedQuestions(nextQuestions);
+      }
     }).catch(() => undefined).finally(() => {
       if (active) setIsLoadingSuggestedQuestions(false);
     });
     return () => { active = false; };
-  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext]);
+  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext, suggestedQuestionGenerationVersion]);
 
   /**
    * 打开当前消息的右键菜单。

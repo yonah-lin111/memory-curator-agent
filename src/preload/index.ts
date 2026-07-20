@@ -910,8 +910,11 @@ const api = {
       ipcRenderer.invoke('ai:session:turn:delete', sessionId, messageId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
-    suggestQuestions: (messages: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<string[]> =>
-      ipcRenderer.invoke('ai:suggested-questions:generate', messages),
+    suggestQuestions: (
+      messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+      excludedQuestions: string[] = [],
+    ): Promise<string[]> =>
+      ipcRenderer.invoke('ai:suggested-questions:generate', messages, excludedQuestions),
     listPromptHistory: (scope: PromptHistoryScope): Promise<string[]> =>
       ipcRenderer.invoke('ai:prompt-history:list', scope),
     addPromptHistory: (scope: PromptHistoryScope, prompt: string): Promise<string[]> =>

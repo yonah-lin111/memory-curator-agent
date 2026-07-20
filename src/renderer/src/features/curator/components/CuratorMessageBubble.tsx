@@ -77,6 +77,7 @@ type CuratorMessageBubbleProps = {
   // 用户编辑状态改变时的回调.
   onUserEditStateChange?: (isEditing: boolean) => void;
   suggestedQuestionContext?: Array<{ role: "user" | "assistant"; content: string }>;
+  suggestedQuestionGenerationVersion?: number;
   onSendSuggestedQuestion?: (question: string) => void;
 };
 
@@ -498,6 +499,7 @@ export const CuratorMessageBubble = ({
   onToolConfirmationToggle,
   onUserEditStateChange,
   suggestedQuestionContext,
+  suggestedQuestionGenerationVersion = 0,
   onSendSuggestedQuestion,
 }: CuratorMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
@@ -512,6 +514,7 @@ export const CuratorMessageBubble = ({
   const bubbleRef = useRef<HTMLDivElement>(null);
   const remainingCharCountRef = useRef(0);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const suggestedQuestionHistoryRef = useRef<string[]>([]);
   const [isLoadingSuggestedQuestions, setIsLoadingSuggestedQuestions] = useState(false);
   const suggestedQuestionContextKey = suggestedQuestionContext?.map((item) => `${item.role}:${item.content}`).join("\u0000") ?? "";
   const stableSuggestedQuestionContext = React.useMemo(
@@ -525,15 +528,19 @@ export const CuratorMessageBubble = ({
       return;
     }
     let active = true;
-    setSuggestedQuestions([]);
     setIsLoadingSuggestedQuestions(true);
-    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext).then((questions) => {
-      if (active) setSuggestedQuestions(questions);
+    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext, suggestedQuestionHistoryRef.current).then((questions) => {
+      if (active) {
+        const excludedQuestions = new Set(suggestedQuestionHistoryRef.current.map((question) => question.trim()));
+        const nextQuestions = questions.filter((question) => !excludedQuestions.has(question.trim()));
+        suggestedQuestionHistoryRef.current = [...suggestedQuestionHistoryRef.current, ...nextQuestions];
+        setSuggestedQuestions(nextQuestions);
+      }
     }).catch(() => undefined).finally(() => {
       if (active) setIsLoadingSuggestedQuestions(false);
     });
     return () => { active = false; };
-  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext]);
+  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext, suggestedQuestionGenerationVersion]);
 
   // 气泡主体容器，用于捕获高度变化执行 FLIP 过渡。
   const userBubbleRef = useRef<HTMLDivElement>(null);

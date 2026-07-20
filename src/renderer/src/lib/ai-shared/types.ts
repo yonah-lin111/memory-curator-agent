@@ -1,5 +1,5 @@
 // AI 输入框内置命令标识。
-export type CuratorInputCommandId = "clear" | "undo" | "model" | "session";
+export type CuratorInputCommandId = "clear" | "undo" | "model" | "session" | "suggest";
 
 // AI 输入框斜杠命令配置类型。
 export interface CuratorInputCommand {

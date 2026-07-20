@@ -65,6 +65,7 @@ export const PromptAiChatInput = ({
   onUndo,
   onSessionChange,
   onMcp,
+  onSuggestQuestions,
   chatSessions,
   references = [],
   onReferenceRemove,
@@ -83,6 +84,7 @@ export const PromptAiChatInput = ({
   onUndo?: () => Promise<PromptAiUndoResult>;
   onSessionChange?: (sessionId: string) => void;
   onMcp?: () => Promise<void>;
+  onSuggestQuestions?: () => void;
   chatSessions?: CuratorSession[];
   references?: {
     id: string;
@@ -131,7 +133,7 @@ export const PromptAiChatInput = ({
     Array<CuratorInputCommand | typeof MCP_COMMAND>
   >(() => {
     const commands = getMatchedCommands(inputText).filter((cmd) =>
-      ["clear", "undo", "model", "session"].includes(cmd.id),
+      ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
     );
     return isMcpCommandMatch(inputText) ? [...commands, MCP_COMMAND] : commands;
   }, [inputText]);
@@ -267,10 +269,13 @@ export const PromptAiChatInput = ({
       } else if (commandId === "mcp") {
         setInputText("");
         await onMcp?.();
+      } else if (commandId === "suggest") {
+        setInputText("");
+        onSuggestQuestions?.();
       }
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
-    [onMcp, onNewChat, onUndo, disabled, resetHistoryCursor, toast],
+    [onMcp, onNewChat, onSuggestQuestions, onUndo, disabled, resetHistoryCursor, toast],
   );
 
   const moveActiveCommand = useCallback(
@@ -311,7 +316,7 @@ export const PromptAiChatInput = ({
       }
 
       const commands = getMatchedCommands(nextValue).filter((cmd) =>
-        ["clear", "undo", "model", "session"].includes(cmd.id),
+        ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
       );
       const nextMatchedCommands = isMcpCommandMatch(nextValue)
         ? [...commands, MCP_COMMAND]

@@ -65,6 +65,10 @@ export const PromptAiChatWorkspace = forwardRef<
   const latestTriggerMessageRef = useRef<HTMLDivElement>(null);
   const prevScrolledTriggerMessageIdRef = useRef<string | null>(null);
   const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
+  // 手动刷新建议问题时递增，用于通知对应消息气泡重新请求。
+  const [suggestedQuestionGenerationVersion, setSuggestedQuestionGenerationVersion] = useState(0);
+  // 手动命令指定的建议问题目标，独立于自动触发开关。
+  const [manualSuggestedQuestionMessageId, setManualSuggestedQuestionMessageId] = useState<string | null>(null);
   const [messageContextMenu, setMessageContextMenu] = useState<PromptAiMessageContextMenuRequest | null>(null);
   const escCancelStateRef = useRef<"idle" | "pending">("idle");
   const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,6 +78,17 @@ export const PromptAiChatWorkspace = forwardRef<
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const message = messages[index];
       if (message.role === "user" || message.role === "system_command") {
+        return message.id;
+      }
+    }
+
+    return null;
+  }, [messages]);
+
+  const latestAssistantMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === "assistant") {
         return message.id;
       }
     }
@@ -439,7 +454,8 @@ export const PromptAiChatWorkspace = forwardRef<
                         }
                         onReferenceSelect={onReferenceSelect}
                         suggestedQuestionContext={
-                          message.id === controller.suggestedQuestionMessageId &&
+                          (message.id === controller.suggestedQuestionMessageId ||
+                            message.id === manualSuggestedQuestionMessageId) &&
                           message.role === "assistant" &&
                           message.id === messages[messages.length - 1]?.id
                             ? messages
@@ -447,6 +463,7 @@ export const PromptAiChatWorkspace = forwardRef<
                               .map((item) => ({ role: item.role, content: item.content }))
                             : undefined
                         }
+                        suggestedQuestionGenerationVersion={suggestedQuestionGenerationVersion}
                         onSendSuggestedQuestion={(question) => { void controller.sendMessage(question); }}
                       />
                     </div>
@@ -473,6 +490,13 @@ export const PromptAiChatWorkspace = forwardRef<
             onUndo={controller.handleUndo}
             onSessionChange={controller.handleSessionChange}
             onMcp={controller.showMcpTools}
+            onSuggestQuestions={() => {
+              if (!latestAssistantMessageId || isGenerating) {
+                return;
+              }
+              setManualSuggestedQuestionMessageId(latestAssistantMessageId);
+              setSuggestedQuestionGenerationVersion((version) => version + 1);
+            }}
             chatSessions={controller.sessions}
             references={controller.references}
             onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}

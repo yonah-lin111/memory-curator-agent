@@ -181,7 +181,11 @@ export const registerAiHandlers = (): void => {
     createModelOptionsResponse(),
   );
 
-  ipcMain.handle("ai:suggested-questions:generate", async (_, messages: SuggestedQuestionContextMessage[]) => {
+  ipcMain.handle("ai:suggested-questions:generate", async (
+    _,
+    messages: SuggestedQuestionContextMessage[],
+    excludedQuestions: string[] = [],
+  ) => {
     const settings = readAiSettingsConfig();
     if (!settings.suggestedQuestionsEnabled || messages.length === 0) return [];
     const selection = settings.suggestedQuestions;
@@ -200,7 +204,10 @@ export const registerAiHandlers = (): void => {
         model: selection.model,
         tools: [],
         messages: [
-          { role: "system", content: "根据以下对话生成 2 到 4 个用户下一步可以直接提问的中文问题。仅返回 JSON 字符串数组，不要解释、Markdown 或工具调用。" },
+          {
+            role: "system",
+            content: `根据以下对话生成 2 到 4 个用户下一步可以直接提问的中文问题。不得重复以下已有问题：${JSON.stringify(excludedQuestions)}。仅返回 JSON 字符串数组，不要解释、Markdown 或工具调用。`,
+          },
           ...context,
         ],
       })) {

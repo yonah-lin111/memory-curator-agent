@@ -979,7 +979,10 @@ type AppAPI = {
     deleteTurn?: (sessionId: string, messageId: string) => Promise<CuratorSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
-    suggestQuestions: (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => Promise<string[]>
+    suggestQuestions: (
+      messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+      excludedQuestions?: string[],
+    ) => Promise<string[]>
     // 读取指定输入区域的历史提示词列表。
     listPromptHistory?: (scope: PromptHistoryScope) => Promise<string[]>
     // 保存指定输入区域的历史提示词。
