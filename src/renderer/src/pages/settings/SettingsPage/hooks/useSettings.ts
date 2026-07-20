@@ -129,7 +129,7 @@ export const useSettings = () => {
 
   const updateModelSelection = useCallback(
     (
-      key: "defaultModel" | "titleSummary" | "weeklySummary",
+      key: "defaultModel" | "titleSummary" | "weeklySummary" | "suggestedQuestions",
       field: keyof AiSettingsModelSelection,
       value: string
     ): void => {
@@ -144,6 +144,10 @@ export const useSettings = () => {
     },
     [updateSettings]
   );
+
+  const updateSuggestedQuestionsEnabled = useCallback((enabled: boolean): void => {
+    updateSettings((current) => ({ ...current, suggestedQuestionsEnabled: enabled }));
+  }, [updateSettings]);
 
   const addProvider = useCallback((): void => {
     updateSettings((current) => {
@@ -360,6 +364,7 @@ export const useSettings = () => {
     toggleModelExpanded,
     loadSettings,
     updateModelSelection,
+    updateSuggestedQuestionsEnabled,
     addProvider,
     updateProvider,
     deleteProvider,

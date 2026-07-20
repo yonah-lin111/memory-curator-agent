@@ -354,6 +354,10 @@ type AiSettingsConfig = {
   titleSummary: AiSettingsModelSelection
   // 周度总结模型。
   weeklySummary: AiSettingsModelSelection
+  // 推荐问题生成模型。
+  suggestedQuestions: AiSettingsModelSelection
+  // 是否启用推荐问题。
+  suggestedQuestionsEnabled: boolean
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
@@ -896,6 +900,8 @@ const api = {
       ipcRenderer.invoke('ai:session:turn:delete', sessionId, messageId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
       ipcRenderer.invoke('ai:model-options:get'),
+    suggestQuestions: (messages: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<string[]> =>
+      ipcRenderer.invoke('ai:suggested-questions:generate', messages),
     listPromptHistory: (scope: PromptHistoryScope): Promise<string[]> =>
       ipcRenderer.invoke('ai:prompt-history:list', scope),
     addPromptHistory: (scope: PromptHistoryScope, prompt: string): Promise<string[]> =>

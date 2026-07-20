@@ -52,6 +52,10 @@ export type AiSettingsConfig = {
   titleSummary: AiSettingsModelSelection
   // 周度总结模型。
   weeklySummary: AiSettingsModelSelection
+  // 推荐问题生成模型。
+  suggestedQuestions: AiSettingsModelSelection
+  // 是否在 AI 回复后生成推荐问题。
+  suggestedQuestionsEnabled: boolean
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
@@ -96,6 +100,8 @@ type RawAiConfig = {
   titleSummary?: Partial<AiSettingsModelSelection>
   // 周度总结模型。
   weeklySummary?: Partial<AiSettingsModelSelection>
+  suggestedQuestions?: Partial<AiSettingsModelSelection>
+  suggestedQuestionsEnabled?: boolean
   // 已启用 provider 标识列表。
   enabled_providers?: string[]
   // Provider 配置表。
@@ -122,6 +128,11 @@ const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
     provider: 'bailian',
     model: 'MiniMax-M2.5'
   },
+  suggestedQuestions: {
+    provider: 'bailian',
+    model: 'MiniMax-M2.5'
+  },
+  suggestedQuestionsEnabled: true,
   enabledProviders: ['bailian'],
   providers: {
     bailian: {
@@ -340,6 +351,8 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     defaultModel,
     titleSummary: normalizeSelection(rawAi.titleSummary, undefined, providers, defaultModel),
     weeklySummary: normalizeSelection(rawAi.weeklySummary, undefined, providers, defaultModel),
+    suggestedQuestions: normalizeSelection(rawAi.suggestedQuestions, undefined, providers, defaultModel),
+    suggestedQuestionsEnabled: rawAi.suggestedQuestionsEnabled !== false,
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
     showAgentThinking: rawAi.showAgentThinking === true,
@@ -441,6 +454,7 @@ const validateSettings = (settings: AiSettingsConfig): void => {
   validateSelection('默认模型', settings.defaultModel, settings.providers)
   validateSelection('标题总结模型', settings.titleSummary, settings.providers)
   validateSelection('周度总结模型', settings.weeklySummary, settings.providers)
+  validateSelection('推荐问题模型', settings.suggestedQuestions, settings.providers)
 
   if (typeof settings.showAgentThinking !== 'boolean') {
     throw new Error('showAgentThinking 必须为布尔值')
@@ -496,6 +510,8 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   defaultModel: settings.defaultModel,
   titleSummary: settings.titleSummary,
   weeklySummary: settings.weeklySummary,
+  suggestedQuestions: settings.suggestedQuestions,
+  suggestedQuestionsEnabled: settings.suggestedQuestionsEnabled,
   enabled_providers: settings.enabledProviders,
   showAgentThinking: settings.showAgentThinking,
   disabled_skill_ids: settings.disabledSkillIds,

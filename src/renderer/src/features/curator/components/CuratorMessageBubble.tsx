@@ -13,6 +13,7 @@ import type {
 } from "@/features/curator/types";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import { SuggestedQuestions } from "@/lib/ai-shared/SuggestedQuestions";
 import { CuratorSkillCallBlock } from "@/components/ai-shared/SkillCallBlock";
 import {
   ExecutionGroupBlock,
@@ -74,6 +75,8 @@ type CuratorMessageBubbleProps = {
   onToolConfirmationToggle?: () => void;
   // 用户编辑状态改变时的回调.
   onUserEditStateChange?: (isEditing: boolean) => void;
+  suggestedQuestionContext?: Array<{ role: "user" | "assistant"; content: string }>;
+  onSendSuggestedQuestion?: (question: string) => void;
 };
 
 // AI 消息右键菜单打开请求类型。
@@ -493,6 +496,8 @@ export const CuratorMessageBubble = ({
   onThinkingBlockToggle,
   onToolConfirmationToggle,
   onUserEditStateChange,
+  suggestedQuestionContext,
+  onSendSuggestedQuestion,
 }: CuratorMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
   const isUser = message.role === "user";
@@ -505,6 +510,29 @@ export const CuratorMessageBubble = ({
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const remainingCharCountRef = useRef(0);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
+  const [isLoadingSuggestedQuestions, setIsLoadingSuggestedQuestions] = useState(false);
+  const suggestedQuestionContextKey = suggestedQuestionContext?.map((item) => `${item.role}:${item.content}`).join("\u0000") ?? "";
+  const stableSuggestedQuestionContext = React.useMemo(
+    () => suggestedQuestionContext ?? [],
+    [suggestedQuestionContextKey],
+  );
+
+  useEffect(() => {
+    if (isUser || isGenerating || message.cancelled || !stableSuggestedQuestionContext.length || !window.api?.ai?.suggestQuestions) {
+      setIsLoadingSuggestedQuestions(false);
+      return;
+    }
+    let active = true;
+    setSuggestedQuestions([]);
+    setIsLoadingSuggestedQuestions(true);
+    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext).then((questions) => {
+      if (active) setSuggestedQuestions(questions);
+    }).catch(() => undefined).finally(() => {
+      if (active) setIsLoadingSuggestedQuestions(false);
+    });
+    return () => { active = false; };
+  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext]);
 
   // 气泡主体容器，用于捕获高度变化执行 FLIP 过渡。
   const userBubbleRef = useRef<HTMLDivElement>(null);
@@ -1000,6 +1028,8 @@ export const CuratorMessageBubble = ({
             </div>
           )}
         </div>
+
+        {!isUser && suggestedQuestionContext ? <SuggestedQuestions questions={suggestedQuestions} isLoading={isLoadingSuggestedQuestions} onSelect={(question) => onSendSuggestedQuestion?.(question)} /> : null}
 
         {/* 提及的 Agent 行 */}
         {isUser &&

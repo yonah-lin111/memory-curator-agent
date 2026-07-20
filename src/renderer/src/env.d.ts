@@ -457,6 +457,10 @@ type AiSettingsConfig = {
   titleSummary: AiSettingsModelSelection
   // 周度总结模型。
   weeklySummary: AiSettingsModelSelection
+  // 推荐问题生成模型。
+  suggestedQuestions: AiSettingsModelSelection
+  // 是否启用推荐问题。
+  suggestedQuestionsEnabled: boolean
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
@@ -965,6 +969,7 @@ type AppAPI = {
     deleteTurn?: (sessionId: string, messageId: string) => Promise<CuratorSession | null>
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
+    suggestQuestions: (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => Promise<string[]>
     // 读取指定输入区域的历史提示词列表。
     listPromptHistory?: (scope: PromptHistoryScope) => Promise<string[]>
     // 保存指定输入区域的历史提示词。

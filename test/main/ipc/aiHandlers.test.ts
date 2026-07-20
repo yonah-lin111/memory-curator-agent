@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runReactAgent } from '@/agent/core/reactAgent'
 import { createModelProvider } from '@/agent/providers/providerFactory'
 import { getDatabase } from '@/db'
-import { createModelOptionsResponse, createSystemPrompt, registerAiHandlers } from '@/ipc/aiHandlers'
+import {
+  createModelOptionsResponse,
+  createSystemPrompt,
+  parseSuggestedQuestions,
+  registerAiHandlers,
+  trimSuggestedQuestionContext,
+} from '@/ipc/aiHandlers'
 import { createAiChatPersistenceService } from '@/services/aiChatPersistenceService'
 
 // 无连接符 UUID 形态。
@@ -91,6 +97,28 @@ describe('aiHandlers', () => {
       }
     } as never)
     vi.mocked(runReactAgent).mockImplementation(async function* () {})
+  })
+
+  it('保留超长最新 AI 回复的尾部，避免推荐问题上下文变为空', () => {
+    const context = trimSuggestedQuestionContext([
+      { role: 'user', content: '请分析这段内容' },
+      { role: 'assistant', content: 'a'.repeat(12_000) },
+    ], 4_000)
+
+    expect(context).toEqual([
+      { role: 'assistant', content: 'a'.repeat(4_000) },
+    ])
+  })
+
+  it('兼容模型返回的 JSON 对象与编号问题列表', () => {
+    expect(parseSuggestedQuestions('{"questions":["下一步怎么做？","有哪些风险？"]}')).toEqual([
+      '下一步怎么做？',
+      '有哪些风险？',
+    ])
+    expect(parseSuggestedQuestions('1. 下一步怎么做？\n2. 有哪些风险？')).toEqual([
+      '下一步怎么做？',
+      '有哪些风险？',
+    ])
   })
 
   it('system prompt 不硬编码具体工具名，避免工具被筛掉时诱导伪调用', () => {

@@ -48,6 +48,11 @@ const createSettings = (): AiSettingsConfig => ({
     provider: 'gemini',
     model: 'gemini-3.5-flash'
   },
+  suggestedQuestions: {
+    provider: 'gemini',
+    model: 'gemini-3.5-flash'
+  },
+  suggestedQuestionsEnabled: true,
   enabledProviders: ['gemini'],
   showAgentThinking: false,
   disabledSkillIds: [],

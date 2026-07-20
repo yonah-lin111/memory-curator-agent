@@ -61,6 +61,66 @@ import {
   createTimestamp,
 } from "./ai/helpers";
 import { startAiChat } from "./ai/chatRunner";
+import { readAiSettingsConfig } from "@/services/configService";
+import { createModelProvider } from "@/agent/providers/providerFactory";
+
+// 推荐问题请求中的精简对话消息。
+type SuggestedQuestionContextMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+/**
+ * 解析模型返回的推荐问题，保证界面仅接收 2-4 条非空文本。
+ */
+export const parseSuggestedQuestions = (content: string): string[] => {
+  const normalizeQuestions = (values: unknown[]): string[] => {
+    const questions = Array.from(new Set(values.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean))).slice(0, 4);
+    return questions.length >= 2 ? questions : [];
+  };
+
+  const json = content.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? content.match(/\[[\s\S]*\]/)?.[0];
+  if (json) {
+    try {
+      const parsed = JSON.parse(json) as unknown;
+      if (Array.isArray(parsed)) return normalizeQuestions(parsed);
+      if (typeof parsed === "object" && parsed !== null && Array.isArray((parsed as { questions?: unknown }).questions)) {
+        return normalizeQuestions((parsed as { questions: unknown[] }).questions);
+      }
+    } catch {
+      // JSON 不完整时继续尝试解析常见的编号列表。
+    }
+  }
+
+  const listQuestions = content
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.、])\s*/, "").trim())
+    .filter((line) => line.endsWith("？") || line.endsWith("?"));
+
+  return normalizeQuestions(listQuestions);
+};
+
+/**
+ * 按模型上下文预算保留最近对话，避免辅助请求挤占主对话的可用上下文。
+ */
+export const trimSuggestedQuestionContext = (
+  messages: SuggestedQuestionContextMessage[],
+  maxChars: number,
+): SuggestedQuestionContextMessage[] => {
+  const selected: SuggestedQuestionContextMessage[] = [];
+  let usedChars = 0;
+
+  for (const message of messages.slice(-12).reverse()) {
+    const availableChars = maxChars - usedChars;
+    if (availableChars <= 0) break;
+    const content = message.content.slice(-Math.min(8000, availableChars));
+    if (!content) continue;
+    selected.unshift({ ...message, content });
+    usedChars += content.length;
+  }
+
+  return selected;
+};
 
 // 为测试兼容性重新导出方法
 export { createSystemPrompt, createModelOptionsResponse };
@@ -120,6 +180,37 @@ export const registerAiHandlers = (): void => {
   ipcMain.handle("ai:model-options:get", async () =>
     createModelOptionsResponse(),
   );
+
+  ipcMain.handle("ai:suggested-questions:generate", async (_, messages: SuggestedQuestionContextMessage[]) => {
+    const settings = readAiSettingsConfig();
+    if (!settings.suggestedQuestionsEnabled || messages.length === 0) return [];
+    const selection = settings.suggestedQuestions;
+    const providerConfig = settings.providers[selection.provider];
+    if (!providerConfig || !providerConfig.models[selection.model]) return [];
+    const context = trimSuggestedQuestionContext(
+      messages,
+      Math.max(4000, Math.floor(providerConfig.models[selection.model].limit.context * 3)),
+    );
+    if (context.length === 0) return [];
+
+    try {
+      const provider = await createModelProvider(providerConfig);
+      let output = "";
+      for await (const event of provider.streamTurn({
+        model: selection.model,
+        tools: [],
+        messages: [
+          { role: "system", content: "根据以下对话生成 2 到 4 个用户下一步可以直接提问的中文问题。仅返回 JSON 字符串数组，不要解释、Markdown 或工具调用。" },
+          ...context,
+        ],
+      })) {
+        if (event.type === "text_delta") output += event.delta;
+      }
+      return parseSuggestedQuestions(output);
+    } catch {
+      return [];
+    }
+  });
 
   ipcMain.handle(
     "ai:sessions:list",

@@ -9,6 +9,7 @@ import {
 } from "@/components/ai-shared/AskRequestPanel";
 import { CuratorThinkingBlock } from "@/components/ai-shared/ThinkingBlock";
 import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
+import { SuggestedQuestions } from "@/lib/ai-shared/SuggestedQuestions";
 import { CuratorSkillCallBlock } from "@/components/ai-shared/SkillCallBlock";
 import { PromptAiMcpCallBlock } from "@/features/prompt-design/components/PromptAiMcpCallBlock";
 import { PromptAiMcpOverview } from "@/features/prompt-design/components/PromptAiMcpOverview";
@@ -62,6 +63,8 @@ type PromptAiChatMessageBubbleProps = {
   onSubmitToolConfirmationAnswer?: (
     payload: CuratorToolConfirmationAnswerSubmitPayload,
   ) => void | Promise<void>;
+  suggestedQuestionContext?: Array<{ role: "user" | "assistant"; content: string }>;
+  onSendSuggestedQuestion?: (question: string) => void;
 };
 
 /**
@@ -123,6 +126,8 @@ export const PromptAiChatMessageBubble = ({
   onEditAndResendUserMessage,
   onReferenceSelect,
   onSubmitToolConfirmationAnswer,
+  suggestedQuestionContext,
+  onSendSuggestedQuestion,
 }: PromptAiChatMessageBubbleProps): React.JSX.Element => {
   const showAgentThinking = useAiSettingsStore((state) => state.showAgentThinking);
   const isUser = message.role === "user";
@@ -133,6 +138,29 @@ export const PromptAiChatMessageBubble = ({
   const messageParts = resolveMessageParts(message);
   const markdownContent = isUser ? message.content : messageParts.filter((part): part is Extract<PromptAiPart, { kind: "text" }> => part.kind === "text").map((part) => part.content).join("\n\n").trim() || message.content;
   const plainTextContent = stripMarkdownSyntax(markdownContent);
+  const [suggestedQuestions, setSuggestedQuestions] = React.useState<string[]>([]);
+  const [isLoadingSuggestedQuestions, setIsLoadingSuggestedQuestions] = React.useState(false);
+  const suggestedQuestionContextKey = suggestedQuestionContext?.map((item) => `${item.role}:${item.content}`).join("\u0000") ?? "";
+  const stableSuggestedQuestionContext = React.useMemo(
+    () => suggestedQuestionContext ?? [],
+    [suggestedQuestionContextKey],
+  );
+
+  React.useEffect(() => {
+    if (isUser || isGenerating || message.cancelled || !stableSuggestedQuestionContext.length || !window.api?.ai?.suggestQuestions) {
+      setIsLoadingSuggestedQuestions(false);
+      return;
+    }
+    let active = true;
+    setSuggestedQuestions([]);
+    setIsLoadingSuggestedQuestions(true);
+    void window.api.ai.suggestQuestions(stableSuggestedQuestionContext).then((questions) => {
+      if (active) setSuggestedQuestions(questions);
+    }).catch(() => undefined).finally(() => {
+      if (active) setIsLoadingSuggestedQuestions(false);
+    });
+    return () => { active = false; };
+  }, [isGenerating, isUser, message.cancelled, message.id, stableSuggestedQuestionContext]);
 
   /**
    * 打开当前消息的右键菜单。
@@ -291,6 +319,7 @@ export const PromptAiChatMessageBubble = ({
             </div>
           )}
         </div>
+        {!isUser && suggestedQuestionContext ? <SuggestedQuestions questions={suggestedQuestions} isLoading={isLoadingSuggestedQuestions} onSelect={(question) => onSendSuggestedQuestion?.(question)} /> : null}
         {!isNonTimedSystemMessage ? <div className={`text-xs font-mono mt-0.5 px-1 text-white/30 flex items-center gap-1.5 min-h-[1.25rem] ${isUser ? "justify-end text-right" : "justify-start text-left"}`}>
           <span>{isGenerating ? (
             <span className="relative flex h-1.5 w-1.5 my-1 ml-0.5">

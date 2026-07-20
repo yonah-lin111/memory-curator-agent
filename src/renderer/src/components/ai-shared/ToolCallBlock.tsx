@@ -191,12 +191,7 @@ const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
 
   const rightAngleSvg = (
     <svg className="h-3 w-3 stroke-current" viewBox="0 0 12 12" fill="none">
-      <path
-        d="M3 1v5h7"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 

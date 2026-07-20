@@ -438,6 +438,16 @@ export const PromptAiChatWorkspace = forwardRef<
                           controller.handleSubmitToolConfirmationAnswer
                         }
                         onReferenceSelect={onReferenceSelect}
+                        suggestedQuestionContext={
+                          !isGenerating &&
+                          message.role === "assistant" &&
+                          message.id === messages[messages.length - 1]?.id
+                            ? messages
+                              .filter((item): item is typeof item & { role: "user" | "assistant" } => item.role === "user" || item.role === "assistant")
+                              .map((item) => ({ role: item.role, content: item.content }))
+                            : undefined
+                        }
+                        onSendSuggestedQuestion={(question) => { void controller.sendMessage(question); }}
                       />
                     </div>
                   );

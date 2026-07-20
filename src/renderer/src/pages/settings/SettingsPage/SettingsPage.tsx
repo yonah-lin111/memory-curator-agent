@@ -25,6 +25,7 @@ export const SettingsPage = (): React.JSX.Element => {
     toggleModelExpanded,
     loadSettings,
     updateModelSelection,
+    updateSuggestedQuestionsEnabled,
     addProvider,
     updateProvider,
     deleteProvider,
@@ -100,7 +101,7 @@ export const SettingsPage = (): React.JSX.Element => {
           className={`min-h-0 overflow-y-auto ${activeSection === "providers" ? "scrollbar-hidden" : ""}`}
         >
           {activeSection === "models" && (
-            <ModelsSection settings={settings} updateModelSelection={updateModelSelection} />
+            <ModelsSection settings={settings} updateModelSelection={updateModelSelection} updateSuggestedQuestionsEnabled={updateSuggestedQuestionsEnabled} />
           )}
           {activeSection === "providers" && (
             <ProvidersSection

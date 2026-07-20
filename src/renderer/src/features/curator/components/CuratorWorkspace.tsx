@@ -931,6 +931,16 @@ export const CuratorWorkspace = ({
                         onThinkingBlockToggle={handleThinkingBlockToggle}
                         onToolConfirmationToggle={handleThinkingBlockToggle}
                         onUserEditStateChange={handleUserEditStateChange}
+                        suggestedQuestionContext={
+                          message.role === "assistant" &&
+                          message.id === latestAssistantMessageId &&
+                          session.status === "completed"
+                            ? session.messages
+                              .filter((item): item is typeof item & { role: "user" | "assistant" } => item.role === "user" || item.role === "assistant")
+                              .map((item) => ({ role: item.role, content: item.content }))
+                            : undefined
+                        }
+                        onSendSuggestedQuestion={(question) => onSendMessage({ text: question, agents: [] })}
                       />
                     </div>
                   );
