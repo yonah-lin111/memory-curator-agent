@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
-import { RotateCcw, SendHorizontal, FileText } from "lucide-react";
+import { RotateCcw, SendHorizontal, MessageSquare } from "lucide-react";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tag } from "@/components/ui/Tag";
+import { useToast } from "@/components/ui/Toast";
 
 import { useFileMention } from "@/features/prompt-design/hooks/useFileMention";
 import type { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
+import {
+  PromptAiFileMentionPanel,
+  PromptAiSlashCommandPanel,
+  type PromptAiInputCommand,
+} from "@/features/prompt-design/components/PromptAiInputPanels";
+import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
+import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
 
 type InlineInputPosition = { left: number; top: number | "auto"; bottom: number | "auto" };
 type PanelDirection = "up" | "down";
@@ -14,6 +22,24 @@ type PromptAiInlineInputProps = {
   view: EditorView | null;
   controller: ReturnType<typeof usePromptAiChatController>;
   onClose: () => void;
+};
+
+// 内联输入能够完整执行的斜杠命令。
+const INLINE_COMMAND_IDS = ["clear", "undo", "session"];
+
+// Prompt AI 专用 MCP 命令。
+const MCP_COMMAND: PromptAiInputCommand = {
+  id: "mcp",
+  name: "/mcp",
+  description: "列出可用的 MCP 服务和工具",
+};
+
+/**
+ * 判断当前斜杠输入是否匹配 Prompt AI 专用 MCP 命令。
+ */
+const isMcpCommandMatch = (value: string): boolean => {
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue.startsWith("/") && "/mcp".startsWith(normalizedValue);
 };
 
 /**
@@ -24,12 +50,37 @@ export const PromptAiInlineInput = ({
   controller,
   onClose,
 }: PromptAiInlineInputProps): React.JSX.Element | null => {
+  const toast = useToast();
   const [inputText, setInputText] = useState("");
   const [position, setPosition] = useState<InlineInputPosition | null>(null);
   const [panelDirection, setPanelDirection] = useState<PanelDirection>("down");
+  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mention = useFileMention(inputText, setInputText, textareaRef, () => undefined);
+  const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
+    const commands = getMatchedCommands(inputText).filter((command) =>
+      INLINE_COMMAND_IDS.includes(command.id),
+    );
+
+    return isMcpCommandMatch(inputText) ? [...commands, MCP_COMMAND] : commands;
+  }, [inputText]);
+  const {
+    activeSessionIndex,
+    matchedSessions,
+    isSessionMode,
+    setActiveSessionIndex,
+    selectSession,
+    moveActiveSession,
+  } = useCuratorSessions(
+    inputText,
+    setInputText,
+    controller.sessions,
+    textareaRef,
+    () => undefined,
+    controller.handleSessionChange,
+  );
 
   const restoreEditorFocus = useCallback((): void => {
     onClose();
@@ -59,6 +110,90 @@ export const PromptAiInlineInput = ({
     mention.closeFileMentionPanel();
     restoreEditorFocus();
   }, [controller, inputText, mention, restoreEditorFocus]);
+
+  /**
+   * 清空当前草稿与引用，保持与聊天输入框一致的清空语义。
+   */
+  const handleClear = useCallback((): void => {
+    setInputText("");
+    mention.closeFileMentionPanel();
+    controller.setReferences([]);
+    toast.success("已清空输入内容");
+  }, [controller, mention, toast]);
+
+  /**
+   * 执行内联输入中可用的会话级斜杠命令。
+   */
+  const executeCommand = useCallback(async (commandId: string): Promise<void> => {
+    setIsCommandPanelOpen(false);
+
+    if (commandId === "clear") {
+      if (controller.isGenerating) {
+        toast.warning("AI 正在生成，请稍后再试");
+        return;
+      }
+      setInputText("");
+      controller.handleNewChat();
+    } else if (commandId === "undo") {
+      const result = await controller.handleUndo();
+      if (result === false) {
+        toast.error("撤销对话失败");
+      } else if (result.status === "empty") {
+        toast.warning("没有可撤销的对话");
+      } else {
+        setInputText(result.prompt ?? "");
+      }
+    } else if (commandId === "session") {
+      setInputText("/session ");
+    } else if (commandId === "mcp") {
+      setInputText("");
+      await controller.showMcpTools();
+    }
+
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [controller, toast]);
+
+  /**
+   * 在命令候选项中循环移动当前激活项。
+   */
+  const moveActiveCommand = useCallback((direction: 1 | -1): void => {
+    setActiveCommandIndex((currentIndex) => {
+      if (!matchedCommands.length) return 0;
+      return (currentIndex + direction + matchedCommands.length) % matchedCommands.length;
+    });
+  }, [matchedCommands.length]);
+
+  /**
+   * 同步斜杠、会话和文件提及面板的互斥状态。
+   */
+  const handleInputChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    const nextValue = event.target.value;
+    setInputText(nextValue);
+
+    const nextIsSessionMode = nextValue === "/session" || nextValue.startsWith("/session ");
+    if (nextIsSessionMode) {
+      setIsCommandPanelOpen(false);
+      mention.closeFileMentionPanel();
+      return;
+    }
+
+    const commands = getMatchedCommands(nextValue).filter((command) =>
+      INLINE_COMMAND_IDS.includes(command.id),
+    );
+    const nextMatchedCommands = isMcpCommandMatch(nextValue)
+      ? [...commands, MCP_COMMAND]
+      : commands;
+    const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0;
+    setIsCommandPanelOpen(shouldOpenCommandPanel);
+    setActiveCommandIndex(0);
+
+    if (shouldOpenCommandPanel) {
+      mention.closeFileMentionPanel();
+      return;
+    }
+
+    mention.syncFileMentionPanel(nextValue, event.target.selectionStart);
+  }, [mention]);
 
   useLayoutEffect(() => {
     if (!view) return;
@@ -117,27 +252,37 @@ export const PromptAiInlineInput = ({
       className="fixed z-[110] flex w-[min(360px,calc(100vw-16px))] flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2 shadow-2xl"
       style={position}
     >
+      <PromptAiSlashCommandPanel
+        isOpen={isCommandPanelOpen}
+        commands={matchedCommands}
+        activeIndex={activeCommandIndex}
+        onActiveIndexChange={setActiveCommandIndex}
+        onCommandSelect={(command) => void executeCommand(command.id)}
+        idPrefix="prompt-inline-slash-command"
+        style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
+      />
       <CommandPanel
+        isOpen={isSessionMode}
+        ariaLabel="会话选择"
+        items={matchedSessions}
+        activeIndex={activeSessionIndex}
+        onActiveIndexChange={setActiveSessionIndex}
+        onItemSelect={selectSession}
+        renderItem={(session) => (
+          <div className="flex w-full items-center gap-2">
+            <MessageSquare className="h-4 w-4 shrink-0 opacity-50" />
+            <span className="flex-1 truncate text-left text-sm font-medium">{session.title}</span>
+          </div>
+        )}
+        idPrefix="prompt-inline-session-select"
+        style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
+      />
+      <PromptAiFileMentionPanel
         isOpen={mention.isFilePanelOpen}
-        ariaLabel="文件提及"
-        items={mention.matchedFiles.map((path) => ({ id: path, path }))}
+        paths={mention.matchedFiles}
         activeIndex={mention.activeFileIndex}
         onActiveIndexChange={mention.setActiveFileIndex}
-        onItemSelect={(item) => mention.selectFileMention(item.path)}
-        renderItem={(item) => {
-          const slashIndex = item.path.lastIndexOf("/");
-          const name = slashIndex < 0 ? item.path : item.path.slice(slashIndex + 1);
-          const directory = slashIndex < 0 ? "" : item.path.slice(0, slashIndex);
-          return (
-            <div className="flex w-full items-center gap-2 overflow-hidden py-0.5">
-              <FileText className="h-4 w-4 shrink-0 opacity-50" />
-              <div className="min-w-0 flex-1 text-left">
-                <div className="truncate text-sm font-medium text-white">{name}</div>
-                {directory && <div className="truncate text-xs text-white/35">{directory}</div>}
-              </div>
-            </div>
-          );
-        }}
+        onPathSelect={mention.selectFileMention}
         idPrefix="prompt-inline-file-mention"
         style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
       />
@@ -146,12 +291,53 @@ export const PromptAiInlineInput = ({
         ref={textareaRef}
         rows={2}
         value={inputText}
-        onChange={(event) => {
-          const next = event.target.value;
-          setInputText(next);
-          mention.syncFileMentionPanel(next, event.target.selectionStart);
-        }}
+        onChange={handleInputChange}
         onKeyDown={(event) => {
+          if (isSessionMode && matchedSessions.length > 0) {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveActiveSession(1);
+              return;
+            }
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveActiveSession(-1);
+              return;
+            }
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              selectSession(matchedSessions[activeSessionIndex] ?? matchedSessions[0]);
+              return;
+            }
+          }
+          if (isSessionMode && event.key === "Escape") {
+            event.preventDefault();
+            setInputText("");
+            return;
+          }
+          if (isCommandPanelOpen) {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveActiveCommand(1);
+              return;
+            }
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveActiveCommand(-1);
+              return;
+            }
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              const command = matchedCommands[activeCommandIndex] ?? matchedCommands[0];
+              if (command) void executeCommand(command.id);
+              return;
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setIsCommandPanelOpen(false);
+              return;
+            }
+          }
           mention.handleKeyDown(event);
           if (event.defaultPrevented) return;
           if (event.key === "Escape") {
@@ -171,9 +357,9 @@ export const PromptAiInlineInput = ({
         <button
           type="button"
           aria-label="清空输入"
-          disabled={!inputText}
-          onClick={() => { setInputText(""); mention.closeFileMentionPanel(); }}
-          className={`flex h-6 w-6 items-center justify-center rounded-full bg-transparent transition-colors ${inputText ? "text-white/45 hover:text-white" : "cursor-not-allowed text-white/10"}`}
+          disabled={!inputText && controller.references.length === 0}
+          onClick={handleClear}
+          className={`flex h-6 w-6 items-center justify-center rounded-full bg-transparent transition-colors ${inputText || controller.references.length > 0 ? "text-white/45 hover:text-white" : "cursor-not-allowed text-white/10"}`}
         >
           <RotateCcw className="h-3.5 w-3.5" />
         </button>

@@ -10,7 +10,6 @@ import {
   Paperclip,
   RotateCcw,
   SendHorizontal,
-  FileText,
   Bot,
   MessageSquare,
 } from "lucide-react";
@@ -18,8 +17,12 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
+import {
+  PromptAiFileMentionPanel,
+  PromptAiSlashCommandPanel,
+} from "@/features/prompt-design/components/PromptAiInputPanels";
 import {
   FALLBACK_LINE_HEIGHT,
   INTERACTIVE_SELECTOR,
@@ -389,21 +392,12 @@ export const PromptAiChatInput = ({
         className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
         onClick={handleContainerClick}
       >
-        <CommandPanel
+        <PromptAiSlashCommandPanel
           isOpen={isCommandPanelOpen}
-          ariaLabel="Slash Commands"
-          items={matchedCommands}
+          commands={matchedCommands}
           activeIndex={activeCommandIndex}
           onActiveIndexChange={setActiveCommandIndex}
-          onItemSelect={(cmd) => executeCommand(cmd.id)}
-          renderItem={(cmd) => (
-            <div className="flex items-center gap-3 w-full">
-              <span className="text-sm font-medium shrink-0">{cmd.name}</span>
-              <span className="text-xs text-white/50 truncate flex-1 text-left">
-                {cmd.description}
-              </span>
-            </div>
-          )}
+          onCommandSelect={(command) => executeCommand(command.id)}
           idPrefix="prompt-slash-command"
         />
 
@@ -446,35 +440,12 @@ export const PromptAiChatInput = ({
           idPrefix="prompt-session-select"
         />
 
-        <CommandPanel
+        <PromptAiFileMentionPanel
           isOpen={isFilePanelOpen}
-          ariaLabel="File Mentions"
-          items={matchedFiles.map((path) => ({ id: path, path }))}
+          paths={matchedFiles}
           activeIndex={activeFileIndex}
           onActiveIndexChange={setActiveFileIndex}
-          onItemSelect={(item) => selectFileMention(item.path)}
-          renderItem={(item) => {
-            const lastSlash = item.path.lastIndexOf("/");
-            const baseName =
-              lastSlash !== -1 ? item.path.substring(lastSlash + 1) : item.path;
-            const dirPath =
-              lastSlash !== -1 ? item.path.substring(0, lastSlash) : "";
-            return (
-              <div className="flex items-center gap-2 overflow-hidden w-full py-0.5">
-                <FileText className="h-4 w-4 shrink-0 opacity-50" />
-                <div className="flex flex-col min-w-0 flex-1 text-left">
-                  <span className="truncate text-sm text-white font-medium">
-                    {baseName}
-                  </span>
-                  {dirPath && (
-                    <span className="truncate text-xs text-white/35">
-                      {dirPath}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          }}
+          onPathSelect={selectFileMention}
           idPrefix="prompt-file-mention"
         />
 
