@@ -200,6 +200,33 @@ export const CuratorWorkspace = ({
 
     return null;
   }, [session.messages]);
+  // 仅保存当前打开会话中刚完成生成的助手消息标识。
+  const [suggestedQuestionMessageId, setSuggestedQuestionMessageId] = useState<string | null>(null);
+  const previousSuggestedQuestionSessionRef = useRef({
+    id: session.id,
+    status: session.status,
+  });
+
+  useEffect(() => {
+    const previous = previousSuggestedQuestionSessionRef.current;
+    const isSameSession = previous.id === session.id;
+    const hasJustCompleted =
+      isChatOpen &&
+      isSameSession &&
+      previous.status === "running" &&
+      session.status === "completed";
+
+    if (hasJustCompleted) {
+      setSuggestedQuestionMessageId(latestAssistantMessageId);
+    } else if (!isSameSession || session.status !== "completed" || !isChatOpen) {
+      setSuggestedQuestionMessageId(null);
+    }
+
+    previousSuggestedQuestionSessionRef.current = {
+      id: session.id,
+      status: session.status,
+    };
+  }, [isChatOpen, latestAssistantMessageId, session.id, session.status]);
   const latestUserMessageId = useMemo(() => {
     for (let index = session.messages.length - 1; index >= 0; index -= 1) {
       const message = session.messages[index];
@@ -933,8 +960,9 @@ export const CuratorWorkspace = ({
                         onUserEditStateChange={handleUserEditStateChange}
                         suggestedQuestionContext={
                           message.role === "assistant" &&
+                          message.id === suggestedQuestionMessageId &&
                           message.id === latestAssistantMessageId &&
-                          session.status === "completed"
+                          message.id === session.messages.at(-1)?.id
                             ? session.messages
                               .filter((item): item is typeof item & { role: "user" | "assistant" } => item.role === "user" || item.role === "assistant")
                               .map((item) => ({ role: item.role, content: item.content }))

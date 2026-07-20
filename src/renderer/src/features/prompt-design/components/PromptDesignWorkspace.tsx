@@ -372,6 +372,7 @@ export const PromptDesignWorkspace = ({
     activeDesignId || "default-design-item-id",
     pendingCandidateContent ?? content,
     handleEditorSuggestion,
+    isOpen && isPromptAiSidebarOpen,
   );
   controllerRef.current = controller;
 

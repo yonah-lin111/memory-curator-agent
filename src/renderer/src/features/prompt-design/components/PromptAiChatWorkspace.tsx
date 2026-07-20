@@ -439,7 +439,7 @@ export const PromptAiChatWorkspace = forwardRef<
                         }
                         onReferenceSelect={onReferenceSelect}
                         suggestedQuestionContext={
-                          !isGenerating &&
+                          message.id === controller.suggestedQuestionMessageId &&
                           message.role === "assistant" &&
                           message.id === messages[messages.length - 1]?.id
                             ? messages

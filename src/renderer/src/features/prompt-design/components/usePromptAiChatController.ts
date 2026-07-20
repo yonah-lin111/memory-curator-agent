@@ -198,8 +198,11 @@ export const usePromptAiChatController = (
   designItemId: string,
   currentDocument: string,
   onEditorSuggestion: (originalContent: string, candidateContent: string) => boolean,
+  isSuggestedQuestionTriggerEnabled: boolean,
 ) => {
   const [messages, setMessages] = useState<PromptAiMessage[]>([]);
+  const messagesRef = useRef<PromptAiMessage[]>(messages);
+  messagesRef.current = messages;
   const [sessionId, setSessionId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionInitialized, setSessionInitialized] = useState(false);
@@ -219,6 +222,14 @@ export const usePromptAiChatController = (
     documentVersionRef.current += 1;
   }
   const [currentDocumentTruncated, setCurrentDocumentTruncated] = useState(false);
+  // 仅记录当前可见会话中刚完成的助手消息，避免历史消息重新触发推荐问题。
+  const [suggestedQuestionMessageId, setSuggestedQuestionMessageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSuggestedQuestionTriggerEnabled) {
+      setSuggestedQuestionMessageId(null);
+    }
+  }, [isSuggestedQuestionTriggerEnabled]);
 
   const fetchSessions = useCallback(async () => {
     if (!designItemId) return;
@@ -234,6 +245,7 @@ export const usePromptAiChatController = (
     const session = await window.api.promptAi!.getSession(sid);
     if (!session) return;
 
+    setSuggestedQuestionMessageId(null);
     setSessionId(session.id);
     setReferences([]);
     setMessages(session.messages.map((message) => ({
@@ -319,6 +331,10 @@ export const usePromptAiChatController = (
       } else if (event.type === "done") {
         setIsGenerating(false);
         if (event.runId === activeRunIdRef.current) activeRunIdRef.current = null;
+        if (isSuggestedQuestionTriggerEnabled) {
+          const latestMessage = messagesRef.current.at(-1);
+          setSuggestedQuestionMessageId(latestMessage?.role === "assistant" ? latestMessage.id : null);
+        }
         setMessages((previous) => updateLastAssistantMessage(previous, (message) => ({
           ...message,
           parts: message.parts?.map((part) => part.kind === "reasoning" ? { ...part, status: "done" } : part),
@@ -333,7 +349,7 @@ export const usePromptAiChatController = (
     });
 
     return unlisten;
-  }, [fetchSessions, onEditorSuggestion, sessionId]);
+  }, [fetchSessions, isSuggestedQuestionTriggerEnabled, onEditorSuggestion, sessionId]);
 
   useEffect(() => window.api.promptAi!.onEditorReadRequest((request) => {
     if (request.designItemId !== designItemId) return;
@@ -380,12 +396,16 @@ export const usePromptAiChatController = (
 
   const handleNewChat = useCallback(() => {
     if (isGenerating) return;
+    setSuggestedQuestionMessageId(null);
     setSessionId(`sess-${Date.now()}`);
     setMessages([]);
   }, [isGenerating]);
 
   const handleSessionChange = useCallback((sid: string) => {
-    if (!isGenerating) void loadSession(sid);
+    if (!isGenerating) {
+      setSuggestedQuestionMessageId(null);
+      void loadSession(sid);
+    }
   }, [isGenerating, loadSession]);
 
   const handleRenameChat = useCallback(async (sid: string, title: string) => {
@@ -468,6 +488,7 @@ export const usePromptAiChatController = (
     const time = new Date().toISOString();
     const referenceSnapshot = options?.references?.map((reference) => ({ ...reference }));
     setReferences([]);
+    setSuggestedQuestionMessageId(null);
     setMessages((previous) => [...previous,
       { id: `msg-${Date.now()}`, role: "user", content: text, time, references: referenceSnapshot },
       { id: `msg-${Date.now()}-ai`, role: "assistant", content: "", model: modelId, time, parts: [] },
@@ -608,6 +629,6 @@ export const usePromptAiChatController = (
     contextDocument: isGenerating ? requestContext.currentDocument : currentDocument,
     contextReferences: isGenerating ? requestContext.references : references,
     currentDocumentTruncated,
-    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET,
+    sessionInitialized, LATEST_ASSISTANT_TOP_OFFSET, suggestedQuestionMessageId,
   };
 };
