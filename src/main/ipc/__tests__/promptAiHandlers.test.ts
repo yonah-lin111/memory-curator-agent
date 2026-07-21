@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { loadPromptDesignAgentPrompt } from "@/services/agentPromptService";
+import {
+  loadCuratorAgentPrompt,
+  loadPromptDesignAgentPrompt,
+} from "@/services/agentPromptService";
 
 describe("Prompt Design system prompt requirements", () => {
   it("should contain the required strict tool usage rules for design intents", () => {
@@ -49,5 +52,15 @@ describe("Prompt Design system prompt requirements", () => {
     expect(prompt).not.toContain("<constraint></constraint>");
     expect(prompt).not.toContain("<rule></rule>");
     expect(prompt.indexOf("<prompt-structure>")).toBeGreaterThan(prompt.indexOf("<policies>"));
+  });
+});
+
+describe("Curator system prompt", () => {
+  it("loads the built-in prompt when the external configuration is empty", () => {
+    const prompt = loadCuratorAgentPrompt();
+
+    expect(prompt.match(/<system>/g)).toHaveLength(1);
+    expect(prompt).toContain("你是一个可靠的本地优先 AI 助手");
+    expect(prompt).toContain("<tool-efficiency>");
   });
 });

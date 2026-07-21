@@ -7,16 +7,16 @@ import { type AiChatMessagePart } from "@/db/schema";
 import {
   type AiModelOptionsResponse,
   DEFAULT_CHAT_SESSION_TITLE,
-  SYSTEM_PROMPT_SECTIONS,
   type AiChatSessionTitleUpdatedEvent,
 } from "./types";
+import { loadCuratorAgentPrompt } from "@/services/agentPromptService";
 
 /**
  * 创建 Agent 系统提示词。
  */
 export const createSystemPrompt = (): AgentMessage => ({
   role: "system",
-  content: SYSTEM_PROMPT_SECTIONS.join("\n"),
+  content: loadCuratorAgentPrompt(),
 });
 
 /**
