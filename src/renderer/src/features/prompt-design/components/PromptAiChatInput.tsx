@@ -469,7 +469,7 @@ export const PromptAiChatInput = ({
   return (
     <div className="flex-shrink-0 p-3">
       <div
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text [&_[role=listbox]]:pointer-events-none"
         onClick={handleContainerClick}
       >
         <PromptAiSlashCommandPanel

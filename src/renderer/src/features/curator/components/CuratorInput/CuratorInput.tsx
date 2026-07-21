@@ -85,7 +85,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full"
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full [&_[role=listbox]]:pointer-events-none"
       >
         <input
           type="file"

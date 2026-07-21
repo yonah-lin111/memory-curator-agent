@@ -318,7 +318,7 @@ export const PromptAiInlineInput = ({
   return (
     <div
       ref={containerRef}
-      className="fixed z-[110] flex w-[min(360px,calc(100vw-16px))] flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2 shadow-2xl"
+      className="fixed z-[110] flex w-[min(360px,calc(100vw-16px))] flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2 shadow-2xl [&_[role=listbox]]:pointer-events-none"
       style={position}
     >
       <PromptAiSlashCommandPanel
