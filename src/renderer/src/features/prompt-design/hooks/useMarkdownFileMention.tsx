@@ -197,7 +197,11 @@ export const useMarkdownFileMention = (enabled: boolean) => {
       effects: StateEffect.appendConfig.of([
         fileMentionField,
         EditorView.updateListener.of((update) => {
-          if (update.docChanged || update.selectionSet) syncPanelRef.current(update.view);
+          if (update.docChanged) {
+            syncPanelRef.current(update.view);
+          } else if (update.selectionSet) {
+            closePanel();
+          }
         }),
         Prec.high(
           EditorView.domEventHandlers({
