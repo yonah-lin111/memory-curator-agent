@@ -19,7 +19,7 @@ const IGNORE_DIRS = new Set([
 export const registerPromptDesignHandlers = (): void => {
   // 文件
   ipcMain.handle("prompt-design:files:search", (_, { directory, query }: { directory: string, query: string }) => {
-    const results: { path: string; score: number }[] = []
+    const results: { path: string; isDirectory: boolean; score: number }[] = []
     const maxResults = 100
 
     const cleanQuery = query.toLowerCase().replace(/^@/, "").trim()
@@ -43,6 +43,11 @@ export const registerPromptDesignHandlers = (): void => {
 
         if (entry.isDirectory()) {
           if (!IGNORE_DIRS.has(entry.name) && !entry.name.startsWith(".")) {
+            const directoryPath = `${normalizedRelativePath}/`
+            const score = getMatchScore(normalizedRelativePath, cleanQuery)
+            if (score > 0) {
+              results.push({ path: directoryPath, isDirectory: true, score })
+            }
             walk(fullPath)
           }
         } else if (entry.isFile()) {
@@ -50,7 +55,7 @@ export const registerPromptDesignHandlers = (): void => {
 
           const score = getMatchScore(normalizedRelativePath, cleanQuery)
           if (score > 0) {
-            results.push({ path: normalizedRelativePath, score })
+            results.push({ path: normalizedRelativePath, isDirectory: false, score })
           }
         }
       }
@@ -71,7 +76,7 @@ export const registerPromptDesignHandlers = (): void => {
         return a.path.localeCompare(b.path)
       })
       .slice(0, maxResults)
-      .map(item => item.path)
+      .map(({ path: itemPath, isDirectory }) => ({ path: itemPath, isDirectory }))
   })
 
   // 项目

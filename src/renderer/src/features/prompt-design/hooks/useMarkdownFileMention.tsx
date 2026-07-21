@@ -1,32 +1,50 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Decoration, EditorView } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
-import { StateEffect, StateField, Prec } from "@codemirror/state";
-import { FileText } from "lucide-react";
+import { RangeSetBuilder, StateEffect, StateField, Prec } from "@codemirror/state";
+import { FileText, Folder } from "lucide-react";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import type { AgentMentionPanelState } from "@/lib/ai-shared/types";
 import { resolveAgentMentionPanelState, getFileMentionDeletionRange } from "@/lib/ai-shared/utils";
+import type { FileMentionItem } from "@/features/prompt-design/components/PromptAiInputPanels";
+import { normalizeFileMentionItems } from "@/features/prompt-design/components/PromptAiInputPanels";
 
 type ActiveProject = { id: string; path?: string };
 type MentionPanelPosition = { left: number; top: number | "auto"; bottom: number | "auto"; maxHeight?: string };
-type FileMentionRange = { from: number; to: number };
-
-const addFileMentionEffect = StateEffect.define<FileMentionRange>();
 const fileMentionDecoration = Decoration.mark({ class: "cm-file-mention" });
+const FILE_MENTION_TOKEN_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
+
+/**
+ * 根据文档中的 @路径重建高亮范围，保证编辑器重新加载后装饰不会丢失。
+ */
+const buildFileMentionDecorations = (document: string): DecorationSet => {
+  const builder = new RangeSetBuilder<Decoration>();
+  FILE_MENTION_TOKEN_PATTERN.lastIndex = 0;
+
+  let match = FILE_MENTION_TOKEN_PATTERN.exec(document);
+  while (match) {
+    const prefix = match[1] ?? "";
+    const token = match[2] ?? "";
+    const from = match.index + prefix.length;
+    builder.add(from, from + token.length, fileMentionDecoration);
+    match = FILE_MENTION_TOKEN_PATTERN.exec(document);
+  }
+
+  return builder.finish();
+};
 
 /**
  * 维护由文件提及面板插入的精确范围，避免手输 @token 被误标。
  */
 const fileMentionField = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
+  create: (state) => buildFileMentionDecorations(state.doc.toString()),
   update: (decorations, transaction) => {
-    const mappedDecorations = decorations.map(transaction.changes);
-    const effects = transaction.effects.filter((effect) => effect.is(addFileMentionEffect));
-    return effects.reduce(
-      (nextDecorations, effect) => nextDecorations.update({ add: [fileMentionDecoration.range(effect.value.from, effect.value.to)] }),
-      mappedDecorations,
-    );
+    if (transaction.docChanged) {
+      return buildFileMentionDecorations(transaction.state.doc.toString());
+    }
+
+    return decorations;
   },
   provide: (field) => EditorView.decorations.from(field),
 });
@@ -38,13 +56,13 @@ export const useMarkdownFileMention = (enabled: boolean) => {
   const activeProjectId = usePromptDesignStore((state) => state.activeProjectId);
   const [activeProject, setActiveProject] = useState<ActiveProject | null>(null);
   const [panelState, setPanelState] = useState<AgentMentionPanelState | null>(null);
-  const [matchedFiles, setMatchedFiles] = useState<string[]>([]);
+  const [matchedFiles, setMatchedFiles] = useState<FileMentionItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [panelPosition, setPanelPosition] = useState<MentionPanelPosition | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const isComposingRef = useRef(false);
   const panelStateRef = useRef<AgentMentionPanelState | null>(null);
-  const matchedFilesRef = useRef<string[]>([]);
+  const matchedFilesRef = useRef<FileMentionItem[]>([]);
   const activeIndexRef = useRef(0);
 
   useEffect(() => {
@@ -75,7 +93,7 @@ export const useMarkdownFileMention = (enabled: boolean) => {
     window.api.promptDesign?.searchFiles(activeProject.path, panelState.query)
       ?.then((files) => {
         if (isCurrent) {
-          setMatchedFiles(files);
+          setMatchedFiles(normalizeFileMentionItems(files));
           setActiveIndex(0);
         }
       })
@@ -152,18 +170,17 @@ export const useMarkdownFileMention = (enabled: boolean) => {
   const syncPanelRef = useRef(syncPanel);
   syncPanelRef.current = syncPanel;
 
-  const selectFile = useCallback((path: string): void => {
+  const selectFile = useCallback((item: FileMentionItem): void => {
     const view = viewRef.current;
     const state = panelStateRef.current;
     if (!view || !state) return;
 
     const cursor = view.state.selection.main.head;
-    const insert = `@${path} `;
+    const insert = `@${item.path} `;
     const nextCursor = state.start + insert.length;
     view.dispatch({
       changes: { from: state.start, to: cursor, insert },
       selection: { anchor: nextCursor },
-      effects: addFileMentionEffect.of({ from: state.start, to: state.start + insert.length - 1 }),
       userEvent: "input.complete",
     });
     view.focus();
@@ -251,17 +268,22 @@ export const useMarkdownFileMention = (enabled: boolean) => {
     <CommandPanel
       isOpen={isOpen}
       ariaLabel="项目文件提及"
-      items={matchedFiles.map((path) => ({ id: path, path }))}
+      items={matchedFiles}
       activeIndex={activeIndex}
       onActiveIndexChange={setActiveIndex}
-      onItemSelect={(item) => selectFile(item.path)}
+      onItemSelect={selectFile}
       renderItem={(item) => {
-        const slashIndex = item.path.lastIndexOf("/");
-        const name = slashIndex < 0 ? item.path : item.path.slice(slashIndex + 1);
-        const directory = slashIndex < 0 ? "" : item.path.slice(0, slashIndex);
+        const displayPath = item.isDirectory ? item.path.replace(/\/$/, "") : item.path;
+        const slashIndex = displayPath.lastIndexOf("/");
+        const name = `${slashIndex < 0 ? displayPath : displayPath.slice(slashIndex + 1)}${item.isDirectory ? "/" : ""}`;
+        const directory = slashIndex < 0 ? "" : displayPath.slice(0, slashIndex);
         return (
           <div className="flex w-full items-center gap-2 overflow-hidden py-0.5">
-            <FileText className="h-4 w-4 shrink-0 opacity-50" />
+            {item.isDirectory ? (
+              <Folder className="h-4 w-4 shrink-0 opacity-50" />
+            ) : (
+              <FileText className="h-4 w-4 shrink-0 opacity-50" />
+            )}
             <div className="min-w-0 flex-1 text-left">
               <div className="truncate text-sm font-medium text-white">{name}</div>
               {directory && <div className="truncate text-xs text-white/35">{directory}</div>}

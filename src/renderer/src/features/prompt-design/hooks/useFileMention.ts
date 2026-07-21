@@ -4,6 +4,8 @@ import { resolveAgentMentionPanelState, getFileMentionDeletionRange } from "@/li
 import type { AgentMentionPanelState } from "@/lib/ai-shared/types";
 import { usePromptDesignStore } from "../store/promptDesignStore";
 import { useToast } from "@/components/ui/Toast";
+import { normalizeFileMentionItems } from "@/features/prompt-design/components/PromptAiInputPanels";
+import type { FileMentionItem } from "@/features/prompt-design/components/PromptAiInputPanels";
 
 export const useFileMention = (
   inputText: string,
@@ -14,7 +16,7 @@ export const useFileMention = (
   const [fileMentionPanelState, setFileMentionPanelState] =
     useState<AgentMentionPanelState | null>(null);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [matchedFiles, setMatchedFiles] = useState<string[]>([]);
+  const [matchedFiles, setMatchedFiles] = useState<FileMentionItem[]>([]);
   // 使用此 ref 追踪选择是否发生在 IME 组合输入期间
   const isComposingRef = useRef(false);
   
@@ -94,9 +96,9 @@ export const useFileMention = (
     let isMounted = true;
 
     window.api.promptDesign?.searchFiles(activeProject.path, fileMentionPanelState.query)
-      ?.then((results: string[]) => {
+      ?.then((results) => {
         if (isMounted) {
-          setMatchedFiles(results);
+          setMatchedFiles(normalizeFileMentionItems(results));
           setActiveFileIndex(0);
         }
       })
@@ -112,15 +114,15 @@ export const useFileMention = (
     };
   }, [fileMentionPanelState?.query, activeProject?.path, toastStore]);
 
-  const selectFileMention = useCallback((path: string): void => {
+  const selectFileMention = useCallback((item: FileMentionItem): void => {
     const textarea = textareaRef.current;
     if (!textarea || !fileMentionPanelState) {
       return;
     }
 
     const cursor = textarea.selectionStart;
-    const nextValue = `${inputText.slice(0, fileMentionPanelState.start)}@${path} ${inputText.slice(cursor)}`;
-    const nextCursor = fileMentionPanelState.start + path.length + 2;
+    const nextValue = `${inputText.slice(0, fileMentionPanelState.start)}@${item.path} ${inputText.slice(cursor)}`;
+    const nextCursor = fileMentionPanelState.start + item.path.length + 2;
 
     setInputText(nextValue);
     closeFileMentionPanel();

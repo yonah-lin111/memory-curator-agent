@@ -1025,7 +1025,7 @@ const api = {
       update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:designs:update', id, input),
       delete: (id: string) => ipcRenderer.invoke('prompt-design:designs:delete', id)
     },
-    searchFiles: (directory: string, query: string): Promise<string[]> =>
+    searchFiles: (directory: string, query: string): Promise<{ path: string; isDirectory: boolean }[]> =>
       ipcRenderer.invoke('prompt-design:files:search', { directory, query })
   },
   promptAi: {

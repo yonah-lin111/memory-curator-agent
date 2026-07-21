@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText, Folder } from "lucide-react";
 import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 
 // 提示词 AI 斜杠命令的公共形状。
@@ -9,10 +9,31 @@ export interface PromptAiInputCommand {
 }
 
 // 文件提及候选项。
-type FileMentionItem = {
+export type FileMentionItem = {
   id: string;
   path: string;
+  isDirectory: boolean;
 };
+
+// 兼容旧版主进程返回的路径字符串，并统一补齐候选项元数据。
+export const normalizeFileMentionItems = (
+  results: Array<string | Omit<FileMentionItem, "id"> | FileMentionItem>,
+): FileMentionItem[] =>
+  results.map((result) => {
+    if (typeof result === "string") {
+      return {
+        id: result,
+        path: result,
+        isDirectory: result.endsWith("/"),
+      };
+    }
+
+    return {
+      id: result.id ?? result.path,
+      path: result.path,
+      isDirectory: result.isDirectory ?? result.path.endsWith("/"),
+    };
+  });
 
 // 斜杠命令面板属性。
 type PromptAiSlashCommandPanelProps = {
@@ -63,10 +84,10 @@ export const PromptAiSlashCommandPanel = ({
 // 文件提及面板属性。
 type PromptAiFileMentionPanelProps = {
   isOpen: boolean;
-  paths: string[];
+  paths: FileMentionItem[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
-  onPathSelect: (path: string) => void;
+  onPathSelect: (item: FileMentionItem) => void;
   idPrefix: string;
   style?: React.CSSProperties;
 };
@@ -86,18 +107,24 @@ export const PromptAiFileMentionPanel = ({
   <CommandPanel<FileMentionItem>
     isOpen={isOpen}
     ariaLabel="文件提及"
-    items={paths.map((path) => ({ id: path, path }))}
+    items={paths}
     activeIndex={activeIndex}
     onActiveIndexChange={onActiveIndexChange}
-    onItemSelect={(item) => onPathSelect(item.path)}
+    onItemSelect={onPathSelect}
     renderItem={(item) => {
-      const slashIndex = item.path.lastIndexOf("/");
-      const name = slashIndex < 0 ? item.path : item.path.slice(slashIndex + 1);
-      const directory = slashIndex < 0 ? "" : item.path.slice(0, slashIndex);
+      const isDirectory = item.isDirectory;
+      const displayPath = isDirectory ? item.path.replace(/\/$/, "") : item.path;
+      const slashIndex = displayPath.lastIndexOf("/");
+      const name = `${slashIndex < 0 ? displayPath : displayPath.slice(slashIndex + 1)}${isDirectory ? "/" : ""}`;
+      const directory = slashIndex < 0 ? "" : displayPath.slice(0, slashIndex);
 
       return (
         <div className="flex w-full items-center gap-2 overflow-hidden py-0.5">
-          <FileText className="h-4 w-4 shrink-0 opacity-50" />
+          {isDirectory ? (
+            <Folder className="h-4 w-4 shrink-0 opacity-50" />
+          ) : (
+            <FileText className="h-4 w-4 shrink-0 opacity-50" />
+          )}
           <div className="min-w-0 flex-1 text-left">
             <div className="truncate text-sm font-medium text-white">{name}</div>
             {directory && <div className="truncate text-xs text-white/35">{directory}</div>}

@@ -1078,7 +1078,7 @@ type AppAPI = {
       update: (id: string, input: any) => Promise<void>
       delete: (id: string) => Promise<void>
     }
-    searchFiles: (directory: string, query: string) => Promise<string[]>
+    searchFiles: (directory: string, query: string) => Promise<{ path: string; isDirectory: boolean }[]>
   }
   promptAi?: {
     // 使用配置的标题模型为当前提示词设计生成简短标题。
