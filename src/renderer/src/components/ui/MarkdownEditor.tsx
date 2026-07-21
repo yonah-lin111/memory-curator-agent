@@ -416,11 +416,32 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
   }
 );
 
+/**
+ * 仅识别完整 URL 与具备目录层级的文件路径，避免将自然语言中的斜杠误判为路径。
+ */
+const getLinkOrPathRanges = (lineText: string): Array<[number, number]> => {
+  const matcher = /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<>"'`()]+|(?<![\p{L}\p{N}])(?:~\/|\/|\.{1,2}\/)[^\s/]+(?:\/[^\s/]+)+/gu;
+
+  return Array.from(lineText.matchAll(matcher), (match) => {
+    const from = match.index ?? 0;
+    return [from, from + match[0].length];
+  });
+};
+
 // 全局注册 CodeMirror 6 扩展插件，实现 Markdown 语法标记独立高亮分色
 config({
   codeMirrorExtensions(extensions, options) {
     return [
-      ...extensions,
+      // 替换默认路径规则，避免“日/常记录”这类正文被缩写为省略号。
+      ...extensions.map((extension) => extension.type === "linkShortener"
+        ? {
+          ...extension,
+          options: {
+            ...extension.options,
+            findTexts: ({ lineText }: { lineText: string }) => getLinkOrPathRanges(lineText),
+          },
+        }
+        : extension),
       {
         type: "markdownHighlight",
         extension: markdownHighlightPlugin,
