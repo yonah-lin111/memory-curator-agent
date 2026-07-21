@@ -1,6 +1,13 @@
 import type React from "react";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, FileText, Search, Plus, Import } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Search,
+  Plus,
+  Import,
+} from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Modal } from "@/components/ui/Modal";
@@ -31,7 +38,9 @@ export const PromptSidebarList = ({
   const [projects, setProjects] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
   const [designs, setDesigns] = useState<any[]>([]);
-  const [titleGeneratingDesignId, setTitleGeneratingDesignId] = useState<string | null>(null);
+  const [titleGeneratingDesignId, setTitleGeneratingDesignId] = useState<
+    string | null
+  >(null);
 
   const [collapsedProjects, setCollapsedProjects] = useState<
     Record<string, boolean>
@@ -101,22 +110,45 @@ export const PromptSidebarList = ({
       void fetchData();
       const projectId = usePromptDesignStore.getState().activeProjectId;
       if (projectId) {
-        setCollapsedProjects((previous) => ({ ...previous, [projectId]: false }));
+        setCollapsedProjects((previous) => ({
+          ...previous,
+          [projectId]: false,
+        }));
       }
     };
     const handleTitleGenerating = (event: Event) => {
-      const detail = (event as CustomEvent<{ designId: string; isGenerating: boolean }>).detail;
+      const detail = (
+        event as CustomEvent<{ designId: string; isGenerating: boolean }>
+      ).detail;
       setTitleGeneratingDesignId(detail?.isGenerating ? detail.designId : null);
     };
     window.addEventListener("click", handleClick);
-    window.addEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
-    window.addEventListener(PROMPT_DESIGN_TITLE_UPDATED_EVENT, handlePromptDesignCreated);
-    window.addEventListener(PROMPT_DESIGN_TITLE_GENERATING_EVENT, handleTitleGenerating);
+    window.addEventListener(
+      PROMPT_DESIGN_CREATED_EVENT,
+      handlePromptDesignCreated,
+    );
+    window.addEventListener(
+      PROMPT_DESIGN_TITLE_UPDATED_EVENT,
+      handlePromptDesignCreated,
+    );
+    window.addEventListener(
+      PROMPT_DESIGN_TITLE_GENERATING_EVENT,
+      handleTitleGenerating,
+    );
     return () => {
       window.removeEventListener("click", handleClick);
-      window.removeEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
-      window.removeEventListener(PROMPT_DESIGN_TITLE_UPDATED_EVENT, handlePromptDesignCreated);
-      window.removeEventListener(PROMPT_DESIGN_TITLE_GENERATING_EVENT, handleTitleGenerating);
+      window.removeEventListener(
+        PROMPT_DESIGN_CREATED_EVENT,
+        handlePromptDesignCreated,
+      );
+      window.removeEventListener(
+        PROMPT_DESIGN_TITLE_UPDATED_EVENT,
+        handlePromptDesignCreated,
+      );
+      window.removeEventListener(
+        PROMPT_DESIGN_TITLE_GENERATING_EVENT,
+        handleTitleGenerating,
+      );
     };
   }, []);
 
@@ -395,6 +427,50 @@ export const PromptSidebarList = ({
     </div>
   );
 
+  const renderPromptTitle = (prompt: any) => {
+    const isEditing = editingId === prompt.id;
+    const isTruncated = truncatedIds.has(prompt.id);
+    const titleElement = (
+      <div
+        className="min-w-0 flex-1 truncate text-xs"
+        onMouseEnter={(event) => {
+          const element = event.currentTarget;
+          if (element.scrollWidth > element.clientWidth) {
+            setTruncatedIds((previous) => new Set(previous).add(prompt.id));
+          }
+        }}
+      >
+        {isEditing ? (
+          <input
+            // eslint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+            onFocus={(event) => event.target.select()}
+            value={editingName}
+            onChange={(event) => setEditingName(event.target.value)}
+            onBlur={handleRenameCommit}
+            onKeyDown={(event) =>
+              event.key === "Enter" &&
+              !event.nativeEvent.isComposing &&
+              handleRenameCommit()
+            }
+            onClick={(event) => event.stopPropagation()}
+            className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
+          />
+        ) : (
+          prompt.name
+        )}
+      </div>
+    );
+
+    return isTruncated && !isEditing ? (
+      <Tooltip content={prompt.name} placement="right" className="min-w-0 flex-1">
+        {titleElement}
+      </Tooltip>
+    ) : (
+      titleElement
+    );
+  };
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -527,7 +603,7 @@ export const PromptSidebarList = ({
                         return (
                           <Tooltip
                             content={proj.name}
-                            placement="top"
+                            placement="right"
                             className="flex-1 min-w-0"
                           >
                             {nameElement}
@@ -543,124 +619,156 @@ export const PromptSidebarList = ({
                   </div>
                   {!isCollapsed && (
                     <div className="flex flex-col gap-0.5">
-                      {proj.modules.length > 0 ? (
-                        proj.modules.map((module: any) => (
-                          <div key={module.id} className="flex flex-col gap-0.5">
+                      {proj.modules.length > 0
+                        ? proj.modules.map((module: any) => (
                             <div
-                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
-                              onClick={() => {
-                                if (editingId !== module.id) toggleModule(module.id);
-                                setActiveModuleId(module.id);
-                              }}
-                              onContextMenu={(event) =>
-                                handleContextMenu(event, "module", module, proj.id)
-                              }
+                              key={module.id}
+                              className="flex flex-col gap-0.5"
                             >
-                              <span className="h-1.5 w-1.5 flex-shrink-0 rounded-[1px] bg-white/20" />
-                              {editingId === module.id ? (
-                                <input
-                                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                                  autoFocus
-                                  onFocus={(event) => event.target.select()}
-                                  value={editingName}
-                                  onChange={(event) => setEditingName(event.target.value)}
-                                  onBlur={handleRenameCommit}
-                                  onKeyDown={(event) =>
-                                    event.key === "Enter" &&
-                                    !event.nativeEvent.isComposing &&
-                                    handleRenameCommit()
-                                  }
-                                  onClick={(event) => event.stopPropagation()}
-                                  className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
-                                />
-                              ) : (
-                                <span className="min-w-0 flex-1 truncate">{module.name}</span>
-                              )}
-                              <ChevronRight
-                                className={`h-3.5 w-3.5 text-white/30 transition-transform ${collapsedModules[module.id] ? "" : "rotate-90"}`}
-                              />
-                            </div>
-                            {!collapsedModules[module.id] && module.prompts.map((prompt: any) => (
                               <div
-                                key={prompt.id}
-                                className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] py-2 pr-2 pl-5 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
-                                onClick={async () => {
-                                  try {
-                                    const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
-                                    if (!sessions || sessions.length === 0) {
-                                      await (window.api as any).promptAi.createSession(prompt.id);
-                                    }
-                                  } catch (error) {
-                                    console.error("Failed to check or create session:", error);
-                                  }
-                                  setActiveProjectId(proj.id);
+                                className="flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
+                                onClick={() => {
+                                  if (editingId !== module.id)
+                                    toggleModule(module.id);
                                   setActiveModuleId(module.id);
-                                  const useStore = usePromptDesignStore.getState();
-                                  if (useStore.setActiveDesignIdSafe) {
-                                    const success = await useStore.setActiveDesignIdSafe(prompt.id);
-                                    if (!success) return;
-                                  } else {
-                                    setActiveDesignId(prompt.id);
-                                  }
-                                  setProjectName(proj.name);
-                                  setItemName(prompt.name);
-                                  onDesignSelected?.();
                                 }}
                                 onContextMenu={(event) =>
-                                  handleContextMenu(event, "prompt", prompt, proj.id)
+                                  handleContextMenu(
+                                    event,
+                                    "module",
+                                    module,
+                                    proj.id,
+                                  )
                                 }
                               >
-                                {titleGeneratingDesignId === prompt.id ? (
-                                  <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
+                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-[1px] bg-white/20" />
+                                {editingId === module.id ? (
+                                  <input
+                                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                                    autoFocus
+                                    onFocus={(event) => event.target.select()}
+                                    value={editingName}
+                                    onChange={(event) =>
+                                      setEditingName(event.target.value)
+                                    }
+                                    onBlur={handleRenameCommit}
+                                    onKeyDown={(event) =>
+                                      event.key === "Enter" &&
+                                      !event.nativeEvent.isComposing &&
+                                      handleRenameCommit()
+                                    }
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
+                                  />
                                 ) : (
-                                  <>
-                                    <svg className="h-3 w-3 flex-shrink-0 stroke-current text-white/35" viewBox="0 0 12 12" fill="none">
-                                      <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <span className="min-w-0 flex-1 truncate text-xs">
-                                      {editingId === prompt.id ? (
-                                    <input
-                                      // eslint-disable-next-line jsx-a11y/no-autofocus
-                                      autoFocus
-                                      onFocus={(event) => event.target.select()}
-                                      value={editingName}
-                                      onChange={(event) => setEditingName(event.target.value)}
-                                      onBlur={handleRenameCommit}
-                                      onKeyDown={(event) =>
-                                        event.key === "Enter" &&
-                                        !event.nativeEvent.isComposing &&
-                                        handleRenameCommit()
-                                      }
-                                      onClick={(event) => event.stopPropagation()}
-                                      className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
-                                    />
-                                      ) : prompt.name}
-                                    </span>
-                                  </>
+                                  <span className="min-w-0 flex-1 truncate">
+                                    {module.name}
+                                  </span>
                                 )}
+                                <ChevronRight
+                                  className={`h-3.5 w-3.5 text-white/30 transition-transform ${collapsedModules[module.id] ? "" : "rotate-90"}`}
+                                />
                               </div>
-                            ))}
-                          </div>
-                        ))
-                      ) : null}
+                              {!collapsedModules[module.id] &&
+                                module.prompts.map((prompt: any) => (
+                                  <div
+                                    key={prompt.id}
+                                    className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] py-2 pr-2 pl-5 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
+                                    onClick={async () => {
+                                      try {
+                                        const sessions = await (
+                                          window.api as any
+                                        ).promptAi.listSessions(prompt.id);
+                                        if (
+                                          !sessions ||
+                                          sessions.length === 0
+                                        ) {
+                                          await (
+                                            window.api as any
+                                          ).promptAi.createSession(prompt.id);
+                                        }
+                                      } catch (error) {
+                                        console.error(
+                                          "Failed to check or create session:",
+                                          error,
+                                        );
+                                      }
+                                      setActiveProjectId(proj.id);
+                                      setActiveModuleId(module.id);
+                                      const useStore =
+                                        usePromptDesignStore.getState();
+                                      if (useStore.setActiveDesignIdSafe) {
+                                        const success =
+                                          await useStore.setActiveDesignIdSafe(
+                                            prompt.id,
+                                          );
+                                        if (!success) return;
+                                      } else {
+                                        setActiveDesignId(prompt.id);
+                                      }
+                                      setProjectName(proj.name);
+                                      setItemName(prompt.name);
+                                      onDesignSelected?.();
+                                    }}
+                                    onContextMenu={(event) =>
+                                      handleContextMenu(
+                                        event,
+                                        "prompt",
+                                        prompt,
+                                        proj.id,
+                                      )
+                                    }
+                                  >
+                                    {titleGeneratingDesignId === prompt.id ? (
+                                      <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
+                                    ) : (
+                                      <>
+                                        <svg
+                                          className="h-3 w-3 flex-shrink-0 stroke-current text-white/35"
+                                          viewBox="0 0 12 12"
+                                          fill="none"
+                                        >
+                                          <path
+                                            d="M3 1v5h7"
+                                            strokeWidth="1.5"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          />
+                                        </svg>
+                                        {renderPromptTitle(prompt)}
+                                      </>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          ))
+                        : null}
                       {proj.directPrompts.map((prompt: any) => (
                         <div
                           key={prompt.id}
                           className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
                           onClick={async () => {
                             try {
-                              const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
+                              const sessions = await (
+                                window.api as any
+                              ).promptAi.listSessions(prompt.id);
                               if (!sessions || sessions.length === 0) {
-                                await (window.api as any).promptAi.createSession(prompt.id);
+                                await (
+                                  window.api as any
+                                ).promptAi.createSession(prompt.id);
                               }
                             } catch (error) {
-                              console.error("Failed to check or create session:", error);
+                              console.error(
+                                "Failed to check or create session:",
+                                error,
+                              );
                             }
                             setActiveProjectId(proj.id);
                             setActiveModuleId(null);
                             const useStore = usePromptDesignStore.getState();
                             if (useStore.setActiveDesignIdSafe) {
-                              const success = await useStore.setActiveDesignIdSafe(prompt.id);
+                              const success =
+                                await useStore.setActiveDesignIdSafe(prompt.id);
                               if (!success) return;
                             } else {
                               setActiveDesignId(prompt.id);
@@ -678,30 +786,13 @@ export const PromptSidebarList = ({
                           ) : (
                             <>
                               <FileText className="h-3.5 w-3.5 flex-shrink-0 text-white/35" />
-                              <span className="min-w-0 flex-1 truncate text-xs">
-                                {editingId === prompt.id ? (
-                              <input
-                                // eslint-disable-next-line jsx-a11y/no-autofocus
-                                autoFocus
-                                onFocus={(event) => event.target.select()}
-                                value={editingName}
-                                onChange={(event) => setEditingName(event.target.value)}
-                                onBlur={handleRenameCommit}
-                                onKeyDown={(event) =>
-                                  event.key === "Enter" &&
-                                  !event.nativeEvent.isComposing &&
-                                  handleRenameCommit()
-                                }
-                                onClick={(event) => event.stopPropagation()}
-                                className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
-                              />
-                                ) : prompt.name}
-                              </span>
+                              {renderPromptTitle(prompt)}
                             </>
                           )}
                         </div>
                       ))}
-                      {proj.modules.length === 0 && proj.directPrompts.length === 0 ? (
+                      {proj.modules.length === 0 &&
+                      proj.directPrompts.length === 0 ? (
                         <div className="px-3 py-2 text-xs text-white/20 text-center select-none">
                           暂无模块，请右键新建
                         </div>
@@ -727,12 +818,17 @@ export const PromptSidebarList = ({
           y={contextMenu.y}
           onAddModule={async () => {
             try {
-              const created = await (window.api as any).promptDesign.modules.create({
+              const created = await (
+                window.api as any
+              ).promptDesign.modules.create({
                 projectId: contextMenu.id,
                 name: "新模块",
               });
               await fetchData();
-              setCollapsedProjects((prev) => ({ ...prev, [contextMenu.id]: false }));
+              setCollapsedProjects((prev) => ({
+                ...prev,
+                [contextMenu.id]: false,
+              }));
               if (created?.id) {
                 setEditingId(created.id);
                 setEditingName(created.name || "新模块");
@@ -744,7 +840,9 @@ export const PromptSidebarList = ({
           }}
           onAddProjectDesign={async () => {
             try {
-              const created = await (window.api as any).promptDesign.designs.create({
+              const created = await (
+                window.api as any
+              ).promptDesign.designs.create({
                 projectId: contextMenu.id,
                 name: "新提示词设计",
               });
@@ -809,8 +907,16 @@ export const PromptSidebarList = ({
                   setActiveDesignId(null);
                 }
               } else if (contextMenu.type === "module") {
-                await (window.api as any).promptDesign.modules.delete(contextMenu.id);
-                if (designs.some((design) => design.moduleId === contextMenu.id && design.id === activeDesignId)) {
+                await (window.api as any).promptDesign.modules.delete(
+                  contextMenu.id,
+                );
+                if (
+                  designs.some(
+                    (design) =>
+                      design.moduleId === contextMenu.id &&
+                      design.id === activeDesignId,
+                  )
+                ) {
                   setActiveDesignId(null);
                 }
               } else {
