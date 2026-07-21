@@ -186,6 +186,11 @@ const activePromptAiRuns = new Map<
 >();
 
 export function registerPromptAiHandlers(): void {
+  ipcMain.handle("prompt-ai:design:title:generate", async (_, content: string): Promise<string> => {
+    if (!content.trim()) throw new Error("提示词内容为空");
+    return createSessionTitle(loadProviderConfig(), content, "prompt-design");
+  });
+
   ipcMain.handle("prompt-ai:mcp:status", async (_, payload: { designItemId: string }): Promise<PromptAiMcpStatusResult> => {
     const providerConfig = loadProviderConfig();
     const total = providerConfig.mcp.length;

@@ -23,6 +23,7 @@ type PromptAiSlashCommandPanelProps = {
   onCommandSelect: (command: PromptAiInputCommand) => void;
   idPrefix: string;
   style?: React.CSSProperties;
+  className?: string;
 };
 
 /**
@@ -36,6 +37,7 @@ export const PromptAiSlashCommandPanel = ({
   onCommandSelect,
   idPrefix,
   style,
+  className,
 }: PromptAiSlashCommandPanelProps): React.JSX.Element | null => (
   <CommandPanel
     isOpen={isOpen}
@@ -54,6 +56,7 @@ export const PromptAiSlashCommandPanel = ({
     )}
     idPrefix={idPrefix}
     style={style}
+    className={className}
   />
 );
 

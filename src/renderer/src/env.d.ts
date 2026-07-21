@@ -1081,6 +1081,8 @@ type AppAPI = {
     searchFiles: (directory: string, query: string) => Promise<string[]>
   }
   promptAi?: {
+    // 使用配置的标题模型为当前提示词设计生成简短标题。
+    generateDesignTitle: (content: string) => Promise<string>
     // 检查当前提示词设计页的 MCP 服务连接状态。
     checkMcpStatus: (payload: { designItemId: string }) => Promise<PromptAiMcpStatusResult>
     // 读取当前可用 MCP 服务及其工具。

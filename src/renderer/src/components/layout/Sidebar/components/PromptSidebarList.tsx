@@ -6,7 +6,11 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
-import { PROMPT_DESIGN_CREATED_EVENT } from "@/features/prompt-design/lib/promptCommand";
+import {
+  PROMPT_DESIGN_CREATED_EVENT,
+  PROMPT_DESIGN_TITLE_GENERATING_EVENT,
+  PROMPT_DESIGN_TITLE_UPDATED_EVENT,
+} from "@/features/prompt-design/lib/promptCommand";
 import { PromptSidebarContextMenu } from "./PromptSidebarContextMenu";
 
 type PromptSidebarProps = {
@@ -27,6 +31,7 @@ export const PromptSidebarList = ({
   const [projects, setProjects] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
   const [designs, setDesigns] = useState<any[]>([]);
+  const [titleGeneratingDesignId, setTitleGeneratingDesignId] = useState<string | null>(null);
 
   const [collapsedProjects, setCollapsedProjects] = useState<
     Record<string, boolean>
@@ -99,11 +104,19 @@ export const PromptSidebarList = ({
         setCollapsedProjects((previous) => ({ ...previous, [projectId]: false }));
       }
     };
+    const handleTitleGenerating = (event: Event) => {
+      const detail = (event as CustomEvent<{ designId: string; isGenerating: boolean }>).detail;
+      setTitleGeneratingDesignId(detail?.isGenerating ? detail.designId : null);
+    };
     window.addEventListener("click", handleClick);
     window.addEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
+    window.addEventListener(PROMPT_DESIGN_TITLE_UPDATED_EVENT, handlePromptDesignCreated);
+    window.addEventListener(PROMPT_DESIGN_TITLE_GENERATING_EVENT, handleTitleGenerating);
     return () => {
       window.removeEventListener("click", handleClick);
       window.removeEventListener(PROMPT_DESIGN_CREATED_EVENT, handlePromptDesignCreated);
+      window.removeEventListener(PROMPT_DESIGN_TITLE_UPDATED_EVENT, handlePromptDesignCreated);
+      window.removeEventListener(PROMPT_DESIGN_TITLE_GENERATING_EVENT, handleTitleGenerating);
     };
   }, []);
 
@@ -597,11 +610,15 @@ export const PromptSidebarList = ({
                                   handleContextMenu(event, "prompt", prompt, proj.id)
                                 }
                               >
-                                <svg className="h-3 w-3 flex-shrink-0 stroke-current text-white/35" viewBox="0 0 12 12" fill="none">
-                                  <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                <span className="min-w-0 flex-1 truncate text-xs">
-                                  {editingId === prompt.id ? (
+                                {titleGeneratingDesignId === prompt.id ? (
+                                  <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
+                                ) : (
+                                  <>
+                                    <svg className="h-3 w-3 flex-shrink-0 stroke-current text-white/35" viewBox="0 0 12 12" fill="none">
+                                      <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    <span className="min-w-0 flex-1 truncate text-xs">
+                                      {editingId === prompt.id ? (
                                     <input
                                       // eslint-disable-next-line jsx-a11y/no-autofocus
                                       autoFocus
@@ -617,8 +634,10 @@ export const PromptSidebarList = ({
                                       onClick={(event) => event.stopPropagation()}
                                       className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
                                     />
-                                  ) : prompt.name}
-                                </span>
+                                      ) : prompt.name}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -654,9 +673,13 @@ export const PromptSidebarList = ({
                             handleContextMenu(event, "prompt", prompt, proj.id)
                           }
                         >
-                          <FileText className="h-3.5 w-3.5 flex-shrink-0 text-white/35" />
-                          <span className="min-w-0 flex-1 truncate text-xs">
-                            {editingId === prompt.id ? (
+                          {titleGeneratingDesignId === prompt.id ? (
+                            <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
+                          ) : (
+                            <>
+                              <FileText className="h-3.5 w-3.5 flex-shrink-0 text-white/35" />
+                              <span className="min-w-0 flex-1 truncate text-xs">
+                                {editingId === prompt.id ? (
                               <input
                                 // eslint-disable-next-line jsx-a11y/no-autofocus
                                 autoFocus
@@ -672,8 +695,10 @@ export const PromptSidebarList = ({
                                 onClick={(event) => event.stopPropagation()}
                                 className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
                               />
-                            ) : prompt.name}
-                          </span>
+                                ) : prompt.name}
+                              </span>
+                            </>
+                          )}
                         </div>
                       ))}
                       {proj.modules.length === 0 && proj.directPrompts.length === 0 ? (

@@ -86,6 +86,7 @@ export const normalizeGeneratedSessionTitle = (title: string): string => {
 export const createSessionTitle = async (
   config: ReturnType<typeof loadProviderConfig>,
   message: string,
+  purpose: "chat" | "prompt-design" = "chat",
 ): Promise<string> => {
   const titleProviderConfig = config.providers[config.titleSummary.provider];
   const fallbackTitle = createFallbackSessionTitle(message);
@@ -107,7 +108,9 @@ export const createSessionTitle = async (
         {
           role: "system",
           content:
-            "你只负责把用户第一条聊天内容总结成中文短标题。要求：4到12个汉字，动宾短语，不要标点、引号、解释或换行。示例：用户输入“你是谁”，输出“用户询问AI身份”。",
+            purpose === "prompt-design"
+              ? "你只负责把提示词设计内容总结成中文短标题。要求：4到12个汉字，优先使用优化、修复、添加等动宾短语；不得出现用户、我、你等主语；不要标点、引号、解释或换行；只输出标题。"
+              : "你只负责把用户第一条聊天内容总结成中文短标题。要求：4到12个汉字，动宾短语，不要标点、引号、解释或换行。示例：用户输入“你是谁”，输出“用户询问AI身份”。",
         },
         {
           role: "user",

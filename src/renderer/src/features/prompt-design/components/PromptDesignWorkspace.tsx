@@ -2,14 +2,17 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
 import { Prec, StateEffect } from "@codemirror/state";
-import { Bot, FilePlus2 } from "lucide-react";
-import { CommandPanel } from "@/components/ai-shared/CommandPanel";
+import { Bot } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { useToast } from "@/components/ui/Toast";
 import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSidebar";
 import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
+import {
+  PromptAiSlashCommandPanel,
+  type PromptAiInputCommand,
+} from "@/features/prompt-design/components/PromptAiInputPanels";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
@@ -18,6 +21,8 @@ import {
   applyPromptAction,
   executePromptChangeCommand,
   isPromptChangeCommand,
+  PROMPT_DESIGN_TITLE_GENERATING_EVENT,
+  PROMPT_DESIGN_TITLE_UPDATED_EVENT,
 } from "@/features/prompt-design/lib/promptCommand";
 
 // 设计项切换 loading 最短展示时长（ms），与 AI 侧栏保持一致。
@@ -43,10 +48,8 @@ type MatchedLine = {
 };
 
 // Markdown 编辑器中的斜杠命令候选项。
-type MarkdownSlashCommand = {
-  id: "newDesign" | "root" | "change";
-  name: string;
-  description: string;
+type MarkdownSlashCommand = PromptAiInputCommand & {
+  id: "newDesign" | "title" | "root" | "change";
 };
 
 // 命令面板在视口中的位置。
@@ -60,6 +63,12 @@ const NEW_DESIGN_COMMAND: MarkdownSlashCommand = {
   id: "newDesign",
   name: "/newDesign",
   description: "新建提示词设计",
+};
+
+const TITLE_COMMAND: MarkdownSlashCommand = {
+  id: "title",
+  name: "/title",
+  description: "根据提示词生成简短标题",
 };
 
 const NEW_DESIGN_ACTIONS: MarkdownSlashCommand[] = [
@@ -84,7 +93,9 @@ const getSlashCommandLine = (
  */
 const getMarkdownSlashCommandOptions = (value: string): MarkdownSlashCommand[] => {
   if (isPromptChangeCommand(value)) return [];
+  if (value === "/") return [NEW_DESIGN_COMMAND, TITLE_COMMAND];
   if ("/newdesign".startsWith(value.toLowerCase())) return [NEW_DESIGN_COMMAND];
+  if ("/title".startsWith(value.toLowerCase())) return [TITLE_COMMAND];
   if (!value.startsWith("/newDesign")) return [];
 
   const lastToken = value.split(/\s+/).at(-1) ?? "";
@@ -657,11 +668,64 @@ export const PromptDesignWorkspace = ({
     });
     setMarkdownCommandLine(null);
     setMarkdownCommandPosition(null);
+    toast.info("正在创建提示词设计...");
     void executePromptChangeCommand(commandLine.value)
       .then(() => toast.success("提示词设计创建成功"))
       .catch((error: unknown) =>
         toast.error(error instanceof Error ? error.message : "创建提示词设计失败"),
       );
+  }, [toast]);
+
+  /**
+   * 根据当前正文更新设计标题，并移除标题命令行。
+   */
+  const executeTitleCommand = useCallback((view: EditorView): void => {
+    const commandLine = getSlashCommandLine(view);
+    if (!commandLine || commandLine.value.trim().toLowerCase() !== "/title") return;
+    const document = view.state.doc.toString();
+    const contentWithoutCommand =
+      `${document.slice(0, commandLine.from)}${document.slice(commandLine.to)}`.trim();
+    const currentDesignId = usePromptDesignStore.getState().activeDesignId;
+    if (editorViewRef.current !== view || !currentDesignId || !contentWithoutCommand) {
+      toast.warning("提示词内容为空，无法生成标题");
+      return;
+    }
+    view.dispatch({
+      changes: { from: commandLine.from, to: commandLine.to, insert: "" },
+      selection: { anchor: commandLine.from },
+    });
+    setMarkdownCommandLine(null);
+    setMarkdownCommandPosition(null);
+    const generateTitle = window.api.promptAi?.generateDesignTitle;
+    if (typeof generateTitle !== "function") {
+      toast.error("标题生成服务已更新，请重启应用后重试");
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+      detail: { designId: currentDesignId, isGenerating: true },
+    }));
+    toast.info("正在总结设计标题...");
+    void generateTitle(contentWithoutCommand)
+      .then(async (title) => {
+        const normalizedTitle = title.trim().slice(0, 12);
+        if (!normalizedTitle) throw new Error("未生成有效标题");
+        await window.api.promptDesign?.designs.rename(currentDesignId, normalizedTitle);
+        return normalizedTitle;
+      })
+      .then((title) => {
+        if (usePromptDesignStore.getState().activeDesignId === currentDesignId) {
+          usePromptDesignStore.getState().setItemName(title);
+        }
+        window.dispatchEvent(new Event(PROMPT_DESIGN_TITLE_UPDATED_EVENT));
+        toast.success("设计标题已更新");
+      })
+      .catch(() => toast.error("更新设计标题失败"))
+      .finally(() => {
+        window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+          detail: { designId: currentDesignId, isGenerating: false },
+        }));
+      });
   }, [toast]);
 
   /**
@@ -715,6 +779,15 @@ export const PromptDesignWorkspace = ({
               executeNewDesignCommand(editorView);
               return true;
             }
+            if (
+              event.key === "Enter" &&
+              !event.isComposing &&
+              commandLine?.value.trim().toLowerCase() === "/title"
+            ) {
+              event.preventDefault();
+              executeTitleCommand(editorView);
+              return true;
+            }
             if (commandLine && commands.length > 0) {
               if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 event.preventDefault();
@@ -741,6 +814,11 @@ export const PromptDesignWorkspace = ({
                     editorView.dispatch({
                       changes: { from: commandLine.from, to: commandLine.to, insert },
                       selection: { anchor: cursor },
+                    });
+                  } else if (command.id === "title") {
+                    editorView.dispatch({
+                      changes: { from: commandLine.from, to: commandLine.to, insert: "/title" },
+                      selection: { anchor: commandLine.from + 6 },
                     });
                   } else {
                     const insert = applyPromptAction(commandLine.value, command.id);
@@ -776,6 +854,7 @@ export const PromptDesignWorkspace = ({
   }, [
     addSelectionReference,
     executeNewDesignCommand,
+    executeTitleCommand,
     syncMarkdownCommandPanel,
   ]);
 
@@ -916,15 +995,14 @@ export const PromptDesignWorkspace = ({
                 onContextMenu={handleContextMenu}
                 onModeChange={setEditorMode}
               />
-              <CommandPanel
+              <PromptAiSlashCommandPanel
                 isOpen={Boolean(markdownCommandLine && markdownCommandPosition)}
-                ariaLabel="提示词设计命令"
-                items={markdownCommandLine
+                commands={markdownCommandLine
                   ? getMarkdownSlashCommandOptions(markdownCommandLine.value)
                   : []}
                 activeIndex={activeMarkdownCommandIndex}
                 onActiveIndexChange={setActiveMarkdownCommandIndex}
-                onItemSelect={(command) => {
+                onCommandSelect={(command) => {
                   const view = editorViewRef.current;
                   const commandLine = view ? getSlashCommandLine(view) : null;
                   if (!view || !commandLine) return;
@@ -936,23 +1014,20 @@ export const PromptDesignWorkspace = ({
                     });
                     return;
                   }
+                  if (command.id === "title") {
+                    view.dispatch({
+                      changes: { from: commandLine.from, to: commandLine.to, insert: "/title" },
+                      selection: { anchor: commandLine.from + 6 },
+                    });
+                    return;
+                  }
+                  if (command.id !== "root" && command.id !== "change") return;
                   const insert = applyPromptAction(commandLine.value, command.id);
                   view.dispatch({
                     changes: { from: commandLine.from, to: commandLine.to, insert },
                     selection: { anchor: commandLine.from + insert.length },
                   });
                 }}
-                renderItem={(command) => (
-                  <div className="flex w-full items-center gap-2">
-                    <FilePlus2 className="h-4 w-4 shrink-0 opacity-50" />
-                    <div className="min-w-0 flex-1 text-left">
-                      <div className="truncate text-sm font-medium">{command.name}</div>
-                      <div className="truncate text-xs text-white/35">
-                        {command.description}
-                      </div>
-                    </div>
-                  </div>
-                )}
                 idPrefix="prompt-markdown-slash-command"
                 className="fixed z-[100] w-[360px]"
                 style={markdownCommandPosition ?? undefined}

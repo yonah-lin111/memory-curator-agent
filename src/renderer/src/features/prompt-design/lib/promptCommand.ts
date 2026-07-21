@@ -16,6 +16,12 @@ type PromptCreation = {
 // 侧边栏刷新事件名称。
 export const PROMPT_DESIGN_CREATED_EVENT = "prompt-design:created";
 
+// 提示词设计标题变更后的侧边栏刷新事件名称。
+export const PROMPT_DESIGN_TITLE_UPDATED_EVENT = "prompt-design:title-updated";
+
+// 提示词设计标题生成状态事件名称。
+export const PROMPT_DESIGN_TITLE_GENERATING_EVENT = "prompt-design:title-generating";
+
 // /prompt 的首级创建命令。
 const PROMPT_CREATE_OPTIONS: PromptCommandOption[] = [
   {
@@ -124,10 +130,8 @@ export const executePromptChangeCommand = async (value: string): Promise<boolean
     }
   }
 
-  if (!designName) {
-    if (moduleName && !shouldCreateAtRoot) {
-      store.setActiveModuleId(moduleId ?? null);
-    }
+  if (moduleName && !designName) {
+    if (!shouldCreateAtRoot) store.setActiveModuleId(moduleId ?? null);
     window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
     return false;
   }
@@ -135,7 +139,7 @@ export const executePromptChangeCommand = async (value: string): Promise<boolean
   const design = await (window.api as any).promptDesign.designs.create({
     projectId,
     moduleId,
-    name: designName,
+    name: designName || "新提示词设计",
   });
   const sessions = await (window.api as any).promptAi.listSessions(design.id);
   if (!sessions?.length) {

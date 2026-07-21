@@ -1029,6 +1029,8 @@ const api = {
       ipcRenderer.invoke('prompt-design:files:search', { directory, query })
   },
   promptAi: {
+    generateDesignTitle: (content: string): Promise<string> =>
+      ipcRenderer.invoke('prompt-ai:design:title:generate', content),
     checkMcpStatus: (payload: { designItemId: string }): Promise<PromptAiMcpStatusResult> =>
       ipcRenderer.invoke('prompt-ai:mcp:status', payload),
     listMcpTools: (payload: { sessionId: string; designItemId: string }): Promise<PromptAiMcpCommandResult> =>
