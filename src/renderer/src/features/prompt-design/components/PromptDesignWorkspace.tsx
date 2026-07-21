@@ -1,8 +1,9 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
-import { StateEffect } from "@codemirror/state";
-import { Bot } from "lucide-react";
+import { Prec, StateEffect } from "@codemirror/state";
+import { Bot, FilePlus2 } from "lucide-react";
+import { CommandPanel } from "@/components/ai-shared/CommandPanel";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
@@ -13,6 +14,11 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
 import type { PromptDesignReference } from "@/features/prompt-design/types";
+import {
+  applyPromptAction,
+  executePromptChangeCommand,
+  isPromptChangeCommand,
+} from "@/features/prompt-design/lib/promptCommand";
 
 // 设计项切换 loading 最短展示时长（ms），与 AI 侧栏保持一致。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -34,6 +40,59 @@ interface PromptDesignWorkspaceProps {
 type MatchedLine = {
   originalIndex: number;
   candidateIndex: number;
+};
+
+// Markdown 编辑器中的斜杠命令候选项。
+type MarkdownSlashCommand = {
+  id: "newDesign" | "root" | "change";
+  name: string;
+  description: string;
+};
+
+// 命令面板在视口中的位置。
+type MarkdownSlashCommandPosition = {
+  left: number;
+  top: number | "auto";
+  bottom: number | "auto";
+};
+
+const NEW_DESIGN_COMMAND: MarkdownSlashCommand = {
+  id: "newDesign",
+  name: "/newDesign",
+  description: "新建提示词设计",
+};
+
+const NEW_DESIGN_ACTIONS: MarkdownSlashCommand[] = [
+  { id: "root", name: "-root", description: "在项目根目录创建" },
+  { id: "change", name: "-change", description: "创建并打开设计" },
+];
+
+/**
+ * 取得光标所在行的斜杠命令文本及其文档范围。
+ */
+const getSlashCommandLine = (
+  view: EditorView,
+): { from: number; to: number; value: string } | null => {
+  const line = view.state.doc.lineAt(view.state.selection.main.head);
+  const value = line.text.trimStart();
+  if (!value.startsWith("/")) return null;
+  return { from: line.from, to: line.to, value };
+};
+
+/**
+ * 根据当前命令行文本返回可显示的候选项。
+ */
+const getMarkdownSlashCommandOptions = (value: string): MarkdownSlashCommand[] => {
+  if (isPromptChangeCommand(value)) return [];
+  if ("/newdesign".startsWith(value.toLowerCase())) return [NEW_DESIGN_COMMAND];
+  if (!value.startsWith("/newDesign")) return [];
+
+  const lastToken = value.split(/\s+/).at(-1) ?? "";
+  if (!lastToken.startsWith("-")) return [];
+
+  return value.split(/\s+/).includes("-root")
+    ? NEW_DESIGN_ACTIONS.filter((command) => command.id === "change")
+    : NEW_DESIGN_ACTIONS;
 };
 
 // Diff 定位使用的前后上下文行数。
@@ -204,6 +263,17 @@ export const PromptDesignWorkspace = ({
   const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  // Markdown 编辑器斜杠命令面板状态。
+  const [markdownCommandLine, setMarkdownCommandLine] = useState<{
+    from: number;
+    to: number;
+    value: string;
+  } | null>(null);
+  const [markdownCommandPosition, setMarkdownCommandPosition] =
+    useState<MarkdownSlashCommandPosition | null>(null);
+  const [activeMarkdownCommandIndex, setActiveMarkdownCommandIndex] = useState(0);
+  const activeMarkdownCommandIndexRef = useRef(0);
+  activeMarkdownCommandIndexRef.current = activeMarkdownCommandIndex;
   // 用于通知侧栏聊天输入框主动获取焦点。
   const [chatInputFocusVersion, setChatInputFocusVersion] = useState(0);
   const lastShiftTimeRef = useRef(0);
@@ -574,13 +644,116 @@ export const PromptDesignWorkspace = ({
     };
   }, [inlineInputView]);
 
+  /**
+   * 执行完整的新建设计命令，并从正文中移除该命令行。
+   */
+  const executeNewDesignCommand = useCallback((view: EditorView): void => {
+    const commandLine = getSlashCommandLine(view);
+    if (!commandLine || !isPromptChangeCommand(commandLine.value)) return;
+
+    view.dispatch({
+      changes: { from: commandLine.from, to: commandLine.to, insert: "" },
+      selection: { anchor: commandLine.from },
+    });
+    setMarkdownCommandLine(null);
+    setMarkdownCommandPosition(null);
+    void executePromptChangeCommand(commandLine.value)
+      .then(() => toast.success("提示词设计创建成功"))
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "创建提示词设计失败"),
+      );
+  }, [toast]);
+
+  /**
+   * 同步 Markdown 光标处的斜杠命令面板位置与候选项。
+   */
+  const syncMarkdownCommandPanel = useCallback((view: EditorView): void => {
+    const commandLine = getSlashCommandLine(view);
+    const commands = commandLine
+      ? getMarkdownSlashCommandOptions(commandLine.value)
+      : [];
+    const coords = view.coordsAtPos(view.state.selection.main.head);
+    if (!commandLine || commands.length === 0 || !coords) {
+      setMarkdownCommandLine(null);
+      setMarkdownCommandPosition(null);
+      return;
+    }
+
+    const panelWidth = 360;
+    const offset = 6;
+    const left = Math.min(
+      Math.max(coords.left, 8),
+      Math.max(window.innerWidth - panelWidth - 8, 8),
+    );
+    setMarkdownCommandLine(commandLine);
+    setMarkdownCommandPosition(
+      window.innerHeight - coords.bottom < window.innerHeight * 0.3
+        ? { left, top: "auto", bottom: window.innerHeight - coords.top + offset }
+        : { left, top: coords.bottom + offset, bottom: "auto" },
+    );
+  }, []);
+
   const handleEditorViewReady = useCallback((view: EditorView): void => {
     if (editorViewRef.current === view) return;
     editorViewRef.current = view;
     view.dispatch({
-      effects: StateEffect.appendConfig.of(
-        EditorView.domEventHandlers({
+      effects: StateEffect.appendConfig.of([
+        Prec.high(
+          EditorView.domEventHandlers({
           keydown: (event, editorView) => {
+            const commandLine = getSlashCommandLine(editorView);
+            const commands = commandLine
+              ? getMarkdownSlashCommandOptions(commandLine.value)
+              : [];
+            if (
+              event.key === "Enter" &&
+              !event.isComposing &&
+              commandLine &&
+              isPromptChangeCommand(commandLine.value)
+            ) {
+              event.preventDefault();
+              executeNewDesignCommand(editorView);
+              return true;
+            }
+            if (commandLine && commands.length > 0) {
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                const direction = event.key === "ArrowDown" ? 1 : -1;
+                setActiveMarkdownCommandIndex(
+                  (index) => (index + direction + commands.length) % commands.length,
+                );
+                return true;
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setMarkdownCommandLine(null);
+                setMarkdownCommandPosition(null);
+                return true;
+              }
+              if (event.key === "Enter" && !event.isComposing) {
+                const command =
+                  commands[activeMarkdownCommandIndexRef.current] ?? commands[0];
+                if (command) {
+                  event.preventDefault();
+                  if (command.id === "newDesign") {
+                    const insert = "/newDesign design[]";
+                    const cursor = commandLine.from + insert.length - 1;
+                    editorView.dispatch({
+                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      selection: { anchor: cursor },
+                    });
+                  } else {
+                    const insert = applyPromptAction(commandLine.value, command.id);
+                    editorView.dispatch({
+                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      selection: { anchor: commandLine.from + insert.length },
+                    });
+                  }
+                  return true;
+                }
+              }
+            }
+
             if (event.key !== "Shift" || event.repeat) return false;
             const now = Date.now();
             const previous = editorView.dom.dataset.promptShiftTime;
@@ -590,10 +763,21 @@ export const PromptDesignWorkspace = ({
             setInlineInputView(editorView);
             return true;
           },
+          }),
+        ),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged || update.selectionSet) {
+            syncMarkdownCommandPanel(update.view);
+          }
         }),
-      ),
+      ]),
     });
-  }, [addSelectionReference]);
+    syncMarkdownCommandPanel(view);
+  }, [
+    addSelectionReference,
+    executeNewDesignCommand,
+    syncMarkdownCommandPanel,
+  ]);
 
   /**
    * 通过 CodeMirror 事务应用 Agent 已确认的正文，保留选区与滚动位置。
@@ -731,6 +915,47 @@ export const PromptDesignWorkspace = ({
                 onEditorViewReady={handleEditorViewReady}
                 onContextMenu={handleContextMenu}
                 onModeChange={setEditorMode}
+              />
+              <CommandPanel
+                isOpen={Boolean(markdownCommandLine && markdownCommandPosition)}
+                ariaLabel="提示词设计命令"
+                items={markdownCommandLine
+                  ? getMarkdownSlashCommandOptions(markdownCommandLine.value)
+                  : []}
+                activeIndex={activeMarkdownCommandIndex}
+                onActiveIndexChange={setActiveMarkdownCommandIndex}
+                onItemSelect={(command) => {
+                  const view = editorViewRef.current;
+                  const commandLine = view ? getSlashCommandLine(view) : null;
+                  if (!view || !commandLine) return;
+                  if (command.id === "newDesign") {
+                    const insert = "/newDesign design[]";
+                    view.dispatch({
+                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      selection: { anchor: commandLine.from + insert.length - 1 },
+                    });
+                    return;
+                  }
+                  const insert = applyPromptAction(commandLine.value, command.id);
+                  view.dispatch({
+                    changes: { from: commandLine.from, to: commandLine.to, insert },
+                    selection: { anchor: commandLine.from + insert.length },
+                  });
+                }}
+                renderItem={(command) => (
+                  <div className="flex w-full items-center gap-2">
+                    <FilePlus2 className="h-4 w-4 shrink-0 opacity-50" />
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="truncate text-sm font-medium">{command.name}</div>
+                      <div className="truncate text-xs text-white/35">
+                        {command.description}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                idPrefix="prompt-markdown-slash-command"
+                className="fixed z-[100] w-[360px]"
+                style={markdownCommandPosition ?? undefined}
               />
               {inlineInputView && (
                 <PromptAiInlineInput

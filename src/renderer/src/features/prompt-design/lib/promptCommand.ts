@@ -83,7 +83,7 @@ export const applyPromptAction = (value: string, action: "root" | "change"): str
  * 判断输入是否是可执行的 /prompt 创建命令。
  */
 export const isPromptChangeCommand = (value: string): boolean =>
-  /^\/prompt(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-(?:root|change))+\s*$/i.test(
+  /^\/(?:prompt|newDesign)(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-(?:root|change))+\s*$/i.test(
     value,
   ) && value.trim().split(/\s+/).includes("-change");
 
