@@ -631,8 +631,8 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
           changeEditorMode("preview");
         }
       } 
-      // cmd + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
-      else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "e") {
+      // cmd + shift + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
+      else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "e") {
         e.preventDefault();
         e.stopPropagation();
         // 仅预览模式恢复进入前布局，其他模式在编辑与双栏间切换。

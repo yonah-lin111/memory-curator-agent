@@ -60,6 +60,16 @@ type MarkdownSlashCommandPosition = {
   bottom: number | "auto";
 };
 
+/**
+ * 判断是否触发内联 AI 输入框的快捷键。
+ * 使用 Ctrl/Cmd + Shift + O，避开 md-editor-rt 已注册的 Ctrl/Cmd 组合键。
+ */
+const isInlineInputShortcut = (event: KeyboardEvent): boolean =>
+  (event.ctrlKey || event.metaKey) &&
+  event.shiftKey &&
+  !event.altKey &&
+  event.code === "KeyO";
+
 const NEW_DESIGN_COMMAND: MarkdownSlashCommand = {
   id: "newDesign",
   name: "/newDesign",
@@ -292,7 +302,6 @@ export const PromptDesignWorkspace = ({
   activeMarkdownCommandIndexRef.current = activeMarkdownCommandIndex;
   // 用于通知侧栏聊天输入框主动获取焦点。
   const [chatInputFocusVersion, setChatInputFocusVersion] = useState(0);
-  const lastShiftTimeRef = useRef(0);
   const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">("edit");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; view: EditorView; mode: "edit" | "preview" | "split" } | null>(null);
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
@@ -637,19 +646,11 @@ export const PromptDesignWorkspace = ({
   useEffect(() => {
     if (!inlineInputView) return;
 
-    lastShiftTimeRef.current = 0;
     const handleInlineInputKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== "Shift" || event.repeat) return;
-
-      const now = Date.now();
-      if (!lastShiftTimeRef.current || now - lastShiftTimeRef.current > 500) {
-        lastShiftTimeRef.current = now;
-        return;
-      }
+      if (!isInlineInputShortcut(event) || event.repeat) return;
 
       event.preventDefault();
       event.stopPropagation();
-      lastShiftTimeRef.current = 0;
       setInlineInputView(null);
       requestAnimationFrame(() => inlineInputView.focus());
     };
@@ -838,11 +839,8 @@ export const PromptDesignWorkspace = ({
               }
             }
 
-            if (event.key !== "Shift" || event.repeat) return false;
-            const now = Date.now();
-            const previous = editorView.dom.dataset.promptShiftTime;
-            editorView.dom.dataset.promptShiftTime = String(now);
-            if (!previous || now - Number(previous) > 500) return false;
+            if (!isInlineInputShortcut(event) || event.repeat) return false;
+            event.preventDefault();
             addSelectionReference(editorView);
             setInlineInputView(editorView);
             return true;
