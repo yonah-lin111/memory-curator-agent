@@ -66,3 +66,8 @@ export const getAiChatTextTrashDir = (): string => join(getAppDataRoot(), 'trash
  */
 export const getSkillsDir = (): string => join(getAppDataRoot(), 'skills')
 
+/**
+ * 获取提示词设计 Agent 的用户自定义提示词路径。
+ */
+export const getPromptDesignAgentPromptPath = (): string =>
+  join(getAppDataRoot(), 'system prompt', 'prompt-design.xml')

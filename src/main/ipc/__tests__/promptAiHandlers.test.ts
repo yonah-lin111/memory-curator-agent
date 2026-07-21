@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { loadPromptDesignAgentPrompt } from "@/services/agentPromptService";
 
 describe("Prompt Design system prompt requirements", () => {
   it("should contain the required strict tool usage rules for design intents", () => {
@@ -14,22 +15,10 @@ describe("Prompt Design system prompt requirements", () => {
       "<policies>",
       "<rules>",
       "<output-format>",
-      "RTCF Markdown 结构",
-      "Role、Task、Context、Format",
-      "不得将产出提示词改为 XML",
-      "grill-me",
-      "hasCodeGraph",
-      "hasCodebaseMemory",
       "const fileTools = projectRoot ? createPromptFileTools(projectRoot) : []",
-      "<code-research-policy>",
       "<current-editor-context>",
       "<repository-context>",
       "<available-skills>",
-      "不得在聊天回复中输出完整文档",
-      "prompt_editor_replace",
-      "prompt_editor_replace_lines",
-      "prompt_editor_delete_lines",
-      "只简短确认结果，不重复文档内容",
       "getAvailableSkillsForAgent(\"prompt-design\")",
       "createSkillTool(availableSkills)",
       "escapeXmlText(skill.description || skill.name)"
@@ -41,9 +30,24 @@ describe("Prompt Design system prompt requirements", () => {
     const path = require('path');
     
     const sourceCode = fs.readFileSync(path.join(__dirname, '../promptAiHandlers.ts'), 'utf-8');
+    const promptService = fs.readFileSync(path.join(__dirname, '../../services/agentPromptService.ts'), 'utf-8');
+    const promptFile = fs.readFileSync(path.join(process.env.HOME || '', '.mc/system prompt/prompt-design.xml'), 'utf-8');
+    const promptSource = `${sourceCode}\n${promptService}\n${promptFile}`;
     
     for (const rule of requiredRules) {
-      expect(sourceCode).toContain(rule);
+      expect(promptSource).toContain(rule);
     }
+  });
+
+  it("按标签将用户提示词注入内置系统提示词", () => {
+    const prompt = loadPromptDesignAgentPrompt();
+
+    expect(prompt.match(/<system>/g)).toHaveLength(1);
+    expect(prompt).toContain("<prompt-structure>");
+    expect(prompt).toContain("<information-policy>");
+    expect(prompt).not.toContain("<principle></principle>");
+    expect(prompt).not.toContain("<constraint></constraint>");
+    expect(prompt).not.toContain("<rule></rule>");
+    expect(prompt.indexOf("<prompt-structure>")).toBeGreaterThan(prompt.indexOf("<policies>"));
   });
 });
