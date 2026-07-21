@@ -17,6 +17,7 @@ import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
 import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
 import {
   executePromptChangeCommand,
+  executePromptTitleCommand,
   applyPromptAction,
   getPromptCommandOptions,
   getPromptCommandTemplate,
@@ -190,6 +191,15 @@ export const PromptAiInlineInput = ({
     } else if (commandId === "prompt") {
       setInputText("/prompt ");
       setIsCommandPanelOpen(true);
+    } else if (commandId === "title") {
+      setInputText("");
+      toast.info("正在总结设计标题...");
+      try {
+        await executePromptTitleCommand();
+        toast.success("设计标题已更新");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "更新设计标题失败");
+      }
     } else if (commandId === "module" || commandId === "design") {
       const template = getPromptCommandTemplate(commandId);
       setInputText(template);
@@ -318,7 +328,7 @@ export const PromptAiInlineInput = ({
   return (
     <div
       ref={containerRef}
-      className="fixed z-[110] flex w-[min(360px,calc(100vw-16px))] flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2 shadow-2xl [&_[role=listbox]]:pointer-events-none"
+      className="fixed z-[110] flex w-[min(360px,calc(100vw-16px))] flex-col gap-2 rounded-[6px] border border-white/10 bg-[#212121] p-2 shadow-2xl"
       style={position}
     >
       <PromptAiSlashCommandPanel
@@ -329,6 +339,7 @@ export const PromptAiInlineInput = ({
         onCommandSelect={(command) => void executeCommand(command.id)}
         idPrefix="prompt-inline-slash-command"
         style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
+        keyboardOnly
       />
       <CommandPanel
         isOpen={isSessionMode}
@@ -345,6 +356,7 @@ export const PromptAiInlineInput = ({
         )}
         idPrefix="prompt-inline-session-select"
         style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
+        keyboardOnly
       />
       <PromptAiFileMentionPanel
         isOpen={mention.isFilePanelOpen}
@@ -354,6 +366,7 @@ export const PromptAiInlineInput = ({
         onPathSelect={mention.selectFileMention}
         idPrefix="prompt-inline-file-mention"
         style={panelDirection === "down" ? { top: "calc(100% + 8px)", bottom: "auto" } : { bottom: "calc(100% + 8px)", top: "auto" }}
+        keyboardOnly
       />
       {controller.references.length > 0 && <div className="flex flex-wrap gap-1 px-1">{controller.references.map((reference) => <Tag key={reference.id} size="small" onClose={() => controller.setReferences((items) => items.filter((item) => item.id !== reference.id))}>第{reference.startLine}–{reference.endLine}行</Tag>)}</div>}
       <textarea

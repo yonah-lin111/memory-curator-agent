@@ -45,6 +45,7 @@ type PromptAiSlashCommandPanelProps = {
   idPrefix: string;
   style?: React.CSSProperties;
   className?: string;
+  keyboardOnly?: boolean;
 };
 
 /**
@@ -59,6 +60,7 @@ export const PromptAiSlashCommandPanel = ({
   idPrefix,
   style,
   className,
+  keyboardOnly,
 }: PromptAiSlashCommandPanelProps): React.JSX.Element | null => (
   <CommandPanel
     isOpen={isOpen}
@@ -78,6 +80,7 @@ export const PromptAiSlashCommandPanel = ({
     idPrefix={idPrefix}
     style={style}
     className={className}
+    keyboardOnly={keyboardOnly}
   />
 );
 
@@ -90,6 +93,8 @@ type PromptAiFileMentionPanelProps = {
   onPathSelect: (item: FileMentionItem) => void;
   idPrefix: string;
   style?: React.CSSProperties;
+  className?: string;
+  keyboardOnly?: boolean;
 };
 
 /**
@@ -103,6 +108,8 @@ export const PromptAiFileMentionPanel = ({
   onPathSelect,
   idPrefix,
   style,
+  className,
+  keyboardOnly,
 }: PromptAiFileMentionPanelProps): React.JSX.Element | null => (
   <CommandPanel<FileMentionItem>
     isOpen={isOpen}
@@ -134,5 +141,7 @@ export const PromptAiFileMentionPanel = ({
     }}
     idPrefix={idPrefix}
     style={style}
+    className={className}
+    keyboardOnly={keyboardOnly}
   />
 );

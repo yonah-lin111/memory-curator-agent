@@ -68,6 +68,8 @@ export interface MentionCommandPanelsProps {
   onActiveAgentIndexChange: (idx: number) => void;
   // 确认选择 Agent 回调。
   onAgentSelect: (agent: any) => void;
+  // 是否禁用全部面板的鼠标交互，仅允许键盘选择。
+  keyboardOnly: boolean;
 }
 
 /**
@@ -101,6 +103,7 @@ export const MentionCommandPanels = ({
   activeAgentIndex,
   onActiveAgentIndexChange,
   onAgentSelect,
+  keyboardOnly,
 }: MentionCommandPanelsProps): React.JSX.Element => {
   return (
     <>
@@ -113,6 +116,7 @@ export const MentionCommandPanels = ({
         onItemSelect={onCommandSelect}
         onKeyDown={onCommandPanelKeyDown}
         idPrefix="curator-command"
+        keyboardOnly={keyboardOnly}
         renderItem={(command) => (
           <span className="flex items-center gap-2 min-w-0">
             <span className="text-[13px] font-semibold text-white">
@@ -135,6 +139,7 @@ export const MentionCommandPanels = ({
         onItemSelect={onModelSelect}
         onKeyDown={onModelPanelKeyDown}
         idPrefix="curator-model"
+        keyboardOnly={keyboardOnly}
         renderItem={(model) => (
           <span className="flex items-center gap-2 min-w-0">
             <span className="text-[13px] font-semibold text-white">
@@ -158,6 +163,7 @@ export const MentionCommandPanels = ({
         onKeyDown={onSessionPanelKeyDown}
         onScroll={onSessionScroll}
         idPrefix="curator-session"
+        keyboardOnly={keyboardOnly}
         renderItem={(session) => (
           <span className="flex items-center gap-2 min-w-0">
             <span className="text-[13px] font-semibold text-white truncate max-w-[200px]">
@@ -181,6 +187,7 @@ export const MentionCommandPanels = ({
         onActiveIndexChange={onActiveAgentIndexChange}
         onItemSelect={onAgentSelect}
         idPrefix="curator-agent"
+        keyboardOnly={keyboardOnly}
         renderItem={(agent) => {
           // 直接显示自带分类后缀的 token（形如 @people[agent] 或 @translator[skill]）
           const displayName = agent.token;

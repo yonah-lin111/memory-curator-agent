@@ -296,6 +296,7 @@ export const useMarkdownFileMention = (enabled: boolean) => {
         );
       }}
       idPrefix="prompt-markdown-file-mention"
+      keyboardOnly
       className="fixed z-[100] w-[360px]"
       style={panelPosition ? {
         left: panelPosition.left,

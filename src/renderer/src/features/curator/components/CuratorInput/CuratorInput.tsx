@@ -85,7 +85,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full [&_[role=listbox]]:pointer-events-none"
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full"
       >
         <input
           type="file"
@@ -135,6 +135,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
           activeAgentIndex={activeAgentIndex}
           onActiveAgentIndexChange={setActiveAgentIndex}
           onAgentSelect={selectAgentMention}
+          keyboardOnly
         />
 
         {/* 使用提取出来的附件预览子组件 */}

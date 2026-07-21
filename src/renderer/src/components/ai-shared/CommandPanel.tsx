@@ -33,6 +33,8 @@ export interface CommandPanelProps<T extends SuggestionItem> {
   style?: React.CSSProperties;
   // 面板额外类名，用于编辑器光标定位等特殊场景。
   className?: string;
+  // 是否禁用面板的鼠标交互，仅保留键盘操作。
+  keyboardOnly?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ export const CommandPanel = <T extends SuggestionItem>({
   idPrefix,
   style,
   className,
+  keyboardOnly = false,
 }: CommandPanelProps<T>): React.JSX.Element | null => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +85,7 @@ export const CommandPanel = <T extends SuggestionItem>({
       aria-activedescendant={`${idPrefix}-${activeItem?.id}`}
       onKeyDown={onKeyDown}
       onScroll={onScroll}
-      style={style}
+      style={keyboardOnly ? { ...style, pointerEvents: "none" } : style}
       className={`absolute bottom-[calc(100%+8px)] left-0 right-0 z-40 max-h-[30vh] overflow-y-auto rounded-[6px] border border-white/10 bg-[#303030] shadow-2xl outline-none ${className ?? ""}`}
     >
       {items.map((item, index) => {
@@ -95,8 +98,8 @@ export const CommandPanel = <T extends SuggestionItem>({
             type="button"
             role="option"
             aria-selected={isActive}
-            onMouseEnter={() => onActiveIndexChange(index)}
-            onClick={() => onItemSelect(item)}
+            onMouseEnter={keyboardOnly ? undefined : () => onActiveIndexChange(index)}
+            onClick={keyboardOnly ? undefined : () => onItemSelect(item)}
             className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
               isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5"
             }`}

@@ -43,6 +43,7 @@ import type {
 import { Tag } from "@/components/ui/Tag";
 import {
   executePromptChangeCommand,
+  executePromptTitleCommand,
   applyPromptAction,
   getPromptCommandOptions,
   getPromptCommandTemplate,
@@ -301,6 +302,15 @@ export const PromptAiChatInput = ({
       } else if (commandId === "prompt") {
         setInputText("/prompt ");
         setIsCommandPanelOpen(true);
+      } else if (commandId === "title") {
+        setInputText("");
+        toast.info("正在总结设计标题...");
+        try {
+          await executePromptTitleCommand();
+          toast.success("设计标题已更新");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "更新设计标题失败");
+        }
       } else if (commandId === "module" || commandId === "design") {
         const template = getPromptCommandTemplate(commandId);
         setInputText(template);
@@ -469,7 +479,7 @@ export const PromptAiChatInput = ({
   return (
     <div className="flex-shrink-0 p-3">
       <div
-        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text [&_[role=listbox]]:pointer-events-none"
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
         onClick={handleContainerClick}
       >
         <PromptAiSlashCommandPanel
@@ -479,6 +489,7 @@ export const PromptAiChatInput = ({
           onActiveIndexChange={setActiveCommandIndex}
           onCommandSelect={(command) => executeCommand(command.id)}
           idPrefix="prompt-slash-command"
+          keyboardOnly
         />
 
         <CommandPanel
@@ -500,6 +511,7 @@ export const PromptAiChatInput = ({
             </div>
           )}
           idPrefix="prompt-model-select"
+          keyboardOnly
         />
 
         <CommandPanel
@@ -518,6 +530,7 @@ export const PromptAiChatInput = ({
             </div>
           )}
           idPrefix="prompt-session-select"
+          keyboardOnly
         />
 
         <PromptAiFileMentionPanel
@@ -527,6 +540,7 @@ export const PromptAiChatInput = ({
           onActiveIndexChange={setActiveFileIndex}
           onPathSelect={selectFileMention}
           idPrefix="prompt-file-mention"
+          keyboardOnly
         />
 
         {/* 引用标签 */}

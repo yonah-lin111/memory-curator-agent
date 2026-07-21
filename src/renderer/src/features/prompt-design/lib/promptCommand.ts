@@ -2,7 +2,7 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 
 // Prompt 创建命令的候选项。
 export interface PromptCommandOption {
-  id: "module" | "design" | "root" | "change";
+  id: "module" | "design" | "title" | "root" | "change";
   name: string;
   description: string;
 }
@@ -33,6 +33,11 @@ const PROMPT_CREATE_OPTIONS: PromptCommandOption[] = [
     id: "design",
     name: "design[]",
     description: "在当前项目中创建设计",
+  },
+  {
+    id: "title",
+    name: "title",
+    description: "根据提示词生成简短标题",
   },
 ];
 
@@ -167,4 +172,47 @@ export const executePromptChangeCommand = async (
   }
   window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
   return { created: "design", opened: shouldOpenDesign };
+};
+
+/**
+ * 根据当前设计的提示词正文生成并更新标题。
+ */
+export const executePromptTitleCommand = async (): Promise<string> => {
+  const store = usePromptDesignStore.getState();
+  const designId = store.activeDesignId;
+  if (!designId) {
+    throw new Error("请先选择提示词设计");
+  }
+
+  const designs = await window.api.promptDesign?.designs.list();
+  const design = designs?.find((item) => item.id === designId);
+  const content = typeof design?.designData === "string" ? design.designData.trim() : "";
+  if (!content) {
+    throw new Error("提示词内容为空，无法生成标题");
+  }
+
+  const generateTitle = window.api.promptAi?.generateDesignTitle;
+  if (typeof generateTitle !== "function") {
+    throw new Error("标题生成服务已更新，请重启应用后重试");
+  }
+
+  window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+    detail: { designId, isGenerating: true },
+  }));
+  try {
+    const title = (await generateTitle(content)).trim().slice(0, 12);
+    if (!title) {
+      throw new Error("未生成有效标题");
+    }
+    await window.api.promptDesign?.designs.rename(designId, title);
+    if (usePromptDesignStore.getState().activeDesignId === designId) {
+      usePromptDesignStore.getState().setItemName(title);
+    }
+    window.dispatchEvent(new Event(PROMPT_DESIGN_TITLE_UPDATED_EVENT));
+    return title;
+  } finally {
+    window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+      detail: { designId, isGenerating: false },
+    }));
+  }
 };
