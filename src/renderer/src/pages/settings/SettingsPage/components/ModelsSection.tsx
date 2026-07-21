@@ -1,4 +1,5 @@
 import type React from "react";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Select } from "@/components/ui/Select";
 import type { AiSettingsConfig, AiSettingsModelSelection } from "../types";
 
@@ -49,13 +50,19 @@ export const ModelsSection = ({
             key={selectionKey}
             className="rounded-[6px] border border-white/8 bg-[#212121] p-4"
           >
-            <h3 className="text-sm font-bold text-white">{title}</h3>
-            {selectionKey === "suggestedQuestions" ? (
-              <label className="mt-3 flex items-center gap-2 text-xs text-white/60">
-                <input type="checkbox" checked={settings.suggestedQuestionsEnabled} onChange={(event) => updateSuggestedQuestionsEnabled(event.target.checked)} className="h-4 w-4 accent-white" />
-                在 AI 回复后显示推荐问题
-              </label>
-            ) : null}
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-bold text-white">{title}</h3>
+              {selectionKey === "suggestedQuestions" ? (
+                <label className="flex shrink-0 items-center gap-2 text-xs text-white/60">
+                  启用问题建议
+                  <Checkbox
+                    checked={settings.suggestedQuestionsEnabled}
+                    onChange={updateSuggestedQuestionsEnabled}
+                    aria-label="启用问题建议"
+                  />
+                </label>
+              ) : null}
+            </div>
             <div className="mt-4 grid gap-3">
               <label className="grid gap-1.5 text-xs text-white/45">
                 Provider

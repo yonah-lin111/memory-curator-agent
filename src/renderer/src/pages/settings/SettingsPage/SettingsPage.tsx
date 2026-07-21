@@ -86,11 +86,6 @@ export const SettingsPage = (): React.JSX.Element => {
                   }`}
                 >
                   <span className="block text-sm font-bold">{section.label}</span>
-                  <span
-                    className={`mt-1 block text-xs ${isActive ? "text-black/55" : "text-white/30"}`}
-                  >
-                    {section.description}
-                  </span>
                 </button>
               );
             })}

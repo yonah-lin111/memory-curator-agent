@@ -7,22 +7,22 @@ export const SETTINGS_SECTIONS: Array<{
 }> = [
   {
     id: "models",
-    label: "AI 模型",
+    label: "默认模型",
     description: "默认模型与标题总结",
   },
   {
     id: "providers",
-    label: "Providers",
+    label: "服务商",
     description: "供应商、密钥与模型",
   },
   {
     id: "agent",
-    label: "Agent",
+    label: "智能体",
     description: "上下文治理参数",
   },
   {
     id: "skills",
-    label: "Agent 技能",
+    label: "技能",
     description: "自定义指令与高级挂载规则",
   },
 ];

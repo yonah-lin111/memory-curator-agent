@@ -121,9 +121,9 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     expect(await screen.findByText('/Users/yonah/.mc/config.json')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'AI 模型' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Providers' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Agent' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '模型' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '服务商' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '智能体' })).toBeInTheDocument()
   })
 
   it('修改 Agent 参数后保存新配置', async () => {
@@ -131,7 +131,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    await user.click(screen.getByRole('button', { name: '智能体' }))
     await user.clear(screen.getByLabelText('Tool output max chars'))
     await user.type(screen.getByLabelText('Tool output max chars'), '8192')
     await user.click(screen.getByRole('button', { name: '保存设置' }))
@@ -155,7 +155,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    await user.click(screen.getByRole('button', { name: '智能体' }))
     expect(screen.getByRole('switch', { name: '显示 Agent 思考' })).not.toBeChecked()
     await user.click(screen.getByRole('switch', { name: '显示 Agent 思考' }))
     await user.click(screen.getByRole('button', { name: '保存设置' }))
@@ -172,7 +172,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Agent' }))
+    await user.click(screen.getByRole('button', { name: '智能体' }))
     await user.clear(screen.getByLabelText('Exa API Key'))
     await user.type(screen.getByLabelText('Exa API Key'), 'new-exa-key')
     await user.clear(screen.getByLabelText('Tavily API Key'))
@@ -196,7 +196,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Agent 技能' }))
+    await user.click(screen.getByRole('button', { name: '技能' }))
     await user.click(await screen.findByRole('switch', { name: '启用技能 grill-me' }))
     await user.click(screen.getByRole('button', { name: '保存设置' }))
 
@@ -212,7 +212,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Providers' }))
+    await user.click(screen.getByRole('button', { name: '服务商' }))
     await user.click(screen.getByRole('button', { name: '新增 Provider' }))
     await user.clear(screen.getByLabelText('Provider ID'))
     await user.type(screen.getByLabelText('Provider ID'), 'zhipu')
@@ -246,7 +246,7 @@ describe('SettingsPage', () => {
     renderSettingsPage()
 
     await screen.findByText('/Users/yonah/.mc/config.json')
-    await user.click(screen.getByRole('button', { name: 'Providers' }))
+    await user.click(screen.getByRole('button', { name: '服务商' }))
     
     const deleteButton = screen.getByRole('button', { name: '删除 Provider' })
     expect(deleteButton).toBeInTheDocument()
