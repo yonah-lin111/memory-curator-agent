@@ -129,9 +129,15 @@ export const PromptAiInlineInput = ({
     if (isPromptChangeCommand(text)) {
       void (async (): Promise<void> => {
         try {
-          const designCreated = await executePromptChangeCommand(text);
+          const result = await executePromptChangeCommand(text);
           setInputText("");
-          toast.success(designCreated ? "已创建并打开设计" : "已创建模块");
+          toast.success(
+            result.opened
+              ? "已创建并打开设计"
+              : result.created === "design"
+                ? "已创建设计"
+                : "已创建模块",
+          );
         } catch (error) {
           toast.error(error instanceof Error ? error.message : "创建设计失败");
         }

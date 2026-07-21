@@ -17,6 +17,7 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
 import type { PromptDesignReference } from "@/features/prompt-design/types";
+import { isFuzzyCommandMatch } from "@/lib/ai-shared/utils";
 import {
   applyPromptAction,
   executePromptChangeCommand,
@@ -93,10 +94,14 @@ const getSlashCommandLine = (
  */
 const getMarkdownSlashCommandOptions = (value: string): MarkdownSlashCommand[] => {
   if (isPromptChangeCommand(value)) return [];
-  if (value === "/") return [NEW_DESIGN_COMMAND, TITLE_COMMAND];
-  if ("/newdesign".startsWith(value.toLowerCase())) return [NEW_DESIGN_COMMAND];
-  if ("/title".startsWith(value.toLowerCase())) return [TITLE_COMMAND];
-  if (!value.startsWith("/newDesign")) return [];
+  if (/\s$/.test(value)) return [];
+  const [command, ...argumentsList] = value.trim().split(/\s+/);
+  const commandQuery = command.slice(1).toLowerCase();
+  const commands = [NEW_DESIGN_COMMAND, TITLE_COMMAND].filter((item) =>
+    isFuzzyCommandMatch(commandQuery, item.name.slice(1).toLowerCase()),
+  );
+  if (argumentsList.length === 0) return commands;
+  if (command.toLowerCase() !== NEW_DESIGN_COMMAND.name.toLowerCase()) return [];
 
   const lastToken = value.split(/\s+/).at(-1) ?? "";
   if (!lastToken.startsWith("-")) return [];
@@ -816,9 +821,10 @@ export const PromptDesignWorkspace = ({
                       selection: { anchor: cursor },
                     });
                   } else if (command.id === "title") {
+                    const insert = "/title ";
                     editorView.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert: "/title" },
-                      selection: { anchor: commandLine.from + 6 },
+                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      selection: { anchor: commandLine.from + insert.length },
                     });
                   } else {
                     const insert = applyPromptAction(commandLine.value, command.id);
@@ -1015,9 +1021,10 @@ export const PromptDesignWorkspace = ({
                     return;
                   }
                   if (command.id === "title") {
+                    const insert = "/title ";
                     view.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert: "/title" },
-                      selection: { anchor: commandLine.from + 6 },
+                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      selection: { anchor: commandLine.from + insert.length },
                     });
                     return;
                   }

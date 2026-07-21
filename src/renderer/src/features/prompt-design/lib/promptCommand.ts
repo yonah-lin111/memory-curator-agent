@@ -88,10 +88,14 @@ export const applyPromptAction = (value: string, action: "root" | "change"): str
 /**
  * 判断输入是否是可执行的 /prompt 创建命令。
  */
-export const isPromptChangeCommand = (value: string): boolean =>
-  /^\/(?:prompt|newDesign)(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-(?:root|change))+\s*$/i.test(
-    value,
-  ) && value.trim().split(/\s+/).includes("-change");
+export const isPromptChangeCommand = (value: string): boolean => {
+  const { moduleName, designName } = parsePromptCreation(value);
+  return (
+    /^\/(?:prompt|newDesign)(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-(?:root|change))*\s*$/i.test(
+      value,
+    ) && Boolean(moduleName || designName)
+  );
+};
 
 /**
  * 从 /prompt 创建命令中读取模块与设计名称。
@@ -106,11 +110,14 @@ const parsePromptCreation = (value: string): PromptCreation => {
 /**
  * 执行 /prompt 创建命令；创建设计时同时切换到该设计。
  */
-export const executePromptChangeCommand = async (value: string): Promise<boolean> => {
+export const executePromptChangeCommand = async (
+  value: string,
+): Promise<{ created: "module" | "design"; opened: boolean }> => {
   const { moduleName, designName } = parsePromptCreation(value);
   const store = usePromptDesignStore.getState();
   const projectId = store.activeProjectId;
   const shouldCreateAtRoot = value.trim().split(/\s+/).includes("-root");
+  const shouldOpenDesign = value.trim().split(/\s+/).includes("-change");
 
   if (!projectId) {
     throw new Error("请先在侧边栏选择项目");
@@ -131,9 +138,11 @@ export const executePromptChangeCommand = async (value: string): Promise<boolean
   }
 
   if (moduleName && !designName) {
-    if (!shouldCreateAtRoot) store.setActiveModuleId(moduleId ?? null);
+    if (shouldOpenDesign && !shouldCreateAtRoot) {
+      store.setActiveModuleId(moduleId ?? null);
+    }
     window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
-    return false;
+    return { created: "module", opened: false };
   }
 
   const design = await (window.api as any).promptDesign.designs.create({
@@ -146,14 +155,16 @@ export const executePromptChangeCommand = async (value: string): Promise<boolean
     await (window.api as any).promptAi.createSession(design.id);
   }
 
-  store.setActiveProjectId(projectId);
-  store.setActiveModuleId(moduleId ?? null);
-  if (store.setActiveDesignIdSafe) {
-    await store.setActiveDesignIdSafe(design.id);
-  } else {
-    store.setActiveDesignId(design.id);
+  if (shouldOpenDesign) {
+    store.setActiveProjectId(projectId);
+    store.setActiveModuleId(moduleId ?? null);
+    if (store.setActiveDesignIdSafe) {
+      await store.setActiveDesignIdSafe(design.id);
+    } else {
+      store.setActiveDesignId(design.id);
+    }
+    store.setItemName(design.name);
   }
-  store.setItemName(design.name);
   window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
-  return true;
+  return { created: "design", opened: shouldOpenDesign };
 };
