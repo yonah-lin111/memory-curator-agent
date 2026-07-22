@@ -18,6 +18,7 @@ import { registerBillsHandlers } from "@/ipc/billsHandlers";
 import { registerPromptDesignHandlers } from "@/ipc/promptDesignHandlers";
 import { registerPromptAiHandlers } from "@/ipc/promptAiHandlers";
 import { registerSkillsHandlers } from "@/ipc/skillsHandlers";
+import { closePromptDesignMcpConnections } from "@/agent/tools/mcpToolService";
 import {
   registerImageProtocolHandler,
   registerImageProtocolSchemes,
@@ -133,4 +134,8 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("before-quit", () => {
+  void closePromptDesignMcpConnections();
 });

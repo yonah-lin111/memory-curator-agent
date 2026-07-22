@@ -12,6 +12,31 @@ export type McpConnectionFailure = {
   error: string
 }
 
+// MCP 连接在空闲后保留的时间，避免连续对话反复启动服务进程。
+const MCP_CONNECTION_IDLE_TIMEOUT = 60_000
+
+// MCP 连接池条目。
+type McpConnectionPoolEntry = {
+  client: Client
+  tools: AgentTool[]
+  references: number
+  idleTimer?: NodeJS.Timeout
+}
+
+// 正在创建与已创建的连接均以同一键缓存，避免并发请求重复拉起 MCP 服务。
+const mcpConnectionPool = new Map<string, Promise<McpConnectionPoolEntry>>()
+
+/**
+ * 为项目和服务配置生成稳定的连接池键。
+ */
+const getConnectionPoolKey = (server: McpServerConfig, projectRoot: string): string => JSON.stringify({
+  projectRoot,
+  id: server.id,
+  command: server.command,
+  args: server.args,
+  timeout: server.timeout
+})
+
 /**
  * 为 MCP 请求设置超时，避免服务异常阻塞 Agent 会话。
  */
@@ -73,13 +98,168 @@ const toAgentToolResult = (result: unknown): AgentToolResult => {
 }
 
 /**
+ * 建立单个 MCP 连接并发现可用工具。
+ */
+const connectMcpServer = async (
+  server: McpServerConfig,
+  projectRoot: string
+): Promise<McpConnectionPoolEntry> => {
+  const client = new Client(
+    { name: 'memory-curator-agent', version: '0.1.0' },
+    { capabilities: { roots: { listChanged: false } } }
+  )
+  client.setRequestHandler(ListRootsRequestSchema, async () => ({
+    roots: [{ uri: pathToFileURL(projectRoot).href, name: server.name }]
+  }))
+  const transport = new StdioClientTransport({
+    command: server.command,
+    args: server.args
+  })
+
+  try {
+    await withTimeout(client.connect(transport), server.timeout, `MCP server ${server.name} connection`)
+    const listedTools = await withTimeout(client.listTools(), server.timeout, `MCP server ${server.name} tool discovery`)
+    const tools = listedTools.tools.map((tool) => ({
+      name: `mcp_${server.id.replace(/[^a-zA-Z0-9_]/g, '_')}_${tool.name.replace(/[^a-zA-Z0-9_]/g, '_')}`,
+      description: tool.description ?? `MCP tool ${tool.name} from ${server.id}.`,
+      parameters: toJsonSchema(tool.inputSchema),
+      mcp: { serverId: server.id, serverName: server.name, toolName: tool.name },
+      execute: async (input: unknown) => executeMcpTool(server, projectRoot, tool.name, input)
+    }))
+
+    return { client, tools, references: 0 }
+  } catch (error) {
+    await transport.close().catch(() => undefined)
+    throw error
+  }
+}
+
+/**
+ * 获取 MCP 连接的使用权；同一项目与服务配置复用一个已连接客户端。
+ */
+const acquireMcpConnection = async (
+  server: McpServerConfig,
+  projectRoot: string
+): Promise<{ client: Client; tools: AgentTool[]; release: () => Promise<void> }> => {
+  const key = getConnectionPoolKey(server, projectRoot)
+  let entryPromise = mcpConnectionPool.get(key)
+
+  if (!entryPromise) {
+    entryPromise = connectMcpServer(server, projectRoot)
+    mcpConnectionPool.set(key, entryPromise)
+    void entryPromise.catch(() => {
+      if (mcpConnectionPool.get(key) === entryPromise) {
+        mcpConnectionPool.delete(key)
+      }
+    })
+  }
+
+  const entry = await entryPromise
+  entry.references += 1
+  if (entry.idleTimer) {
+    clearTimeout(entry.idleTimer)
+    entry.idleTimer = undefined
+  }
+
+  let released = false
+  const release = async (): Promise<void> => {
+    if (released) return
+    released = true
+    entry.references = Math.max(0, entry.references - 1)
+    if (entry.references > 0 || entry.idleTimer) return
+
+    entry.idleTimer = setTimeout(() => {
+      if (entry.references > 0 || mcpConnectionPool.get(key) !== entryPromise) return
+      mcpConnectionPool.delete(key)
+      entry.idleTimer = undefined
+      void entry.client.close().catch(() => undefined)
+    }, MCP_CONNECTION_IDLE_TIMEOUT)
+    entry.idleTimer.unref?.()
+  }
+
+  return { client: entry.client, tools: entry.tools, release }
+}
+
+/**
+ * 驱逐发生调用错误的连接，确保下一次获取连接时重新建立 MCP 会话。
+ */
+const invalidateMcpConnection = async (
+  key: string,
+  entryPromise: Promise<McpConnectionPoolEntry>,
+  entry: McpConnectionPoolEntry
+): Promise<void> => {
+  if (mcpConnectionPool.get(key) !== entryPromise) return
+
+  mcpConnectionPool.delete(key)
+  if (entry.idleTimer) {
+    clearTimeout(entry.idleTimer)
+    entry.idleTimer = undefined
+  }
+  await entry.client.close().catch(() => undefined)
+}
+
+/**
+ * 调用 MCP 工具；连接失效时驱逐旧连接并自动重试一次。
+ */
+const executeMcpTool = async (
+  server: McpServerConfig,
+  projectRoot: string,
+  toolName: string,
+  input: unknown,
+  shouldRetry = true
+): Promise<AgentToolResult> => {
+  const key = getConnectionPoolKey(server, projectRoot)
+  const entryPromise = mcpConnectionPool.get(key)
+  const connection = await acquireMcpConnection(server, projectRoot)
+
+  try {
+    return toAgentToolResult(
+      await withTimeout(
+        connection.client.callTool({ name: toolName, arguments: input as Record<string, unknown> }),
+        server.timeout,
+        `MCP tool ${server.name}.${toolName}`
+      )
+    )
+  } catch (error) {
+    if (!shouldRetry || !entryPromise) throw error
+
+    const entry = await entryPromise.catch(() => undefined)
+    if (entry) {
+      await invalidateMcpConnection(key, entryPromise, entry)
+    }
+    return executeMcpTool(server, projectRoot, toolName, input, false)
+  } finally {
+    await connection.release()
+  }
+}
+
+/**
+ * 关闭全部空闲或活跃的 MCP 连接，用于应用退出等生命周期场景。
+ */
+export const closePromptDesignMcpConnections = async (): Promise<void> => {
+  const entries = await Promise.all([...mcpConnectionPool.values()].map(async (entryPromise) => {
+    try {
+      return await entryPromise
+    } catch {
+      return undefined
+    }
+  }))
+  mcpConnectionPool.clear()
+  await Promise.all(entries.map(async (entry) => {
+    if (!entry) return
+    if (entry.idleTimer) clearTimeout(entry.idleTimer)
+    await entry.client.close().catch(() => undefined)
+  }))
+}
+
+/**
  * 为提示词设计 Agent 连接 MCP 服务并适配其工具定义。
  */
 export const createPromptDesignMcpTools = async (
   servers: McpServerConfig[],
   projectRoot: string | null
 ): Promise<{ tools: AgentTool[]; failures: McpConnectionFailure[]; close: () => Promise<void> }> => {
-  const clients: Client[] = []
+  const releases: Array<() => Promise<void>> = []
   const tools: AgentTool[] = []
   const failures: McpConnectionFailure[] = []
 
@@ -88,41 +268,11 @@ export const createPromptDesignMcpTools = async (
   }
 
   for (const server of servers) {
-    const client = new Client(
-      { name: 'memory-curator-agent', version: '0.1.0' },
-      { capabilities: { roots: { listChanged: false } } }
-    )
-    client.setRequestHandler(ListRootsRequestSchema, async () => ({
-      roots: [{ uri: pathToFileURL(projectRoot).href, name: server.name }]
-    }))
-    const transport = new StdioClientTransport({
-      command: server.command,
-      args: server.args
-    })
-
     try {
-      await withTimeout(client.connect(transport), server.timeout, `MCP server ${server.name} connection`)
-      clients.push(client)
-      const listedTools = await withTimeout(client.listTools(), server.timeout, `MCP server ${server.name} tool discovery`)
-
-      for (const tool of listedTools.tools) {
-        const name = `mcp_${server.id.replace(/[^a-zA-Z0-9_]/g, '_')}_${tool.name.replace(/[^a-zA-Z0-9_]/g, '_')}`
-        tools.push({
-          name,
-          description: tool.description ?? `MCP tool ${tool.name} from ${server.id}.`,
-          parameters: toJsonSchema(tool.inputSchema),
-          mcp: { serverId: server.id, serverName: server.name, toolName: tool.name },
-          execute: async (input) => toAgentToolResult(
-            await withTimeout(
-              client.callTool({ name: tool.name, arguments: input as Record<string, unknown> }),
-              server.timeout,
-              `MCP tool ${server.name}.${tool.name}`
-            )
-          )
-        })
-      }
+      const connection = await acquireMcpConnection(server, projectRoot)
+      tools.push(...connection.tools)
+      releases.push(connection.release)
     } catch (error) {
-      await transport.close().catch(() => undefined)
       failures.push({ server, error: error instanceof Error ? error.message : String(error) })
       console.error(`Unable to connect MCP server ${server.id}:`, error)
     }
@@ -132,7 +282,7 @@ export const createPromptDesignMcpTools = async (
     tools,
     failures,
     close: async () => {
-      await Promise.all(clients.map((client) => client.close().catch(() => undefined)))
+      await Promise.all(releases.map((release) => release()))
     }
   }
 }

@@ -152,6 +152,7 @@ const AppContent = (): React.JSX.Element => {
     failed: number;
     names: string[];
     failedNames: string[];
+    isLoading?: boolean;
   } | null>(null);
 
   // 每次打开提示词设计页或切换设计项时重新检查 MCP 连接状态。
@@ -162,7 +163,14 @@ const AppContent = (): React.JSX.Element => {
     }
 
     let isMounted = true;
-    setMcpStatus(null);
+    setMcpStatus({
+      total: 0,
+      connected: 0,
+      failed: 0,
+      names: [],
+      failedNames: [],
+      isLoading: true,
+    });
     void window.api?.promptAi?.checkMcpStatus({ designItemId: activeDesignId ?? "" })
       .then((status) => {
         if (isMounted) setMcpStatus(status);

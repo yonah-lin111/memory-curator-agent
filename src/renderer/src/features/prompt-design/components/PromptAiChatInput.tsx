@@ -12,6 +12,7 @@ import {
   SendHorizontal,
   Bot,
   MessageSquare,
+  LoaderCircle,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Select } from "@/components/ui/Select";
@@ -110,6 +111,7 @@ export const PromptAiChatInput = ({
     failed: number;
     names: string[];
     failedNames: string[];
+    isLoading?: boolean;
   };
 }) => {
   const toast = useToast();
@@ -643,7 +645,11 @@ export const PromptAiChatInput = ({
                     <span className="text-[11px] font-semibold text-white/50">
                       MCP servers
                     </span>
-                    {mcpStatus.names.length > 0 ? (
+                    {mcpStatus.isLoading ? (
+                      <span className="text-xs text-white/40">
+                        Checking MCP servers...
+                      </span>
+                    ) : mcpStatus.names.length > 0 ? (
                       mcpStatus.names.map((name, index) => (
                         <span
                           key={`${name}-${index}`}
@@ -670,15 +676,23 @@ export const PromptAiChatInput = ({
                 >
                   <span
                     aria-hidden="true"
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      mcpStatus.total > 0 &&
-                      mcpStatus.connected === mcpStatus.total
-                        ? "bg-emerald-400"
-                        : mcpStatus.failed > 0 && mcpStatus.connected > 0
-                          ? "bg-amber-400"
-                          : "bg-red-400"
-                    }`}
-                  />
+                    className="flex h-3 w-3 items-center justify-center"
+                  >
+                    {mcpStatus.isLoading ? (
+                      <LoaderCircle className="h-3 w-3 animate-spin text-amber-400" />
+                    ) : (
+                      <span
+                        className={`block h-1.5 w-1.5 rounded-full ${
+                          mcpStatus.total > 0 &&
+                          mcpStatus.connected === mcpStatus.total
+                            ? "bg-emerald-400"
+                            : mcpStatus.failed > 0 && mcpStatus.connected > 0
+                              ? "bg-amber-400"
+                              : "bg-red-400"
+                        }`}
+                      />
+                    )}
+                  </span>
                 </div>
               </Tooltip>
             )}
