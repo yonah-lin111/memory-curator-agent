@@ -72,7 +72,7 @@ const isInlineInputShortcut = (event: KeyboardEvent): boolean =>
 const NEW_DESIGN_COMMAND: MarkdownSlashCommand = {
   id: "new",
   name: "/new {type}",
-  description: "新建",
+  description: "新建操作",
 };
 
 const TITLE_COMMAND: MarkdownSlashCommand = {
