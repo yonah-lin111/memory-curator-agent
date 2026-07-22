@@ -619,6 +619,12 @@ html:hover::-webkit-scrollbar-thumb,
   font-size: 14px !important;
 }
 
+/* 保持英文单词完整，超长无空格内容仍可换行。 */
+.curator-markdown-preview .md-editor-preview {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
 /* 恢复 Tailwind preflight 重置的列表记号 */
 .markdown-preview-container ul {
   list-style-type: disc;
