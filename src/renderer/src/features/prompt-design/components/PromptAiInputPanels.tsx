@@ -29,7 +29,7 @@ export const normalizeFileMentionItems = (
     }
 
     return {
-      id: result.id ?? result.path,
+      id: "id" in result ? result.id : result.path,
       path: result.path,
       isDirectory: result.isDirectory ?? result.path.endsWith("/"),
     };

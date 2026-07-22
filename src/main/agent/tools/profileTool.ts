@@ -6,9 +6,6 @@ import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation'
 // 个人信息可写字段。
 const PROFILE_FIELDS = ['avatar', 'name', 'gender', 'status', 'birthday', 'contact', 'tags', 'details'] as const
 
-// 个人信息更新字段类型。
-type ProfileField = (typeof PROFILE_FIELDS)[number]
-
 // 个人信息工具入参。
 type ProfileToolInput = Partial<PersonalProfileUpdateInput> & {
   confirmationSummary?: string

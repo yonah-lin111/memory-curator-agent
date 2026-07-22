@@ -2,14 +2,14 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
 import { Prec, StateEffect } from "@codemirror/state";
-import { Bot, FilePlus2 } from "lucide-react";
-import { CommandPanel } from "@/components/ai-shared/CommandPanel";
+import { Bot } from "lucide-react";
 import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import type { MarkdownEditorChangeBlock } from "@/components/ui/MarkdownEditor";
 import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
 import { useToast } from "@/components/ui/Toast";
 import { PromptAiSidebar } from "@/features/prompt-design/components/PromptAiSidebar";
 import { PromptAiInlineInput } from "@/features/prompt-design/components/PromptAiInlineInput";
+import { PromptAiSlashCommandPanel } from "@/features/prompt-design/components/PromptAiInputPanels";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
@@ -71,8 +71,8 @@ const isInlineInputShortcut = (event: KeyboardEvent): boolean =>
 
 const NEW_DESIGN_COMMAND: MarkdownSlashCommand = {
   id: "new",
-  name: "/new",
-  description: "新建提示词设计",
+  name: "/new {type}",
+  description: "新建",
 };
 
 const TITLE_COMMAND: MarkdownSlashCommand = {
@@ -87,8 +87,16 @@ const MARKDOWN_TOP_LEVEL_COMMANDS: MarkdownSlashCommand[] = [
 ];
 
 const NEW_DESIGN_CREATE_OPTIONS: MarkdownSlashCommand[] = [
-  { id: "module", name: "module[]", description: "在当前项目中创建模块" },
-  { id: "design", name: "design[]", description: "在当前项目中创建设计" },
+  {
+    id: "module",
+    name: "module[title] -params",
+    description: "在当前项目中创建模块",
+  },
+  {
+    id: "design",
+    name: "design[title] -params",
+    description: "在当前项目中创建设计",
+  },
 ];
 
 const NEW_DESIGN_ACTIONS: MarkdownSlashCommand[] = [
@@ -98,7 +106,8 @@ const NEW_DESIGN_ACTIONS: MarkdownSlashCommand[] = [
 /**
  * 判断当前命令行是否为待执行的标题生成命令。
  */
-const isPromptTitleCommand = (value: string): boolean => /^\/title\s+$/i.test(value);
+const isPromptTitleCommand = (value: string): boolean =>
+  /^\/title\s+$/i.test(value);
 
 /**
  * 取得光标所在行的斜杠命令文本及其文档范围。
@@ -115,9 +124,15 @@ const getSlashCommandLine = (
 /**
  * 根据当前命令行文本返回可显示的候选项。
  */
-const getMarkdownSlashCommandOptions = (value: string): MarkdownSlashCommand[] => {
+const getMarkdownSlashCommandOptions = (
+  value: string,
+): MarkdownSlashCommand[] => {
   if (isPromptChangeCommand(value)) return [];
   if (isPromptTitleCommand(value)) return [];
+  if (/^\/new(?:\s+(?:module|design)\[[^\]]*\])+/i.test(value)) {
+    const lastToken = value.trimEnd().split(/\s+/).at(-1) ?? "";
+    return lastToken.startsWith("-") ? NEW_DESIGN_ACTIONS : [];
+  }
   if (/^\/new\s*$/i.test(value)) return NEW_DESIGN_CREATE_OPTIONS;
   const commandQuery = value.trim().toLowerCase().replace(/^\//, "");
   const topLevelCommands = MARKDOWN_TOP_LEVEL_COMMANDS.filter((command) =>
@@ -248,8 +263,12 @@ const applyChangeBlock = (
   const lines = toLines(content);
   const originalLength = block.originalLines.length;
 
-  const beforeContext = block.beforeContext ?? (block.beforeLine === undefined ? [] : [block.beforeLine]);
-  const afterContext = block.afterContext ?? (block.afterLine === undefined ? [] : [block.afterLine]);
+  const beforeContext =
+    block.beforeContext ??
+    (block.beforeLine === undefined ? [] : [block.beforeLine]);
+  const afterContext =
+    block.afterContext ??
+    (block.afterLine === undefined ? [] : [block.afterLine]);
   const matchedIndexes: number[] = [];
   for (let index = 0; index <= lines.length - originalLength; index += 1) {
     const isOriginalMatch = block.originalLines.every(
@@ -261,7 +280,8 @@ const applyChangeBlock = (
     const hasAfterContext = afterContext.every(
       (line, offset) => lines[index + originalLength + offset] === line,
     );
-    if (isOriginalMatch && hasBeforeContext && hasAfterContext) matchedIndexes.push(index);
+    if (isOriginalMatch && hasBeforeContext && hasAfterContext)
+      matchedIndexes.push(index);
   }
   if (matchedIndexes.length !== 1) return null;
   const index = matchedIndexes[0];
@@ -295,14 +315,20 @@ export const PromptDesignWorkspace = ({
     [],
   );
   // Agent 未确认修改的最新完整候选正文，作为下一轮 Agent 的工作副本。
-  const [pendingCandidateContent, setPendingCandidateContent] = useState<string | null>(null);
+  const [pendingCandidateContent, setPendingCandidateContent] = useState<
+    string | null
+  >(null);
   const contentRef = useRef(content);
   const pendingCandidateContentRef = useRef<string | null>(null);
   const nextChangeIdRef = useRef(0);
   const pendingProgrammaticContentsRef = useRef<Set<string>>(new Set());
-  const controllerRef = useRef<ReturnType<typeof usePromptAiChatController> | null>(null);
+  const controllerRef = useRef<ReturnType<
+    typeof usePromptAiChatController
+  > | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
-  const [inlineInputView, setInlineInputView] = useState<EditorView | null>(null);
+  const [inlineInputView, setInlineInputView] = useState<EditorView | null>(
+    null,
+  );
   // Markdown 编辑器斜杠命令面板状态。
   const [markdownCommandLine, setMarkdownCommandLine] = useState<{
     from: number;
@@ -311,13 +337,21 @@ export const PromptDesignWorkspace = ({
   } | null>(null);
   const [markdownCommandPosition, setMarkdownCommandPosition] =
     useState<MarkdownSlashCommandPosition | null>(null);
-  const [activeMarkdownCommandIndex, setActiveMarkdownCommandIndex] = useState(0);
+  const [activeMarkdownCommandIndex, setActiveMarkdownCommandIndex] =
+    useState(0);
   const activeMarkdownCommandIndexRef = useRef(0);
   activeMarkdownCommandIndexRef.current = activeMarkdownCommandIndex;
   // 用于通知侧栏聊天输入框主动获取焦点。
   const [chatInputFocusVersion, setChatInputFocusVersion] = useState(0);
-  const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">("edit");
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; view: EditorView; mode: "edit" | "preview" | "split" } | null>(null);
+  const [editorMode, setEditorMode] = useState<"edit" | "preview" | "split">(
+    "edit",
+  );
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    view: EditorView;
+    mode: "edit" | "preview" | "split";
+  } | null>(null);
   const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
 
   // 初始化加载标识，防抖相关
@@ -329,7 +363,8 @@ export const PromptDesignWorkspace = ({
 
   const enqueueUpdate = useCallback(
     (id: string, designData: string): Promise<boolean> => {
-      const prevPromise = updatePromisesRef.current[id] || Promise.resolve(true);
+      const prevPromise =
+        updatePromisesRef.current[id] || Promise.resolve(true);
       const nextPromise = prevPromise.then(async () => {
         try {
           await window.api.promptDesign?.designs.update(id, { designData });
@@ -406,19 +441,27 @@ export const PromptDesignWorkspace = ({
         const previousLines = toLines(previousContent);
         const nextLines = toLines(nextContent);
         controllerRef.current?.setReferences((previous) => {
-          const nextReferences = previous.filter((reference) =>
-            previousLines.slice(reference.startLine - 1, reference.endLine).join("\n") ===
-              nextLines.slice(reference.startLine - 1, reference.endLine).join("\n") &&
-            previousLines.slice(0, reference.startLine - 1).join("\n") ===
-              nextLines.slice(0, reference.startLine - 1).join("\n"),
+          const nextReferences = previous.filter(
+            (reference) =>
+              previousLines
+                .slice(reference.startLine - 1, reference.endLine)
+                .join("\n") ===
+                nextLines
+                  .slice(reference.startLine - 1, reference.endLine)
+                  .join("\n") &&
+              previousLines.slice(0, reference.startLine - 1).join("\n") ===
+                nextLines.slice(0, reference.startLine - 1).join("\n"),
           );
           const removedCount = previous.length - nextReferences.length;
           if (removedCount > 0) {
-            toastRef.current.warning(`文档内容已改变，已移除 ${removedCount} 个失效引用`);
+            toastRef.current.warning(
+              `文档内容已改变，已移除 ${removedCount} 个失效引用`,
+            );
           }
           return nextReferences;
         });
-        const currentWorkingContent = pendingCandidateContentRef.current ?? previousContent;
+        const currentWorkingContent =
+          pendingCandidateContentRef.current ?? previousContent;
         let nextWorkingContent = currentWorkingContent;
         let hasSyncConflict = false;
         for (const userBlock of getChangeBlocks(previousContent, nextContent)) {
@@ -435,13 +478,20 @@ export const PromptDesignWorkspace = ({
 
         if (hasSyncConflict) {
           // 不猜测重复文本的目标位置，保留候选分支并标记冲突供用户处理。
-          setChangeBlocks((previous) => previous.map((block) => ({ ...block, status: "conflict" })));
-        } else {
-          const nextBlocks = getChangeBlocks(nextContent, nextWorkingContent).map(
-            (block) => ({ ...block, id: `ai-change-${nextChangeIdRef.current++}` }),
+          setChangeBlocks((previous) =>
+            previous.map((block) => ({ ...block, status: "conflict" })),
           );
+        } else {
+          const nextBlocks = getChangeBlocks(
+            nextContent,
+            nextWorkingContent,
+          ).map((block) => ({
+            ...block,
+            id: `ai-change-${nextChangeIdRef.current++}`,
+          }));
           setChangeBlocks(nextBlocks);
-          const nextCandidate = nextBlocks.length > 0 ? nextWorkingContent : null;
+          const nextCandidate =
+            nextBlocks.length > 0 ? nextWorkingContent : null;
           setPendingCandidateContent(nextCandidate);
           pendingCandidateContentRef.current = nextCandidate;
         }
@@ -460,7 +510,8 @@ export const PromptDesignWorkspace = ({
    */
   const handleEditorSuggestion = useCallback(
     (workingContent: string, candidateContent: string): boolean => {
-      const expectedWorkingContent = pendingCandidateContentRef.current ?? contentRef.current;
+      const expectedWorkingContent =
+        pendingCandidateContentRef.current ?? contentRef.current;
       // 忽略基于过期正文生成的异步工具结果，避免覆盖最新待审候选。
       if (workingContent !== expectedWorkingContent) return false;
       const blocks = getChangeBlocks(contentRef.current, candidateContent).map(
@@ -485,65 +536,107 @@ export const PromptDesignWorkspace = ({
   );
   controllerRef.current = controller;
 
-  const getReferenceRange = useCallback((view: EditorView): PromptDesignReference | null => {
-    const selection = view.state.selection.main;
-    const from = Math.min(selection.from, selection.to);
-    const to = Math.max(selection.from, selection.to);
-    const start = view.state.doc.lineAt(from);
-    const end = view.state.doc.lineAt(to);
-    const startLine = start.number;
-    const endLine = end.number;
-    if (endLine - startLine + 1 > 200) return null;
-    return { id: `reference-${Date.now()}`, startLine, endLine, content: view.state.doc.sliceString(start.from, end.to) };
-  }, []);
+  const getReferenceRange = useCallback(
+    (view: EditorView): PromptDesignReference | null => {
+      const selection = view.state.selection.main;
+      const from = Math.min(selection.from, selection.to);
+      const to = Math.max(selection.from, selection.to);
+      const start = view.state.doc.lineAt(from);
+      const end = view.state.doc.lineAt(to);
+      const startLine = start.number;
+      const endLine = end.number;
+      if (endLine - startLine + 1 > 200) return null;
+      return {
+        id: `reference-${Date.now()}`,
+        startLine,
+        endLine,
+        content: view.state.doc.sliceString(start.from, end.to),
+      };
+    },
+    [],
+  );
 
-  const handleContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>, view: EditorView): void => {
-    event.preventDefault();
-    const selection = view.state.selection.main;
-    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-    if (pos !== null && !(pos >= selection.from && pos <= selection.to && selection.from !== selection.to)) {
-      view.dispatch({ selection: { anchor: pos, head: pos } });
-    }
-    setContextMenu({ x: event.clientX, y: event.clientY, view, mode: editorMode });
-  }, []);
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>, view: EditorView): void => {
+      event.preventDefault();
+      const selection = view.state.selection.main;
+      const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+      if (
+        pos !== null &&
+        !(
+          pos >= selection.from &&
+          pos <= selection.to &&
+          selection.from !== selection.to
+        )
+      ) {
+        view.dispatch({ selection: { anchor: pos, head: pos } });
+      }
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        view,
+        mode: editorMode,
+      });
+    },
+    [],
+  );
 
-  const copySelection = useCallback(async (view: EditorView, cut = false): Promise<void> => {
-    const selection = view.state.selection.main;
-    const text = view.state.sliceDoc(selection.from, selection.to);
-    try {
-      await navigator.clipboard.writeText(text);
-      if (cut && selection.from !== selection.to) view.dispatch({ changes: { from: selection.from, to: selection.to, insert: "" } });
-    } catch { toast.error("剪贴板操作失败"); }
-    setContextMenu(null);
-  }, [toast]);
+  const copySelection = useCallback(
+    async (view: EditorView, cut = false): Promise<void> => {
+      const selection = view.state.selection.main;
+      const text = view.state.sliceDoc(selection.from, selection.to);
+      try {
+        await navigator.clipboard.writeText(text);
+        if (cut && selection.from !== selection.to)
+          view.dispatch({
+            changes: { from: selection.from, to: selection.to, insert: "" },
+          });
+      } catch {
+        toast.error("剪贴板操作失败");
+      }
+      setContextMenu(null);
+    },
+    [toast],
+  );
 
   /**
    * 将编辑器选区加入当前 AI 对话引用，并合并相邻区间。
    */
-  const addSelectionReference = useCallback((view: EditorView): boolean => {
-    const selection = view.state.selection.main;
-    if (selection.from === selection.to) return false;
+  const addSelectionReference = useCallback(
+    (view: EditorView): boolean => {
+      const selection = view.state.selection.main;
+      if (selection.from === selection.to) return false;
 
-    const reference = getReferenceRange(view);
-    if (!reference) {
-      toast.warning("引用最多支持200行");
-      return false;
-    }
-
-    controllerRef.current?.setReferences((previous) => {
-      const merged = [...previous, reference].sort((a, b) => a.startLine - b.startLine);
-      const result: PromptDesignReference[] = [];
-      for (const item of merged) {
-        const last = result.at(-1);
-        if (last && item.startLine <= last.endLine + 1) {
-          last.endLine = Math.max(last.endLine, item.endLine);
-          last.content = view.state.doc.line(last.startLine).from <= view.state.doc.length ? view.state.doc.sliceString(view.state.doc.line(last.startLine).from, view.state.doc.line(last.endLine).to) : last.content;
-        } else result.push({ ...item });
+      const reference = getReferenceRange(view);
+      if (!reference) {
+        toast.warning("引用最多支持200行");
+        return false;
       }
-      return result.slice(0, 10);
-    });
-    return true;
-  }, [getReferenceRange, toast]);
+
+      controllerRef.current?.setReferences((previous) => {
+        const merged = [...previous, reference].sort(
+          (a, b) => a.startLine - b.startLine,
+        );
+        const result: PromptDesignReference[] = [];
+        for (const item of merged) {
+          const last = result.at(-1);
+          if (last && item.startLine <= last.endLine + 1) {
+            last.endLine = Math.max(last.endLine, item.endLine);
+            last.content =
+              view.state.doc.line(last.startLine).from <= view.state.doc.length
+                ? view.state.doc.sliceString(
+                    view.state.doc.line(last.startLine).from,
+                    view.state.doc.line(last.endLine).to,
+                  )
+                : last.content;
+          } else result.push({ ...item });
+        }
+        return result.slice(0, 10);
+      });
+      return true;
+    },
+    [getReferenceRange, toast],
+  );
 
   /**
    * 通过右键菜单添加引用后，将焦点转交给侧栏聊天输入框。
@@ -559,26 +652,33 @@ export const PromptDesignWorkspace = ({
   /**
    * 定位引用对应的编辑器内容，并在原文未变更时选中该范围。
    */
-  const handleReferenceSelect = useCallback((reference: PromptDesignReference): void => {
-    const view = editorViewRef.current;
-    if (!view || reference.startLine < 1 || reference.endLine > view.state.doc.lines) {
-      toast.warning("引用内容已改变，无法定位");
-      return;
-    }
+  const handleReferenceSelect = useCallback(
+    (reference: PromptDesignReference): void => {
+      const view = editorViewRef.current;
+      if (
+        !view ||
+        reference.startLine < 1 ||
+        reference.endLine > view.state.doc.lines
+      ) {
+        toast.warning("引用内容已改变，无法定位");
+        return;
+      }
 
-    const from = view.state.doc.line(reference.startLine).from;
-    const to = view.state.doc.line(reference.endLine).to;
-    if (view.state.doc.sliceString(from, to) !== reference.content) {
-      toast.warning("引用内容已改变，无法定位");
-      return;
-    }
+      const from = view.state.doc.line(reference.startLine).from;
+      const to = view.state.doc.line(reference.endLine).to;
+      if (view.state.doc.sliceString(from, to) !== reference.content) {
+        toast.warning("引用内容已改变，无法定位");
+        return;
+      }
 
-    view.dispatch({
-      selection: { anchor: from, head: to },
-      effects: EditorView.scrollIntoView(from, { y: "center" }),
-    });
-    view.focus();
-  }, [toast]);
+      view.dispatch({
+        selection: { anchor: from, head: to },
+        effects: EditorView.scrollIntoView(from, { y: "center" }),
+      });
+      view.focus();
+    },
+    [toast],
+  );
 
   // 初始化加载当前 activeDesignId 的数据
   useEffect(() => {
@@ -605,37 +705,40 @@ export const PromptDesignWorkspace = ({
       }, remaining);
     };
 
-    void window.api.promptDesign?.designs.list().then((designs) => {
-      if (!isMounted) return;
-      const design = designs.find((d) => d.id === activeDesignId);
-      if (design) {
-        const loadedContent = design.designData || "";
-        pendingProgrammaticContentsRef.current.add(loadedContent);
-        contentRef.current = loadedContent;
-        setContent(loadedContent);
-        setSavedContent(loadedContent);
-        setChangeBlocks([]);
-        setPendingCandidateContent(null);
-        pendingCandidateContentRef.current = null;
-        setHistoryResetVersion((version) => version + 1);
-      } else {
-        // Fallback for not found active design
-        contentRef.current = "";
-        setContent("");
-        setSavedContent("");
-        setChangeBlocks([]);
-        setPendingCandidateContent(null);
-        pendingCandidateContentRef.current = null;
-        setHistoryResetVersion((version) => version + 1);
-      }
-      setIsSaving(false);
-      finishInitializing();
-    }).catch((error) => {
-      if (!isMounted) return;
-      console.error(`加载提示词设计失败[${activeDesignId}]:`, error);
-      toastRef.current.error("加载提示词设计失败");
-      finishInitializing();
-    });
+    void window.api.promptDesign?.designs
+      .list()
+      .then((designs) => {
+        if (!isMounted) return;
+        const design = designs.find((d) => d.id === activeDesignId);
+        if (design) {
+          const loadedContent = design.designData || "";
+          pendingProgrammaticContentsRef.current.add(loadedContent);
+          contentRef.current = loadedContent;
+          setContent(loadedContent);
+          setSavedContent(loadedContent);
+          setChangeBlocks([]);
+          setPendingCandidateContent(null);
+          pendingCandidateContentRef.current = null;
+          setHistoryResetVersion((version) => version + 1);
+        } else {
+          // Fallback for not found active design
+          contentRef.current = "";
+          setContent("");
+          setSavedContent("");
+          setChangeBlocks([]);
+          setPendingCandidateContent(null);
+          pendingCandidateContentRef.current = null;
+          setHistoryResetVersion((version) => version + 1);
+        }
+        setIsSaving(false);
+        finishInitializing();
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        console.error(`加载提示词设计失败[${activeDesignId}]:`, error);
+        toastRef.current.error("加载提示词设计失败");
+        finishInitializing();
+      });
 
     return () => {
       isMounted = false;
@@ -646,14 +749,16 @@ export const PromptDesignWorkspace = ({
 
   // 使用 setBeforeDesignSwitch 在切换设计时冲刷当前设计
   useEffect(() => {
-    const unsubscribe = usePromptDesignStore.getState().setBeforeDesignSwitch(async () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-      flushSave();
-      return true;
-    });
+    const unsubscribe = usePromptDesignStore
+      .getState()
+      .setBeforeDesignSwitch(async () => {
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = null;
+        }
+        flushSave();
+        return true;
+      });
     return unsubscribe;
   }, [flushSave]);
 
@@ -678,43 +783,53 @@ export const PromptDesignWorkspace = ({
   /**
    * 执行完整的新建设计命令，并从正文中移除该命令行。
    */
-  const executeNewDesignCommand = useCallback((view: EditorView): void => {
-    const commandLine = getSlashCommandLine(view);
-    if (!commandLine || !isPromptChangeCommand(commandLine.value)) return;
+  const executeNewDesignCommand = useCallback(
+    (view: EditorView): void => {
+      const commandLine = getSlashCommandLine(view);
+      if (!commandLine || !isPromptChangeCommand(commandLine.value)) return;
 
-    view.dispatch({
-      changes: { from: commandLine.from, to: commandLine.to, insert: "" },
-      selection: { anchor: commandLine.from },
-    });
-    setMarkdownCommandLine(null);
-    setMarkdownCommandPosition(null);
-    void executePromptChangeCommand(commandLine.value)
-      .then(() => toast.success("提示词设计创建成功"))
-      .catch((error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "创建提示词设计失败"),
-      );
-  }, [toast]);
+      view.dispatch({
+        changes: { from: commandLine.from, to: commandLine.to, insert: "" },
+        selection: { anchor: commandLine.from },
+      });
+      setMarkdownCommandLine(null);
+      setMarkdownCommandPosition(null);
+      void executePromptChangeCommand(commandLine.value)
+        .then(() => toast.success("提示词设计创建成功"))
+        .catch((error: unknown) =>
+          toast.error(
+            error instanceof Error ? error.message : "创建提示词设计失败",
+          ),
+        );
+    },
+    [toast],
+  );
 
   /**
    * 执行标题生成命令，并从正文中移除该命令行。
    */
-  const executePromptTitleCommandLine = useCallback((view: EditorView): void => {
-    const commandLine = getSlashCommandLine(view);
-    if (!commandLine || !isPromptTitleCommand(commandLine.value)) return;
+  const executePromptTitleCommandLine = useCallback(
+    (view: EditorView): void => {
+      const commandLine = getSlashCommandLine(view);
+      if (!commandLine || !isPromptTitleCommand(commandLine.value)) return;
 
-    view.dispatch({
-      changes: { from: commandLine.from, to: commandLine.to, insert: "" },
-      selection: { anchor: commandLine.from },
-    });
-    setMarkdownCommandLine(null);
-    setMarkdownCommandPosition(null);
-    toast.info("正在生成设计标题...");
-    void executePromptTitleCommand()
-      .then(() => toast.success("设计标题已更新"))
-      .catch((error: unknown) =>
-        toast.error(error instanceof Error ? error.message : "更新设计标题失败"),
-      );
-  }, [toast]);
+      view.dispatch({
+        changes: { from: commandLine.from, to: commandLine.to, insert: "" },
+        selection: { anchor: commandLine.from },
+      });
+      setMarkdownCommandLine(null);
+      setMarkdownCommandPosition(null);
+      toast.info("正在生成设计标题...");
+      void executePromptTitleCommand()
+        .then(() => toast.success("设计标题已更新"))
+        .catch((error: unknown) =>
+          toast.error(
+            error instanceof Error ? error.message : "更新设计标题失败",
+          ),
+        );
+    },
+    [toast],
+  );
 
   /**
    * 同步 Markdown 光标处的斜杠命令面板位置与候选项。
@@ -740,116 +855,153 @@ export const PromptDesignWorkspace = ({
     setMarkdownCommandLine(commandLine);
     setMarkdownCommandPosition(
       window.innerHeight - coords.bottom < window.innerHeight * 0.3
-        ? { left, top: "auto", bottom: window.innerHeight - coords.top + offset }
+        ? {
+            left,
+            top: "auto",
+            bottom: window.innerHeight - coords.top + offset,
+          }
         : { left, top: coords.bottom + offset, bottom: "auto" },
     );
   }, []);
 
-  const handleEditorViewReady = useCallback((view: EditorView): void => {
-    if (editorViewRef.current === view) return;
-    editorViewRef.current = view;
-    view.dispatch({
-      effects: StateEffect.appendConfig.of([
-        Prec.high(
-          EditorView.domEventHandlers({
-          keydown: (event, editorView) => {
-            const commandLine = getSlashCommandLine(editorView);
-            const commands = commandLine
-              ? getMarkdownSlashCommandOptions(commandLine.value)
-              : [];
-            if (
-              event.key === "Enter" &&
-              !event.isComposing &&
-              commandLine &&
-              isPromptChangeCommand(commandLine.value)
-            ) {
-              event.preventDefault();
-              executeNewDesignCommand(editorView);
-              return true;
-            }
-            if (
-              event.key === "Enter" &&
-              !event.isComposing &&
-              commandLine &&
-              isPromptTitleCommand(commandLine.value)
-            ) {
-              event.preventDefault();
-              executePromptTitleCommandLine(editorView);
-              return true;
-            }
-            if (commandLine && commands.length > 0) {
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                event.preventDefault();
-                const direction = event.key === "ArrowDown" ? 1 : -1;
-                setActiveMarkdownCommandIndex(
-                  (index) => (index + direction + commands.length) % commands.length,
-                );
-                return true;
-              }
-              if (event.key === "Escape") {
-                event.preventDefault();
-                setMarkdownCommandLine(null);
-                setMarkdownCommandPosition(null);
-                return true;
-              }
-              if (event.key === "Enter" && !event.isComposing) {
-                const command =
-                  commands[activeMarkdownCommandIndexRef.current] ?? commands[0];
-                if (command) {
+  const handleEditorViewReady = useCallback(
+    (view: EditorView): void => {
+      if (editorViewRef.current === view) return;
+      editorViewRef.current = view;
+      view.dispatch({
+        effects: StateEffect.appendConfig.of([
+          Prec.high(
+            EditorView.domEventHandlers({
+              keydown: (event, editorView) => {
+                const commandLine = getSlashCommandLine(editorView);
+                const commands = commandLine
+                  ? getMarkdownSlashCommandOptions(commandLine.value)
+                  : [];
+                if (
+                  event.key === "Enter" &&
+                  !event.isComposing &&
+                  commandLine &&
+                  isPromptChangeCommand(commandLine.value)
+                ) {
                   event.preventDefault();
-                  if (command.id === "new") {
-                    const insert = "/new ";
-                    const cursor = commandLine.from + insert.length;
-                    editorView.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
-                      selection: { anchor: cursor },
-                    });
-                  } else if (command.id === "title") {
-                    const insert = "/title ";
-                    editorView.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
-                      selection: { anchor: commandLine.from + insert.length },
-                    });
-                  } else if (command.id === "module" || command.id === "design") {
-                    const insert = getPromptCommandTemplate(command.id);
-                    editorView.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
-                      selection: { anchor: commandLine.from + insert.length - 1 },
-                    });
-                  } else {
-                    const insert = applyPromptAction(commandLine.value, command.id);
-                    editorView.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
-                      selection: { anchor: commandLine.from + insert.length },
-                    });
-                  }
+                  executeNewDesignCommand(editorView);
                   return true;
                 }
-              }
-            }
+                if (
+                  event.key === "Enter" &&
+                  !event.isComposing &&
+                  commandLine &&
+                  isPromptTitleCommand(commandLine.value)
+                ) {
+                  event.preventDefault();
+                  executePromptTitleCommandLine(editorView);
+                  return true;
+                }
+                if (commandLine && commands.length > 0) {
+                  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                    event.preventDefault();
+                    const direction = event.key === "ArrowDown" ? 1 : -1;
+                    setActiveMarkdownCommandIndex(
+                      (index) =>
+                        (index + direction + commands.length) % commands.length,
+                    );
+                    return true;
+                  }
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setMarkdownCommandLine(null);
+                    setMarkdownCommandPosition(null);
+                    return true;
+                  }
+                  if (event.key === "Enter" && !event.isComposing) {
+                    const command =
+                      commands[activeMarkdownCommandIndexRef.current] ??
+                      commands[0];
+                    if (command) {
+                      event.preventDefault();
+                      if (command.id === "new") {
+                        const insert = "/new ";
+                        const cursor = commandLine.from + insert.length;
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert,
+                          },
+                          selection: { anchor: cursor },
+                        });
+                      } else if (command.id === "title") {
+                        const insert = "/title ";
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert,
+                          },
+                          selection: {
+                            anchor: commandLine.from + insert.length,
+                          },
+                        });
+                      } else if (
+                        command.id === "module" ||
+                        command.id === "design"
+                      ) {
+                        const insert = getPromptCommandTemplate(command.id);
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert,
+                          },
+                          selection: {
+                            anchor: commandLine.from + insert.length,
+                          },
+                        });
+                      } else {
+                        const insert = applyPromptAction(
+                          commandLine.value,
+                          command.id,
+                        );
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert,
+                          },
+                          selection: {
+                            anchor: commandLine.from + insert.length,
+                          },
+                        });
+                      }
+                      return true;
+                    }
+                  }
+                }
 
-            if (!isInlineInputShortcut(event) || event.repeat) return false;
-            event.preventDefault();
-            addSelectionReference(editorView);
-            setInlineInputView(editorView);
-            return true;
-          },
+                if (!isInlineInputShortcut(event) || event.repeat) return false;
+                event.preventDefault();
+                addSelectionReference(editorView);
+                setInlineInputView(editorView);
+                return true;
+              },
+            }),
+          ),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged || update.selectionSet) {
+              syncMarkdownCommandPanel(update.view);
+            }
           }),
-        ),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged || update.selectionSet) {
-            syncMarkdownCommandPanel(update.view);
-          }
-        }),
-      ]),
-    });
-    syncMarkdownCommandPanel(view);
-  }, [
-    addSelectionReference,
-    executeNewDesignCommand,
-    executePromptTitleCommandLine,
-    syncMarkdownCommandPanel,
-  ]);
+        ]),
+      });
+      syncMarkdownCommandPanel(view);
+    },
+    [
+      addSelectionReference,
+      executeNewDesignCommand,
+      executePromptTitleCommandLine,
+      syncMarkdownCommandPanel,
+    ],
+  );
 
   /**
    * 通过 CodeMirror 事务应用 Agent 已确认的正文，保留选区与滚动位置。
@@ -876,7 +1028,8 @@ export const PromptDesignWorkspace = ({
     });
 
     requestAnimationFrame(() => {
-      const maxScrollTop = view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
+      const maxScrollTop =
+        view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight;
       view.scrollDOM.scrollTop = Math.min(scrollTop, Math.max(0, maxScrollTop));
     });
   }, []);
@@ -897,15 +1050,21 @@ export const PromptDesignWorkspace = ({
           scheduleSave(activeDesignId, nextContent);
         }
 
-        const candidateContent = pendingCandidateContentRef.current ?? nextContent;
-        const remainingBlocks = getChangeBlocks(nextContent, candidateContent).map(
-          (item) => ({ ...item, id: `ai-change-${nextChangeIdRef.current++}` }),
-        );
+        const candidateContent =
+          pendingCandidateContentRef.current ?? nextContent;
+        const remainingBlocks = getChangeBlocks(
+          nextContent,
+          candidateContent,
+        ).map((item) => ({
+          ...item,
+          id: `ai-change-${nextChangeIdRef.current++}`,
+        }));
         setChangeBlocks(remainingBlocks);
         setPendingCandidateContent(
           remainingBlocks.length > 0 ? candidateContent : null,
         );
-        pendingCandidateContentRef.current = remainingBlocks.length > 0 ? candidateContent : null;
+        pendingCandidateContentRef.current =
+          remainingBlocks.length > 0 ? candidateContent : null;
         return;
       }
       setChangeBlocks((previous) =>
@@ -917,23 +1076,33 @@ export const PromptDesignWorkspace = ({
     [applyAcceptedContent, changeBlocks, scheduleSave, activeDesignId],
   );
 
-  const handleRejectChange = useCallback((id: string): void => {
-    const block = changeBlocks.find((item) => item.id === id);
-    const candidateContent = pendingCandidateContentRef.current;
-    if (!block || !candidateContent) return;
-    const nextCandidateContent = applyChangeBlock(candidateContent, {
-      ...block,
-      originalLines: block.candidateLines,
-      candidateLines: block.originalLines,
-    });
-    if (nextCandidateContent === null) return;
-    const nextBlocks = getChangeBlocks(contentRef.current, nextCandidateContent).map(
-      (item) => ({ ...item, id: `ai-change-${nextChangeIdRef.current++}` }),
-    );
-    setChangeBlocks(nextBlocks);
-    setPendingCandidateContent(nextBlocks.length > 0 ? nextCandidateContent : null);
-    pendingCandidateContentRef.current = nextBlocks.length > 0 ? nextCandidateContent : null;
-  }, [changeBlocks]);
+  const handleRejectChange = useCallback(
+    (id: string): void => {
+      const block = changeBlocks.find((item) => item.id === id);
+      const candidateContent = pendingCandidateContentRef.current;
+      if (!block || !candidateContent) return;
+      const nextCandidateContent = applyChangeBlock(candidateContent, {
+        ...block,
+        originalLines: block.candidateLines,
+        candidateLines: block.originalLines,
+      });
+      if (nextCandidateContent === null) return;
+      const nextBlocks = getChangeBlocks(
+        contentRef.current,
+        nextCandidateContent,
+      ).map((item) => ({
+        ...item,
+        id: `ai-change-${nextChangeIdRef.current++}`,
+      }));
+      setChangeBlocks(nextBlocks);
+      setPendingCandidateContent(
+        nextBlocks.length > 0 ? nextCandidateContent : null,
+      );
+      pendingCandidateContentRef.current =
+        nextBlocks.length > 0 ? nextCandidateContent : null;
+    },
+    [changeBlocks],
+  );
 
   /**
    * 接受当前候选正文中的全部变更，并将结果加入保存队列。
@@ -967,13 +1136,18 @@ export const PromptDesignWorkspace = ({
         <div className="min-h-0 flex-1 relative flex flex-col">
           {activeDesignId ? (
             <>
-              <LoadingOverlay isLoading={isInitializing} text="Loading prompt..." />
+              <LoadingOverlay
+                isLoading={isInitializing}
+                text="Loading prompt..."
+              />
               <MarkdownEditor
                 aiChangeBlocks={changeBlocks}
                 fontSizeStorageKey="prompt-design-editor"
                 id="prompt-design-editor"
                 showSaveStatus
-                isSaved={!isInitializing && !isSaving && content === savedContent}
+                isSaved={
+                  !isInitializing && !isSaving && content === savedContent
+                }
                 onAcceptAiChange={handleAcceptChange}
                 onAcceptAllAiChanges={handleAcceptAllChanges}
                 onBlur={handleEditorBlur}
@@ -989,22 +1163,27 @@ export const PromptDesignWorkspace = ({
                 onContextMenu={handleContextMenu}
                 onModeChange={setEditorMode}
               />
-              <CommandPanel
+              <PromptAiSlashCommandPanel
                 isOpen={Boolean(markdownCommandLine && markdownCommandPosition)}
-                ariaLabel="提示词设计命令"
-                items={markdownCommandLine
-                  ? getMarkdownSlashCommandOptions(markdownCommandLine.value)
-                  : []}
+                commands={
+                  markdownCommandLine
+                    ? getMarkdownSlashCommandOptions(markdownCommandLine.value)
+                    : []
+                }
                 activeIndex={activeMarkdownCommandIndex}
                 onActiveIndexChange={setActiveMarkdownCommandIndex}
-                onItemSelect={(command) => {
+                onCommandSelect={(command) => {
                   const view = editorViewRef.current;
                   const commandLine = view ? getSlashCommandLine(view) : null;
                   if (!view || !commandLine) return;
                   if (command.id === "new") {
                     const insert = "/new ";
                     view.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      changes: {
+                        from: commandLine.from,
+                        to: commandLine.to,
+                        insert,
+                      },
                       selection: { anchor: commandLine.from + insert.length },
                     });
                     return;
@@ -1012,7 +1191,11 @@ export const PromptDesignWorkspace = ({
                   if (command.id === "title") {
                     const insert = "/title ";
                     view.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
+                      changes: {
+                        from: commandLine.from,
+                        to: commandLine.to,
+                        insert,
+                      },
                       selection: { anchor: commandLine.from + insert.length },
                     });
                     return;
@@ -1020,28 +1203,29 @@ export const PromptDesignWorkspace = ({
                   if (command.id === "module" || command.id === "design") {
                     const insert = getPromptCommandTemplate(command.id);
                     view.dispatch({
-                      changes: { from: commandLine.from, to: commandLine.to, insert },
-                      selection: { anchor: commandLine.from + insert.length - 1 },
+                      changes: {
+                        from: commandLine.from,
+                        to: commandLine.to,
+                        insert,
+                      },
+                      selection: { anchor: commandLine.from + insert.length },
                     });
                     return;
                   }
-                  const insert = applyPromptAction(commandLine.value, command.id);
+                  if (command.id !== "root") return;
+                  const insert = applyPromptAction(
+                    commandLine.value,
+                    command.id,
+                  );
                   view.dispatch({
-                    changes: { from: commandLine.from, to: commandLine.to, insert },
+                    changes: {
+                      from: commandLine.from,
+                      to: commandLine.to,
+                      insert,
+                    },
                     selection: { anchor: commandLine.from + insert.length },
                   });
                 }}
-                renderItem={(command) => (
-                  <div className="flex w-full items-center gap-2">
-                    <FilePlus2 className="h-4 w-4 shrink-0 opacity-50" />
-                    <div className="min-w-0 flex-1 text-left">
-                      <div className="truncate text-sm font-medium">{command.name}</div>
-                      <div className="truncate text-xs text-white/35">
-                        {command.description}
-                      </div>
-                    </div>
-                  </div>
-                )}
                 idPrefix="prompt-markdown-slash-command"
                 keyboardOnly
                 className="fixed z-[100] w-[360px]"
@@ -1070,7 +1254,34 @@ export const PromptDesignWorkspace = ({
           ) : null}
         </div>
       </div>
-      {contextMenu && <PromptDesignContextMenu x={contextMenu.x} y={contextMenu.y} isEditMode={contextMenu.mode !== "preview"} canPaste={contextMenu.mode !== "preview"} canQuote={contextMenu.mode !== "preview" && contextMenu.view.state.selection.main.from !== contextMenu.view.state.selection.main.to} onCopy={() => void copySelection(contextMenu.view)} onPaste={() => { void navigator.clipboard.readText().then((text) => contextMenu.view.dispatch(contextMenu.view.state.replaceSelection(text))).catch(() => toast.error("剪贴板操作失败")); setContextMenu(null); }} onCut={() => void copySelection(contextMenu.view, true)} onQuote={handleQuote} onClose={() => setContextMenu(null)} />}
+      {contextMenu && (
+        <PromptDesignContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isEditMode={contextMenu.mode !== "preview"}
+          canPaste={contextMenu.mode !== "preview"}
+          canQuote={
+            contextMenu.mode !== "preview" &&
+            contextMenu.view.state.selection.main.from !==
+              contextMenu.view.state.selection.main.to
+          }
+          onCopy={() => void copySelection(contextMenu.view)}
+          onPaste={() => {
+            void navigator.clipboard
+              .readText()
+              .then((text) =>
+                contextMenu.view.dispatch(
+                  contextMenu.view.state.replaceSelection(text),
+                ),
+              )
+              .catch(() => toast.error("剪贴板操作失败"));
+            setContextMenu(null);
+          }}
+          onCut={() => void copySelection(contextMenu.view, true)}
+          onQuote={handleQuote}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       <PromptAiSidebar
         isOpen={isPromptAiSidebarOpen}
         mcpStatus={mcpStatus}

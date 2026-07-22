@@ -31,12 +31,11 @@ export const applyPromptAction = (value: string, action: "root"): string =>
  * 判断输入是否是可执行的 /new 创建命令。
  */
 export const isPromptChangeCommand = (value: string): boolean => {
-  const { moduleName, designName } = parsePromptCreation(value);
-  return (
-    /^\/new(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-root)*\s*$/i.test(
-      value,
-    ) && Boolean(moduleName || designName)
+  const isNewCommand = /^\/new(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-root)*\s*$/i.test(
+    value,
   );
+  const hasCreationToken = /\b(?:module|design)\[[^\]]*\]/i.test(value);
+  return isNewCommand && hasCreationToken;
 };
 
 /**
@@ -56,30 +55,34 @@ export const executePromptChangeCommand = async (
   value: string,
 ): Promise<{ created: "module" | "design"; opened: boolean }> => {
   const { moduleName, designName } = parsePromptCreation(value);
+  const hasModuleToken = /\bmodule\[[^\]]*\]/i.test(value);
+  const hasDesignToken = /\bdesign\[[^\]]*\]/i.test(value);
+  const resolvedModuleName = moduleName || (hasModuleToken ? "new module" : undefined);
+  const resolvedDesignName = designName || (hasDesignToken ? "new design" : undefined);
   const store = usePromptDesignStore.getState();
   const projectId = store.activeProjectId;
   const shouldCreateAtRoot = value.trim().split(/\s+/).includes("-root");
-  const shouldOpenDesign = Boolean(designName);
+  const shouldOpenDesign = Boolean(resolvedDesignName);
 
   if (!projectId) {
     throw new Error("请先在侧边栏选择项目");
   }
-  if (!moduleName && !designName) {
+  if (!resolvedModuleName && !resolvedDesignName) {
     throw new Error("请至少填写模块或设计名称");
   }
 
   let moduleId = shouldCreateAtRoot ? undefined : store.activeModuleId ?? undefined;
-  if (moduleName) {
+  if (resolvedModuleName) {
     const module = await (window.api as any).promptDesign.modules.create({
       projectId,
-      name: moduleName,
+      name: resolvedModuleName,
     });
     if (!shouldCreateAtRoot) {
       moduleId = module.id;
     }
   }
 
-  if (moduleName && !designName) {
+  if (resolvedModuleName && !resolvedDesignName) {
     if (shouldOpenDesign && !shouldCreateAtRoot) {
       store.setActiveModuleId(moduleId ?? null);
     }
@@ -90,7 +93,7 @@ export const executePromptChangeCommand = async (
   const design = await (window.api as any).promptDesign.designs.create({
     projectId,
     moduleId,
-    name: designName || "new design",
+    name: resolvedDesignName,
   });
   const sessions = await (window.api as any).promptAi.listSessions(design.id);
   if (!sessions?.length) {
