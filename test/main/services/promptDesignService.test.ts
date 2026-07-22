@@ -103,4 +103,48 @@ describe('promptDesignService', () => {
       expect.objectContaining({ id: 'd-3', moduleId: undefined })
     )
   })
+
+  it('places a new module design first', () => {
+    promptDesignService.createDesign({
+      id: 'd-1',
+      projectId: 'p-1',
+      moduleId: 'm-1',
+      name: 'Existing Design'
+    })
+    promptDesignService.createDesign({
+      id: 'd-2',
+      projectId: 'p-1',
+      moduleId: 'm-1',
+      name: 'New Design'
+    })
+
+    const moduleDesigns = promptDesignService
+      .listDesigns('p-1')
+      .filter((design) => design.moduleId === 'm-1')
+
+    expect(moduleDesigns.map((design) => design.id)).toEqual(['d-2', 'd-1'])
+  })
+
+  it('persists prompt design sort order', () => {
+    promptDesignService.createDesign({
+      id: 'd-1',
+      projectId: 'p-1',
+      moduleId: 'm-1',
+      name: 'First Design'
+    })
+    promptDesignService.createDesign({
+      id: 'd-2',
+      projectId: 'p-1',
+      moduleId: 'm-1',
+      name: 'Second Design'
+    })
+
+    const sortedDesigns = promptDesignService.sortDesigns(['d-2', 'd-1'])
+
+    expect(sortedDesigns.map((design) => design.id)).toEqual(['d-2', 'd-1'])
+    expect(promptDesignService.listDesigns('p-1').map((design) => design.id)).toEqual([
+      'd-2',
+      'd-1'
+    ])
+  })
 })

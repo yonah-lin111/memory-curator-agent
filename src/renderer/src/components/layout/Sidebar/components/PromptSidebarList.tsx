@@ -6,6 +6,7 @@ import {
   Search,
   Plus,
   Import,
+  ArrowUpDown,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -31,6 +32,13 @@ type PromptSidebarProps = {
   onCollapsedChange?: (collapsed: boolean) => void;
   "aria-hidden"?: boolean;
   onDesignSelected?: () => void;
+};
+
+// 提示词状态的展示排序权重。
+const PROMPT_STATUS_SORT_ORDER: Record<PromptDesignStatus, number> = {
+  in_progress: 0,
+  todo: 1,
+  completed: 2,
 };
 
 export const PromptSidebarList = ({
@@ -241,6 +249,32 @@ export const PromptSidebarList = ({
     } catch (error) {
       console.error("Update prompt design status failed", error);
       showError("切换失败");
+    }
+  };
+
+  /**
+   * 按状态对提示词排序，保持同一状态下原有的相对顺序。
+   */
+  const handleSortPrompts = async (): Promise<void> => {
+    const sortedIds = designs
+      .map((design, index) => ({ design, index }))
+      .sort((left, right) => {
+        const statusDifference =
+          PROMPT_STATUS_SORT_ORDER[left.design.status ?? "todo"] -
+          PROMPT_STATUS_SORT_ORDER[right.design.status ?? "todo"];
+
+        return statusDifference || left.index - right.index;
+      })
+      .map(({ design }) => design.id);
+
+    try {
+      const sortedDesigns = await (window.api as any).promptDesign.designs.sort(
+        sortedIds,
+      );
+      setDesigns(sortedDesigns);
+    } catch (error) {
+      console.error("Sort prompt designs failed", error);
+      showError("排序失败");
     }
   };
 
@@ -556,9 +590,12 @@ export const PromptSidebarList = ({
   const renderItemTitle = (item: any) => {
     const isEditing = editingId === item.id;
     const isTruncated = truncatedIds.has(item.id);
+    const isCompletedPrompt = item.status === "completed";
     const titleElement = (
       <div
-        className="min-w-0 flex-1 truncate text-xs"
+        className={`min-w-0 flex-1 truncate text-xs ${
+          isCompletedPrompt ? "text-white/40 line-through decoration-white/30" : ""
+        }`}
         onMouseEnter={(event) => {
           updateTruncatedTitle(item.id, event.currentTarget);
         }}
@@ -612,6 +649,14 @@ export const PromptSidebarList = ({
         </Tooltip>
 
         <div className="flex items-center gap-0.5">
+          <Tooltip content="按状态排序" placement="bottom">
+            <IconButton
+              aria-label="Sort prompts by status"
+              onClick={() => void handleSortPrompts()}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </IconButton>
+          </Tooltip>
           <Tooltip content="导入项目" placement="bottom">
             <IconButton
               aria-label="Import project"
@@ -649,7 +694,7 @@ export const PromptSidebarList = ({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4 flex flex-col gap-6 px-1">
+      <div className="flex-1 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] pr-1 pb-4 flex flex-col gap-6 px-1">
         <div className="flex flex-col gap-4">
           {filteredProjects.length > 0 ? (
             filteredProjects.map((proj) => {

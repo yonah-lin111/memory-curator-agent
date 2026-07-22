@@ -1023,6 +1023,7 @@ const api = {
       create: (input: any) => ipcRenderer.invoke('prompt-design:designs:create', input),
       rename: (id: string, name: string) => ipcRenderer.invoke('prompt-design:designs:rename', id, name),
       update: (id: string, input: any) => ipcRenderer.invoke('prompt-design:designs:update', id, input),
+      sort: (ids: string[]) => ipcRenderer.invoke('prompt-design:designs:sort', ids),
       delete: (id: string) => ipcRenderer.invoke('prompt-design:designs:delete', id)
     },
     searchFiles: (directory: string, query: string): Promise<{ path: string; isDirectory: boolean }[]> =>

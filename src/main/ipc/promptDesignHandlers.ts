@@ -138,6 +138,10 @@ export const registerPromptDesignHandlers = (): void => {
     promptDesignService.updateDesign(id, input)
   })
 
+  ipcMain.handle("prompt-design:designs:sort", (_, ids: string[]) => {
+    return promptDesignService.sortDesigns(ids)
+  })
+
   ipcMain.handle("prompt-design:designs:delete", (_, id) => {
     promptDesignService.deleteDesign(id)
   })

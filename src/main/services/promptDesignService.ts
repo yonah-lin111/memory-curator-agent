@@ -149,9 +149,9 @@ export const promptDesignService = {
     let rows: PromptDesignRow[]
     
     if (projectId) {
-      rows = db.prepare("SELECT * FROM prompt_design_items WHERE project_id = ? ORDER BY created_at ASC").all(projectId) as PromptDesignRow[]
+      rows = db.prepare("SELECT * FROM prompt_design_items WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC, id ASC").all(projectId) as PromptDesignRow[]
     } else {
-      rows = db.prepare("SELECT * FROM prompt_design_items ORDER BY created_at ASC").all() as PromptDesignRow[]
+      rows = db.prepare("SELECT * FROM prompt_design_items ORDER BY sort_order ASC, created_at ASC, id ASC").all() as PromptDesignRow[]
     }
 
     return rows.map((row) => ({
@@ -161,6 +161,7 @@ export const promptDesignService = {
       name: row.name,
       designData: row.design_data ?? "",
       status: row.status,
+      sortOrder: row.sort_order,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }))
@@ -171,10 +172,21 @@ export const promptDesignService = {
     const id = input.id || createCompactUuid()
     const now = new Date().toISOString()
     const designDataStr = input.designData ?? ""
+    const sortOrder = input.moduleId
+      ? (db
+          .prepare(
+            "SELECT COALESCE(MIN(sort_order), 0) - 1 AS sort_order FROM prompt_design_items WHERE project_id = ? AND module_id = ?",
+          )
+          .get(input.projectId, input.moduleId) as { sort_order: number })
+      : (db
+          .prepare(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 AS sort_order FROM prompt_design_items WHERE project_id = ? AND module_id IS NULL",
+          )
+          .get(input.projectId) as { sort_order: number })
 
     db.prepare(
-      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, "todo", now, now)
+      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, status, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, "todo", sortOrder.sort_order, now, now)
 
     return {
       id,
@@ -183,6 +195,7 @@ export const promptDesignService = {
       name: input.name,
       designData: designDataStr,
       status: "todo",
+      sortOrder: sortOrder.sort_order,
       createdAt: now,
       updatedAt: now,
     }
@@ -231,6 +244,19 @@ export const promptDesignService = {
     })
 
     transaction()
+  },
+
+  sortDesigns: (ids: string[]): PromptDesign[] => {
+    const db = getDatabase()
+    const updateSortOrder = db.prepare(
+      "UPDATE prompt_design_items SET sort_order = ? WHERE external_id = ?",
+    )
+
+    db.transaction(() => {
+      ids.forEach((id, index) => updateSortOrder.run(index, id))
+    })()
+
+    return promptDesignService.listDesigns()
   },
 
   deleteDesign: (id: string): void => {

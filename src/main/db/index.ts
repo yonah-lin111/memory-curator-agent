@@ -1103,6 +1103,7 @@ export const createPromptDesignTables = (database: Database.Database): void => {
       name TEXT NOT NULL,
       design_data TEXT,
       status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'completed')),
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE,
@@ -1353,6 +1354,33 @@ export const initDatabase = (): Database.Database => {
     }
 
     sqlite.pragma('user_version = 4')
+  }
+
+  if (currentVersion < 5) {
+    const promptDesignColumns = sqlite
+      .prepare("PRAGMA table_info(prompt_design_items)")
+      .all() as Array<{ name: string }>
+
+    if (!promptDesignColumns.some((column) => column.name === "sort_order")) {
+      sqlite.exec(
+        "ALTER TABLE prompt_design_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+      )
+
+      const rows = sqlite
+        .prepare(
+          "SELECT external_id FROM prompt_design_items ORDER BY created_at ASC, id ASC",
+        )
+        .all() as Array<{ external_id: string }>
+      const updateSortOrder = sqlite.prepare(
+        "UPDATE prompt_design_items SET sort_order = ? WHERE external_id = ?",
+      )
+
+      sqlite.transaction(() => {
+        rows.forEach((row, index) => updateSortOrder.run(index, row.external_id))
+      })()
+    }
+
+    sqlite.pragma('user_version = 5')
   }
 
   // 启用 SQLite 外键约束，以支持级联删除

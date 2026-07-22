@@ -1062,6 +1062,7 @@ type AppAPI = {
       create: (input: any) => Promise<any>
       rename: (id: string, name: string) => Promise<void>
       update: (id: string, input: any) => Promise<void>
+      sort: (ids: string[]) => Promise<any[]>
       delete: (id: string) => Promise<void>
     }
     modules: {

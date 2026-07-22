@@ -408,6 +408,7 @@ export type PromptDesignRow = {
   name: string;
   design_data: string;
   status: PromptDesignStatus;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 };
@@ -420,6 +421,7 @@ export type PromptDesign = {
   name: string;
   designData: string;
   status: PromptDesignStatus;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 };
