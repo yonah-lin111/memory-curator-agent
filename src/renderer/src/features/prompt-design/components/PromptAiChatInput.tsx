@@ -41,14 +41,6 @@ import type {
   PromptAiUndoResult,
 } from "@/features/prompt-design/components/usePromptAiChatController";
 import { Tag } from "@/components/ui/Tag";
-import {
-  executePromptChangeCommand,
-  executePromptTitleCommand,
-  applyPromptAction,
-  getPromptCommandOptions,
-  getPromptCommandTemplate,
-  isPromptChangeCommand,
-} from "@/features/prompt-design/lib/promptCommand";
 
 const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
 
@@ -58,14 +50,6 @@ const MCP_COMMAND = {
   name: "/mcp",
   aliases: [],
   description: "List available MCP servers and tools",
-  addToContext: false,
-} as const;
-
-const PROMPT_COMMAND = {
-  id: "prompt",
-  name: "/prompt",
-  aliases: [],
-  description: "创建模块或设计",
   addToContext: false,
 } as const;
 
@@ -149,19 +133,12 @@ export const PromptAiChatInput = ({
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
 
   const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
-    const promptCommands = getPromptCommandOptions(inputText);
-    if (promptCommands.length > 0) {
-      return promptCommands;
-    }
     const commands = getMatchedCommands(inputText).filter((cmd) =>
       ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
     );
     const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(inputText)
       ? [MCP_COMMAND]
       : [];
-    if ("/prompt".startsWith(inputText.trim().toLowerCase())) {
-      customCommands.push(PROMPT_COMMAND);
-    }
     return [...commands, ...customCommands];
   }, [inputText]);
 
@@ -299,33 +276,11 @@ export const PromptAiChatInput = ({
       } else if (commandId === "suggest") {
         setInputText("");
         onSuggestQuestions?.();
-      } else if (commandId === "prompt") {
-        setInputText("/prompt ");
-        setIsCommandPanelOpen(true);
-      } else if (commandId === "title") {
-        setInputText("");
-        toast.info("正在总结设计标题...");
-        try {
-          await executePromptTitleCommand();
-          toast.success("设计标题已更新");
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : "更新设计标题失败");
-        }
-      } else if (commandId === "module" || commandId === "design") {
-        const template = getPromptCommandTemplate(commandId);
-        setInputText(template);
-        requestAnimationFrame(() => {
-          const cursorPosition = template.length - 1;
-          textareaRef.current?.setSelectionRange(cursorPosition, cursorPosition);
-        });
-      } else if (commandId === "root") {
-        setInputText(applyPromptAction(inputText, "root"));
       }
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
     [
       disabled,
-      inputText,
       onMcp,
       onNewChat,
       onSuggestQuestions,
@@ -372,29 +327,12 @@ export const PromptAiChatInput = ({
         return;
       }
 
-      if (isPromptChangeCommand(nextValue)) {
-        setIsCommandPanelOpen(false);
-        closeFileMentionPanel();
-        return;
-      }
-
-      const promptCommands = getPromptCommandOptions(nextValue);
-      if (promptCommands.length > 0) {
-        setIsCommandPanelOpen(true);
-        setActiveCommandIndex(0);
-        closeFileMentionPanel();
-        return;
-      }
-
       const commands = getMatchedCommands(nextValue).filter((cmd) =>
         ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
       );
       const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(nextValue)
         ? [MCP_COMMAND]
         : [];
-      if ("/prompt".startsWith(nextValue.trim().toLowerCase())) {
-        customCommands.push(PROMPT_COMMAND);
-      }
       const nextMatchedCommands = [...commands, ...customCommands];
 
       const shouldOpenCommandPanel =
@@ -437,23 +375,6 @@ export const PromptAiChatInput = ({
       await executeCommand("mcp");
       return;
     }
-    if (isPromptChangeCommand(inputText)) {
-      try {
-        const result = await executePromptChangeCommand(inputText);
-        setInputText("");
-        toast.success(
-          result.opened
-            ? "已创建并打开设计"
-            : result.created === "design"
-              ? "已创建设计"
-              : "已创建模块",
-        );
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "创建设计失败");
-      }
-      return;
-    }
-
     if (inputText.trim() && onSend) {
       // 发送前清理无用的前缀
       const cleanedText = inputText
@@ -785,11 +706,11 @@ export const PromptAiChatInput = ({
             </button>
             <IconButton
               aria-label="Send message"
-              disabled={!inputText.trim() || isPromptChangeCommand(inputText)}
-              highlighted={Boolean(inputText.trim()) && !isPromptChangeCommand(inputText)}
+              disabled={!inputText.trim()}
+              highlighted={Boolean(inputText.trim())}
               onClick={handleSend}
               className={`rounded-full flex items-center justify-center transition-all ${
-                inputText.trim() && !isPromptChangeCommand(inputText)
+                inputText.trim()
                   ? "bg-white text-black hover:bg-white/90"
                   : "bg-white/10 text-white/30 cursor-not-allowed"
               }`}
