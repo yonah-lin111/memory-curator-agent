@@ -714,6 +714,7 @@ export const PromptDesignWorkspace = ({
               <LoadingOverlay isLoading={isInitializing} text="Loading prompt..." />
               <MarkdownEditor
                 aiChangeBlocks={changeBlocks}
+                fontSizeStorageKey="prompt-design-editor"
                 id="prompt-design-editor"
                 showSaveStatus
                 isSaved={!isInitializing && !isSaving && content === savedContent}

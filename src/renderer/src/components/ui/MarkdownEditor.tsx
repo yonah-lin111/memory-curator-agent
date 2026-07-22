@@ -11,6 +11,7 @@ import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } fr
 import { useMarkdownFileMention } from "@/features/prompt-design/hooks/useMarkdownFileMention";
 import { MarkdownEditorFooter } from "@/components/ui/MarkdownEditorFooter";
 import { MarkdownEditorToolbar } from "@/components/ui/MarkdownEditorToolbar";
+import { getMarkdownEditorFontSize, saveMarkdownEditorFontSize } from "@/lib/markdownEditorFontSize";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
@@ -526,6 +527,8 @@ export interface MarkdownEditorProps {
   onModeChange?: (mode: MarkdownEditorMode) => void;
   // 递增时清空撤销与重做历史。
   historyResetVersion?: number;
+  // 当前编辑器的独立字号持久化键，未设置时不持久化。
+  fontSizeStorageKey?: string;
 }
 
 /**
@@ -551,9 +554,21 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   onContextMenu,
   onModeChange,
   historyResetVersion,
+  fontSizeStorageKey,
 }, ref): React.JSX.Element => {
   // 编辑器实例引用，用于调用暴露的方法。
   const editorRef = useRef<ExposeParam>(null);
+  // 当前实例字号，可按设置键独立恢复。
+  const [fontSize, setFontSize] = useState(() => getMarkdownEditorFontSize(fontSizeStorageKey));
+  useEffect(() => {
+    setFontSize(getMarkdownEditorFontSize(fontSizeStorageKey));
+  }, [fontSizeStorageKey]);
+  /**
+   * 更新当前实例字号，并在配置持久化键时写入本地存储。
+   */
+  const updateFontSize = useCallback((nextFontSize: number): void => {
+    setFontSize(saveMarkdownEditorFontSize(nextFontSize, fontSizeStorageKey));
+  }, [fontSizeStorageKey]);
   // 当前显示模式，用于同步工具栏高亮状态。
   const [editorMode, setEditorMode] = useState<MarkdownEditorMode>(defaultMode ?? "edit");
   // 进入仅预览前的模式，用于快捷键退出后恢复原布局。
@@ -655,8 +670,9 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
   const editorStyle = useMemo<React.CSSProperties>(
     () => ({
       height: typeof height === "number" ? `${height}px` : height,
+      fontSize: `${fontSize}px`,
     }),
-    [height],
+    [fontSize, height],
   );
 
   // 组合外层类名。
@@ -738,9 +754,11 @@ export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEdit
       </div>
       <MarkdownEditorFooter
         aiChangeCount={aiChangeBlocks.length}
+        fontSize={fontSize}
         isSaved={isSaved}
         onAcceptAllAiChanges={onAcceptAllAiChanges}
         onRejectAllAiChanges={onRejectAllAiChanges}
+        onFontSizeChange={updateFontSize}
         showSaveStatus={showSaveStatus}
         value={value}
       />

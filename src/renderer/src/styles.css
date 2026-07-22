@@ -236,6 +236,7 @@ html:hover::-webkit-scrollbar-thumb,
 /* Markdown 编辑器无默认样式模式——去除边框和背景，由外层容器控制。 */
 .md-editor-clean.md-editor,
 .md-editor-clean.md-editor-dark {
+  --md-color: #b8b8b8 !important;
   --md-bk-color: transparent !important;
   --md-bk-color-outstand: transparent !important;
   --md-border-color: transparent !important;
@@ -245,6 +246,16 @@ html:hover::-webkit-scrollbar-thumb,
   --md-scrollbar-thumb-active-color: rgba(255, 255, 255, 0.35) !important;
   border: none !important;
   background: transparent !important;
+}
+
+/* 编辑区字号由 MarkdownEditor 的内联样式控制，避免被 CodeMirror 默认字号覆盖。 */
+.md-editor-clean .cm-editor {
+  color: #b8b8b8 !important;
+  font-size: inherit !important;
+}
+
+.md-editor-clean .cm-content {
+  color: #b8b8b8 !important;
 }
 
 /* 当 .md-editor-clean 整体被 hover 时，显示其内置自定义滚动条滑块（颜色设为微白 10%） */
@@ -339,7 +350,10 @@ html:hover::-webkit-scrollbar-thumb,
   font: inherit;
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .md-editor .cm-ai-diff-controls button:focus-visible {
