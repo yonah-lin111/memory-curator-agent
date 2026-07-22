@@ -271,7 +271,7 @@ export const ExecutionGroupBlock = ({
             {renderGroupedParts()}
           </div>
         </div>
-        <div className="flex items-center gap-1 pl-1 text-xs leading-relaxed text-white/40">
+        <div className="flex items-center gap-1 pl-1 text-xs leading-relaxed text-white/45">
           <svg
             className="h-3 w-3 shrink-0 stroke-current"
             viewBox="0 0 12 12"

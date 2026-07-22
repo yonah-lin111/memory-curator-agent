@@ -70,7 +70,7 @@ export const PromptAiMcpCallBlock = ({
                     <path d="M3 1v5h7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <span className="min-w-0 break-all font-mono text-xs text-white/80">{toolName}</span>
+                <span className="min-w-0 break-all font-mono text-xs text-white/45">{toolName}</span>
                 <presentation.Icon
                   className={`mt-0.5 h-3 w-3 shrink-0 ${presentation.className}`}
                 />

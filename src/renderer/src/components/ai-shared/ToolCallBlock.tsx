@@ -16,6 +16,9 @@ import {
   ChartNoAxesCombined,
   Palette,
   Wrench,
+  Check,
+  LoaderCircle,
+  X,
 } from "lucide-react";
 import type {
   CuratorToolStep,
@@ -65,39 +68,41 @@ type CuratorToolCallBlockProps = {
   connectsToNextExecution?: boolean;
 };
 
-// 根据工具步骤状态返回状态展示配置。
-const getStatusConfig = (
+/**
+ * 根据工具步骤状态返回观察文本后的状态图标配置。
+ */
+const getToolStatusPresentation = (
   status: CuratorToolStepStatus,
 ): {
-  // 状态显示文本。
-  label: string;
-  // 状态样式类名。
+  // 状态图标组件。
+  Icon: React.ComponentType<{ className?: string }>;
+  // 状态图标样式类名。
   className: string;
 } => {
   switch (status) {
     case "done":
       return {
-        label: "Tool completed",
+        Icon: Check,
         className: "text-emerald-400",
       };
     case "failed":
       return {
-        label: "Tool failed",
+        Icon: X,
         className: "text-red-400",
       };
     case "cancelled":
       return {
-        label: "Cancelled",
+        Icon: X,
         className: "text-white/35",
       };
     case "running":
       return {
-        label: "Running",
-        className: "text-amber-400 animate-spin",
+        Icon: LoaderCircle,
+        className: "animate-spin text-amber-400",
       };
     case "queued":
       return {
-        label: "Queued",
+        Icon: LoaderCircle,
         className: "text-white/30",
       };
   }
@@ -204,14 +209,14 @@ const renderAskAnswerSummary = (data: unknown): React.JSX.Element | null => {
             <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
               {index === 0 ? rightAngleSvg : <span className="w-3" />}
             </span>
-            <span className="text-white/35">{item.question}</span>
+            <span className="text-white/45">{item.question}</span>
           </div>
           {/* 选择 */}
           <div className="pl-4 flex items-start gap-1 text-xs leading-relaxed text-white/45">
             <span className="inline-flex h-[1.625em] w-3 flex-shrink-0 items-center justify-center select-none">
               {rightAngleSvg}
             </span>
-            <span className="min-w-0 text-white/70">
+            <span className="min-w-0 text-white/45">
               {item.answers.length > 0 ? item.answers.join("、") : "未回答"}
             </span>
           </div>
@@ -336,7 +341,7 @@ const CuratorToolRequestPanelContainer = ({
             />
           </svg>
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-white/45">
           <CuratorAskRequestPanel
             request={activeRequest}
             onSubmit={activeOnSubmit}
@@ -439,20 +444,6 @@ type GroupedToolStep = {
   steps: CuratorToolStep[];
 };
 
-/**
- * 动态计算同一组内步骤的总体状态。
- */
-const getGroupStatus = (
-  groupSteps: CuratorToolStep[],
-): CuratorToolStepStatus => {
-  if (groupSteps.some((s) => s.status === "running")) return "running";
-  if (groupSteps.some((s) => s.status === "failed")) return "failed";
-  if (groupSteps.some((s) => s.status === "cancelled")) return "cancelled";
-  if (groupSteps.every((s) => s.status === "done")) return "done";
-  if (groupSteps.some((s) => s.status === "queued")) return "queued";
-  return "done";
-};
-
 // 展开余下步骤的容器组件，支持 max-height 与 opacity 平滑过渡。
 const RemainingStepsContainer = ({
   steps,
@@ -531,6 +522,7 @@ export const CuratorToolCallBlock = ({
   // 单个工具步骤渲染函数。
   const renderStep = (step: CuratorToolStep) => {
     const displayObservation = formatToolObservation(step);
+    const statusPresentation = getToolStatusPresentation(step.status);
     const askRequest = isCuratorAskRequest(step.data) ? step.data : null;
     const toolConfirmationRequest = isCuratorToolConfirmationRequest(step.data)
       ? step.data
@@ -569,9 +561,12 @@ export const CuratorToolCallBlock = ({
               />
             </svg>
           </span>
-          <span className="flex-1 min-w-0 break-all whitespace-pre-wrap">
+          <span className="min-w-0 break-all whitespace-pre-wrap text-white/45">
             {displayObservation}
           </span>
+          <statusPresentation.Icon
+            className={`mt-0.5 h-3 w-3 shrink-0 ${statusPresentation.className}`}
+          />
         </div>
         {toolConfirmationRequest?.input ? (
           <CuratorToolChangePreview
@@ -595,8 +590,6 @@ export const CuratorToolCallBlock = ({
       {/* 步骤列表 */}
       <div className="relative flex flex-col gap-3 pl-1">
         {groupedSteps.map((group, groupIndex) => {
-          const groupStatus = getGroupStatus(group.steps);
-          const config = getStatusConfig(groupStatus);
           const StatusIcon = getToolIcon(group.tool);
 
           const hasMoreSteps = group.steps.length > COLLAPSE_THRESHOLD;
@@ -613,12 +606,10 @@ export const CuratorToolCallBlock = ({
               {/* 时间轴节点列 */}
               <div className="relative flex flex-col items-center flex-shrink-0 w-6 self-stretch">
                 <div
-                  aria-label={config.label}
+                  aria-label={group.tool}
                   className="relative z-10 flex items-center justify-center"
                 >
-                  <StatusIcon
-                    className={`h-[15px] w-[15px] ${config.className}`}
-                  />
+                  <StatusIcon className="h-[15px] w-[15px] text-white/50" />
                 </div>
                 {groupIndex < groupedSteps.length - 1 ? (
                   <div className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5" />

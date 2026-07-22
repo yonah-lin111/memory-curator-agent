@@ -80,7 +80,7 @@ export const CuratorSkillCallBlock = ({
                     strokeLinejoin="round"
                   />
                 </svg>
-                <span className="min-w-0 break-all font-mono text-xs text-white/80">
+                <span className="min-w-0 break-all font-mono text-xs text-white/45">
                   {getSkillName(step)}
                 </span>
                 <presentation.Icon
