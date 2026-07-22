@@ -563,10 +563,10 @@ export const CuratorToolCallBlock = ({
           </span>
           <span className="min-w-0 break-all whitespace-pre-wrap text-white/45">
             {displayObservation}
+            <statusPresentation.Icon
+              className={`ml-1 inline-block h-3 w-3 align-text-bottom ${statusPresentation.className}`}
+            />
           </span>
-          <statusPresentation.Icon
-            className={`mt-0.5 h-3 w-3 shrink-0 ${statusPresentation.className}`}
-          />
         </div>
         {toolConfirmationRequest?.input ? (
           <CuratorToolChangePreview
