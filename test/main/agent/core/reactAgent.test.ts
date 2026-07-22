@@ -70,6 +70,53 @@ const PEOPLE_DELETE_CONFIRMATION: AgentTool["confirmation"] = {
 };
 
 describe("reactAgent", () => {
+  it("未授权工具调用失败后继续 Agent 流程", async () => {
+    const providerInputs: ModelTurnInput[] = [];
+    const provider: ModelProvider = {
+      id: "fake",
+      type: "openai-compatible",
+      streamTurn: async function* (input) {
+        providerInputs.push(input);
+        if (providerInputs.length === 1) {
+          yield {
+            type: "tool_call_done",
+            id: "call-unauthorized",
+            name: "codegraph_explore",
+            argumentsText: "{}",
+          };
+          return;
+        }
+
+        yield { type: "text_delta", delta: "已继续处理。" };
+      },
+    };
+
+    const events = await Array.fromAsync(
+      runReactAgent({
+        provider,
+        model: "fake-model",
+        messages: [{ role: "user", content: "继续处理" }],
+        tools: [],
+        maxTurns: 2,
+      }),
+    );
+
+    expect(events).toContainEqual({
+      type: "tool_failed",
+      id: "call-unauthorized",
+      name: "codegraph_explore",
+      input: {},
+      error: "The model requested an unauthorized tool: codegraph_explore",
+    });
+    expect(events).toContainEqual({ type: "text_delta", delta: "已继续处理。" });
+    expect(providerInputs).toHaveLength(2);
+    expect(providerInputs[1].messages.at(-1)).toMatchObject({
+      role: "tool",
+      toolCallId: "call-unauthorized",
+      name: "codegraph_explore",
+    });
+  });
+
   it("将推理片段与工具调用一并回灌到下一轮", async () => {
     const providerInputs: ModelTurnInput[] = [];
     const provider: ModelProvider = {

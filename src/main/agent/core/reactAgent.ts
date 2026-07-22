@@ -380,7 +380,19 @@ export async function* runReactAgent(input: ReactAgentRunInput): AsyncGenerator<
 
       const tool = toolsByName.get(toolCall.name)
       if (!tool) {
-        throw new Error(`The model requested an unauthorized tool: ${toolCall.name || '<empty>'}`)
+        const error = `The model requested an unauthorized tool: ${toolCall.name || '<empty>'}`
+
+        yield {
+          type: 'tool_failed',
+          id: toolCall.id,
+          name: toolCall.name,
+          input: parseToolArguments(toolCall),
+          error
+        }
+
+        appendSilentToolFailureMessage(messages, toolCall, error)
+        executedAnyNonDoomLoop = true
+        continue
       }
 
       const toolInput = parseToolArguments(toolCall)

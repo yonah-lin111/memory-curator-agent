@@ -752,6 +752,27 @@ async function runPromptAiChat(
           step.status = "failed";
           step.observation = `Tool execution failed: ${event.error}`;
           step.data = { error: event.error };
+        } else {
+          const failedMcpStep: AiToolStep = {
+            id: event.id,
+            title: `MCP tool failed: ${event.name}`,
+            tool: event.name,
+            status: "failed",
+            input: event.input,
+            observation: `Tool execution failed: ${event.error}`,
+            data: { error: event.error },
+            mcp: {
+              serverId: "unavailable",
+              serverName: "MCP",
+              toolName: event.name,
+            },
+          };
+          assistantToolSteps.push(failedMcpStep);
+          assistantParts.push({
+            id: createCompactUuid(),
+            kind: "tool",
+            stepId: failedMcpStep.id,
+          });
         }
         db.upsertToolCall({
           id: createCompactUuid(),

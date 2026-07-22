@@ -74,6 +74,11 @@ export const PromptAiMcpCallBlock = ({
                 <presentation.Icon
                   className={`mt-0.5 h-3 w-3 shrink-0 ${presentation.className}`}
                 />
+                {step.status === "failed" && step.observation ? (
+                  <span className="min-w-0 break-all text-xs text-red-300/80">
+                    {step.observation}
+                  </span>
+                ) : null}
               </div>
             );
           })}
