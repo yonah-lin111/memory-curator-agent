@@ -282,17 +282,20 @@ export const PromptSidebarList = ({
     }
   };
 
-  const toggleProject = (projectId: string) => {
+  /**
+   * 切换项目展开状态，并保留空项目首次默认收起的行为。
+   */
+  const toggleProject = (projectId: string, defaultCollapsed = false): void => {
     setCollapsedProjects((prev) => ({
       ...prev,
-      [projectId]: !prev[projectId],
+      [projectId]: !(prev[projectId] ?? defaultCollapsed),
     }));
   };
 
   const toggleModule = (moduleId: string) => {
     setCollapsedModules((previous) => ({
       ...previous,
-      [moduleId]: !previous[moduleId],
+      [moduleId]: !(previous[moduleId] ?? true),
     }));
   };
 
@@ -824,14 +827,17 @@ export const PromptSidebarList = ({
         <div className="flex flex-col gap-4">
           {filteredProjects.length > 0 ? (
             filteredProjects.map((proj) => {
-              const isCollapsed = collapsedProjects[proj.id];
+              const isEmptyProject =
+                proj.modules.length === 0 && proj.directPrompts.length === 0;
+              const isCollapsed =
+                collapsedProjects[proj.id] ?? isEmptyProject;
               return (
                 <div key={proj.id} className="flex flex-col gap-1.5">
                   <div
                     className={`flex items-center justify-between px-1 py-1 cursor-pointer rounded-[6px] transition-colors group ${activeProjectId === proj.id ? "bg-white/10" : "hover:bg-white/[0.02]"}`}
                     onClick={() => {
                       if (editingId !== proj.id && editingPathId !== proj.id) {
-                        toggleProject(proj.id);
+                        toggleProject(proj.id, isEmptyProject);
                       }
                     }}
                     onContextMenu={(e) => handleContextMenu(e, "project", proj)}
@@ -910,11 +916,15 @@ export const PromptSidebarList = ({
                   {!isCollapsed && (
                     <div className="flex flex-col gap-0.5">
                       {proj.modules.length > 0
-                        ? proj.modules.map((module: any) => (
-                            <div
-                              key={module.id}
-                              className="flex flex-col gap-0.5"
-                            >
+                          ? proj.modules.map((module: any) => {
+                            const isModuleCollapsed =
+                              collapsedModules[module.id] ?? true;
+
+                            return (
+                              <div
+                                key={module.id}
+                                className="flex flex-col gap-0.5"
+                              >
                               <div
                                 className="flex w-full cursor-pointer items-center rounded-[6px] px-1 py-1 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
                                 onClick={() => {
@@ -954,17 +964,18 @@ export const PromptSidebarList = ({
                                   renderItemTitle(module)
                                 )}
                                 <ChevronRight
-                                  className={`h-3.5 w-3.5 text-white/30 transition-transform ${collapsedModules[module.id] ? "" : "rotate-90"}`}
+                                  className={`h-3.5 w-3.5 text-white/30 transition-transform ${isModuleCollapsed ? "" : "rotate-90"}`}
                                 />
                               </div>
-                              {!collapsedModules[module.id] &&
+                              {!isModuleCollapsed &&
                                 renderPromptGroups(
                                   module.prompts,
                                   proj,
                                   module.id,
                                 )}
-                            </div>
-                          ))
+                              </div>
+                            );
+                          })
                         : null}
                       {renderPromptGroups(proj.directPrompts, proj, null)}
                       {proj.modules.length === 0 &&
