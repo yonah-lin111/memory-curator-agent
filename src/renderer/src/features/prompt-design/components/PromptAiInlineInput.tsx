@@ -209,8 +209,6 @@ export const PromptAiInlineInput = ({
       });
     } else if (commandId === "root") {
       setInputText(applyPromptAction(inputText, "root"));
-    } else if (commandId === "change") {
-      setInputText(applyPromptAction(inputText, "change"));
     }
 
     requestAnimationFrame(() => textareaRef.current?.focus());

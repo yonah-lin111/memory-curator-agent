@@ -102,7 +102,7 @@ export class PromptAiPersistenceService {
       if (!checkDesign) {
         this.db.prepare(`
           INSERT INTO prompt_design_items (external_id, project_id, name, created_at, updated_at)
-          VALUES ('default-design-item-id', 'default-project-id', 'Default Design', ?, ?)
+          VALUES ('default-design-item-id', 'default-project-id', 'new design', ?, ?)
         `).run(input.timestamp, input.timestamp);
       }
     }

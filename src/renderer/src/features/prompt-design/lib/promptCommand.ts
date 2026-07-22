@@ -1,8 +1,9 @@
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+import { isFuzzyCommandMatch } from "@/lib/ai-shared/utils";
 
 // Prompt 创建命令的候选项。
 export interface PromptCommandOption {
-  id: "module" | "design" | "title" | "root" | "change";
+  id: "module" | "design" | "title" | "root";
   name: string;
   description: string;
 }
@@ -48,11 +49,6 @@ const PROMPT_ACTION_OPTIONS: PromptCommandOption[] = [
     name: "-root",
     description: "在项目根目录创建",
   },
-  {
-    id: "change",
-    name: "-change",
-    description: "创建并打开设计",
-  },
 ];
 
 /**
@@ -69,13 +65,16 @@ export const getPromptCommandOptions = (value: string): PromptCommandOption[] =>
   }
 
   const lastToken = normalizedValue.split(/\s+/).at(-1) ?? "";
-  if (!lastToken.startsWith("-")) {
-    return [];
+  if (lastToken.startsWith("-")) {
+    const actionQuery = lastToken.slice(1).toLowerCase();
+    return PROMPT_ACTION_OPTIONS.filter((option) =>
+      isFuzzyCommandMatch(actionQuery, option.id),
+    );
   }
 
-  return normalizedValue.split(/\s+/).includes("-root")
-    ? PROMPT_ACTION_OPTIONS.filter((option) => option.id === "change")
-    : PROMPT_ACTION_OPTIONS;
+  return PROMPT_CREATE_OPTIONS.filter((option) =>
+    isFuzzyCommandMatch(lastToken.toLowerCase(), option.id),
+  );
 };
 
 /**
@@ -87,7 +86,7 @@ export const getPromptCommandTemplate = (commandId: "module" | "design"): string
 /**
  * 将当前未完成的操作命令替换为选中的操作。
  */
-export const applyPromptAction = (value: string, action: "root" | "change"): string =>
+export const applyPromptAction = (value: string, action: "root"): string =>
   `${value.replace(/-\S*\s*$/, "").trim()} -${action} `;
 
 /**
@@ -96,7 +95,7 @@ export const applyPromptAction = (value: string, action: "root" | "change"): str
 export const isPromptChangeCommand = (value: string): boolean => {
   const { moduleName, designName } = parsePromptCreation(value);
   return (
-    /^\/(?:prompt|newDesign)(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-(?:root|change))*\s*$/i.test(
+    /^\/(?:prompt|newDesign)(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-root)*\s*$/i.test(
       value,
     ) && Boolean(moduleName || designName)
   );
@@ -122,7 +121,7 @@ export const executePromptChangeCommand = async (
   const store = usePromptDesignStore.getState();
   const projectId = store.activeProjectId;
   const shouldCreateAtRoot = value.trim().split(/\s+/).includes("-root");
-  const shouldOpenDesign = value.trim().split(/\s+/).includes("-change");
+  const shouldOpenDesign = Boolean(designName);
 
   if (!projectId) {
     throw new Error("请先在侧边栏选择项目");
@@ -153,7 +152,7 @@ export const executePromptChangeCommand = async (
   const design = await (window.api as any).promptDesign.designs.create({
     projectId,
     moduleId,
-    name: designName || "新提示词设计",
+    name: designName || "new design",
   });
   const sessions = await (window.api as any).promptAi.listSessions(design.id);
   if (!sessions?.length) {

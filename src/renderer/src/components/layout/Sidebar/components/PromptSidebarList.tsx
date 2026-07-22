@@ -59,6 +59,12 @@ export const PromptSidebarList = ({
   const [newProjectPath, setNewProjectPath] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
+  const [createdDesign, setCreatedDesign] = useState<{
+    id: string;
+    projectId: string;
+    moduleId?: string;
+    projectName: string;
+  } | null>(null);
   /** 路径编辑状态 */
   const [editingPathId, setEditingPathId] = useState<string | null>(null);
   const [editingPath, setEditingPath] = useState<string>("");
@@ -258,6 +264,9 @@ export const PromptSidebarList = ({
       return;
     }
 
+    const createdDesignToOpen =
+      createdDesign?.id === editingId ? createdDesign : null;
+
     try {
       if (projects.some((project) => project.id === editingId)) {
         await (window.api as any).promptDesign.projects.rename(
@@ -276,6 +285,24 @@ export const PromptSidebarList = ({
         );
       }
       await fetchData();
+      if (createdDesignToOpen) {
+        setActiveProjectId(createdDesignToOpen.projectId);
+        setActiveModuleId(createdDesignToOpen.moduleId ?? null);
+        const store = usePromptDesignStore.getState();
+        let hasOpened = true;
+        if (store.setActiveDesignIdSafe) {
+          hasOpened = await store.setActiveDesignIdSafe(createdDesignToOpen.id);
+        } else {
+          setActiveDesignId(createdDesignToOpen.id);
+        }
+
+        if (hasOpened) {
+          setProjectName(createdDesignToOpen.projectName);
+          setItemName(editingName.trim());
+          onDesignSelected?.();
+        }
+        setCreatedDesign(null);
+      }
       setTruncatedIds((previous) => {
         if (!previous.has(editingId)) return previous;
 
@@ -944,7 +971,7 @@ export const PromptSidebarList = ({
                 window.api as any
               ).promptDesign.designs.create({
                 projectId: contextMenu.id,
-                name: "新提示词设计",
+                name: "new design",
               });
               await fetchData();
               setCollapsedProjects((previous) => ({
@@ -953,7 +980,12 @@ export const PromptSidebarList = ({
               }));
               if (created?.id) {
                 setEditingId(created.id);
-                setEditingName(created.name || "新提示词设计");
+                setEditingName(created.name || "new design");
+                setCreatedDesign({
+                  id: created.id,
+                  projectId: contextMenu.id,
+                  projectName: contextMenu.title,
+                });
               }
             } catch (error) {
               console.error("Add project design failed", error);
@@ -967,7 +999,7 @@ export const PromptSidebarList = ({
               ).promptDesign.designs.create({
                 projectId: contextMenu.projectId,
                 moduleId: contextMenu.id,
-                name: "新提示词设计",
+                name: "new design",
               });
               await fetchData();
               setCollapsedProjects((prev) => ({
@@ -977,7 +1009,16 @@ export const PromptSidebarList = ({
               // 新建后自动进入编辑名称状态
               if (created?.id) {
                 setEditingId(created.id);
-                setEditingName(created.name || "新提示词设计");
+                setEditingName(created.name || "new design");
+                setCreatedDesign({
+                  id: created.id,
+                  projectId: contextMenu.projectId ?? "",
+                  moduleId: contextMenu.id,
+                  projectName:
+                    projects.find(
+                      (project) => project.id === contextMenu.projectId,
+                    )?.name ?? "",
+                });
               }
             } catch (error) {
               console.error("Add design failed", error);
