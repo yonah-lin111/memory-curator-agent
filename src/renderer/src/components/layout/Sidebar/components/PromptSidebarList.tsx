@@ -19,6 +19,7 @@ import {
 } from "@/features/prompt-design/lib/promptCommand";
 import {
   getPromptDesignStatusOption,
+  PROMPT_DESIGN_STATUS_OPTIONS,
   PROMPT_DESIGN_STATUS_UPDATED_EVENT,
   type PromptDesignStatus,
 } from "@/features/prompt-design/lib/promptDesignStatus";
@@ -193,6 +194,37 @@ export const PromptSidebarList = ({
   const renderPromptStatusIcon = (status: PromptDesignStatus) => {
     const { icon: StatusIcon, className } = getPromptDesignStatusOption(status);
     return <StatusIcon className={`h-3.5 w-3.5 flex-shrink-0 ${className}`} />;
+  };
+
+  /**
+   * 循环切换设计项状态，避免触发设计项本身的选中操作。
+   */
+  const handlePromptStatusCycle = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    prompt: { id: string; status?: PromptDesignStatus },
+  ): Promise<void> => {
+    event.stopPropagation();
+    const currentIndex = PROMPT_DESIGN_STATUS_OPTIONS.findIndex(
+      (option) => option.value === (prompt.status ?? "todo"),
+    );
+    const nextStatus =
+      PROMPT_DESIGN_STATUS_OPTIONS[
+        (currentIndex + 1) % PROMPT_DESIGN_STATUS_OPTIONS.length
+      ].value;
+
+    try {
+      await (window.api as any).promptDesign.designs.update(prompt.id, {
+        status: nextStatus,
+      });
+      await fetchData();
+      window.dispatchEvent(
+        new CustomEvent(PROMPT_DESIGN_STATUS_UPDATED_EVENT, {
+          detail: { designId: prompt.id, status: nextStatus },
+        }),
+      );
+    } catch (error) {
+      console.error("Update prompt design status failed", error);
+    }
   };
 
   const toggleProject = (projectId: string) => {
@@ -748,7 +780,19 @@ export const PromptSidebarList = ({
                                       <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
                                     ) : (
                                       <>
-                                        {renderPromptStatusIcon(prompt.status)}
+                                        <button
+                                          aria-label="切换设计项状态"
+                                          className="flex flex-shrink-0 items-center"
+                                          onClick={(event) =>
+                                            void handlePromptStatusCycle(event, prompt)
+                                          }
+                                          title="切换设计项状态"
+                                          type="button"
+                                        >
+                                          {renderPromptStatusIcon(
+                                            prompt.status ?? "todo",
+                                          )}
+                                        </button>
                                         {renderPromptTitle(prompt)}
                                       </>
                                     )}
@@ -799,7 +843,17 @@ export const PromptSidebarList = ({
                             <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
                           ) : (
                             <>
-                              {renderPromptStatusIcon(prompt.status)}
+                              <button
+                                aria-label="切换设计项状态"
+                                className="flex flex-shrink-0 items-center"
+                                onClick={(event) =>
+                                  void handlePromptStatusCycle(event, prompt)
+                                }
+                                title="切换设计项状态"
+                                type="button"
+                              >
+                                {renderPromptStatusIcon(prompt.status ?? "todo")}
+                              </button>
                               {renderPromptTitle(prompt)}
                             </>
                           )}

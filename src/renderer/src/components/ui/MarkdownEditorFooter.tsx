@@ -2,12 +2,6 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
-import { Tooltip } from "@/components/ui/Tooltip";
-import {
-  getPromptDesignStatusOption,
-  PROMPT_DESIGN_STATUS_OPTIONS,
-  type PromptDesignStatus,
-} from "@/features/prompt-design/lib/promptDesignStatus";
 import {
   MAX_MARKDOWN_EDITOR_FONT_SIZE,
   MIN_MARKDOWN_EDITOR_FONT_SIZE,
@@ -31,10 +25,6 @@ interface MarkdownEditorFooterProps {
   fontSize: number;
   // 编辑器字号变更回调。
   onFontSizeChange: (fontSize: number) => void;
-  // 当前提示词设计状态。
-  status?: PromptDesignStatus;
-  // 提示词设计状态变更回调。
-  onStatusChange?: (status: PromptDesignStatus) => void;
 }
 
 /**
@@ -49,12 +39,9 @@ export const MarkdownEditorFooter = ({
   onRejectAllAiChanges,
   fontSize,
   onFontSizeChange,
-  status,
-  onStatusChange,
 }: MarkdownEditorFooterProps): React.JSX.Element => {
   const characterCount = Array.from(value).length;
   const [fontSizeInput, setFontSizeInput] = useState(String(fontSize));
-  const [statusMenuVersion, setStatusMenuVersion] = useState(0);
 
   useEffect(() => {
     setFontSizeInput(String(fontSize));
@@ -85,59 +72,9 @@ export const MarkdownEditorFooter = ({
     updateFontSize(nextFontSize);
   };
 
-  /**
-   * 更新状态并重新挂载气泡，使选择后自然关闭菜单。
-   */
-  const handleStatusChange = (nextStatus: PromptDesignStatus): void => {
-    onStatusChange?.(nextStatus);
-    setStatusMenuVersion((version) => version + 1);
-  };
-
   return (
     <div className="relative z-20 flex h-8 flex-none items-center gap-3 px-2 text-xs text-white/45">
       <span>{`字数：${characterCount}`}</span>
-      {status && onStatusChange ? (() => {
-        const { icon: StatusIcon, label, className } = getPromptDesignStatusOption(status);
-
-        return (
-          <Tooltip
-            key={statusMenuVersion}
-            placement="top"
-            trigger="click"
-            contentClassName="w-32 whitespace-normal p-1"
-            content={
-              <div className="flex flex-col gap-0.5">
-                {PROMPT_DESIGN_STATUS_OPTIONS.map((option) => {
-                  const OptionIcon = option.icon;
-                  const isSelected = option.value === status;
-
-                  return (
-                    <button
-                      key={option.value}
-                      className={`flex items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-xs transition-colors hover:bg-white/8 ${
-                        isSelected ? "text-white" : "text-white/65"
-                      }`}
-                      type="button"
-                      onClick={() => handleStatusChange(option.value)}
-                    >
-                      <OptionIcon className={`h-3.5 w-3.5 ${option.className}`} />
-                      <span>{option.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            }
-          >
-            <IconButton
-              aria-label={`提示词状态：${label}`}
-              size="small"
-              title={`提示词状态：${label}`}
-            >
-              <StatusIcon className={`h-3.5 w-3.5 ${className}`} />
-            </IconButton>
-          </Tooltip>
-        );
-      })() : null}
       <span aria-hidden="true" className="min-w-0 flex-1" />
       {aiChangeCount > 0 && (
         <div className="flex items-center gap-1.5">

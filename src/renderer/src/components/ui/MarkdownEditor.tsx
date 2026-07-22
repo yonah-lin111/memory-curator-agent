@@ -35,7 +35,6 @@ import {
   getMarkdownEditorFontSize,
   saveMarkdownEditorFontSize,
 } from "@/lib/markdownEditorFontSize";
-import type { PromptDesignStatus } from "@/features/prompt-design/lib/promptDesignStatus";
 
 // Markdown 编辑器高度。
 type MarkdownEditorHeight = number | string;
@@ -674,10 +673,6 @@ export interface MarkdownEditorProps {
   historyResetVersion?: number;
   // 当前编辑器的独立字号持久化键，未设置时不持久化。
   fontSizeStorageKey?: string;
-  // 当前提示词设计状态。
-  promptDesignStatus?: PromptDesignStatus;
-  // 提示词设计状态变更回调。
-  onPromptDesignStatusChange?: (status: PromptDesignStatus) => void;
 }
 
 /**
@@ -709,8 +704,6 @@ export const MarkdownEditor = memo(
         onModeChange,
         historyResetVersion,
         fontSizeStorageKey,
-        promptDesignStatus,
-        onPromptDesignStatusChange,
       },
       ref,
     ): React.JSX.Element => {
@@ -970,8 +963,6 @@ export const MarkdownEditor = memo(
             onAcceptAllAiChanges={onAcceptAllAiChanges}
             onRejectAllAiChanges={onRejectAllAiChanges}
             onFontSizeChange={updateFontSize}
-            status={promptDesignStatus}
-            onStatusChange={onPromptDesignStatusChange}
             showSaveStatus={showSaveStatus}
             value={value}
           />
