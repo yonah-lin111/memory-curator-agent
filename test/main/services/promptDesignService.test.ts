@@ -47,6 +47,7 @@ describe('promptDesignService', () => {
 
     expect(design.id).toBe('d-1')
     expect(design.name).toBe('Test Design')
+    expect(design.status).toBe('todo')
 
     // 2. Perform a Markdown content update.
     const designData = '# Test prompt\n\nHello'
@@ -55,11 +56,14 @@ describe('promptDesignService', () => {
       name: 'Updated Name',
       designData
     })
+    promptDesignService.updateDesign('d-1', { status: 'completed' })
 
     // 3. Verify design_items is updated
     const designRow = testDb.prepare("SELECT * FROM prompt_design_items WHERE external_id = 'd-1'").get() as any
     expect(designRow.name).toBe('Updated Name')
     expect(designRow.design_data).toEqual(designData)
+    expect(designRow.status).toBe('completed')
+    expect(() => testDb.prepare("UPDATE prompt_design_items SET status = 'invalid' WHERE external_id = 'd-1'").run()).toThrow()
 
   })
 

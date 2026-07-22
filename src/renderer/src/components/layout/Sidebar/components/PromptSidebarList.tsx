@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  FileText,
   Search,
   Plus,
   Import,
@@ -18,6 +17,11 @@ import {
   PROMPT_DESIGN_TITLE_GENERATING_EVENT,
   PROMPT_DESIGN_TITLE_UPDATED_EVENT,
 } from "@/features/prompt-design/lib/promptCommand";
+import {
+  getPromptDesignStatusOption,
+  PROMPT_DESIGN_STATUS_UPDATED_EVENT,
+  type PromptDesignStatus,
+} from "@/features/prompt-design/lib/promptDesignStatus";
 import { PromptSidebarContextMenu } from "./PromptSidebarContextMenu";
 
 type PromptSidebarProps = {
@@ -67,6 +71,7 @@ export const PromptSidebarList = ({
     title: string;
     projectId?: string;
     projectPath?: string;
+    status?: PromptDesignStatus;
     x: number;
     y: number;
   } | null>(null);
@@ -122,6 +127,9 @@ export const PromptSidebarList = ({
       ).detail;
       setTitleGeneratingDesignId(detail?.isGenerating ? detail.designId : null);
     };
+    const handlePromptDesignStatusUpdated = () => {
+      void fetchData();
+    };
     window.addEventListener("click", handleClick);
     window.addEventListener(
       PROMPT_DESIGN_CREATED_EVENT,
@@ -134,6 +142,10 @@ export const PromptSidebarList = ({
     window.addEventListener(
       PROMPT_DESIGN_TITLE_GENERATING_EVENT,
       handleTitleGenerating,
+    );
+    window.addEventListener(
+      PROMPT_DESIGN_STATUS_UPDATED_EVENT,
+      handlePromptDesignStatusUpdated,
     );
     return () => {
       window.removeEventListener("click", handleClick);
@@ -149,13 +161,17 @@ export const PromptSidebarList = ({
         PROMPT_DESIGN_TITLE_GENERATING_EVENT,
         handleTitleGenerating,
       );
+      window.removeEventListener(
+        PROMPT_DESIGN_STATUS_UPDATED_EVENT,
+        handlePromptDesignStatusUpdated,
+      );
     };
   }, []);
 
   const handleContextMenu = (
     e: React.MouseEvent,
     type: "project" | "module" | "prompt",
-    item: { id: string; name: string; path?: string },
+    item: { id: string; name: string; path?: string; status?: PromptDesignStatus },
     projectId?: string,
   ) => {
     e.preventDefault();
@@ -165,9 +181,18 @@ export const PromptSidebarList = ({
       title: item.name,
       projectId,
       projectPath: (item as any).path,
+      status: item.status,
       x: e.clientX,
       y: e.clientY,
     });
+  };
+
+  /**
+   * 渲染提示词设计项的当前状态图标。
+   */
+  const renderPromptStatusIcon = (status: PromptDesignStatus) => {
+    const { icon: StatusIcon, className } = getPromptDesignStatusOption(status);
+    return <StatusIcon className={`h-3.5 w-3.5 flex-shrink-0 ${className}`} />;
   };
 
   const toggleProject = (projectId: string) => {
@@ -723,18 +748,7 @@ export const PromptSidebarList = ({
                                       <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
                                     ) : (
                                       <>
-                                        <svg
-                                          className="h-3 w-3 flex-shrink-0 stroke-current text-white/35"
-                                          viewBox="0 0 12 12"
-                                          fill="none"
-                                        >
-                                          <path
-                                            d="M3 1v5h7"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                          />
-                                        </svg>
+                                        {renderPromptStatusIcon(prompt.status)}
                                         {renderPromptTitle(prompt)}
                                       </>
                                     )}
@@ -785,7 +799,7 @@ export const PromptSidebarList = ({
                             <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
                           ) : (
                             <>
-                              <FileText className="h-3.5 w-3.5 flex-shrink-0 text-white/35" />
+                              {renderPromptStatusIcon(prompt.status)}
                               {renderPromptTitle(prompt)}
                             </>
                           )}
@@ -894,6 +908,24 @@ export const PromptSidebarList = ({
           onRename={() => {
             setEditingId(contextMenu.id);
             setEditingName(contextMenu.title);
+            setContextMenu(null);
+          }}
+          status={contextMenu.status}
+          onStatusChange={async (status) => {
+            try {
+              await (window.api as any).promptDesign.designs.update(
+                contextMenu.id,
+                { status },
+              );
+              await fetchData();
+              window.dispatchEvent(
+                new CustomEvent(PROMPT_DESIGN_STATUS_UPDATED_EVENT, {
+                  detail: { designId: contextMenu.id, status },
+                }),
+              );
+            } catch (error) {
+              console.error("Update prompt design status failed", error);
+            }
             setContextMenu(null);
           }}
           onDelete={async () => {

@@ -396,6 +396,9 @@ export type PromptDesignModuleUpdateInput = {
   name?: string;
 };
 
+/** 提示词设计状态 */
+export type PromptDesignStatus = "todo" | "in_progress" | "completed";
+
 /** 提示词设计数据库行 */
 export type PromptDesignRow = {
   id: number;
@@ -404,6 +407,7 @@ export type PromptDesignRow = {
   module_id: string | null;
   name: string;
   design_data: string;
+  status: PromptDesignStatus;
   created_at: string;
   updated_at: string;
 };
@@ -415,6 +419,7 @@ export type PromptDesign = {
   moduleId?: string;
   name: string;
   designData: string;
+  status: PromptDesignStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -432,6 +437,7 @@ export type PromptDesignCreateInput = {
 export type PromptDesignUpdateInput = {
   name?: string;
   designData?: string;
+  status?: PromptDesignStatus;
 };
 
 /** 提示词业务节点提纯数据库行（方案二 CQRS 核心表） */

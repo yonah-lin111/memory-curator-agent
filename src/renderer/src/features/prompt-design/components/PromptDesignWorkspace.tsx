@@ -13,6 +13,10 @@ import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesig
 import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
 import { PromptDesignContextMenu } from "@/features/prompt-design/components/PromptDesignContextMenu";
 import type { PromptDesignReference } from "@/features/prompt-design/types";
+import {
+  PROMPT_DESIGN_STATUS_UPDATED_EVENT,
+  type PromptDesignStatus,
+} from "@/features/prompt-design/lib/promptDesignStatus";
 
 // 设计项切换 loading 最短展示时长（ms），与 AI 侧栏保持一致。
 const MIN_SWITCH_LOADING_MS = 500;
@@ -199,6 +203,8 @@ export const PromptDesignWorkspace = ({
   toastRef.current = toast;
   const [content, setContent] = useState("");
   const [savedContent, setSavedContent] = useState("");
+  const [promptDesignStatus, setPromptDesignStatus] =
+    useState<PromptDesignStatus>("todo");
   // 设计项内容加载完成后递增，用于清空编辑器历史。
   const [historyResetVersion, setHistoryResetVersion] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -514,6 +520,7 @@ export const PromptDesignWorkspace = ({
         contentRef.current = loadedContent;
         setContent(loadedContent);
         setSavedContent(loadedContent);
+        setPromptDesignStatus(design.status ?? "todo");
         setChangeBlocks([]);
         setPendingCandidateContent(null);
         pendingCandidateContentRef.current = null;
@@ -523,6 +530,7 @@ export const PromptDesignWorkspace = ({
         contentRef.current = "";
         setContent("");
         setSavedContent("");
+        setPromptDesignStatus("todo");
         setChangeBlocks([]);
         setPendingCandidateContent(null);
         pendingCandidateContentRef.current = null;
@@ -703,6 +711,29 @@ export const PromptDesignWorkspace = ({
     pendingCandidateContentRef.current = null;
   }, [changeBlocks.length]);
 
+  /**
+   * 持久化当前提示词设计的状态，并通知侧栏刷新图标。
+   */
+  const handlePromptDesignStatusChange = useCallback(
+    async (status: PromptDesignStatus): Promise<void> => {
+      if (!activeDesignId || status === promptDesignStatus) return;
+
+      try {
+        await window.api.promptDesign?.designs.update(activeDesignId, { status });
+        setPromptDesignStatus(status);
+        window.dispatchEvent(
+          new CustomEvent(PROMPT_DESIGN_STATUS_UPDATED_EVENT, {
+            detail: { designId: activeDesignId, status },
+          }),
+        );
+      } catch (error) {
+        console.error(`更新提示词设计状态失败[${activeDesignId}]:`, error);
+        toast.error("更新提示词状态失败，请稍后重试");
+      }
+    },
+    [activeDesignId, promptDesignStatus, toast],
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -732,6 +763,8 @@ export const PromptDesignWorkspace = ({
                 onEditorViewReady={handleEditorViewReady}
                 onContextMenu={handleContextMenu}
                 onModeChange={setEditorMode}
+                promptDesignStatus={promptDesignStatus}
+                onPromptDesignStatusChange={handlePromptDesignStatusChange}
               />
               {inlineInputView && (
                 <PromptAiInlineInput

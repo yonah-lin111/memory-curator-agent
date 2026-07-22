@@ -160,6 +160,7 @@ export const promptDesignService = {
       moduleId: row.module_id || undefined,
       name: row.name,
       designData: row.design_data ?? "",
+      status: row.status,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }))
@@ -172,8 +173,8 @@ export const promptDesignService = {
     const designDataStr = input.designData ?? ""
 
     db.prepare(
-      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, now, now)
+      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, "todo", now, now)
 
     return {
       id,
@@ -181,6 +182,7 @@ export const promptDesignService = {
       moduleId: input.moduleId,
       name: input.name,
       designData: designDataStr,
+      status: "todo",
       createdAt: now,
       updatedAt: now,
     }
@@ -200,29 +202,32 @@ export const promptDesignService = {
     const db = getDatabase()
     const now = new Date().toISOString()
 
+    if (input.status !== undefined && !["todo", "in_progress", "completed"].includes(input.status)) {
+      throw new Error(`Invalid prompt design status: ${input.status}`)
+    }
+
     // 采用 sqlite 事务，保证更新的安全
     const transaction = db.transaction(() => {
-      // 更新主设计项大 JSON
-      if (input.name !== undefined && input.designData !== undefined) {
-        db.prepare("UPDATE prompt_design_items SET name = ?, design_data = ?, updated_at = ? WHERE external_id = ?").run(
-          input.name,
-          input.designData,
-          now,
-          id
-        )
-      } else if (input.name !== undefined) {
-        db.prepare("UPDATE prompt_design_items SET name = ?, updated_at = ? WHERE external_id = ?").run(
-          input.name,
-          now,
-          id
-        )
-      } else if (input.designData !== undefined) {
-        db.prepare("UPDATE prompt_design_items SET design_data = ?, updated_at = ? WHERE external_id = ?").run(
-          input.designData,
-          now,
-          id
-        )
+      const updates: string[] = []
+      const values: string[] = []
+
+      if (input.name !== undefined) {
+        updates.push("name = ?")
+        values.push(input.name)
       }
+      if (input.designData !== undefined) {
+        updates.push("design_data = ?")
+        values.push(input.designData)
+      }
+      if (input.status !== undefined) {
+        updates.push("status = ?")
+        values.push(input.status)
+      }
+      if (updates.length === 0) return
+
+      updates.push("updated_at = ?")
+      values.push(now, id)
+      db.prepare(`UPDATE prompt_design_items SET ${updates.join(", ")} WHERE external_id = ?`).run(...values)
     })
 
     transaction()

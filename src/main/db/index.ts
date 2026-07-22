@@ -1102,6 +1102,7 @@ export const createPromptDesignTables = (database: Database.Database): void => {
       module_id TEXT,
       name TEXT NOT NULL,
       design_data TEXT,
+      status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'completed')),
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE,
@@ -1313,6 +1314,46 @@ export const initDatabase = (): Database.Database => {
 
   createPromptDesignTables(sqlite)
   createPromptAiPersistenceTables(sqlite)
+
+  if (currentVersion < 4) {
+    const promptDesignColumns = sqlite
+      .prepare("PRAGMA table_info(prompt_design_items)")
+      .all() as Array<{ name: string }>
+
+    if (!promptDesignColumns.some((column) => column.name === "status")) {
+      sqlite.exec('PRAGMA foreign_keys = OFF;')
+      sqlite.exec(`
+        CREATE TABLE prompt_design_items_new (
+          id INTEGER PRIMARY KEY,
+          external_id TEXT NOT NULL UNIQUE,
+          project_id TEXT NOT NULL,
+          module_id TEXT,
+          name TEXT NOT NULL,
+          design_data TEXT,
+          status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'completed')),
+          created_at TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP NOT NULL,
+          FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE,
+          FOREIGN KEY (module_id) REFERENCES prompt_design_modules(external_id) ON DELETE CASCADE
+        );
+
+        INSERT INTO prompt_design_items_new (
+          id, external_id, project_id, module_id, name, design_data, status, created_at, updated_at
+        )
+        SELECT id, external_id, project_id, module_id, name, design_data, 'todo', created_at, updated_at
+        FROM prompt_design_items;
+
+        DROP TABLE prompt_design_items;
+        ALTER TABLE prompt_design_items_new RENAME TO prompt_design_items;
+        CREATE INDEX IF NOT EXISTS idx_prompt_design_items_project_id
+        ON prompt_design_items(project_id);
+        CREATE INDEX IF NOT EXISTS idx_prompt_design_items_module_id
+        ON prompt_design_items(module_id);
+      `)
+    }
+
+    sqlite.pragma('user_version = 4')
+  }
 
   // 启用 SQLite 外键约束，以支持级联删除
   sqlite.exec('PRAGMA foreign_keys = ON;')
