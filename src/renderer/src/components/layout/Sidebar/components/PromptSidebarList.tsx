@@ -7,6 +7,8 @@ import {
   Plus,
   Import,
   ArrowUpDown,
+  FolderKanban,
+  Boxes,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -63,6 +65,8 @@ export const PromptSidebarList = ({
   const [collapsedModules, setCollapsedModules] = useState<
     Record<string, boolean>
   >({});
+  const [collapsedCompletedPromptGroups, setCollapsedCompletedPromptGroups] =
+    useState<Record<string, boolean>>({});
   const [newProjectName, setNewProjectName] = useState<string>("");
   const [newProjectPath, setNewProjectPath] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -289,6 +293,16 @@ export const PromptSidebarList = ({
     setCollapsedModules((previous) => ({
       ...previous,
       [moduleId]: !previous[moduleId],
+    }));
+  };
+
+  /**
+   * 切换模块或项目直属提示词中的已完成分组。
+   */
+  const toggleCompletedPromptGroup = (groupId: string): void => {
+    setCollapsedCompletedPromptGroups((previous) => ({
+      ...previous,
+      [groupId]: !previous[groupId],
     }));
   };
 
@@ -631,6 +645,118 @@ export const PromptSidebarList = ({
     );
   };
 
+  /**
+   * 渲染单个提示词项，并保持模块项与项目直属项的选择行为一致。
+   */
+  const renderPromptItem = (
+    prompt: any,
+    project: any,
+    moduleId: string | null,
+  ): React.JSX.Element => (
+    <div
+      key={prompt.id}
+      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] text-left transition-all duration-150 group ${moduleId ? "py-2 pr-2 pl-5" : "p-2"} ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
+      onClick={async () => {
+        try {
+          const sessions = await (window.api as any).promptAi.listSessions(prompt.id);
+          if (!sessions || sessions.length === 0) {
+            await (window.api as any).promptAi.createSession(prompt.id);
+          }
+        } catch (error) {
+          console.error("Failed to check or create session:", error);
+        }
+        setActiveProjectId(project.id);
+        setActiveModuleId(moduleId);
+        const useStore = usePromptDesignStore.getState();
+        if (useStore.setActiveDesignIdSafe) {
+          const success = await useStore.setActiveDesignIdSafe(prompt.id);
+          if (!success) return;
+        } else {
+          setActiveDesignId(prompt.id);
+        }
+        setProjectName(project.name);
+        setItemName(prompt.name);
+        onDesignSelected?.();
+      }}
+      onContextMenu={(event) =>
+        handleContextMenu(event, "prompt", prompt, project.id)
+      }
+    >
+      {titleGeneratingDesignId === prompt.id ? (
+        <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
+      ) : (
+        <>
+          <button
+            aria-label="切换设计项状态"
+            className="flex flex-shrink-0 items-center"
+            onClick={(event) => void handlePromptStatusCycle(event, prompt)}
+            title="切换设计项状态"
+            type="button"
+          >
+            {renderPromptStatusIcon(prompt.status ?? "todo")}
+          </button>
+          {renderItemTitle(prompt)}
+        </>
+      )}
+    </div>
+  );
+
+  /**
+   * 按状态渲染提示词：未完成项始终可见，完成项集中到可折叠分组。
+   */
+  const renderPromptGroups = (
+    prompts: any[],
+    project: any,
+    moduleId: string | null,
+  ): React.JSX.Element[] => {
+    // 项目根目录的提示词保持平铺，避免少量项目级设计被额外折叠。
+    if (moduleId === null) {
+      return prompts.map((prompt) => renderPromptItem(prompt, project, null));
+    }
+
+    const unfinishedPrompts = prompts.filter(
+      (prompt) => prompt.status !== "completed",
+    );
+    const completedPrompts = prompts.filter(
+      (prompt) => prompt.status === "completed",
+    );
+    const groupId = moduleId;
+    const shouldAutoExpand =
+      keyword.length > 0 ||
+      completedPrompts.some((prompt) => prompt.id === activeDesignId);
+    const isCollapsed = shouldAutoExpand
+      ? false
+      : (collapsedCompletedPromptGroups[groupId] ?? true);
+
+    return [
+      ...unfinishedPrompts.map((prompt) =>
+        renderPromptItem(prompt, project, moduleId),
+      ),
+      ...(completedPrompts.length > 0
+        ? [
+            <div key={`${groupId}:completed`} className="flex flex-col gap-0.5">
+              <div className={moduleId ? "pl-5" : "pl-4"}>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-xs font-medium text-white/35 transition-colors cursor-pointer select-none [transform:skewX(-8deg)] hover:text-white/60"
+                  onClick={() => toggleCompletedPromptGroup(groupId)}
+                  aria-expanded={!isCollapsed}
+                >
+                  {isCollapsed
+                    ? `显示 ${completedPrompts.length} 个已完成项...`
+                    : `收起 ${completedPrompts.length} 个已完成项`}
+                </button>
+              </div>
+              {!isCollapsed &&
+                completedPrompts.map((prompt) =>
+                  renderPromptItem(prompt, project, moduleId),
+                )}
+            </div>,
+          ]
+        : []),
+    ];
+  };
+
   return (
     <div
       className="flex h-full w-full flex-col gap-4"
@@ -710,6 +836,7 @@ export const PromptSidebarList = ({
                     }}
                     onContextMenu={(e) => handleContextMenu(e, "project", proj)}
                   >
+                    <FolderKanban className="mr-1.5 h-3.5 w-3.5 shrink-0 text-sky-400/80" />
                     {(() => {
                       const isTruncated = truncatedIds.has(proj.id);
                       const isEditing =
@@ -789,7 +916,7 @@ export const PromptSidebarList = ({
                               className="flex flex-col gap-0.5"
                             >
                               <div
-                                className="flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
+                                className="flex w-full cursor-pointer items-center rounded-[6px] px-1 py-1 text-left text-xs font-medium text-white/60 transition-colors hover:bg-white/[0.02] hover:text-white/85"
                                 onClick={() => {
                                   if (editingId !== module.id)
                                     toggleModule(module.id);
@@ -804,7 +931,7 @@ export const PromptSidebarList = ({
                                   )
                                 }
                               >
-                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-[1px] bg-white/20" />
+                                <Boxes className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400/80" />
                                 {editingId === module.id ? (
                                   <input
                                     // eslint-disable-next-line jsx-a11y/no-autofocus
@@ -831,138 +958,15 @@ export const PromptSidebarList = ({
                                 />
                               </div>
                               {!collapsedModules[module.id] &&
-                                module.prompts.map((prompt: any) => (
-                                  <div
-                                    key={prompt.id}
-                                    className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] py-2 pr-2 pl-5 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
-                                    onClick={async () => {
-                                      try {
-                                        const sessions = await (
-                                          window.api as any
-                                        ).promptAi.listSessions(prompt.id);
-                                        if (
-                                          !sessions ||
-                                          sessions.length === 0
-                                        ) {
-                                          await (
-                                            window.api as any
-                                          ).promptAi.createSession(prompt.id);
-                                        }
-                                      } catch (error) {
-                                        console.error(
-                                          "Failed to check or create session:",
-                                          error,
-                                        );
-                                      }
-                                      setActiveProjectId(proj.id);
-                                      setActiveModuleId(module.id);
-                                      const useStore =
-                                        usePromptDesignStore.getState();
-                                      if (useStore.setActiveDesignIdSafe) {
-                                        const success =
-                                          await useStore.setActiveDesignIdSafe(
-                                            prompt.id,
-                                          );
-                                        if (!success) return;
-                                      } else {
-                                        setActiveDesignId(prompt.id);
-                                      }
-                                      setProjectName(proj.name);
-                                      setItemName(prompt.name);
-                                      onDesignSelected?.();
-                                    }}
-                                    onContextMenu={(event) =>
-                                      handleContextMenu(
-                                        event,
-                                        "prompt",
-                                        prompt,
-                                        proj.id,
-                                      )
-                                    }
-                                  >
-                                    {titleGeneratingDesignId === prompt.id ? (
-                                      <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
-                                    ) : (
-                                      <>
-                                        <button
-                                          aria-label="切换设计项状态"
-                                          className="flex flex-shrink-0 items-center"
-                                          onClick={(event) =>
-                                            void handlePromptStatusCycle(event, prompt)
-                                          }
-                                          title="切换设计项状态"
-                                          type="button"
-                                        >
-                                          {renderPromptStatusIcon(
-                                            prompt.status ?? "todo",
-                                          )}
-                                        </button>
-                                        {renderItemTitle(prompt)}
-                                      </>
-                                    )}
-                                  </div>
-                                ))}
+                                renderPromptGroups(
+                                  module.prompts,
+                                  proj,
+                                  module.id,
+                                )}
                             </div>
                           ))
                         : null}
-                      {proj.directPrompts.map((prompt: any) => (
-                        <div
-                          key={prompt.id}
-                          className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[6px] p-2 text-left transition-all duration-150 group ${activeDesignId === prompt.id ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/[0.02]"}`}
-                          onClick={async () => {
-                            try {
-                              const sessions = await (
-                                window.api as any
-                              ).promptAi.listSessions(prompt.id);
-                              if (!sessions || sessions.length === 0) {
-                                await (
-                                  window.api as any
-                                ).promptAi.createSession(prompt.id);
-                              }
-                            } catch (error) {
-                              console.error(
-                                "Failed to check or create session:",
-                                error,
-                              );
-                            }
-                            setActiveProjectId(proj.id);
-                            setActiveModuleId(null);
-                            const useStore = usePromptDesignStore.getState();
-                            if (useStore.setActiveDesignIdSafe) {
-                              const success =
-                                await useStore.setActiveDesignIdSafe(prompt.id);
-                              if (!success) return;
-                            } else {
-                              setActiveDesignId(prompt.id);
-                            }
-                            setProjectName(proj.name);
-                            setItemName(prompt.name);
-                            onDesignSelected?.();
-                          }}
-                          onContextMenu={(event) =>
-                            handleContextMenu(event, "prompt", prompt, proj.id)
-                          }
-                        >
-                          {titleGeneratingDesignId === prompt.id ? (
-                            <div className="h-4 w-full animate-pulse rounded-[6px] bg-white/10" />
-                          ) : (
-                            <>
-                              <button
-                                aria-label="切换设计项状态"
-                                className="flex flex-shrink-0 items-center"
-                                onClick={(event) =>
-                                  void handlePromptStatusCycle(event, prompt)
-                                }
-                                title="切换设计项状态"
-                                type="button"
-                              >
-                                {renderPromptStatusIcon(prompt.status ?? "todo")}
-                              </button>
-                              {renderItemTitle(prompt)}
-                            </>
-                          )}
-                        </div>
-                      ))}
+                      {renderPromptGroups(proj.directPrompts, proj, null)}
                       {proj.modules.length === 0 &&
                       proj.directPrompts.length === 0 ? (
                         <div className="px-3 py-2 text-xs text-white/20 text-center select-none">
