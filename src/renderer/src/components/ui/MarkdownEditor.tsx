@@ -1,17 +1,40 @@
 import type React from "react";
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MdEditor, config } from "md-editor-rt";
 import type { ExposeParam, UploadImgEvent } from "md-editor-rt";
 import { Check, X } from "lucide-react";
 import "md-editor-rt/lib/style.css";
-import { Decoration, EditorView, ViewPlugin, WidgetType } from "@codemirror/view";
+import {
+  Decoration,
+  EditorView,
+  ViewPlugin,
+  WidgetType,
+} from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { EditorState, RangeSetBuilder, StateEffect, StateField, Transaction } from "@codemirror/state";
+import {
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+  Transaction,
+} from "@codemirror/state";
 import { useMarkdownFileMention } from "@/features/prompt-design/hooks/useMarkdownFileMention";
 import { MarkdownEditorFooter } from "@/components/ui/MarkdownEditorFooter";
 import { MarkdownEditorToolbar } from "@/components/ui/MarkdownEditorToolbar";
-import { getMarkdownEditorFontSize, saveMarkdownEditorFontSize } from "@/lib/markdownEditorFontSize";
+import {
+  getMarkdownEditorFontSize,
+  saveMarkdownEditorFontSize,
+} from "@/lib/markdownEditorFontSize";
 import type { PromptDesignStatus } from "@/features/prompt-design/lib/promptDesignStatus";
 
 // Markdown 编辑器高度。
@@ -37,20 +60,38 @@ type InlineDiffActions = {
   onReject: (id: string) => void;
 };
 
-type PositionedInlineDiffBlock = MarkdownEditorChangeBlock & { from: number; to: number };
-type InlineDiffState = { decorations: DecorationSet; blocks: PositionedInlineDiffBlock[] };
-type InlineDiffDecoration = PositionedInlineDiffBlock & { decoration: Decoration };
+type PositionedInlineDiffBlock = MarkdownEditorChangeBlock & {
+  from: number;
+  to: number;
+};
+type InlineDiffState = {
+  decorations: DecorationSet;
+  blocks: PositionedInlineDiffBlock[];
+};
+type InlineDiffDecoration = PositionedInlineDiffBlock & {
+  decoration: Decoration;
+};
 
 const PROMPT_DESIGN_EDITOR_ID = "prompt-design-editor";
-const setInlineDiffEffect = StateEffect.define<{ blocks: MarkdownEditorChangeBlock[]; actions: InlineDiffActions }>();
+const DEFAULT_LETTER_SPACING = "0.04em";
+const DEFAULT_LINE_HEIGHT = 1.8;
+const setInlineDiffEffect = StateEffect.define<{
+  blocks: MarkdownEditorChangeBlock[];
+  actions: InlineDiffActions;
+}>();
 
 /**
  * 依据变更块锚点在文档中定位原文，插入建议定位至两侧锚点之间。
  */
-const getPositionedInlineDiffBlocks = (doc: string, blocks: MarkdownEditorChangeBlock[]): PositionedInlineDiffBlock[] => {
+const getPositionedInlineDiffBlocks = (
+  doc: string,
+  blocks: MarkdownEditorChangeBlock[],
+): PositionedInlineDiffBlock[] => {
   const lines = doc === "" ? [] : doc.split("\n");
   const lineOffsets = lines.reduce<number[]>((offsets, _line, index) => {
-    offsets.push(index === 0 ? 0 : offsets[index - 1] + lines[index - 1].length + 1);
+    offsets.push(
+      index === 0 ? 0 : offsets[index - 1] + lines[index - 1].length + 1,
+    );
     return offsets;
   }, []);
 
@@ -60,17 +101,32 @@ const getPositionedInlineDiffBlocks = (doc: string, blocks: MarkdownEditorChange
     // 仅接受完整多行上下文的唯一匹配，避免重复文本导致错误覆盖。
     const matchedIndexes: number[] = [];
     for (let index = 0; index <= lines.length - originalLength; index += 1) {
-      const isOriginalMatch = block.originalLines.every((line, offset) => lines[index + offset] === line);
-      const beforeContext = block.beforeContext ?? (block.beforeLine === undefined ? [] : [block.beforeLine]);
-      const afterContext = block.afterContext ?? (block.afterLine === undefined ? [] : [block.afterLine]);
-      const hasBeforeContext = beforeContext.every((line, offset) => lines[index - beforeContext.length + offset] === line);
-      const hasAfterContext = afterContext.every((line, offset) => lines[index + originalLength + offset] === line);
-      if (isOriginalMatch && hasBeforeContext && hasAfterContext) matchedIndexes.push(index);
+      const isOriginalMatch = block.originalLines.every(
+        (line, offset) => lines[index + offset] === line,
+      );
+      const beforeContext =
+        block.beforeContext ??
+        (block.beforeLine === undefined ? [] : [block.beforeLine]);
+      const afterContext =
+        block.afterContext ??
+        (block.afterLine === undefined ? [] : [block.afterLine]);
+      const hasBeforeContext = beforeContext.every(
+        (line, offset) => lines[index - beforeContext.length + offset] === line,
+      );
+      const hasAfterContext = afterContext.every(
+        (line, offset) => lines[index + originalLength + offset] === line,
+      );
+      if (isOriginalMatch && hasBeforeContext && hasAfterContext)
+        matchedIndexes.push(index);
     }
     if (matchedIndexes.length !== 1) return [];
     const index = matchedIndexes[0];
     const from = index === lines.length ? doc.length : lineOffsets[index];
-    const to = originalLength === 0 ? from : lineOffsets[index + originalLength - 1] + block.originalLines[originalLength - 1].length;
+    const to =
+      originalLength === 0
+        ? from
+        : lineOffsets[index + originalLength - 1] +
+          block.originalLines[originalLength - 1].length;
     return [{ ...block, from, to }];
   });
 };
@@ -79,14 +135,21 @@ const getPositionedInlineDiffBlocks = (doc: string, blocks: MarkdownEditorChange
  * 原生 DOM 控件避免 Widget 内部依赖 React 渲染树。
  */
 class InlineDiffWidget extends WidgetType {
-  constructor(private readonly block: MarkdownEditorChangeBlock, private readonly actions: InlineDiffActions) {
+  constructor(
+    private readonly block: MarkdownEditorChangeBlock,
+    private readonly actions: InlineDiffActions,
+  ) {
     super();
   }
 
   eq(other: InlineDiffWidget): boolean {
-    return other.block.id === this.block.id
-      && other.block.originalLines.join("\n") === this.block.originalLines.join("\n")
-      && other.block.candidateLines.join("\n") === this.block.candidateLines.join("\n");
+    return (
+      other.block.id === this.block.id &&
+      other.block.originalLines.join("\n") ===
+        this.block.originalLines.join("\n") &&
+      other.block.candidateLines.join("\n") ===
+        this.block.candidateLines.join("\n")
+    );
   }
 
   toDOM(): HTMLElement {
@@ -112,11 +175,19 @@ class InlineDiffWidget extends WidgetType {
       return button;
     };
     controls.append(
-      createButton("Accept", "cm-ai-diff-accept", Check, () => this.actions.onAccept(this.block.id)),
-      createButton("Reject", "cm-ai-diff-reject", X, () => this.actions.onReject(this.block.id)),
+      createButton("Accept", "cm-ai-diff-accept", Check, () =>
+        this.actions.onAccept(this.block.id),
+      ),
+      createButton("Reject", "cm-ai-diff-reject", X, () =>
+        this.actions.onReject(this.block.id),
+      ),
     );
     root.append(controls);
-    const appendLines = (linesToAppend: string[], className: string, prefix: string): void => {
+    const appendLines = (
+      linesToAppend: string[],
+      className: string,
+      prefix: string,
+    ): void => {
       if (linesToAppend.length === 0) return;
       const section = document.createElement("div");
       section.className = className;
@@ -144,7 +215,9 @@ const createInlineDiffExtension = () => {
   const inlineDiffField = StateField.define<InlineDiffState>({
     create: () => ({ decorations: Decoration.none, blocks: [] }),
     update: (value, transaction) => {
-      const effect = transaction.effects.find((item) => item.is(setInlineDiffEffect));
+      const effect = transaction.effects.find((item) =>
+        item.is(setInlineDiffEffect),
+      );
       if (!effect) {
         return {
           decorations: value.decorations.map(transaction.changes),
@@ -155,25 +228,50 @@ const createInlineDiffExtension = () => {
           })),
         };
       }
-      const positionedBlocks = getPositionedInlineDiffBlocks(transaction.state.doc.toString(), effect.value.blocks);
-      const decorations = positionedBlocks.map((block): InlineDiffDecoration => ({
-        ...block,
-        decoration: block.from === block.to
-          ? Decoration.widget({ widget: new InlineDiffWidget(block, effect.value.actions), block: true, side: 1 })
-          : Decoration.replace({ widget: new InlineDiffWidget(block, effect.value.actions), block: true }),
-      }));
+      const positionedBlocks = getPositionedInlineDiffBlocks(
+        transaction.state.doc.toString(),
+        effect.value.blocks,
+      );
+      const decorations = positionedBlocks.map(
+        (block): InlineDiffDecoration => ({
+          ...block,
+          decoration:
+            block.from === block.to
+              ? Decoration.widget({
+                  widget: new InlineDiffWidget(block, effect.value.actions),
+                  block: true,
+                  side: 1,
+                })
+              : Decoration.replace({
+                  widget: new InlineDiffWidget(block, effect.value.actions),
+                  block: true,
+                }),
+        }),
+      );
       // 重叠建议仅保留最后生成的一项，避免过期建议覆盖最新工具结果。
-      const nonOverlappingDecorations = decorations.reduceRight<InlineDiffDecoration[]>((result, decoration) => {
-        const overlaps = result.some((item) => decoration.from < item.to && item.from < decoration.to
-          || decoration.from === decoration.to && item.from === item.to && decoration.from === item.from
-          || decoration.from === decoration.to && decoration.from >= item.from && decoration.from < item.to
-          || item.from === item.to && item.from >= decoration.from && item.from < decoration.to);
+      const nonOverlappingDecorations = decorations.reduceRight<
+        InlineDiffDecoration[]
+      >((result, decoration) => {
+        const overlaps = result.some(
+          (item) =>
+            (decoration.from < item.to && item.from < decoration.to) ||
+            (decoration.from === decoration.to &&
+              item.from === item.to &&
+              decoration.from === item.from) ||
+            (decoration.from === decoration.to &&
+              decoration.from >= item.from &&
+              decoration.from < item.to) ||
+            (item.from === item.to &&
+              item.from >= decoration.from &&
+              item.from < decoration.to),
+        );
         if (!overlaps) result.push(decoration);
         return result;
       }, []);
       // RangeSetBuilder 要求加入的范围按 from 与装饰 startSide 升序排列。
-      const sortedDecorations = nonOverlappingDecorations.sort((a, b) =>
-        a.from - b.from || a.decoration.startSide - b.decoration.startSide,
+      const sortedDecorations = nonOverlappingDecorations.sort(
+        (a, b) =>
+          a.from - b.from || a.decoration.startSide - b.decoration.startSide,
       );
       const builder = new RangeSetBuilder<Decoration>();
       sortedDecorations.forEach((item) => {
@@ -181,20 +279,27 @@ const createInlineDiffExtension = () => {
       });
       return { decorations: builder.finish(), blocks: sortedDecorations };
     },
-    provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
+    provide: (field) =>
+      EditorView.decorations.from(field, (value) => value.decorations),
   });
 
   return [
     inlineDiffField,
     EditorState.transactionFilter.of((transaction) => {
-      if (!transaction.docChanged || !transaction.annotation(Transaction.userEvent)) return transaction;
+      if (
+        !transaction.docChanged ||
+        !transaction.annotation(Transaction.userEvent)
+      )
+        return transaction;
       const { blocks } = transaction.startState.field(inlineDiffField);
       let isLocked = false;
       transaction.changes.iterChanges((fromA, toA) => {
         if (isLocked) return;
-        isLocked = blocks.some((block) => (
-          block.from === block.to ? fromA <= block.from && toA >= block.from : fromA < block.to && toA > block.from
-        ));
+        isLocked = blocks.some((block) =>
+          block.from === block.to
+            ? fromA <= block.from && toA >= block.from
+            : fromA < block.to && toA > block.from,
+        );
       });
       return isLocked ? [] : transaction;
     }),
@@ -213,7 +318,9 @@ const linkDeco = Decoration.mark({ class: "cm-md-link-mark" });
 const separatorDeco = Decoration.mark({ class: "cm-md-separator-mark" });
 const boldDeco = Decoration.mark({ class: "cm-md-bold-mark" });
 const italicDeco = Decoration.mark({ class: "cm-md-emphasis-mark" });
-const strikethroughDeco = Decoration.mark({ class: "cm-md-strikethrough-mark" });
+const strikethroughDeco = Decoration.mark({
+  class: "cm-md-strikethrough-mark",
+});
 
 interface LineDecoItem {
   from: number;
@@ -274,7 +381,12 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
 
             // 4. 匹配列表标记 (如 -, *, +, 1.)
             const listMatch = text.match(/^(\s*)([-*+]|\d+\.)(\s+|$)/);
-            if (listMatch && !text.includes("[ ]") && !text.includes("[x]") && !text.includes("[X]")) {
+            if (
+              listMatch &&
+              !text.includes("[ ]") &&
+              !text.includes("[x]") &&
+              !text.includes("[X]")
+            ) {
               const start = lineFrom + listMatch[1].length;
               const end = start + listMatch[2].length;
               lineDecos.push({ from: start, to: end, deco: listDeco });
@@ -284,7 +396,8 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
             const taskMatch = text.match(/^(\s*[-*+]\s+)(\[[ xX]\])/);
             if (taskMatch) {
               // 前面的列表符号也画成 list-mark
-              const listStart = lineFrom + taskMatch[1].indexOf(taskMatch[1].trim());
+              const listStart =
+                lineFrom + taskMatch[1].indexOf(taskMatch[1].trim());
               const listEnd = listStart + 1;
               lineDecos.push({ from: listStart, to: listEnd, deco: listDeco });
 
@@ -338,15 +451,24 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
               const matchIndex = linkMatch.index;
               const openingMark = linkMatch[1];
               const closingMark = linkMatch[3];
-              
+
               lineDecos.push({
                 from: lineFrom + matchIndex,
                 to: lineFrom + matchIndex + openingMark.length,
                 deco: linkDeco,
               });
               lineDecos.push({
-                from: lineFrom + matchIndex + openingMark.length + linkMatch[2].length,
-                to: lineFrom + matchIndex + openingMark.length + linkMatch[2].length + closingMark.length,
+                from:
+                  lineFrom +
+                  matchIndex +
+                  openingMark.length +
+                  linkMatch[2].length,
+                to:
+                  lineFrom +
+                  matchIndex +
+                  openingMark.length +
+                  linkMatch[2].length +
+                  closingMark.length,
                 deco: linkDeco,
               });
               lineDecos.push({
@@ -415,14 +537,15 @@ const markdownHighlightPlugin = ViewPlugin.fromClass(
   },
   {
     decorations: (v) => v.decorations,
-  }
+  },
 );
 
 /**
  * 仅识别完整 URL 与具备目录层级的文件路径，避免将自然语言中的斜杠误判为路径。
  */
 const getLinkOrPathRanges = (lineText: string): Array<[number, number]> => {
-  const matcher = /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<>"'`()]+|(?<![\p{L}\p{N}])(?:~\/|\/|\.{1,2}\/)[^\s/]+(?:\/[^\s/]+)+/gu;
+  const matcher =
+    /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<>"'`()]+|(?<![\p{L}\p{N}])(?:~\/|\/|\.{1,2}\/)[^\s/]+(?:\/[^\s/]+)+/gu;
 
   return Array.from(lineText.matchAll(matcher), (match) => {
     const from = match.index ?? 0;
@@ -435,18 +558,32 @@ config({
   codeMirrorExtensions(extensions, options) {
     return [
       // 替换默认路径规则，避免“日/常记录”这类正文被缩写为省略号。
-      ...extensions.map((extension) => extension.type === "linkShortener"
-        ? {
-          ...extension,
-          options: {
-            ...extension.options,
-            findTexts: ({ lineText }: { lineText: string }) => getLinkOrPathRanges(lineText),
-          },
-        }
-        : extension),
+      ...extensions.map((extension) =>
+        extension.type === "linkShortener"
+          ? {
+              ...extension,
+              options: {
+                ...extension.options,
+                findTexts: ({ lineText }: { lineText: string }) =>
+                  getLinkOrPathRanges(lineText),
+              },
+            }
+          : extension,
+      ),
       {
         type: "markdownHighlight",
         extension: markdownHighlightPlugin,
+      },
+      {
+        type: "markdownLineHeight",
+        extension: EditorView.theme({
+          ".cm-scroller": {
+            lineHeight: "var(--markdown-editor-line-height) !important",
+          },
+          ".cm-content": {
+            letterSpacing: "var(--markdown-editor-letter-spacing)",
+          },
+        }),
       },
       ...(options.editorId === PROMPT_DESIGN_EDITOR_ID
         ? [{ type: "promptInlineDiff", extension: createInlineDiffExtension() }]
@@ -502,6 +639,10 @@ export interface MarkdownEditorProps {
   placeholder: string;
   // 编辑器高度。
   height: MarkdownEditorHeight;
+  // 编辑器文字间距。
+  letterSpacing?: string;
+  // 编辑器文字行高。
+  lineHeight?: number | string;
   // 是否显示 Markdown 内容保存状态。
   showSaveStatus?: boolean;
   // 当前 Markdown 内容是否已保存，由父组件根据实际保存结果控制。
@@ -523,7 +664,10 @@ export interface MarkdownEditorProps {
   // 编辑器实例就绪回调。
   onEditorViewReady?: (view: EditorView) => void;
   // 编辑器右键菜单回调。
-  onContextMenu?: (event: React.MouseEvent<HTMLDivElement>, view: EditorView) => void;
+  onContextMenu?: (
+    event: React.MouseEvent<HTMLDivElement>,
+    view: EditorView,
+  ) => void;
   // 编辑器显示模式变化回调。
   onModeChange?: (mode: MarkdownEditorMode) => void;
   // 递增时清空撤销与重做历史。
@@ -539,241 +683,303 @@ export interface MarkdownEditorProps {
 /**
  * MarkdownEditor - 项目统一 Markdown 编辑器。
  */
-export const MarkdownEditor = memo(forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
-  id,
-  value,
-  onChange,
-  onBlur,
-  placeholder,
-  height,
-  showSaveStatus = false,
-  isSaved = false,
-  className,
-  defaultMode,
-  aiChangeBlocks = [],
-  onAcceptAiChange,
-  onRejectAiChange,
-  onAcceptAllAiChanges,
-  onRejectAllAiChanges,
-  onEditorViewReady,
-  onContextMenu,
-  onModeChange,
-  historyResetVersion,
-  fontSizeStorageKey,
-  promptDesignStatus,
-  onPromptDesignStatusChange,
-}, ref): React.JSX.Element => {
-  // 编辑器实例引用，用于调用暴露的方法。
-  const editorRef = useRef<ExposeParam>(null);
-  // 当前实例字号，可按设置键独立恢复。
-  const [fontSize, setFontSize] = useState(() => getMarkdownEditorFontSize(fontSizeStorageKey));
-  useEffect(() => {
-    setFontSize(getMarkdownEditorFontSize(fontSizeStorageKey));
-  }, [fontSizeStorageKey]);
-  /**
-   * 更新当前实例字号，并在配置持久化键时写入本地存储。
-   */
-  const updateFontSize = useCallback((nextFontSize: number): void => {
-    setFontSize(saveMarkdownEditorFontSize(nextFontSize, fontSizeStorageKey));
-  }, [fontSizeStorageKey]);
-  // 当前显示模式，用于同步工具栏高亮状态。
-  const [editorMode, setEditorMode] = useState<MarkdownEditorMode>(defaultMode ?? "edit");
-  // 进入仅预览前的模式，用于快捷键退出后恢复原布局。
-  const modeBeforePreviewRef = useRef<Exclude<MarkdownEditorMode, "preview">>(
-    defaultMode === "split" ? "split" : "edit",
-  );
-  /**
-   * 更新编辑器显示模式，并通知外部调用方。
-   */
-  const changeEditorMode = useCallback((mode: MarkdownEditorMode): void => {
-    setEditorMode(mode);
-    onModeChange?.(mode);
-  }, [onModeChange]);
-  useImperativeHandle(ref, () => ({
-    execCommand: (command) => editorRef.current?.execCommand(command),
-    togglePreview: (status) => editorRef.current?.togglePreview(status),
-    togglePreviewOnly: (status) => editorRef.current?.togglePreviewOnly(status),
-    focus: () => editorRef.current?.focus(),
-    getEditorView: () => editorRef.current?.getEditorView(),
-  }), []);
-  const { handleEditorViewReady, mentionPanel } = useMarkdownFileMention(id === PROMPT_DESIGN_EDITOR_ID);
-  const aiChangeActionsRef = useRef<InlineDiffActions>({
-    onAccept: () => undefined,
-    onReject: () => undefined,
-  });
-  aiChangeActionsRef.current = {
-    onAccept: onAcceptAiChange ?? (() => undefined),
-    onReject: onRejectAiChange ?? (() => undefined),
-  };
+export const MarkdownEditor = memo(
+  forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(
+    (
+      {
+        id,
+        value,
+        onChange,
+        onBlur,
+        placeholder,
+        height,
+        letterSpacing = DEFAULT_LETTER_SPACING,
+        lineHeight = DEFAULT_LINE_HEIGHT,
+        showSaveStatus = false,
+        isSaved = false,
+        className,
+        defaultMode,
+        aiChangeBlocks = [],
+        onAcceptAiChange,
+        onRejectAiChange,
+        onAcceptAllAiChanges,
+        onRejectAllAiChanges,
+        onEditorViewReady,
+        onContextMenu,
+        onModeChange,
+        historyResetVersion,
+        fontSizeStorageKey,
+        promptDesignStatus,
+        onPromptDesignStatusChange,
+      },
+      ref,
+    ): React.JSX.Element => {
+      // 编辑器实例引用，用于调用暴露的方法。
+      const editorRef = useRef<ExposeParam>(null);
+      // 当前实例字号，可按设置键独立恢复。
+      const [fontSize, setFontSize] = useState(() =>
+        getMarkdownEditorFontSize(fontSizeStorageKey),
+      );
+      useEffect(() => {
+        setFontSize(getMarkdownEditorFontSize(fontSizeStorageKey));
+      }, [fontSizeStorageKey]);
+      /**
+       * 更新当前实例字号，并在配置持久化键时写入本地存储。
+       */
+      const updateFontSize = useCallback(
+        (nextFontSize: number): void => {
+          setFontSize(
+            saveMarkdownEditorFontSize(nextFontSize, fontSizeStorageKey),
+          );
+        },
+        [fontSizeStorageKey],
+      );
+      // 当前显示模式，用于同步工具栏高亮状态。
+      const [editorMode, setEditorMode] = useState<MarkdownEditorMode>(
+        defaultMode ?? "edit",
+      );
+      // 进入仅预览前的模式，用于快捷键退出后恢复原布局。
+      const modeBeforePreviewRef = useRef<
+        Exclude<MarkdownEditorMode, "preview">
+      >(defaultMode === "split" ? "split" : "edit");
+      /**
+       * 更新编辑器显示模式，并通知外部调用方。
+       */
+      const changeEditorMode = useCallback(
+        (mode: MarkdownEditorMode): void => {
+          setEditorMode(mode);
+          onModeChange?.(mode);
+        },
+        [onModeChange],
+      );
+      useImperativeHandle(
+        ref,
+        () => ({
+          execCommand: (command) => editorRef.current?.execCommand(command),
+          togglePreview: (status) => editorRef.current?.togglePreview(status),
+          togglePreviewOnly: (status) =>
+            editorRef.current?.togglePreviewOnly(status),
+          focus: () => editorRef.current?.focus(),
+          getEditorView: () => editorRef.current?.getEditorView(),
+        }),
+        [],
+      );
+      const { handleEditorViewReady, mentionPanel } = useMarkdownFileMention(
+        id === PROMPT_DESIGN_EDITOR_ID,
+      );
+      const aiChangeActionsRef = useRef<InlineDiffActions>({
+        onAccept: () => undefined,
+        onReject: () => undefined,
+      });
+      aiChangeActionsRef.current = {
+        onAccept: onAcceptAiChange ?? (() => undefined),
+        onReject: onRejectAiChange ?? (() => undefined),
+      };
 
-  useEffect(() => {
-    const editorView = editorRef.current?.getEditorView();
-    if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
-    handleEditorViewReady(editorView);
-    onEditorViewReady?.(editorView);
-  }, [handleEditorViewReady, id, onEditorViewReady]);
+      useEffect(() => {
+        const editorView = editorRef.current?.getEditorView();
+        if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
+        handleEditorViewReady(editorView);
+        onEditorViewReady?.(editorView);
+      }, [handleEditorViewReady, id, onEditorViewReady]);
 
-  useEffect(() => {
-    const editorView = editorRef.current?.getEditorView();
-    if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
-    editorView.dispatch({
-      effects: setInlineDiffEffect.of({
-        blocks: aiChangeBlocks,
-        actions: aiChangeActionsRef.current,
-      }),
-    });
-  }, [aiChangeBlocks, id, onAcceptAiChange, onRejectAiChange]);
+      useEffect(() => {
+        const editorView = editorRef.current?.getEditorView();
+        if (!editorView || id !== PROMPT_DESIGN_EDITOR_ID) return;
+        editorView.dispatch({
+          effects: setInlineDiffEffect.of({
+            blocks: aiChangeBlocks,
+            actions: aiChangeActionsRef.current,
+          }),
+        });
+      }, [aiChangeBlocks, id, onAcceptAiChange, onRejectAiChange]);
 
-  useEffect(() => {
-    if (historyResetVersion === undefined) return;
+      useEffect(() => {
+        if (historyResetVersion === undefined) return;
 
-    // 等待受控 value 同步至 md-editor-rt 后再清空历史。
-    const frameId = requestAnimationFrame(() => {
-      editorRef.current?.resetHistory();
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [historyResetVersion]);
+        // 等待受控 value 同步至 md-editor-rt 后再清空历史。
+        const frameId = requestAnimationFrame(() => {
+          editorRef.current?.resetHistory();
+        });
+        return () => cancelAnimationFrame(frameId);
+      }, [historyResetVersion]);
 
-  // 注册全局/组件级快捷键
-  useEffect(() => {
-    const el = document.getElementById(id);
-    if (!el) return;
+      // 注册全局/组件级快捷键
+      useEffect(() => {
+        const el = document.getElementById(id);
+        if (!el) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // cmd + shift + p (兼容 Windows ctrl): 开启/关闭 md 组件的全局预览 (previewOnly)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "p") {
-        e.preventDefault();
-        e.stopPropagation();
-        if (editorMode === "preview") {
-          editorRef.current?.togglePreviewOnly(false);
-          changeEditorMode(modeBeforePreviewRef.current);
-        } else {
-          modeBeforePreviewRef.current = editorMode;
-          editorRef.current?.togglePreviewOnly(true);
-          changeEditorMode("preview");
+        const handleKeyDown = (e: KeyboardEvent) => {
+          // cmd + shift + p (兼容 Windows ctrl): 开启/关闭 md 组件的全局预览 (previewOnly)
+          if (
+            (e.metaKey || e.ctrlKey) &&
+            e.shiftKey &&
+            e.key.toLowerCase() === "p"
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (editorMode === "preview") {
+              editorRef.current?.togglePreviewOnly(false);
+              changeEditorMode(modeBeforePreviewRef.current);
+            } else {
+              modeBeforePreviewRef.current = editorMode;
+              editorRef.current?.togglePreviewOnly(true);
+              changeEditorMode("preview");
+            }
+          }
+          // cmd + shift + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
+          else if (
+            (e.metaKey || e.ctrlKey) &&
+            e.shiftKey &&
+            e.key.toLowerCase() === "e"
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            // 仅预览模式恢复进入前布局，其他模式在编辑与双栏间切换。
+            if (editorMode === "preview") {
+              editorRef.current?.togglePreviewOnly(false);
+              changeEditorMode(modeBeforePreviewRef.current);
+            } else {
+              editorRef.current?.togglePreview();
+              changeEditorMode(editorMode === "split" ? "edit" : "split");
+            }
+          }
+        };
+
+        // 使用捕获阶段，确保能优先拦截
+        el.addEventListener("keydown", handleKeyDown, { capture: true });
+        return () =>
+          el.removeEventListener("keydown", handleKeyDown, { capture: true });
+      }, [changeEditorMode, editorMode, id]);
+
+      // 编辑器内联排版，兼容像素数值与 CSS 高度。
+      const editorStyle = useMemo<
+        React.CSSProperties & {
+          "--markdown-editor-letter-spacing": string;
+          "--markdown-editor-line-height": number | string;
         }
-      } 
-      // cmd + shift + e (兼容 Windows ctrl): 切换编辑模式 (编辑/预览双栏 vs 仅编辑)
-      else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "e") {
-        e.preventDefault();
-        e.stopPropagation();
-        // 仅预览模式恢复进入前布局，其他模式在编辑与双栏间切换。
-        if (editorMode === "preview") {
-          editorRef.current?.togglePreviewOnly(false);
-          changeEditorMode(modeBeforePreviewRef.current);
-        } else {
-          editorRef.current?.togglePreview();
-          changeEditorMode(editorMode === "split" ? "edit" : "split");
+      >(
+        () => ({
+          height: typeof height === "number" ? `${height}px` : height,
+          fontSize: `${fontSize}px`,
+          letterSpacing,
+          lineHeight,
+          "--markdown-editor-letter-spacing": letterSpacing,
+          "--markdown-editor-line-height": lineHeight,
+        }),
+        [fontSize, height, letterSpacing, lineHeight],
+      );
+
+      // 组合外层类名。
+      const rootClassName = useMemo(
+        () => [className, "md-editor-clean"].filter(Boolean).join(" "),
+        [className],
+      );
+      // 预览区排版按编辑器 ID 隔离，避免影响其他 Markdown 预览实例。
+      const previewTypographyStyle = useMemo(
+        () => `
+          #${CSS.escape(id)}.md-editor-clean .md-editor-preview p,
+          #${CSS.escape(id)}.md-editor-clean .md-editor-preview li {
+            letter-spacing: var(--markdown-editor-letter-spacing);
+            line-height: var(--markdown-editor-line-height) !important;
+          }
+        `,
+        [id],
+      );
+
+      // 根据 defaultMode 设置初始预览状态。
+      useEffect(() => {
+        if (!editorRef.current) {
+          return;
         }
-      }
-    };
 
-    // 使用捕获阶段，确保能优先拦截
-    el.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () => el.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [changeEditorMode, editorMode, id]);
+        if (defaultMode === "preview") {
+          editorRef.current.togglePreviewOnly(true);
+        } else if (defaultMode === "edit") {
+          editorRef.current.togglePreview(false);
+        } else if (defaultMode === "split") {
+          editorRef.current.togglePreview(true);
+        }
+        if (defaultMode) {
+          setEditorMode(defaultMode);
+        }
+      }, [defaultMode]);
 
-  // 编辑器内联高度，兼容像素数值与 CSS 高度。
-  const editorStyle = useMemo<React.CSSProperties>(
-    () => ({
-      height: typeof height === "number" ? `${height}px` : height,
-      fontSize: `${fontSize}px`,
-    }),
-    [fontSize, height],
-  );
+      // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
+      const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
+        void (async () => {
+          try {
+            const savedImages = await Promise.all(
+              files.map(async (file) =>
+                window.api.files.saveMarkdownImage({
+                  name: file.name,
+                  mimeType: file.type,
+                  bytes: await file.arrayBuffer(),
+                }),
+              ),
+            );
 
-  // 组合外层类名。
-  const rootClassName = useMemo(
-    () => [className, "md-editor-clean"].filter(Boolean).join(" "),
-    [className],
-  );
+            callback(savedImages.map((image) => image.url));
+          } catch {
+            callback([]);
+          }
+        })();
+      }, []);
 
-  // 根据 defaultMode 设置初始预览状态。
-  useEffect(() => {
-    if (!editorRef.current) {
-      return;
-    }
-
-    if (defaultMode === "preview") {
-      editorRef.current.togglePreviewOnly(true);
-    } else if (defaultMode === "edit") {
-      editorRef.current.togglePreview(false);
-    } else if (defaultMode === "split") {
-      editorRef.current.togglePreview(true);
-    }
-    if (defaultMode) {
-      setEditorMode(defaultMode);
-    }
-  }, [defaultMode]);
-
-  // 图片上传回调，覆盖粘贴图片与工具栏图片上传。
-  const handleUploadImg = useCallback<UploadImgEvent>((files, callback) => {
-    void (async () => {
-      try {
-        const savedImages = await Promise.all(
-          files.map(async (file) =>
-            window.api.files.saveMarkdownImage({
-              name: file.name,
-              mimeType: file.type,
-              bytes: await file.arrayBuffer(),
-            }),
-          ),
-        );
-
-        callback(savedImages.map((image) => image.url));
-      } catch {
-        callback([]);
-      }
-    })();
-  }, []);
-
-  return (
-    <div
-      className="relative flex h-full min-h-0 flex-col"
-      data-markdown-editor-root
-      onContextMenu={(event) => {
-        const view = editorRef.current?.getEditorView();
-        if (view && onContextMenu) onContextMenu(event, view);
-      }}
-    >
-      <MarkdownEditorToolbar editorRef={editorRef} mode={editorMode} onModeChange={changeEditorMode} />
-      <div className="min-h-0 flex-1">
-        <MdEditor
-          ref={editorRef}
-          className={rootClassName}
-          codeTheme="atom"
-          footers={[]}
-          id={id}
-          language="zh-CN"
-          noPrettier
-          onUploadImg={handleUploadImg}
-          placeholder={placeholder}
-          preview
-          previewTheme="default"
-          showCodeRowNumber
-          style={editorStyle}
-          theme="dark"
-          toolbars={[]}
-          value={value}
-          onBlur={onBlur}
-          onChange={onChange}
-        />
-      </div>
-      <MarkdownEditorFooter
-        aiChangeCount={aiChangeBlocks.length}
-        fontSize={fontSize}
-        isSaved={isSaved}
-        onAcceptAllAiChanges={onAcceptAllAiChanges}
-        onRejectAllAiChanges={onRejectAllAiChanges}
-        onFontSizeChange={updateFontSize}
-        status={promptDesignStatus}
-        onStatusChange={onPromptDesignStatusChange}
-        showSaveStatus={showSaveStatus}
-        value={value}
-      />
-      {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
-    </div>
-  );
-}));
+      return (
+        <div
+          className="relative flex h-full min-h-0 flex-col"
+          data-markdown-editor-root
+          onContextMenu={(event) => {
+            const view = editorRef.current?.getEditorView();
+            if (view && onContextMenu) onContextMenu(event, view);
+          }}
+        >
+          <MarkdownEditorToolbar
+            editorRef={editorRef}
+            mode={editorMode}
+            onModeChange={changeEditorMode}
+          />
+          <div className="min-h-0 flex-1">
+            <style>{previewTypographyStyle}</style>
+            <MdEditor
+              ref={editorRef}
+              className={rootClassName}
+              codeTheme="atom"
+              footers={[]}
+              id={id}
+              language="zh-CN"
+              noPrettier
+              onUploadImg={handleUploadImg}
+              placeholder={placeholder}
+              preview
+              previewTheme="default"
+              showCodeRowNumber
+              style={editorStyle}
+              theme="dark"
+              toolbars={[]}
+              value={value}
+              onBlur={onBlur}
+              onChange={onChange}
+            />
+          </div>
+          <MarkdownEditorFooter
+            aiChangeCount={aiChangeBlocks.length}
+            fontSize={fontSize}
+            isSaved={isSaved}
+            onAcceptAllAiChanges={onAcceptAllAiChanges}
+            onRejectAllAiChanges={onRejectAllAiChanges}
+            onFontSizeChange={updateFontSize}
+            status={promptDesignStatus}
+            onStatusChange={onPromptDesignStatusChange}
+            showSaveStatus={showSaveStatus}
+            value={value}
+          />
+          {id === PROMPT_DESIGN_EDITOR_ID && mentionPanel}
+        </div>
+      );
+    },
+  ),
+);
 
 MarkdownEditor.displayName = "MarkdownEditor";

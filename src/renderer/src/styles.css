@@ -248,6 +248,24 @@ html:hover::-webkit-scrollbar-thumb,
   background: transparent !important;
 }
 
+/* 统一 md-editor-rt 的默认文字排版，MarkdownEditor 可通过组件属性覆盖。 */
+.md-editor,
+.md-editor-preview {
+  --markdown-editor-letter-spacing: 0.04em;
+  --markdown-editor-line-height: 1.8;
+  letter-spacing: var(--markdown-editor-letter-spacing);
+}
+
+.md-editor .cm-scroller {
+  line-height: var(--markdown-editor-line-height) !important;
+}
+
+.md-editor-preview p,
+.md-editor-preview li {
+  line-height: var(--markdown-editor-line-height) !important;
+  letter-spacing: var(--markdown-editor-letter-spacing);
+}
+
 /* 编辑区字号由 MarkdownEditor 的内联样式控制，避免被 CodeMirror 默认字号覆盖。 */
 .md-editor-clean .cm-editor {
   color: #b8b8b8 !important;
