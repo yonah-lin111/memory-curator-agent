@@ -11,6 +11,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
 import {
   PROMPT_DESIGN_CREATED_EVENT,
@@ -38,6 +39,7 @@ export const PromptSidebarList = ({
   "aria-hidden": ariaHidden,
   onDesignSelected,
 }: PromptSidebarProps): React.JSX.Element => {
+  const { show, error: showError } = useToast();
   const [searchKeyword, setSearchKeyword] = useState<string>("");
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -217,6 +219,14 @@ export const PromptSidebarList = ({
         status: nextStatus,
       });
       await fetchData();
+      show(
+        `提示词设计状态：${getPromptDesignStatusOption(nextStatus).label}`,
+        nextStatus === "completed"
+          ? "success"
+          : nextStatus === "in_progress"
+            ? "warning"
+            : "info",
+      );
       window.dispatchEvent(
         new CustomEvent(PROMPT_DESIGN_STATUS_UPDATED_EVENT, {
           detail: { designId: prompt.id, status: nextStatus },
@@ -224,6 +234,7 @@ export const PromptSidebarList = ({
       );
     } catch (error) {
       console.error("Update prompt design status failed", error);
+      showError("切换失败");
     }
   };
 
@@ -265,6 +276,13 @@ export const PromptSidebarList = ({
         );
       }
       await fetchData();
+      setTruncatedIds((previous) => {
+        if (!previous.has(editingId)) return previous;
+
+        const next = new Set(previous);
+        next.delete(editingId);
+        return next;
+      });
     } catch (error) {
       console.error("Rename failed", error);
     }
@@ -484,17 +502,38 @@ export const PromptSidebarList = ({
     </div>
   );
 
-  const renderPromptTitle = (prompt: any) => {
-    const isEditing = editingId === prompt.id;
-    const isTruncated = truncatedIds.has(prompt.id);
+  /**
+   * 根据当前实际渲染宽度同步标题的省略状态。
+   */
+  const updateTruncatedTitle = (
+    id: string,
+    element: HTMLElement,
+  ): void => {
+    const isTruncated = element.scrollWidth > element.clientWidth;
+    setTruncatedIds((previous) => {
+      if (previous.has(id) === isTruncated) return previous;
+
+      const next = new Set(previous);
+      if (isTruncated) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  /**
+   * 渲染项目、模块或提示词标题，并仅在内容被省略时显示 Tooltip。
+   */
+  const renderItemTitle = (item: any) => {
+    const isEditing = editingId === item.id;
+    const isTruncated = truncatedIds.has(item.id);
     const titleElement = (
       <div
         className="min-w-0 flex-1 truncate text-xs"
         onMouseEnter={(event) => {
-          const element = event.currentTarget;
-          if (element.scrollWidth > element.clientWidth) {
-            setTruncatedIds((previous) => new Set(previous).add(prompt.id));
-          }
+          updateTruncatedTitle(item.id, event.currentTarget);
         }}
       >
         {isEditing ? (
@@ -514,13 +553,13 @@ export const PromptSidebarList = ({
             className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
           />
         ) : (
-          prompt.name
+          item.name
         )}
       </div>
     );
 
     return isTruncated && !isEditing ? (
-      <Tooltip content={prompt.name} placement="right" className="min-w-0 flex-1">
+      <Tooltip content={item.name} placement="right" className="min-w-0 flex-1">
         {titleElement}
       </Tooltip>
     ) : (
@@ -608,12 +647,7 @@ export const PromptSidebarList = ({
                         <div
                           className={`flex-1 min-w-0 text-xs font-semibold uppercase tracking-wider transition-colors truncate pr-2 ${activeProjectId === proj.id ? "text-white/90" : "text-white/40 group-hover:text-white/60"}`}
                           onMouseEnter={(e) => {
-                            const el = e.currentTarget;
-                            if (el.scrollWidth > el.clientWidth) {
-                              setTruncatedIds((prev) =>
-                                new Set(prev).add(proj.id),
-                              );
-                            }
+                            updateTruncatedTitle(proj.id, e.currentTarget);
                           }}
                         >
                           {editingPathId === proj.id ? (
@@ -718,9 +752,7 @@ export const PromptSidebarList = ({
                                     className="w-full border-b border-white/20 bg-transparent text-white/80 outline-none"
                                   />
                                 ) : (
-                                  <span className="min-w-0 flex-1 truncate">
-                                    {module.name}
-                                  </span>
+                                  renderItemTitle(module)
                                 )}
                                 <ChevronRight
                                   className={`h-3.5 w-3.5 text-white/30 transition-transform ${collapsedModules[module.id] ? "" : "rotate-90"}`}
@@ -793,7 +825,7 @@ export const PromptSidebarList = ({
                                             prompt.status ?? "todo",
                                           )}
                                         </button>
-                                        {renderPromptTitle(prompt)}
+                                        {renderItemTitle(prompt)}
                                       </>
                                     )}
                                   </div>
@@ -854,7 +886,7 @@ export const PromptSidebarList = ({
                               >
                                 {renderPromptStatusIcon(prompt.status ?? "todo")}
                               </button>
-                              {renderPromptTitle(prompt)}
+                              {renderItemTitle(prompt)}
                             </>
                           )}
                         </div>
