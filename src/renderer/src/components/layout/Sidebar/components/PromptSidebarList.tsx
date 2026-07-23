@@ -305,7 +305,7 @@ export const PromptSidebarList = ({
   const toggleCompletedPromptGroup = (groupId: string): void => {
     setCollapsedCompletedPromptGroups((previous) => ({
       ...previous,
-      [groupId]: !previous[groupId],
+      [groupId]: !(previous[groupId] ?? true),
     }));
   };
 
