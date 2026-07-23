@@ -1,7 +1,7 @@
-import type { AgentTool } from '@/agent/types'
-import { createReadTool } from './readTool'
-import { createGlobTool } from './globTool'
-import { createGrepTool } from './grepTool'
+import type { AgentTool } from "@/agent/types"
+import { createGlobTool } from "./globTool"
+import { createGrepTool } from "./grepTool"
+import { createReadTool } from "./readTool"
 
 /**
  * 创建 Prompt Design AI 专用文件读取工具集。

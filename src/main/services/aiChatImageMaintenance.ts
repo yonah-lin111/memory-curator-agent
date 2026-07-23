@@ -1,4 +1,4 @@
-import type { FilesService } from '@/services/filesService'
+import type { FilesService } from "@/services/filesService"
 
 // 自动清理延迟：给用户撤销删除保留缓冲窗口（30秒）。
 export const AI_CHAT_IMAGE_CLEANUP_DELAY_MS = 30_000
@@ -15,7 +15,7 @@ let cleanupTimer: NodeJS.Timeout | null = null
 const runAiChatImageMaintenance = async (filesService: FilesService): Promise<void> => {
   await filesService.restoreReferencedAiChatImages()
   await filesService.deleteUnusedAiChatImages({
-    minUnusedAgeMs: AI_CHAT_IMAGE_CLEANUP_DELAY_MS
+    minUnusedAgeMs: AI_CHAT_IMAGE_CLEANUP_DELAY_MS,
   })
   await filesService.cleanExpiredTrash().catch(() => undefined)
 }

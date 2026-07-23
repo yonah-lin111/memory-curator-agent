@@ -1,8 +1,8 @@
-import { createCompactUuid } from '@/id'
-import type { AskQuestion } from '@/agent/tools/askTool'
+import type { AskQuestion } from "@/agent/tools/askTool"
+import { createCompactUuid } from "@/id"
 
 // 工具确认动作类型。
-export type ToolConfirmationAction = 'confirm' | 'cancel'
+export type ToolConfirmationAction = "confirm" | "cancel"
 
 // 工具确认完成提示渲染结果。
 export type ToolConfirmationCompletionResult = {
@@ -51,7 +51,7 @@ export type ToolConfirmationConfig = {
 // 工具确认请求数据。
 export type ToolConfirmationRequestData = {
   // 工具数据类型。
-  kind: 'tool_confirmation_request'
+  kind: "tool_confirmation_request"
   // 确认请求唯一标识。
   id: string
   // 待确认工具名称。
@@ -67,7 +67,7 @@ export type ToolConfirmationRequestData = {
 // 工具确认回答数据。
 export type ToolConfirmationAnswerData = {
   // 工具数据类型。
-  kind: 'tool_confirmation_answer'
+  kind: "tool_confirmation_answer"
   // 确认请求唯一标识。
   id: string
   // 用户确认动作。
@@ -78,7 +78,7 @@ export type ToolConfirmationAnswerData = {
  * 判断值是否为普通对象。
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  Boolean(value) && typeof value === "object" && !Array.isArray(value)
 
 /**
  * 创建工具确认请求数据。
@@ -87,14 +87,14 @@ export const createToolConfirmationRequestData = (
   tool: string,
   input: unknown,
   question: AskQuestion,
-  summary?: string
+  summary?: string,
 ): ToolConfirmationRequestData => ({
-  kind: 'tool_confirmation_request',
+  kind: "tool_confirmation_request",
   id: createCompactUuid(),
   tool,
   input,
   ...(summary ? { summary } : {}),
-  questions: [question]
+  questions: [question],
 })
 
 /**
@@ -103,7 +103,7 @@ export const createToolConfirmationRequestData = (
 export const createConfiguredToolConfirmationRequestData = (
   tool: string,
   input: unknown,
-  config: ToolConfirmationConfig
+  config: ToolConfirmationConfig,
 ): ToolConfirmationRequestData => {
   const target = config.renderTarget?.(input)?.trim() || null
   const summary = config.renderSummary(input)?.trim() || undefined
@@ -118,16 +118,16 @@ export const createConfiguredToolConfirmationRequestData = (
       options: [
         {
           label: config.confirm,
-          description: config.confirmDescription ?? '执行该写入操作。'
+          description: config.confirmDescription ?? "执行该写入操作。",
         },
         {
           label: config.cancel,
-          description: config.cancelDescription ?? '不执行该写入操作。'
-        }
+          description: config.cancelDescription ?? "不执行该写入操作。",
+        },
       ],
-      custom: config.custom ?? false
+      custom: config.custom ?? false,
     },
-    summary
+    summary,
   )
 }
 
@@ -136,22 +136,24 @@ export const createConfiguredToolConfirmationRequestData = (
  */
 export const createToolConfirmationAnswerData = (
   request: ToolConfirmationRequestData,
-  action: ToolConfirmationAction
+  action: ToolConfirmationAction,
 ): ToolConfirmationAnswerData => ({
-  kind: 'tool_confirmation_answer',
+  kind: "tool_confirmation_answer",
   id: request.id,
-  action
+  action,
 })
 
 /**
  * 判断值是否为工具确认请求数据。
  */
-export const isToolConfirmationRequestData = (value: unknown): value is ToolConfirmationRequestData =>
+export const isToolConfirmationRequestData = (
+  value: unknown,
+): value is ToolConfirmationRequestData =>
   isRecord(value) &&
-  value.kind === 'tool_confirmation_request' &&
-  typeof value.id === 'string' &&
-  typeof value.tool === 'string' &&
-  (value.summary === undefined || typeof value.summary === 'string') &&
+  value.kind === "tool_confirmation_request" &&
+  typeof value.id === "string" &&
+  typeof value.tool === "string" &&
+  (value.summary === undefined || typeof value.summary === "string") &&
   Array.isArray(value.questions)
 
 /**
@@ -159,6 +161,6 @@ export const isToolConfirmationRequestData = (value: unknown): value is ToolConf
  */
 export const isToolConfirmationAnswerData = (value: unknown): value is ToolConfirmationAnswerData =>
   isRecord(value) &&
-  value.kind === 'tool_confirmation_answer' &&
-  typeof value.id === 'string' &&
-  (value.action === 'confirm' || value.action === 'cancel')
+  value.kind === "tool_confirmation_answer" &&
+  typeof value.id === "string" &&
+  (value.action === "confirm" || value.action === "cancel")

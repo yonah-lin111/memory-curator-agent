@@ -1,158 +1,147 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useToast } from "@/components/ui/Toast";
-import { useHeaderStore } from "@/lib/headerStore";
-import { useAiSettingsStore } from "@/lib/aiSettingsStore";
-import { DEFAULT_CONFIG_PATH } from "../constants";
-import {
-  cloneSettings,
-  createModel,
-  createProvider,
-  normalizeSettingsForSave,
-} from "../utils";
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useToast } from "@/components/ui/Toast"
+import { useAiSettingsStore } from "@/lib/aiSettingsStore"
+import { useHeaderStore } from "@/lib/headerStore"
+import { DEFAULT_CONFIG_PATH } from "../constants"
 import type {
   AiSettingsConfig,
-  AiSettingsProvider,
   AiSettingsModel,
   AiSettingsModelSelection,
+  AiSettingsProvider,
   SettingsSection,
-} from "../types";
+} from "../types"
+import { cloneSettings, createModel, createProvider, normalizeSettingsForSave } from "../utils"
 
 export const useSettings = () => {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("models");
-  const [baseline, setBaseline] = useState<AiSettingsConfig | null>(null);
-  const [settings, setSettings] = useState<AiSettingsConfig | null>(null);
-  const [selectedProviderKey, setSelectedProviderKey] = useState<string>("");
-  const [loadError, setLoadError] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [expandedModelKeys, setExpandedModelKeys] = useState<Record<string, boolean>>({});
+  const [activeSection, setActiveSection] = useState<SettingsSection>("models")
+  const [baseline, setBaseline] = useState<AiSettingsConfig | null>(null)
+  const [settings, setSettings] = useState<AiSettingsConfig | null>(null)
+  const [selectedProviderKey, setSelectedProviderKey] = useState<string>("")
+  const [loadError, setLoadError] = useState<string>("")
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [expandedModelKeys, setExpandedModelKeys] = useState<Record<string, boolean>>({})
 
-  const toast = useToast();
-  const setShowAgentThinking = useAiSettingsStore((state) => state.setShowAgentThinking);
+  const toast = useToast()
+  const setShowAgentThinking = useAiSettingsStore((state) => state.setShowAgentThinking)
 
   const toggleModelExpanded = useCallback((modelKey: string): void => {
     setExpandedModelKeys((prev) => ({
       ...prev,
       [modelKey]: !prev[modelKey],
-    }));
-  }, []);
+    }))
+  }, [])
 
   const isDirty = useMemo(() => {
-    if (!settings || !baseline) return false;
+    if (!settings || !baseline) return false
     return (
       JSON.stringify(normalizeSettingsForSave(settings)) !==
       JSON.stringify(normalizeSettingsForSave(baseline))
-    );
-  }, [baseline, settings]);
+    )
+  }, [baseline, settings])
 
   const loadSettings = useCallback(async (): Promise<void> => {
-    setIsLoading(true);
-    setLoadError("");
+    setIsLoading(true)
+    setLoadError("")
     try {
-      const api = window.api?.config?.ai;
-      if (!api) throw new Error("配置 API 不可用");
-      const nextSettings = await api.get();
-      setBaseline(cloneSettings(nextSettings));
-      setSettings(cloneSettings(nextSettings));
-      setShowAgentThinking(nextSettings.showAgentThinking);
-      setSelectedProviderKey(Object.keys(nextSettings.providers)[0] ?? "");
+      const api = window.api?.config?.ai
+      if (!api) throw new Error("配置 API 不可用")
+      const nextSettings = await api.get()
+      setBaseline(cloneSettings(nextSettings))
+      setSettings(cloneSettings(nextSettings))
+      setShowAgentThinking(nextSettings.showAgentThinking)
+      setSelectedProviderKey(Object.keys(nextSettings.providers)[0] ?? "")
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "加载配置失败");
+      setLoadError(error instanceof Error ? error.message : "加载配置失败")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [setShowAgentThinking]);
+  }, [setShowAgentThinking])
 
   useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    void loadSettings()
+  }, [loadSettings])
 
   const updateSettings = useCallback(
     (updater: (current: AiSettingsConfig) => AiSettingsConfig): void => {
       setSettings((current) => {
-        if (!current) return current;
-        return updater(cloneSettings(current));
-      });
+        if (!current) return current
+        return updater(cloneSettings(current))
+      })
     },
-    []
-  );
+    [],
+  )
 
   const handleSave = useCallback(async (): Promise<void> => {
-    if (!settings) return;
-    setIsSaving(true);
+    if (!settings) return
+    setIsSaving(true)
     try {
-      const api = window.api?.config?.ai;
-      if (!api) throw new Error("配置 API 不可用");
-      const payload = normalizeSettingsForSave(settings);
-      const saved = await api.save(payload);
-      setBaseline(cloneSettings(saved));
-      setSettings(cloneSettings(saved));
-      setShowAgentThinking(saved.showAgentThinking);
-      setSelectedProviderKey(Object.keys(saved.providers)[0] ?? "");
-      toast.success("设置已保存");
+      const api = window.api?.config?.ai
+      if (!api) throw new Error("配置 API 不可用")
+      const payload = normalizeSettingsForSave(settings)
+      const saved = await api.save(payload)
+      setBaseline(cloneSettings(saved))
+      setSettings(cloneSettings(saved))
+      setShowAgentThinking(saved.showAgentThinking)
+      setSelectedProviderKey(Object.keys(saved.providers)[0] ?? "")
+      toast.success("设置已保存")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存配置失败");
+      toast.error(error instanceof Error ? error.message : "保存配置失败")
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  }, [settings, setShowAgentThinking, toast]);
+  }, [settings, setShowAgentThinking, toast])
 
-  const setSettingsState = useHeaderStore((state) => state.setSettingsState);
-  const setCustomTitle = useHeaderStore((state) => state.setCustomTitle);
+  const setSettingsState = useHeaderStore((state) => state.setSettingsState)
+  const setCustomTitle = useHeaderStore((state) => state.setCustomTitle)
 
   useEffect(() => {
     if (settings) {
-      setCustomTitle(settings.configPath || DEFAULT_CONFIG_PATH);
+      setCustomTitle(settings.configPath || DEFAULT_CONFIG_PATH)
       setSettingsState({
         isDirty,
         isSaving,
         onSave: handleSave,
         onReload: loadSettings,
-      });
+      })
     } else {
-      setCustomTitle(null);
-      setSettingsState(null);
+      setCustomTitle(null)
+      setSettingsState(null)
     }
     return () => {
-      setCustomTitle(null);
-      setSettingsState(null);
-    };
-  }, [
-    settings,
-    isDirty,
-    isSaving,
-    handleSave,
-    loadSettings,
-    setSettingsState,
-    setCustomTitle,
-  ]);
+      setCustomTitle(null)
+      setSettingsState(null)
+    }
+  }, [settings, isDirty, isSaving, handleSave, loadSettings, setSettingsState, setCustomTitle])
 
   const updateModelSelection = useCallback(
     (
       key: "defaultModel" | "titleSummary" | "weeklySummary" | "suggestedQuestions",
       field: keyof AiSettingsModelSelection,
-      value: string
+      value: string,
     ): void => {
       updateSettings((current) => {
-        const nextSelection = { ...current[key], [field]: value };
+        const nextSelection = { ...current[key], [field]: value }
         if (field === "provider") {
-          nextSelection.model =
-            Object.keys(current.providers[value]?.models ?? {})[0] ?? "";
+          nextSelection.model = Object.keys(current.providers[value]?.models ?? {})[0] ?? ""
         }
-        return { ...current, [key]: nextSelection };
-      });
+        return { ...current, [key]: nextSelection }
+      })
     },
-    [updateSettings]
-  );
+    [updateSettings],
+  )
 
-  const updateSuggestedQuestionsEnabled = useCallback((enabled: boolean): void => {
-    updateSettings((current) => ({ ...current, suggestedQuestionsEnabled: enabled }));
-  }, [updateSettings]);
+  const updateSuggestedQuestionsEnabled = useCallback(
+    (enabled: boolean): void => {
+      updateSettings((current) => ({ ...current, suggestedQuestionsEnabled: enabled }))
+    },
+    [updateSettings],
+  )
 
   const addProvider = useCallback((): void => {
     updateSettings((current) => {
-      const nextKey = `provider-${Object.keys(current.providers).length + 1}`;
-      setSelectedProviderKey(nextKey);
+      const nextKey = `provider-${Object.keys(current.providers).length + 1}`
+      setSelectedProviderKey(nextKey)
       return {
         ...current,
         enabledProviders: [...current.enabledProviders, nextKey],
@@ -160,39 +149,36 @@ export const useSettings = () => {
           ...current.providers,
           [nextKey]: createProvider(nextKey),
         },
-      };
-    });
-  }, [updateSettings]);
+      }
+    })
+  }, [updateSettings])
 
   const updateProvider = useCallback(
-    (
-      providerKey: string,
-      updater: (provider: AiSettingsProvider) => AiSettingsProvider
-    ): void => {
+    (providerKey: string, updater: (provider: AiSettingsProvider) => AiSettingsProvider): void => {
       updateSettings((current) => ({
         ...current,
         providers: {
           ...current.providers,
           [providerKey]: updater(current.providers[providerKey]),
         },
-      }));
+      }))
     },
-    [updateSettings]
-  );
+    [updateSettings],
+  )
 
   const deleteProvider = useCallback(
     (providerKey: string): void => {
       updateSettings((current) => {
-        const providers = { ...current.providers };
-        delete providers[providerKey];
-        const fallbackProvider = Object.keys(providers)[0] ?? "";
-        setSelectedProviderKey(fallbackProvider);
+        const providers = { ...current.providers }
+        delete providers[providerKey]
+        const fallbackProvider = Object.keys(providers)[0] ?? ""
+        setSelectedProviderKey(fallbackProvider)
 
         return {
           ...current,
           providers,
           enabledProviders: current.enabledProviders.filter(
-            (providerId) => providerId !== providerKey
+            (providerId) => providerId !== providerKey,
           ),
           defaultModel:
             current.defaultModel.provider === providerKey
@@ -215,33 +201,33 @@ export const useSettings = () => {
                   model: Object.keys(providers[fallbackProvider]?.models ?? {})[0] ?? "",
                 }
               : current.weeklySummary,
-        };
-      });
+        }
+      })
     },
-    [updateSettings]
-  );
+    [updateSettings],
+  )
 
   const copyProvider = useCallback(
     (providerKey: string): void => {
       updateSettings((current) => {
-        const originalProvider = current.providers[providerKey];
-        if (!originalProvider) return current;
+        const originalProvider = current.providers[providerKey]
+        if (!originalProvider) return current
 
-        let baseId = `${originalProvider.id}-copy`;
-        let nextKey = baseId;
-        let counter = 1;
+        let baseId = `${originalProvider.id}-copy`
+        let nextKey = baseId
+        let counter = 1
         while (current.providers[nextKey]) {
-          nextKey = `${baseId}-${counter}`;
-          counter++;
+          nextKey = `${baseId}-${counter}`
+          counter++
         }
 
         const clonedProvider: AiSettingsProvider = {
           ...JSON.parse(JSON.stringify(originalProvider)),
           id: nextKey,
           name: originalProvider.name ? `${originalProvider.name} (Copy)` : nextKey,
-        };
+        }
 
-        setSelectedProviderKey(nextKey);
+        setSelectedProviderKey(nextKey)
         return {
           ...current,
           enabledProviders: [...current.enabledProviders, nextKey],
@@ -249,11 +235,11 @@ export const useSettings = () => {
             ...current.providers,
             [nextKey]: clonedProvider,
           },
-        };
-      });
+        }
+      })
     },
-    [updateSettings]
-  );
+    [updateSettings],
+  )
 
   const toggleProviderEnabled = useCallback(
     (providerKey: string, enabled: boolean): void => {
@@ -262,69 +248,69 @@ export const useSettings = () => {
         enabledProviders: enabled
           ? Array.from(new Set([...current.enabledProviders, providerKey]))
           : current.enabledProviders.filter((providerId) => providerId !== providerKey),
-      }));
+      }))
     },
-    [updateSettings]
-  );
+    [updateSettings],
+  )
 
   const addModel = useCallback(
     (providerKey: string): void => {
       updateProvider(providerKey, (provider) => {
-        const modelId = `model-${Object.keys(provider.models).length + 1}`;
+        const modelId = `model-${Object.keys(provider.models).length + 1}`
         return {
           ...provider,
           models: {
             [modelId]: createModel(modelId),
             ...provider.models,
           },
-        };
-      });
+        }
+      })
     },
-    [updateProvider]
-  );
+    [updateProvider],
+  )
 
   const copyModel = useCallback(
     (providerKey: string, modelKey: string): void => {
       updateProvider(providerKey, (provider) => {
-        const originalModel = provider.models[modelKey];
-        if (!originalModel) return provider;
+        const originalModel = provider.models[modelKey]
+        if (!originalModel) return provider
 
-        let baseId = `${originalModel.id}-copy`;
-        let modelId = baseId;
-        let counter = 1;
+        let baseId = `${originalModel.id}-copy`
+        let modelId = baseId
+        let counter = 1
         while (provider.models[modelId]) {
-          modelId = `${baseId}-${counter}`;
-          counter++;
+          modelId = `${baseId}-${counter}`
+          counter++
         }
 
         const clonedModel: AiSettingsModel = {
           ...JSON.parse(JSON.stringify(originalModel)),
           id: modelId,
           name: originalModel.name ? `${originalModel.name} (Copy)` : modelId,
-        };
+        }
 
-        const nextModels: Record<string, AiSettingsModel> = {};
+        const nextModels: Record<string, AiSettingsModel> = {}
         for (const [key, value] of Object.entries(provider.models)) {
-          nextModels[key] = value;
+          nextModels[key] = value
           if (key === modelKey) {
-            nextModels[modelId] = clonedModel;
+            nextModels[modelId] = clonedModel
           }
         }
 
         return {
           ...provider,
           models: nextModels,
-        };
-      });
+        }
+      })
     },
-    [updateProvider]
-  );
+    [updateProvider],
+  )
 
   const updateModel = useCallback(
     (
       providerKey: string,
       modelKey: string,
-      updater: (model: AiSettingsModel) => AiSettingsModel
+      updater: (model: AiSettingsModel) => AiSettingsModel,
     ): void => {
       updateProvider(providerKey, (provider) => ({
         ...provider,
@@ -332,24 +318,24 @@ export const useSettings = () => {
           ...provider.models,
           [modelKey]: updater(provider.models[modelKey]),
         },
-      }));
+      }))
     },
-    [updateProvider]
-  );
+    [updateProvider],
+  )
 
   const deleteModel = useCallback(
     (providerKey: string, modelKey: string): void => {
       updateProvider(providerKey, (provider) => {
-        const models = { ...provider.models };
-        delete models[modelKey];
+        const models = { ...provider.models }
+        delete models[modelKey]
         return {
           ...provider,
           models,
-        };
-      });
+        }
+      })
     },
-    [updateProvider]
-  );
+    [updateProvider],
+  )
 
   return {
     activeSection,
@@ -374,5 +360,5 @@ export const useSettings = () => {
     copyModel,
     updateModel,
     deleteModel,
-  };
-};
+  }
+}

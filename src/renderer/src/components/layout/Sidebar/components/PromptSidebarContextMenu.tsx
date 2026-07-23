@@ -1,34 +1,34 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { Check, Edit3, Trash2, Plus } from "lucide-react";
+import { Check, Edit3, Plus, Trash2 } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   PROMPT_DESIGN_STATUS_OPTIONS,
   type PromptDesignStatus,
-} from "@/features/prompt-design/lib/promptDesignStatus";
+} from "@/features/prompt-design/lib/promptDesignStatus"
 
-type ContextMenuType = "project" | "module" | "prompt";
+type ContextMenuType = "project" | "module" | "prompt"
 
 type PromptSidebarContextMenuProps = {
-  type: ContextMenuType;
-  title: string;
-  x: number;
-  y: number;
-  onAddModule?: () => void;
-  onAddProjectDesign?: () => void;
-  onAddDesign?: () => void;
-  onEditProject?: () => void;
-  onRename?: () => void;
-  status?: PromptDesignStatus;
-  onStatusChange?: (status: PromptDesignStatus) => void;
-  onDelete: () => void;
-};
+  type: ContextMenuType
+  title: string
+  x: number
+  y: number
+  onAddModule?: () => void
+  onAddProjectDesign?: () => void
+  onAddDesign?: () => void
+  onEditProject?: () => void
+  onRename?: () => void
+  status?: PromptDesignStatus
+  onStatusChange?: (status: PromptDesignStatus) => void
+  onDelete: () => void
+}
 
 // 菜单宽度，用于把右键菜单限制在视口内。
-const MENU_WIDTH = 156;
+const MENU_WIDTH = 156
 
 // 菜单与视口边缘的最小距离。
-const VIEWPORT_PADDING = 8;
+const VIEWPORT_PADDING = 8
 
 /**
  * 把菜单坐标钳制在当前视口内。
@@ -38,21 +38,15 @@ const getMenuPosition = (
   y: number,
   type: ContextMenuType,
 ): { left: number; top: number } => {
-  const MENU_HEIGHT = type === "project" ? 158 : type === "module" ? 120 : 196;
-  const maxLeft = Math.max(
-    VIEWPORT_PADDING,
-    window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING,
-  );
-  const maxTop = Math.max(
-    VIEWPORT_PADDING,
-    window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING,
-  );
+  const MENU_HEIGHT = type === "project" ? 158 : type === "module" ? 120 : 196
+  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING)
+  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING)
 
   return {
     left: Math.min(Math.max(x, VIEWPORT_PADDING), maxLeft),
     top: Math.min(Math.max(y, VIEWPORT_PADDING), maxTop),
-  };
-};
+  }
+}
 
 /**
  * PromptSidebarContextMenu - 负责项目和提示词设计项的右键操作菜单。
@@ -72,24 +66,24 @@ export const PromptSidebarContextMenu = ({
   onDelete,
 }: PromptSidebarContextMenuProps): React.JSX.Element => {
   // 是否已进入删除二次确认态。
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
-  const position = getMenuPosition(x, y, type);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false)
+  const position = getMenuPosition(x, y, type)
 
   useEffect(() => {
-    setIsConfirmingDelete(false);
-  }, [title]);
+    setIsConfirmingDelete(false)
+  }, [title])
 
   /**
    * 第一次点击进入确认态，第二次点击才真正删除。
    */
   const handleDeleteClick = (): void => {
     if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
+      setIsConfirmingDelete(true)
+      return
     }
 
-    onDelete();
-  };
+    onDelete()
+  }
 
   const menuContent = (
     <div
@@ -161,8 +155,8 @@ export const PromptSidebarContextMenu = ({
         <>
           <div className="my-1 border-t border-white/8" />
           {PROMPT_DESIGN_STATUS_OPTIONS.map((option) => {
-            const StatusIcon = option.icon;
-            const isSelected = option.value === status;
+            const StatusIcon = option.icon
+            const isSelected = option.value === status
 
             return (
               <button
@@ -177,7 +171,7 @@ export const PromptSidebarContextMenu = ({
                 <span className="flex-1">{option.label}</span>
                 {isSelected ? <Check className="h-3.5 w-3.5 text-white/70" /> : null}
               </button>
-            );
+            )
           })}
           <div className="my-1 border-t border-white/8" />
         </>
@@ -193,9 +187,7 @@ export const PromptSidebarContextMenu = ({
         onClick={handleDeleteClick}
       >
         <Trash2
-          className={`h-3.5 w-3.5 ${
-            isConfirmingDelete ? "text-white" : "text-rose-400/80"
-          }`}
+          className={`h-3.5 w-3.5 ${isConfirmingDelete ? "text-white" : "text-rose-400/80"}`}
         />
         <span>
           {isConfirmingDelete
@@ -208,7 +200,7 @@ export const PromptSidebarContextMenu = ({
         </span>
       </button>
     </div>
-  );
+  )
 
-  return createPortal(menuContent, document.body);
-};
+  return createPortal(menuContent, document.body)
+}

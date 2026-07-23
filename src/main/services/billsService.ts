@@ -1,5 +1,14 @@
-import type { BillCategory, BillCreateInput, BillItem, BillListFilters, BillRow, BillTodaySummary, BillType, BillUpdateInput } from '@/db/schema'
-import { BILL_CATEGORIES } from '@/db/schema'
+import type {
+  BillCategory,
+  BillCreateInput,
+  BillItem,
+  BillListFilters,
+  BillRow,
+  BillTodaySummary,
+  BillType,
+  BillUpdateInput,
+} from "@/db/schema"
+import { BILL_CATEGORIES } from "@/db/schema"
 
 /** 数据库语句接口 */
 type Statement = {
@@ -25,9 +34,9 @@ export type BillsService = {
 /** 提取 SQLite 自增主键 */
 const getInsertedRowId = (result: unknown): number => {
   const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
-  if (typeof rowId === 'bigint') return Number(rowId)
-  if (typeof rowId === 'number') return rowId
-  throw new Error('无法读取新建账单的主键')
+  if (typeof rowId === "bigint") return Number(rowId)
+  if (typeof rowId === "number") return rowId
+  throw new Error("无法读取新建账单的主键")
 }
 
 /** 生成当前时间戳 */
@@ -39,8 +48,8 @@ const createTimestamp = (): string => {
 const getTodayDate = (): string => {
   const now = new Date()
   const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const date = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const date = String(now.getDate()).padStart(2, "0")
   return `${year}-${month}-${date}`
 }
 
@@ -49,7 +58,7 @@ const parseStoredTags = (value: string): string[] => {
   try {
     const parsed = JSON.parse(value) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((tag): tag is string => typeof tag === 'string')
+    return parsed.filter((tag): tag is string => typeof tag === "string")
   } catch {
     return []
   }
@@ -65,24 +74,24 @@ const mapRow = (row: BillRow): BillItem => ({
   note: row.note,
   tags: parseStoredTags(row.tags),
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
 })
 
 /**
  * 校验账单输入。
  */
 const validateBillInput = (input: BillCreateInput | BillUpdateInput): void => {
-  if ('amount' in input && input.amount !== undefined && input.amount <= 0) {
-    throw new Error('金额必须大于0')
+  if ("amount" in input && input.amount !== undefined && input.amount <= 0) {
+    throw new Error("金额必须大于0")
   }
-  if ('category' in input && input.category && !BILL_CATEGORIES.includes(input.category)) {
-    throw new Error('账单分类不正确')
+  if ("category" in input && input.category && !BILL_CATEGORIES.includes(input.category)) {
+    throw new Error("账单分类不正确")
   }
-  if ('billType' in input && input.billType && !['expense', 'income'].includes(input.billType)) {
-    throw new Error('收支类型不正确')
+  if ("billType" in input && input.billType && !["expense", "income"].includes(input.billType)) {
+    throw new Error("收支类型不正确")
   }
-  if ('billDate' in input && input.billDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.billDate)) {
-    throw new Error('账单日期格式不正确')
+  if ("billDate" in input && input.billDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.billDate)) {
+    throw new Error("账单日期格式不正确")
   }
 }
 
@@ -95,19 +104,19 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
     const params: unknown[] = []
 
     if (filters?.billDate) {
-      clauses.push('bill_date = ?')
+      clauses.push("bill_date = ?")
       params.push(filters.billDate)
     }
     if (filters?.category) {
-      clauses.push('category = ?')
+      clauses.push("category = ?")
       params.push(filters.category)
     }
     if (filters?.billType) {
-      clauses.push('bill_type = ?')
+      clauses.push("bill_type = ?")
       params.push(filters.billType)
     }
 
-    const whereClause = clauses.length > 0 ? ` WHERE ${clauses.join(' AND ')}` : ''
+    const whereClause = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : ""
     const rows = database
       .prepare(`SELECT * FROM bills${whereClause} ORDER BY bill_date DESC, id DESC`)
       .all(...params) as BillRow[]
@@ -115,33 +124,44 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
     return rows.map(mapRow)
   },
   create: (input) => {
-    if (input.amount <= 0) throw new Error('金额必须大于0')
-    if (!BILL_CATEGORIES.includes(input.category)) throw new Error('账单分类不正确')
+    if (input.amount <= 0) throw new Error("金额必须大于0")
+    if (!BILL_CATEGORIES.includes(input.category)) throw new Error("账单分类不正确")
 
     const timestamp = createTimestamp()
     const inserted = database
       .prepare(
-        'INSERT INTO bills (amount, category, bill_type, bill_date, note, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        "INSERT INTO bills (amount, category, bill_type, bill_date, note, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(input.amount, input.category, input.billType, input.billDate, input.note, JSON.stringify(input.tags), timestamp, timestamp)
+      .run(
+        input.amount,
+        input.category,
+        input.billType,
+        input.billDate,
+        input.note,
+        JSON.stringify(input.tags),
+        timestamp,
+        timestamp,
+      )
 
     const row = database
-      .prepare('SELECT * FROM bills WHERE id = ?')
+      .prepare("SELECT * FROM bills WHERE id = ?")
       .get(getInsertedRowId(inserted)) as BillRow | undefined
 
-    if (!row) throw new Error('新建账单后读取失败')
+    if (!row) throw new Error("新建账单后读取失败")
     return mapRow(row)
   },
   update: (id, input) => {
     validateBillInput(input)
 
-    const existing = database.prepare('SELECT * FROM bills WHERE id = ?').get(id) as BillRow | undefined
-    if (!existing) throw new Error('账单不存在')
+    const existing = database.prepare("SELECT * FROM bills WHERE id = ?").get(id) as
+      | BillRow
+      | undefined
+    if (!existing) throw new Error("账单不存在")
 
     const updatedAt = createTimestamp()
     database
       .prepare(
-        'UPDATE bills SET amount = ?, category = ?, bill_type = ?, bill_date = ?, note = ?, tags = ?, updated_at = ? WHERE id = ?'
+        "UPDATE bills SET amount = ?, category = ?, bill_type = ?, bill_date = ?, note = ?, tags = ?, updated_at = ? WHERE id = ?",
       )
       .run(
         input.amount ?? existing.amount,
@@ -151,22 +171,26 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
         input.note ?? existing.note,
         input.tags ? JSON.stringify(input.tags) : existing.tags,
         updatedAt,
-        id
+        id,
       )
 
     return mapRow({ ...existing, updated_at: updatedAt })
   },
   delete: (id) => {
-    database.prepare('DELETE FROM bills WHERE id = ?').run(id)
+    database.prepare("DELETE FROM bills WHERE id = ?").run(id)
   },
   todaySummary: (date) => {
     const billDate = date ?? getTodayDate()
 
     const expenseRow = database
-      .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'expense'")
+      .prepare(
+        "SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'expense'",
+      )
       .get(billDate) as { total: number }
     const incomeRow = database
-      .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'income'")
+      .prepare(
+        "SELECT COALESCE(SUM(amount), 0) AS total FROM bills WHERE bill_date = ? AND bill_type = 'income'",
+      )
       .get(billDate) as { total: number }
 
     const recentRows = database
@@ -176,7 +200,7 @@ export const createBillsService = (database: DatabaseConnection): BillsService =
     return {
       expenseTotal: expenseRow.total,
       incomeTotal: incomeRow.total,
-      recentItems: recentRows.map(mapRow)
+      recentItems: recentRows.map(mapRow),
     }
-  }
+  },
 })

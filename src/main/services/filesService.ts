@@ -1,8 +1,27 @@
-import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { basename, extname, join } from 'node:path'
-import { createCompactUuid } from '@/id'
-import { getAiChatImageDir, getAiChatImageTrashDir, getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir, getPeopleAvatarDir, getPersonalAvatarDir, getAppDataRoot } from '@/paths'
-import { createAiChatImageUrl, createAiChatTextFileUrl, createMarkdownImageUrl, createPeopleAvatarUrl, createPersonalAvatarUrl, resolveAiChatTextFileName, resolvePeopleAvatarFileName, resolvePersonalAvatarFileName } from '@/protocols/localImages'
+import { access, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
+import { basename, extname, join } from "node:path"
+import { createCompactUuid } from "@/id"
+import {
+  getAiChatImageDir,
+  getAiChatImageTrashDir,
+  getAiChatTextDir,
+  getAiChatTextTrashDir,
+  getAppDataRoot,
+  getMarkdownImageDir,
+  getMarkdownImageTrashDir,
+  getPeopleAvatarDir,
+  getPersonalAvatarDir,
+} from "@/paths"
+import {
+  createAiChatImageUrl,
+  createAiChatTextFileUrl,
+  createMarkdownImageUrl,
+  createPeopleAvatarUrl,
+  createPersonalAvatarUrl,
+  resolveAiChatTextFileName,
+  resolvePeopleAvatarFileName,
+  resolvePersonalAvatarFileName,
+} from "@/protocols/localImages"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -125,13 +144,17 @@ export type FilesService = {
   // 恢复已进入回收目录但仍被 Markdown 引用的图片。
   restoreReferencedMarkdownImages: () => Promise<MarkdownImageRestoreResult>
   // 删除未被 Markdown 引用的图片。
-  deleteUnusedMarkdownImages: (options?: MarkdownImageCleanupOptions) => Promise<MarkdownImageCleanupResult>
+  deleteUnusedMarkdownImages: (
+    options?: MarkdownImageCleanupOptions,
+  ) => Promise<MarkdownImageCleanupResult>
   // 列出未被 AI 聊天引用的图片。
   listUnusedAiChatImages: () => Promise<MarkdownImageItem[]>
   // 恢复已进入回收目录但仍被 AI 聊天引用的图片。
   restoreReferencedAiChatImages: () => Promise<MarkdownImageRestoreResult>
   // 删除未被 AI 聊天引用的图片。
-  deleteUnusedAiChatImages: (options?: MarkdownImageCleanupOptions) => Promise<MarkdownImageCleanupResult>
+  deleteUnusedAiChatImages: (
+    options?: MarkdownImageCleanupOptions,
+  ) => Promise<MarkdownImageCleanupResult>
   // 保存 AI 聊天文本文件。
   saveAiChatTextFile: (input: MarkdownImageSaveInput) => Promise<AiChatTextFileSaveResult>
   // 删除 AI 聊天文本文件（移到回收站）。
@@ -144,18 +167,19 @@ export type FilesService = {
 
 // MIME 类型到扩展名的映射。
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
-  'image/bmp': '.bmp',
-  'image/gif': '.gif',
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp'
+  "image/bmp": ".bmp",
+  "image/gif": ".gif",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
 }
 
 // 支持清理的图片扩展名集合。
 const SUPPORTED_IMAGE_EXTENSIONS = new Set(Object.values(IMAGE_EXTENSION_BY_MIME))
 
 // Markdown 图片引用正则。
-const MARKDOWN_IMAGE_URL_PATTERN = /(?:mc-img:\/\/md\/|file:\/\/[^\s"'()]*\/img\/md\/)([^)\s"'#?]+)/g
+const MARKDOWN_IMAGE_URL_PATTERN =
+  /(?:mc-img:\/\/md\/|file:\/\/[^\s"'()]*\/img\/md\/)([^)\s"'#?]+)/g
 
 /**
  * 解析安全扩展名。
@@ -173,7 +197,7 @@ const resolveImageExtension = (name: string, mimeType: string): string => {
     return fileExtension
   }
 
-  return '.png'
+  return ".png"
 }
 
 /**
@@ -181,9 +205,9 @@ const resolveImageExtension = (name: string, mimeType: string): string => {
  */
 const createSafeFileStem = (name: string): string => {
   const rawStem = basename(name, extname(name)).trim().toLowerCase()
-  const safeStem = rawStem.replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
+  const safeStem = rawStem.replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
 
-  return safeStem || 'image'
+  return safeStem || "image"
 }
 
 /**
@@ -202,13 +226,13 @@ const listMarkdownContents = (database?: DatabaseConnection): string[] => {
       SELECT content FROM journals
       UNION ALL
       SELECT content FROM snippets
-      `
+      `,
     )
     .all() as Array<{ content?: unknown }>
 
   return rows
     .map((row) => row.content)
-    .filter((content): content is string => typeof content === 'string')
+    .filter((content): content is string => typeof content === "string")
 }
 
 /**
@@ -219,7 +243,7 @@ const extractReferencedImageNames = (contents: string[]): Set<string> => {
 
   contents.forEach((content) => {
     for (const match of content.matchAll(MARKDOWN_IMAGE_URL_PATTERN)) {
-      const fileName = basename(decodeURIComponent(match[1] ?? ''))
+      const fileName = basename(decodeURIComponent(match[1] ?? ""))
 
       if (fileName) {
         referencedNames.add(fileName)
@@ -231,7 +255,8 @@ const extractReferencedImageNames = (contents: string[]): Set<string> => {
 }
 
 // AI 聊天图片引用正则。
-const AI_CHAT_IMAGE_URL_PATTERN = /(?:mc-img:\/\/chat\/|file:\/\/[^\s"'()]*\/img\/chat\/)([^)\s"'#?]+)/g
+const AI_CHAT_IMAGE_URL_PATTERN =
+  /(?:mc-img:\/\/chat\/|file:\/\/[^\s"'()]*\/img\/chat\/)([^)\s"'#?]+)/g
 
 /**
  * 读取全部 AI 聊天正文。
@@ -247,13 +272,13 @@ const listAiChatContents = (database?: DatabaseConnection): string[] => {
       SELECT content FROM ai_chat_messages
       UNION ALL
       SELECT parts_json AS content FROM ai_chat_messages
-      `
+      `,
     )
     .all() as Array<{ content?: unknown }>
 
   return rows
     .map((row) => row.content)
-    .filter((content): content is string => typeof content === 'string')
+    .filter((content): content is string => typeof content === "string")
 }
 
 /**
@@ -264,7 +289,7 @@ const extractReferencedAiChatImageNames = (contents: string[]): Set<string> => {
 
   contents.forEach((content) => {
     for (const match of content.matchAll(AI_CHAT_IMAGE_URL_PATTERN)) {
-      const fileName = basename(decodeURIComponent(match[1] ?? ''))
+      const fileName = basename(decodeURIComponent(match[1] ?? ""))
 
       if (fileName) {
         referencedNames.add(fileName)
@@ -299,16 +324,16 @@ const listMarkdownImageFiles = async (markdownImageDir: string): Promise<Markdow
           filePath,
           url: createMarkdownImageUrl(fileName),
           sizeBytes: fileStat.size,
-          updatedAt: fileStat.mtime.toISOString()
+          updatedAt: fileStat.mtime.toISOString(),
         }
-      })
+      }),
     )
 
     return images
       .filter((image): image is MarkdownImageItem => Boolean(image))
       .sort((left, right) => left.fileName.localeCompare(right.fileName))
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return []
     }
 
@@ -349,7 +374,10 @@ const pathExists = async (filePath: string): Promise<boolean> => {
 /**
  * 读取指定 Markdown 图片文件条目。
  */
-const getMarkdownImageItem = async (markdownImageDir: string, fileName: string): Promise<MarkdownImageItem> => {
+const getMarkdownImageItem = async (
+  markdownImageDir: string,
+  fileName: string,
+): Promise<MarkdownImageItem> => {
   const filePath = join(markdownImageDir, fileName)
   const fileStat = await stat(filePath)
 
@@ -358,7 +386,7 @@ const getMarkdownImageItem = async (markdownImageDir: string, fileName: string):
     filePath,
     url: createMarkdownImageUrl(fileName),
     sizeBytes: fileStat.size,
-    updatedAt: fileStat.mtime.toISOString()
+    updatedAt: fileStat.mtime.toISOString(),
   }
 }
 
@@ -374,12 +402,12 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
   const aiChatImageTrashDir = deps.aiChatImageTrashDir ?? getAiChatImageTrashDir()
   const aiChatTextDir = getAiChatTextDir()
   const aiChatTextTrashDir = getAiChatTextTrashDir()
-  const trashRootDir = deps.trashRootDir ?? join(getAppDataRoot(), 'trash')
+  const trashRootDir = deps.trashRootDir ?? join(getAppDataRoot(), "trash")
 
   return {
     saveMarkdownImage: async (input) => {
-      if (!input.mimeType.startsWith('image/')) {
-        throw new Error('仅支持保存图片文件')
+      if (!input.mimeType.startsWith("image/")) {
+        throw new Error("仅支持保存图片文件")
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
@@ -392,12 +420,12 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       return {
         fileName,
         filePath,
-        url: createMarkdownImageUrl(fileName)
+        url: createMarkdownImageUrl(fileName),
       }
     },
     savePeopleAvatar: async (input) => {
-      if (!input.mimeType.startsWith('image/')) {
-        throw new Error('仅支持保存图片文件')
+      if (!input.mimeType.startsWith("image/")) {
+        throw new Error("仅支持保存图片文件")
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
@@ -410,7 +438,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       return {
         fileName,
         filePath,
-        url: createPeopleAvatarUrl(fileName)
+        url: createPeopleAvatarUrl(fileName),
       }
     },
     deletePeopleAvatar: async (url: string) => {
@@ -427,8 +455,8 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       }
     },
     savePersonalAvatar: async (input) => {
-      if (!input.mimeType.startsWith('image/')) {
-        throw new Error('仅支持保存图片文件')
+      if (!input.mimeType.startsWith("image/")) {
+        throw new Error("仅支持保存图片文件")
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
@@ -441,7 +469,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       return {
         fileName,
         filePath,
-        url: createPersonalAvatarUrl(fileName)
+        url: createPersonalAvatarUrl(fileName),
       }
     },
     deletePersonalAvatar: async (url: string) => {
@@ -458,8 +486,8 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       }
     },
     saveAiChatImage: async (input) => {
-      if (!input.mimeType.startsWith('image/')) {
-        throw new Error('仅支持保存图片文件')
+      if (!input.mimeType.startsWith("image/")) {
+        throw new Error("仅支持保存图片文件")
       }
 
       const extension = resolveImageExtension(input.name, input.mimeType)
@@ -472,7 +500,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
       return {
         fileName,
         filePath,
-        url: createAiChatImageUrl(fileName)
+        url: createAiChatImageUrl(fileName),
       }
     },
     listUnusedMarkdownImages: async () => {
@@ -502,12 +530,14 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
 
           await rename(trashPath, livePath)
           restoredImages.push(await getMarkdownImageItem(markdownImageDir, fileName))
-        })
+        }),
       )
 
       return {
         restoredCount: restoredImages.length,
-        restoredImages: restoredImages.sort((left, right) => left.fileName.localeCompare(right.fileName))
+        restoredImages: restoredImages.sort((left, right) =>
+          left.fileName.localeCompare(right.fileName),
+        ),
       }
     },
     deleteUnusedMarkdownImages: async (options = {}) => {
@@ -537,12 +567,12 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
           const targetPath = await createTrashTargetPath(markdownImageTrashDir, image.fileName)
 
           await rename(image.filePath, targetPath)
-        })
+        }),
       )
 
       return {
         deletedCount: unusedImages.length,
-        deletedImages: unusedImages
+        deletedImages: unusedImages,
       }
     },
     listUnusedAiChatImages: async () => {
@@ -572,12 +602,14 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
 
           await rename(trashPath, livePath)
           restoredImages.push(await getMarkdownImageItem(aiChatImageDir, fileName))
-        })
+        }),
       )
 
       return {
         restoredCount: restoredImages.length,
-        restoredImages: restoredImages.sort((left, right) => left.fileName.localeCompare(right.fileName))
+        restoredImages: restoredImages.sort((left, right) =>
+          left.fileName.localeCompare(right.fileName),
+        ),
       }
     },
     deleteUnusedAiChatImages: async (options = {}) => {
@@ -607,16 +639,16 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
           const targetPath = await createTrashTargetPath(aiChatImageTrashDir, image.fileName)
 
           await rename(image.filePath, targetPath)
-        })
+        }),
       )
 
       return {
         deletedCount: unusedImages.length,
-        deletedImages: unusedImages
+        deletedImages: unusedImages,
       }
     },
     saveAiChatTextFile: async (input) => {
-      const extension = extname(input.name).toLowerCase() || '.txt'
+      const extension = extname(input.name).toLowerCase() || ".txt"
       const fileName = `${createSafeFileStem(input.name)}-${createCompactUuid()}${extension}`
       const filePath = join(aiChatTextDir, fileName)
 
@@ -630,7 +662,7 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
         filePath,
         url: createAiChatTextFileUrl(fileName),
         originalName: input.name,
-        sizeBytes: fileStat.size
+        sizeBytes: fileStat.size,
       }
     },
     deleteAiChatTextFile: async (fileName) => {
@@ -647,15 +679,15 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
     readAiChatTextFile: async (url) => {
       const fileName = resolveAiChatTextFileName(url)
       if (!fileName) {
-        throw new Error('Invalid text file URL')
+        throw new Error("Invalid text file URL")
       }
 
       const filePath = join(aiChatTextDir, fileName)
       if (!(await pathExists(filePath))) {
-        throw new Error('File does not exist')
+        throw new Error("File does not exist")
       }
 
-      return readFile(filePath, 'utf-8')
+      return readFile(filePath, "utf-8")
     },
     cleanExpiredTrash: async (retentionMs = 7 * 24 * 60 * 60 * 1000) => {
       const now = Date.now()
@@ -687,11 +719,11 @@ export const createFilesService = (deps: FilesServiceDeps = {}): FilesService =>
             } catch (err) {
               // 忽略单个文件处理错误，防止阻断整体清理
             }
-          })
+          }),
         )
       }
 
       await cleanFolder(trashRootDir)
-    }
+    },
   }
 }

@@ -1,12 +1,12 @@
-import type React from "react";
-import { AlertCircle, RotateCcw } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { SETTINGS_SECTIONS } from "./constants";
-import { useSettings } from "./hooks/useSettings";
-import { ModelsSection } from "./components/ModelsSection";
-import { ProvidersSection } from "./components/ProvidersSection";
-import { AgentSection } from "./components/AgentSection";
-import { SkillsSection } from "./components/SkillsSection";
+import { AlertCircle, RotateCcw } from "lucide-react"
+import type React from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { AgentSection } from "./components/AgentSection"
+import { ModelsSection } from "./components/ModelsSection"
+import { ProvidersSection } from "./components/ProvidersSection"
+import { SkillsSection } from "./components/SkillsSection"
+import { SETTINGS_SECTIONS } from "./constants"
+import { useSettings } from "./hooks/useSettings"
 
 /**
  * Settings 页面 - 结构化编辑本地 AI 配置。
@@ -35,14 +35,14 @@ export const SettingsPage = (): React.JSX.Element => {
     copyModel,
     updateModel,
     deleteModel,
-  } = useSettings();
+  } = useSettings()
 
   if (isLoading) {
     return (
       <section className="flex h-full items-center justify-center rounded-[6px] bg-[#212121] text-sm text-white/45">
         正在加载设置...
       </section>
-    );
+    )
   }
 
   if (loadError || !settings) {
@@ -59,7 +59,7 @@ export const SettingsPage = (): React.JSX.Element => {
           </IconButton>
         </div>
       </section>
-    );
+    )
   }
 
   return (
@@ -71,7 +71,7 @@ export const SettingsPage = (): React.JSX.Element => {
         <aside className="rounded-[6px] border border-white/8 bg-black/20 p-2">
           <nav className="flex flex-col gap-1" aria-label="Settings sections">
             {SETTINGS_SECTIONS.map((section) => {
-              const isActive = activeSection === section.id;
+              const isActive = activeSection === section.id
               return (
                 <button
                   key={section.id}
@@ -87,7 +87,7 @@ export const SettingsPage = (): React.JSX.Element => {
                 >
                   <span className="block text-sm font-bold">{section.label}</span>
                 </button>
-              );
+              )
             })}
           </nav>
         </aside>
@@ -96,7 +96,11 @@ export const SettingsPage = (): React.JSX.Element => {
           className={`min-h-0 overflow-y-auto ${activeSection === "providers" ? "scrollbar-hidden" : ""}`}
         >
           {activeSection === "models" && (
-            <ModelsSection settings={settings} updateModelSelection={updateModelSelection} updateSuggestedQuestionsEnabled={updateSuggestedQuestionsEnabled} />
+            <ModelsSection
+              settings={settings}
+              updateModelSelection={updateModelSelection}
+              updateSuggestedQuestionsEnabled={updateSuggestedQuestionsEnabled}
+            />
           )}
           {activeSection === "providers" && (
             <ProvidersSection
@@ -125,5 +129,5 @@ export const SettingsPage = (): React.JSX.Element => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

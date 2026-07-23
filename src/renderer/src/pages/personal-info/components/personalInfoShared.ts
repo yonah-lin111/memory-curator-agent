@@ -1,4 +1,4 @@
-export type PersonalInfoPageMode = 'view' | 'edit'
+export type PersonalInfoPageMode = "view" | "edit"
 
 export type PersonalProfile = {
   id: number
@@ -14,7 +14,7 @@ export type PersonalProfile = {
   updatedAt: string
 }
 
-export type PersonalProfilePayload = Omit<PersonalProfile, 'id' | 'createdAt' | 'updatedAt'>
+export type PersonalProfilePayload = Omit<PersonalProfile, "id" | "createdAt" | "updatedAt">
 
 export type FormState = {
   avatar: string
@@ -28,12 +28,12 @@ export type FormState = {
 }
 
 export const initialFormState: FormState = {
-  avatar: '',
-  name: '',
-  gender: '男',
-  status: '',
-  birthday: '',
-  contact: '',
+  avatar: "",
+  name: "",
+  gender: "男",
+  status: "",
+  birthday: "",
+  contact: "",
   tags: [],
-  details: ''
+  details: "",
 }

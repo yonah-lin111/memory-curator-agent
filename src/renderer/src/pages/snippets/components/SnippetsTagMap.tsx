@@ -1,17 +1,17 @@
-import type React from "react";
-import { RotateCcw } from "lucide-react";
-import { Tag } from "@/components/ui/Tag";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { IconButton } from "@/components/ui/IconButton";
+import { RotateCcw } from "lucide-react"
+import type React from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Tag } from "@/components/ui/Tag"
+import { Tooltip } from "@/components/ui/Tooltip"
 
 // 标签地图属性。
 interface SnippetsTagMapProps {
   // 标签统计列表。
-  tags: Array<{ value: string; count: number }>;
+  tags: Array<{ value: string; count: number }>
   // 当前激活标签。
-  activeTag: string | null;
+  activeTag: string | null
   // 标签切换回调。
-  onChange: (tag: string | null) => void;
+  onChange: (tag: string | null) => void
 }
 
 /**
@@ -38,9 +38,7 @@ export const SnippetsTagMap = ({
       </div>
       <div className="flex flex-wrap gap-1.5 overflow-y-scroll custom-scrollbar max-h-[300px] pr-0.5">
         {tags.length === 0 ? (
-          <span className="text-xs text-white/30 py-4 text-center w-full">
-            暂无标签
-          </span>
+          <span className="text-xs text-white/30 py-4 text-center w-full">暂无标签</span>
         ) : (
           <>
             <Tag
@@ -54,9 +52,7 @@ export const SnippetsTagMap = ({
               <Tag
                 key={tag.value}
                 highlighted={activeTag === tag.value}
-                onClick={() =>
-                  onChange(activeTag === tag.value ? null : tag.value)
-                }
+                onClick={() => onChange(activeTag === tag.value ? null : tag.value)}
                 className="font-medium cursor-pointer"
                 prefix="#"
               >
@@ -68,4 +64,4 @@ export const SnippetsTagMap = ({
       </div>
     </div>
   </aside>
-);
+)

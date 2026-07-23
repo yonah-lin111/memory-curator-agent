@@ -1,19 +1,19 @@
-import React, { useLayoutEffect, useState, useRef } from "react";
-import { ChevronDown, Brain } from "lucide-react";
-import { MdPreview } from "md-editor-rt";
-import "md-editor-rt/lib/preview.css";
+import { Brain, ChevronDown } from "lucide-react"
+import { MdPreview } from "md-editor-rt"
+import React, { useLayoutEffect, useRef, useState } from "react"
+import "md-editor-rt/lib/preview.css"
 
 // AI 思考块组件属性类型。
 type CuratorThinkingBlockProps = {
   // Markdown 思考内容。
-  content: string;
+  content: string
   // 是否正在生成中。
-  isGenerating?: boolean;
+  isGenerating?: boolean
   // 点击折叠展开时的回调。
-  onToggle?: () => void;
+  onToggle?: () => void
   // 后一紧邻执行节点存在时显示出站时间轴连接线。
-  connectsToNextExecution?: boolean;
-};
+  connectsToNextExecution?: boolean
+}
 
 /**
  * CuratorThinkingBlock - 使用 Markdown 预览渲染模型思考内容。
@@ -26,33 +26,33 @@ export const CuratorThinkingBlock = ({
   connectsToNextExecution = false,
 }: CuratorThinkingBlockProps): React.JSX.Element => {
   // 是否展开思考内容。
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false)
   // 思考内容内部容器引用，用于测量真实自适应高度。
-  const innerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null)
   // 缓存真实内容高度，避免流式内容追加导致高度过期被裁切。
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const [contentHeight, setContentHeight] = useState<number | null>(null)
 
   useLayoutEffect(() => {
-    const element = innerRef.current;
+    const element = innerRef.current
     if (!element) {
-      return;
+      return
     }
 
     if (!isExpanded) {
-      setContentHeight(null);
-      return;
+      setContentHeight(null)
+      return
     }
 
-    setContentHeight(element.scrollHeight);
+    setContentHeight(element.scrollHeight)
     const observer = new ResizeObserver(() => {
-      setContentHeight(element.scrollHeight);
-    });
-    observer.observe(element);
+      setContentHeight(element.scrollHeight)
+    })
+    observer.observe(element)
 
     return () => {
-      observer.disconnect();
-    };
-  }, [isExpanded, content]);
+      observer.disconnect()
+    }
+  }, [isExpanded, content])
 
   return (
     <div className="flex w-full gap-2.5 pl-1 my-1.5 items-start">
@@ -74,8 +74,8 @@ export const CuratorThinkingBlock = ({
           type="button"
           className="flex h-5 items-center gap-1 cursor-pointer text-xs select-none pr-2 rounded-[6px] bg-[#212121] text-white/50 hover:bg-[#212121]/80 hover:text-white/70 transition-all duration-200 w-fit outline-none focus:outline-none border-none"
           onClick={() => {
-            setIsExpanded((prev) => !prev);
-            onToggle?.();
+            setIsExpanded((prev) => !prev)
+            onToggle?.()
           }}
           aria-expanded={isExpanded}
         >
@@ -102,7 +102,8 @@ export const CuratorThinkingBlock = ({
                 : `${innerRef.current?.scrollHeight || 0}px`
               : "0px",
             opacity: isExpanded ? 1 : 0,
-            transition: "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
+            transition:
+              "max-height 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1)",
           }}
           className="overflow-hidden"
         >
@@ -128,5 +129,5 @@ export const CuratorThinkingBlock = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,38 +1,36 @@
-import type { AssociatedPersonUpdateInput } from '@/db/schema';
-import type { PeopleService } from '@/services/peopleService';
-import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation';
-import type { PeopleWriteTool } from '../types';
-import { PEOPLE_PROFILE_REQUIRED, PEOPLE_PROFILE_PROPERTIES } from '../constants';
+import type { ToolConfirmationConfig } from "@/agent/tools/toolConfirmation"
+import type { AssociatedPersonUpdateInput } from "@/db/schema"
+import type { PeopleService } from "@/services/peopleService"
+import { PEOPLE_PROFILE_PROPERTIES, PEOPLE_PROFILE_REQUIRED } from "../constants"
+import type { PeopleWriteTool } from "../types"
 import {
   isRecord,
   parsePersonProfileInput,
   parseString,
-  renderPeopleMutationTarget,
-  renderPeopleMutationSummary,
   renderPeopleMutationCompletion,
+  renderPeopleMutationSummary,
+  renderPeopleMutationTarget,
   toToolItem,
-} from '../utils';
+} from "../utils"
 
 /**
  * 解析 People 更新入参。
  */
-const parseUpdateInput = (
-  input: unknown,
-): { id: string; profile: AssociatedPersonUpdateInput } => {
+const parseUpdateInput = (input: unknown): { id: string; profile: AssociatedPersonUpdateInput } => {
   if (!isRecord(input)) {
-    throw new Error("People update input must be an object");
+    throw new Error("People update input must be an object")
   }
 
-  const id = parseString(input.id)?.trim();
+  const id = parseString(input.id)?.trim()
   if (!id) {
-    throw new Error("People update requires id");
+    throw new Error("People update requires id")
   }
 
   return {
     id,
     profile: parsePersonProfileInput(input as Record<string, unknown>),
-  };
-};
+  }
+}
 
 // People 更新确认配置。
 const PEOPLE_UPDATE_CONFIRMATION: ToolConfirmationConfig = {
@@ -46,7 +44,7 @@ const PEOPLE_UPDATE_CONFIRMATION: ToolConfirmationConfig = {
     renderMessage: (input, result) =>
       renderPeopleMutationCompletion("update", input, result as { data: unknown }),
   },
-};
+}
 
 /**
  * 创建 People 更新工具。
@@ -55,20 +53,11 @@ export const createPeopleUpdateTool = (
   peopleService: Pick<PeopleService, "update">,
 ): PeopleWriteTool => ({
   name: "people_tool_update",
-  description:
-    "Update an existing people profile in the local People table by id.",
+  description: "Update an existing people profile in the local People table by id.",
   confirmation: PEOPLE_UPDATE_CONFIRMATION,
   prompt: {
     summary: "Update an existing profile in the local People table by id.",
-    intentKeywords: [
-      "修改",
-      "更新",
-      "改成",
-      "纠正",
-      "补充人物",
-      "update person",
-      "edit person",
-    ],
+    intentKeywords: ["修改", "更新", "改成", "纠正", "补充人物", "update person", "edit person"],
     whenToUse: [
       "Use when the user explicitly asks to update an existing people profile.",
       "Use after people_tool_query when the user identifies a person by name or relationship instead of id, then update the resolved profile id.",
@@ -87,7 +76,8 @@ export const createPeopleUpdateTool = (
       "Query first when the user only provides a name, then merge unchanged fields before updating.",
       "Never overwrite fields with guesses.",
     ],
-    output: "Include confirmationSummary in the tool arguments with key changed fields; return the updated people profile facts needed by the user.",
+    output:
+      "Include confirmationSummary in the tool arguments with key changed fields; return the updated people profile facts needed by the user.",
     examples: [
       '{"confirmationSummary":"将更新 **阿明** 的人物档案。\\n- 状态：技术负责人\\n- 联系方式：GitHub: aming-coder","id":"person-1","name":"阿明","gender":"男","relationship":"朋友","status":"技术负责人","birthday":"09月11日","contact":"GitHub: aming-coder","tags":["极客"],"details":"# 阿明","avatar":""}',
     ],
@@ -104,14 +94,14 @@ export const createPeopleUpdateTool = (
     },
   },
   execute: async (input) => {
-    const parsed = parseUpdateInput(input);
-    const updated = peopleService.update(parsed.id, parsed.profile);
+    const parsed = parseUpdateInput(input)
+    const updated = peopleService.update(parsed.id, parsed.profile)
 
     return {
       observation: `Updated people profile: ${updated.name}.`,
       data: {
         item: toToolItem(updated),
       },
-    };
+    }
   },
-});
+})

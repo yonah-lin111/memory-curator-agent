@@ -1,50 +1,52 @@
-import { ipcMain } from 'electron'
-import { getDatabase } from '@/db'
+import { ipcMain } from "electron"
+import { getDatabase } from "@/db"
 import {
   createFilesService,
   type DatabaseConnection,
-  type MarkdownImageSaveInput
-} from '@/services/filesService'
+  type MarkdownImageSaveInput,
+} from "@/services/filesService"
 
 /**
  * 注册文件 IPC 处理器。
  */
 export const registerFilesHandlers = (): void => {
-  const filesService = createFilesService({ database: getDatabase() as unknown as DatabaseConnection })
+  const filesService = createFilesService({
+    database: getDatabase() as unknown as DatabaseConnection,
+  })
 
-  ipcMain.handle('files:markdown-image:save', (_, input: MarkdownImageSaveInput) =>
-    filesService.saveMarkdownImage(input)
+  ipcMain.handle("files:markdown-image:save", (_, input: MarkdownImageSaveInput) =>
+    filesService.saveMarkdownImage(input),
   )
 
-  ipcMain.handle('files:people-avatar:save', (_, input: MarkdownImageSaveInput) =>
-    filesService.savePeopleAvatar(input)
+  ipcMain.handle("files:people-avatar:save", (_, input: MarkdownImageSaveInput) =>
+    filesService.savePeopleAvatar(input),
   )
 
-  ipcMain.handle('files:people-avatar:delete', (_, url: string) =>
-    filesService.deletePeopleAvatar(url)
+  ipcMain.handle("files:people-avatar:delete", (_, url: string) =>
+    filesService.deletePeopleAvatar(url),
   )
 
-  ipcMain.handle('files:personal-avatar:save', (_, input: MarkdownImageSaveInput) =>
-    filesService.savePersonalAvatar(input)
+  ipcMain.handle("files:personal-avatar:save", (_, input: MarkdownImageSaveInput) =>
+    filesService.savePersonalAvatar(input),
   )
 
-  ipcMain.handle('files:personal-avatar:delete', (_, url: string) =>
-    filesService.deletePersonalAvatar(url)
+  ipcMain.handle("files:personal-avatar:delete", (_, url: string) =>
+    filesService.deletePersonalAvatar(url),
   )
 
-  ipcMain.handle('files:ai-chat-image:save', (_, input: MarkdownImageSaveInput) =>
-    filesService.saveAiChatImage(input)
+  ipcMain.handle("files:ai-chat-image:save", (_, input: MarkdownImageSaveInput) =>
+    filesService.saveAiChatImage(input),
   )
 
-  ipcMain.handle('files:ai-chat-text:save', (_, input: MarkdownImageSaveInput) =>
-    filesService.saveAiChatTextFile(input)
+  ipcMain.handle("files:ai-chat-text:save", (_, input: MarkdownImageSaveInput) =>
+    filesService.saveAiChatTextFile(input),
   )
 
-  ipcMain.handle('files:ai-chat-text:delete', (_, fileName: string) =>
-    filesService.deleteAiChatTextFile(fileName)
+  ipcMain.handle("files:ai-chat-text:delete", (_, fileName: string) =>
+    filesService.deleteAiChatTextFile(fileName),
   )
 
-  ipcMain.handle('files:ai-chat-text:read', (_, url: string) =>
-    filesService.readAiChatTextFile(url)
+  ipcMain.handle("files:ai-chat-text:read", (_, url: string) =>
+    filesService.readAiChatTextFile(url),
   )
 }

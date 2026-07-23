@@ -1,24 +1,24 @@
-import type React from "react";
-import { useState, useRef, useEffect } from "react";
-import { BookOpen, Smile } from "lucide-react";
-import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
+import { BookOpen, Smile } from "lucide-react"
+import type React from "react"
+import { useEffect, useRef, useState } from "react"
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor"
 
 // 日记编辑器区域属性。
 interface JournalEditorSurfaceProps {
   // 当前正文内容。
-  value: string;
+  value: string
   // 当前字数。
-  wordCount: number;
+  wordCount: number
   // 情绪线索文案。
-  moodLabel: string;
+  moodLabel: string
   // 当前正文是否已成功保存。
-  isSaved: boolean;
+  isSaved: boolean
   // 内容变化回调。
-  onChange: (value: string) => void;
+  onChange: (value: string) => void
   // 失焦回调。
-  onBlur: () => void;
+  onBlur: () => void
   // 页面是否正在加载。
-  isLoading?: boolean;
+  isLoading?: boolean
 }
 
 /**
@@ -33,20 +33,20 @@ export const JournalEditorSurface = ({
   onBlur,
   isLoading,
 }: JournalEditorSurfaceProps): React.JSX.Element => {
-  const [editorMode, setEditorMode] = useState<"preview" | "split">("split");
-  const prevLoadingRef = useRef<boolean | undefined>(undefined);
+  const [editorMode, setEditorMode] = useState<"preview" | "split">("split")
+  const prevLoadingRef = useRef<boolean | undefined>(undefined)
 
   useEffect(() => {
     // 初次挂载，或者刚刚完成加载 (isLoading 从 true 变 false)
-    const isInitialMount = prevLoadingRef.current === undefined;
-    const justFinishedLoading = prevLoadingRef.current === true && isLoading === false;
+    const isInitialMount = prevLoadingRef.current === undefined
+    const justFinishedLoading = prevLoadingRef.current === true && isLoading === false
 
     if (isInitialMount || justFinishedLoading) {
-      setEditorMode("split");
+      setEditorMode("split")
     }
 
-    prevLoadingRef.current = isLoading;
-  }, [isLoading]);
+    prevLoadingRef.current = isLoading
+  }, [isLoading])
 
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-[6px] border border-white/6 bg-[#212121] p-4 gap-3">
@@ -80,5 +80,5 @@ export const JournalEditorSurface = ({
         />
       </div>
     </section>
-  );
-};
+  )
+}

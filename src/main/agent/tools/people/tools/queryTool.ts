@@ -1,38 +1,36 @@
-import type { PeopleService } from '@/services/peopleService';
 import type {
   PeopleQueryConditions,
   PeopleQueryToolInput,
   PeopleQueryToolItem,
-} from '@/agent/types';
-import type { PersonRelationship } from '@/db/schema';
-import type { PeopleQueryTool } from '../types';
+} from "@/agent/types"
+import type { PersonRelationship } from "@/db/schema"
+import type { PeopleService } from "@/services/peopleService"
 import {
+  DEFAULT_PEOPLE_COLUMNS,
   DEFAULT_PEOPLE_LIMIT,
+  FORBIDDEN_SQL_PATTERN,
   MAX_PEOPLE_LIMIT,
   MAX_PEOPLE_SQL_LENGTH,
-  PEOPLE_TABLE_NAME,
   PEOPLE_COLUMNS,
-  DEFAULT_PEOPLE_COLUMNS,
   PEOPLE_RELATIONSHIP_SCHEMA,
-  FORBIDDEN_SQL_PATTERN,
+  PEOPLE_TABLE_NAME,
   SQL_COMMENT_PATTERN,
-} from '../constants';
-import { isRecord, parseString, sqlRowToToolItem, isPersonSqlRow } from '../utils';
+} from "../constants"
+import type { PeopleQueryTool } from "../types"
+import { isPersonSqlRow, isRecord, parseString, sqlRowToToolItem } from "../utils"
 
 /**
  * 解析 People 条件查询入参。
  */
 const parseConditions = (value: unknown): PeopleQueryConditions | undefined => {
   if (!isRecord(value)) {
-    return undefined;
+    return undefined
   }
 
   return {
     name: parseString(value.name),
     gender: parseString(value.gender),
-    relationship: parseString(value.relationship) as
-      | PersonRelationship
-      | undefined,
+    relationship: parseString(value.relationship) as PersonRelationship | undefined,
     status: parseString(value.status),
     birthday: parseString(value.birthday),
     contact: parseString(value.contact),
@@ -40,93 +38,75 @@ const parseConditions = (value: unknown): PeopleQueryConditions | undefined => {
     details: parseString(value.details),
     updatedAfter: parseString(value.updatedAfter),
     updatedBefore: parseString(value.updatedBefore),
-  };
-};
+  }
+}
 
 /**
  * 解析 People 工具入参。
  */
 const parseInput = (input: unknown): PeopleQueryToolInput => {
   if (!isRecord(input)) {
-    return {};
+    return {}
   }
 
   return {
     query: parseString(input.query),
-    relationship: parseString(input.relationship) as
-      | PersonRelationship
-      | undefined,
+    relationship: parseString(input.relationship) as PersonRelationship | undefined,
     conditions: parseConditions(input.conditions),
     sql: parseString(input.sql),
     limit: typeof input.limit === "number" ? input.limit : undefined,
-  };
-};
+  }
+}
 
 /**
  * 转义 SQL 字符串字面量。
  */
-const escapeSqlString = (value: string): string => value.replace(/'/g, "''");
+const escapeSqlString = (value: string): string => value.replace(/'/g, "''")
 
 /**
  * 转义 LIKE 查询字面量。
  */
 const escapeSqlLike = (value: string): string =>
-  escapeSqlString(
-    value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_"),
-  );
+  escapeSqlString(value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_"))
 
 /**
  * 构造 LIKE 条件。
  */
-const buildLikeCondition = (
-  column: string,
-  value: string | undefined,
-): string | null => {
-  const trimmed = value?.trim();
+const buildLikeCondition = (column: string, value: string | undefined): string | null => {
+  const trimmed = value?.trim()
   if (!trimmed) {
-    return null;
+    return null
   }
 
-  return `${column} LIKE '%${escapeSqlLike(trimmed)}%' ESCAPE '\\'`;
-};
+  return `${column} LIKE '%${escapeSqlLike(trimmed)}%' ESCAPE '\\'`
+}
 
 /**
  * 构造相等条件。
  */
-const buildEqualCondition = (
-  column: string,
-  value: string | undefined,
-): string | null => {
-  const trimmed = value?.trim();
+const buildEqualCondition = (column: string, value: string | undefined): string | null => {
+  const trimmed = value?.trim()
   if (!trimmed) {
-    return null;
+    return null
   }
 
-  return `${column} = '${escapeSqlString(trimmed)}'`;
-};
+  return `${column} = '${escapeSqlString(trimmed)}'`
+}
 
 /**
  * 构造基础字段 query 条件。
  */
 const buildBaseQueryCondition = (query: string | undefined): string | null => {
-  const trimmed = query?.trim();
+  const trimmed = query?.trim()
   if (!trimmed) {
-    return null;
+    return null
   }
 
-  return `(${[
-    "name",
-    "gender",
-    "relationship",
-    "status",
-    "birthday",
-    "contact",
-    "tags",
-  ]
+  return `(${["name", "gender", "relationship", "status", "birthday", "contact", "tags"]
     .map((column) => buildLikeCondition(column, trimmed))
     .filter((condition): condition is string => Boolean(condition))
-    .join(" OR ")})`;
-};
+    .join(" OR ")})`
+}
 
 /**
  * 构造结构化查询 WHERE 子句。
@@ -135,7 +115,7 @@ const buildStructuredWhere = (
   parsed: PeopleQueryToolInput,
   queryTarget: "base" | "details",
 ): string => {
-  const conditions = parsed.conditions;
+  const conditions = parsed.conditions
   const whereParts = [
     buildEqualCondition("relationship", parsed.relationship),
     buildLikeCondition("name", conditions?.name),
@@ -155,10 +135,10 @@ const buildStructuredWhere = (
     queryTarget === "base"
       ? buildBaseQueryCondition(parsed.query)
       : buildLikeCondition("details", parsed.query),
-  ].filter((condition): condition is string => Boolean(condition));
+  ].filter((condition): condition is string => Boolean(condition))
 
-  return whereParts.length > 0 ? ` WHERE ${whereParts.join(" AND ")}` : "";
-};
+  return whereParts.length > 0 ? ` WHERE ${whereParts.join(" AND ")}` : ""
+}
 
 /**
  * 将结构化查询编译为受控 SQL。
@@ -168,57 +148,51 @@ const buildStructuredSql = (
   queryTarget: "base" | "details",
   limit: number,
 ): string => {
-  const isSingleQuery = limit === 1;
+  const isSingleQuery = limit === 1
   const shouldSelectDetails =
-    isSingleQuery ||
-    Boolean(parsed.conditions?.details) ||
-    queryTarget === "details";
-  const columns = shouldSelectDetails ? PEOPLE_COLUMNS : DEFAULT_PEOPLE_COLUMNS;
+    isSingleQuery || Boolean(parsed.conditions?.details) || queryTarget === "details"
+  const columns = shouldSelectDetails ? PEOPLE_COLUMNS : DEFAULT_PEOPLE_COLUMNS
 
-  return `SELECT ${columns} FROM ${PEOPLE_TABLE_NAME}${buildStructuredWhere(parsed, queryTarget)} ORDER BY updated_at DESC, created_at DESC`;
-};
+  return `SELECT ${columns} FROM ${PEOPLE_TABLE_NAME}${buildStructuredWhere(parsed, queryTarget)} ORDER BY updated_at DESC, created_at DESC`
+}
 
 /**
  * 校验并限制 AI 生成的 People SQL。
  */
 const preparePeopleSql = (sql: string, limit: number): string => {
-  const normalizedSql = sql.trim();
+  const normalizedSql = sql.trim()
 
   if (!normalizedSql) {
-    throw new Error("People SQL cannot be empty");
+    throw new Error("People SQL cannot be empty")
   }
 
   if (normalizedSql.length > MAX_PEOPLE_SQL_LENGTH) {
-    throw new Error("People SQL is too long");
+    throw new Error("People SQL is too long")
   }
 
   if (normalizedSql.includes(";") || SQL_COMMENT_PATTERN.test(normalizedSql)) {
-    throw new Error(
-      "People SQL only allows a single SELECT statement without comments",
-    );
+    throw new Error("People SQL only allows a single SELECT statement without comments")
   }
 
   if (!/^select\b/i.test(normalizedSql)) {
-    throw new Error("People SQL only allows SELECT queries");
+    throw new Error("People SQL only allows SELECT queries")
   }
 
   if (FORBIDDEN_SQL_PATTERN.test(normalizedSql)) {
-    throw new Error("People SQL contains a forbidden keyword");
+    throw new Error("People SQL contains a forbidden keyword")
   }
 
-  if (
-    !new RegExp(`\\bfrom\\s+${PEOPLE_TABLE_NAME}\\b`, "i").test(normalizedSql)
-  ) {
-    throw new Error(`People SQL can only query the ${PEOPLE_TABLE_NAME} table`);
+  if (!new RegExp(`\\bfrom\\s+${PEOPLE_TABLE_NAME}\\b`, "i").test(normalizedSql)) {
+    throw new Error(`People SQL can only query the ${PEOPLE_TABLE_NAME} table`)
   }
 
   if (/\bfrom\s+(?!associated_people\b)[a-z_][\w]*/i.test(normalizedSql)) {
-    throw new Error(`People SQL can only query the ${PEOPLE_TABLE_NAME} table`);
+    throw new Error(`People SQL can only query the ${PEOPLE_TABLE_NAME} table`)
   }
 
-  const hasLimit = /\blimit\s+\d+\b/i.test(normalizedSql);
-  return hasLimit ? normalizedSql : `${normalizedSql} LIMIT ${limit}`;
-};
+  const hasLimit = /\blimit\s+\d+\b/i.test(normalizedSql)
+  return hasLimit ? normalizedSql : `${normalizedSql} LIMIT ${limit}`
+}
 
 /**
  * 执行受控 People SQL 查询。
@@ -228,28 +202,26 @@ const queryBySql = (
   sql: string,
   limit: number,
 ): { items: PeopleQueryToolItem[]; rows: unknown[] } => {
-  const rows = peopleService
-    .querySql(preparePeopleSql(sql, limit))
-    .slice(0, limit);
-  const items = rows.filter(isPersonSqlRow).map(sqlRowToToolItem);
+  const rows = peopleService.querySql(preparePeopleSql(sql, limit)).slice(0, limit)
+  const items = rows.filter(isPersonSqlRow).map(sqlRowToToolItem)
 
   return {
     items,
     rows,
-  };
-};
+  }
+}
 
 /**
  * 渲染 SQL 查询观察文本。
  */
 const renderSqlObservation = (rows: unknown[]): string => {
   if (rows.length === 0) {
-    return "SQL query returned no rows.";
+    return "SQL query returned no rows."
   }
 
-  const rowLabel = rows.length === 1 ? "row" : "rows";
-  return `SQL query returned ${rows.length} ${rowLabel}.`;
-};
+  const rowLabel = rows.length === 1 ? "row" : "rows"
+  return `SQL query returned ${rows.length} ${rowLabel}.`
+}
 
 /**
  * 执行结构化 SQL 查询，必要时再兜底查询 details。
@@ -259,25 +231,13 @@ const queryStructuredBySql = (
   parsed: PeopleQueryToolInput,
   limit: number,
 ): { items: PeopleQueryToolItem[]; rows: unknown[] } => {
-  const baseResult = queryBySql(
-    peopleService,
-    buildStructuredSql(parsed, "base", limit),
-    limit,
-  );
-  if (
-    baseResult.rows.length > 0 ||
-    !parsed.query?.trim() ||
-    parsed.conditions?.details
-  ) {
-    return baseResult;
+  const baseResult = queryBySql(peopleService, buildStructuredSql(parsed, "base", limit), limit)
+  if (baseResult.rows.length > 0 || !parsed.query?.trim() || parsed.conditions?.details) {
+    return baseResult
   }
 
-  return queryBySql(
-    peopleService,
-    buildStructuredSql(parsed, "details", limit),
-    limit,
-  );
-};
+  return queryBySql(peopleService, buildStructuredSql(parsed, "details", limit), limit)
+}
 
 /**
  * 创建 People 只读查询工具。
@@ -391,13 +351,11 @@ export const createPeopleQueryTool = (
           },
           updatedAfter: {
             type: "string",
-            description:
-              "Updated-at lower bound, in the same format as updated_at",
+            description: "Updated-at lower bound, in the same format as updated_at",
           },
           updatedBefore: {
             type: "string",
-            description:
-              "Updated-at upper bound, in the same format as updated_at",
+            description: "Updated-at upper bound, in the same format as updated_at",
           },
         },
       },
@@ -412,16 +370,13 @@ export const createPeopleQueryTool = (
     },
   },
   execute: async (input) => {
-    const parsed = parseInput(input);
-    const limit = Math.max(
-      1,
-      Math.min(parsed.limit ?? DEFAULT_PEOPLE_LIMIT, MAX_PEOPLE_LIMIT),
-    );
+    const parsed = parseInput(input)
+    const limit = Math.max(1, Math.min(parsed.limit ?? DEFAULT_PEOPLE_LIMIT, MAX_PEOPLE_LIMIT))
     const queryResult = parsed.sql
       ? queryBySql(peopleService, parsed.sql, limit)
-      : queryStructuredBySql(peopleService, parsed, limit);
-    const { items, rows } = queryResult;
-    const observation = renderSqlObservation(rows);
+      : queryStructuredBySql(peopleService, parsed, limit)
+    const { items, rows } = queryResult
+    const observation = renderSqlObservation(rows)
 
     return {
       observation,
@@ -431,6 +386,6 @@ export const createPeopleQueryTool = (
       },
       items,
       rows,
-    };
+    }
   },
-});
+})

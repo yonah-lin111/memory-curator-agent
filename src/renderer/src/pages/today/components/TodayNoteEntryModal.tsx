@@ -1,35 +1,35 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { FileText } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Input } from "@/components/ui/Input";
+import { FileText } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
 
 export type NoteItem = {
   // 片段唯一标识。
-  id: number;
+  id: number
   // 片段标题。
-  title: string;
+  title: string
   // 片段正文。
-  content: string;
+  content: string
   // 片段标签列表。
-  tags: string[];
+  tags: string[]
   // 列表展示时间。
-  time: string;
-};
+  time: string
+}
 
 type TodayNoteEntryModalProps = {
   // 当前编辑的随记卡片（新建时为 null 或 undefined）
-  note?: NoteItem | null;
+  note?: NoteItem | null
   // 关闭弹窗回调
-  onClose: () => void;
+  onClose: () => void
   // 保存回调，参数支持带 id 的更新，不带 id 的新建
   onSave: (note: {
-    id?: number;
-    title: string;
-    content: string;
-    tags: string[];
-  }) => Promise<boolean>;
-};
+    id?: number
+    title: string
+    content: string
+    tags: string[]
+  }) => Promise<boolean>
+}
 
 /**
  * TodayNoteEntryModal - 自由随记卡片弹窗组件
@@ -41,33 +41,33 @@ export const TodayNoteEntryModal = ({
   onSave,
 }: TodayNoteEntryModalProps): React.JSX.Element => {
   // 是否正在保存。
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false)
   // 当前是否为编辑态。
-  const isEdit = !!note;
+  const isEdit = !!note
   // 标题输入值。
-  const [title, setTitle] = useState(note?.title ?? "");
+  const [title, setTitle] = useState(note?.title ?? "")
   // 内容输入值。
-  const [content, setContent] = useState(note?.content ?? "");
+  const [content, setContent] = useState(note?.content ?? "")
   // 标签列表。
-  const [tags, setTags] = useState<string[]>(note?.tags ?? []);
+  const [tags, setTags] = useState<string[]>(note?.tags ?? [])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        onClose();
+        onClose()
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [onClose])
 
   const handleSubmit = async (): Promise<void> => {
     if (!title.trim() && !content.trim()) {
-      return;
+      return
     }
 
-    setIsSaving(true);
+    setIsSaving(true)
 
     try {
       const isSaved = await onSave({
@@ -75,17 +75,17 @@ export const TodayNoteEntryModal = ({
         title: title.trim(),
         content: content.trim(),
         tags,
-      });
+      })
 
       if (!isSaved) {
-        return;
+        return
       }
 
-      onClose();
+      onClose()
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   return (
     <div
@@ -101,18 +101,11 @@ export const TodayNoteEntryModal = ({
         <div className="flex items-center justify-between gap-4 border-b border-white/5 py-2.5 px-4">
           <div className="flex items-center gap-2">
             <FileText className="h-3.5 w-3.5 text-white/60" />
-            <h2
-              id="add-entry-modal-title"
-              className="text-sm font-bold text-white"
-            >
+            <h2 id="add-entry-modal-title" className="text-sm font-bold text-white">
               {isEdit ? "编辑自由随记卡片" : "新建自由随记卡片"}
             </h2>
           </div>
-          <IconButton
-            aria-label="Close modal"
-            preset="close"
-            onClick={onClose}
-          />
+          <IconButton aria-label="Close modal" preset="close" onClick={onClose} />
         </div>
 
         <div className="flex flex-col gap-2.5 p-3.5">
@@ -136,9 +129,7 @@ export const TodayNoteEntryModal = ({
             />
           </label>
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold tracking-wide text-white/55">
-              灵感标签
-            </span>
+            <span className="text-sm font-semibold tracking-wide text-white/55">灵感标签</span>
             <Input
               as="tags"
               tags={tags}
@@ -150,9 +141,7 @@ export const TodayNoteEntryModal = ({
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 py-2.5 px-4">
-          <span className="font-mono text-xs text-white/30">
-            ESC 关闭 / 已接入本地持久化
-          </span>
+          <span className="font-mono text-xs text-white/30">ESC 关闭 / 已接入本地持久化</span>
           <IconButton
             preset="save"
             iconOnly={false}
@@ -166,5 +155,5 @@ export const TodayNoteEntryModal = ({
         </div>
       </section>
     </div>
-  );
-};
+  )
+}

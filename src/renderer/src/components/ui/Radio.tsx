@@ -1,44 +1,41 @@
-import type React from "react";
-import { createContext, useContext } from "react";
+import type React from "react"
+import { createContext, useContext } from "react"
 
 // 单选组上下文。
 interface RadioGroupContextValue {
   // 单选组名称。
-  name: string;
+  name: string
   // 当前选中值。
-  value: string;
+  value: string
   // 值变化回调。
-  onChange: (value: string) => void;
+  onChange: (value: string) => void
   // 是否禁用整个单选组。
-  disabled: boolean;
+  disabled: boolean
 }
 
 // 单选组上下文实例。
-const RadioGroupContext = createContext<RadioGroupContextValue | null>(null);
+const RadioGroupContext = createContext<RadioGroupContextValue | null>(null)
 
 // 单选组组件属性。
 export interface RadioGroupProps {
   // 单选组名称。
-  name: string;
+  name: string
   // 当前选中值。
-  value: string;
+  value: string
   // 值变化回调。
-  onChange: (value: string) => void;
+  onChange: (value: string) => void
   // 单选项内容。
-  children: React.ReactNode;
+  children: React.ReactNode
   // 是否禁用整个单选组。
-  disabled?: boolean;
+  disabled?: boolean
   // 额外容器样式名。
-  className?: string;
+  className?: string
 }
 
 // 单选框组件属性。
-export interface RadioProps extends Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  "type"
-> {
+export interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   // 单选项标签。
-  label: React.ReactNode;
+  label: React.ReactNode
 }
 
 /**
@@ -55,18 +52,16 @@ export const Radio = ({
   ...inputProps
 }: RadioProps): React.JSX.Element => {
   // 读取所属单选组状态。
-  const radioGroup = useContext(RadioGroupContext);
+  const radioGroup = useContext(RadioGroupContext)
   // 合并单选组与单项禁用状态。
-  const isDisabled = disabled || radioGroup?.disabled === true;
+  const isDisabled = disabled || radioGroup?.disabled === true
   // 单选组优先接管受控选中状态。
-  const isChecked = radioGroup ? radioGroup.value === String(value) : checked;
+  const isChecked = radioGroup ? radioGroup.value === String(value) : checked
 
   return (
     <label
       className={`flex items-center gap-2 rounded-[4px] px-1 py-1 text-xs text-white/65 transition-colors ${
-        isDisabled
-          ? "cursor-not-allowed opacity-40"
-          : "cursor-pointer hover:bg-white/[0.04]"
+        isDisabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-white/[0.04]"
       } ${className}`}
     >
       <input
@@ -76,9 +71,9 @@ export const Radio = ({
         disabled={isDisabled}
         name={radioGroup?.name ?? name}
         onChange={(event) => {
-          onChange?.(event);
+          onChange?.(event)
           if (event.target.checked) {
-            radioGroup?.onChange(event.target.value);
+            radioGroup?.onChange(event.target.value)
           }
         }}
         type="radio"
@@ -90,8 +85,8 @@ export const Radio = ({
       />
       <span>{label}</span>
     </label>
-  );
-};
+  )
+}
 
 /**
  * RadioGroup - 为 Radio 提供统一的受控状态与互斥选择行为。
@@ -110,5 +105,5 @@ export const RadioGroup = ({
         {children}
       </div>
     </RadioGroupContext.Provider>
-  );
-};
+  )
+}

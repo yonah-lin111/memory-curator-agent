@@ -1,75 +1,78 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { Cpu, RefreshCcw, FileText, Info } from "lucide-react";
-import { useToast } from "@/components/ui/Toast";
-import { Switch } from "@/components/ui/Switch";
-import type { AiSettingsConfig } from "../types";
+import { Cpu, FileText, Info, RefreshCcw } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { Switch } from "@/components/ui/Switch"
+import { useToast } from "@/components/ui/Toast"
+import type { AiSettingsConfig } from "../types"
 
 interface AiAgentSkill {
-  id: string;
-  name: string;
-  description: string;
-  supportedAgents?: string[];
-  content: string;
-  location: string;
+  id: string
+  name: string
+  description: string
+  supportedAgents?: string[]
+  content: string
+  location: string
 }
 
 // Skills 设置板块属性。
 interface SkillsSectionProps {
   // 当前 AI 设置。
-  settings: AiSettingsConfig;
+  settings: AiSettingsConfig
   // 更新 AI 设置。
-  updateSettings: (updater: (current: AiSettingsConfig) => AiSettingsConfig) => void;
+  updateSettings: (updater: (current: AiSettingsConfig) => AiSettingsConfig) => void
 }
 
 /**
  * SkillsSection - 智能体技能展示、热重载管理设置板块。
  */
-export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps): React.JSX.Element => {
-  const toast = useToast();
-  const [skills, setSkills] = useState<AiAgentSkill[]>([]);
-  const [selectedSkill, setSelectedSkill] = useState<AiAgentSkill | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export const SkillsSection = ({
+  settings,
+  updateSettings,
+}: SkillsSectionProps): React.JSX.Element => {
+  const toast = useToast()
+  const [skills, setSkills] = useState<AiAgentSkill[]>([])
+  const [selectedSkill, setSelectedSkill] = useState<AiAgentSkill | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   // 拉取本地所有已解析的 Markdown 技能文件列表。
   const fetchSkills = async (forceRefresh = false): Promise<void> => {
-    if (!window.api?.skills) return;
+    if (!window.api?.skills) return
     try {
-      setIsLoading(true);
-      const list = await window.api.skills.list(forceRefresh);
-      setSkills(list || []);
+      setIsLoading(true)
+      const list = await window.api.skills.list(forceRefresh)
+      setSkills(list || [])
       if (list && list.length > 0) {
         // 默认选中第一个
-        setSelectedSkill(list[0]);
+        setSelectedSkill(list[0])
       } else {
-        setSelectedSkill(null);
+        setSelectedSkill(null)
       }
     } catch (error) {
-      console.error("Failed to load skills in SettingsPage:", error);
-      toast.error("加载本地智能体技能失败");
+      console.error("Failed to load skills in SettingsPage:", error)
+      toast.error("加载本地智能体技能失败")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchSkills(false);
-  }, []);
+    fetchSkills(false)
+  }, [])
 
   // 执行热刷新：清除主进程缓存并重新扫描目录。
   const handleReload = async (): Promise<void> => {
-    if (!window.api?.skills) return;
+    if (!window.api?.skills) return
     try {
-      setIsLoading(true);
-      await window.api.skills.clearCache();
-      await fetchSkills(true);
-      toast.success("技能已热刷新！支持在磁盘修改后即时热加载。");
+      setIsLoading(true)
+      await window.api.skills.clearCache()
+      await fetchSkills(true)
+      toast.success("技能已热刷新！支持在磁盘修改后即时热加载。")
     } catch {
-      toast.error("刷新失败");
+      toast.error("刷新失败")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   /**
    * 切换单个 Skill 的可用状态，实际持久化由设置页统一保存。
@@ -79,9 +82,9 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
       ...current,
       disabledSkillIds: enabled
         ? current.disabledSkillIds.filter((id) => id !== skillId)
-        : Array.from(new Set([...current.disabledSkillIds, skillId]))
-    }));
-  };
+        : Array.from(new Set([...current.disabledSkillIds, skillId])),
+    }))
+  }
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -93,7 +96,9 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
             Agent 智能体技能
           </h2>
           <p className="mt-1 text-xs text-white/40">
-            自定义系统指令级技能。加载于 ~/.mc/skills/{'<'}<span className="text-white/60">技能名</span>{'>'}/skill.md 路径下。
+            自定义系统指令级技能。加载于 ~/.mc/skills/{"<"}
+            <span className="text-white/60">技能名</span>
+            {">"}/skill.md 路径下。
           </p>
         </div>
         <button
@@ -117,8 +122,8 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
             </div>
           ) : (
             skills.map((skill) => {
-              const isSelected = selectedSkill?.id === skill.id;
-              const isDisabled = settings.disabledSkillIds.includes(skill.id);
+              const isSelected = selectedSkill?.id === skill.id
+              const isDisabled = settings.disabledSkillIds.includes(skill.id)
               return (
                 <button
                   key={skill.id}
@@ -127,12 +132,12 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
                   className={`flex flex-col gap-1 rounded-[6px] px-3 py-2 text-left transition-colors ${
                     isSelected
                       ? "bg-white text-black"
-                      : isDisabled ? "text-white/35 hover:bg-white/5" : "hover:bg-white/5 text-white/85"
+                      : isDisabled
+                        ? "text-white/35 hover:bg-white/5"
+                        : "hover:bg-white/5 text-white/85"
                   }`}
                 >
-                  <span className="block text-xs font-semibold truncate w-full">
-                    {skill.name}
-                  </span>
+                  <span className="block text-xs font-semibold truncate w-full">{skill.name}</span>
                   <span
                     className={`block text-[11px] truncate w-full ${
                       isSelected ? "text-black/60" : "text-white/35"
@@ -142,7 +147,7 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
                   </span>
                   {isDisabled && <span className="text-[10px] text-amber-200/70">已禁用</span>}
                 </button>
-              );
+              )
             })
           )}
         </div>
@@ -154,7 +159,10 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-bold text-white">{selectedSkill.name}</h3>
-                  <label className="flex items-center gap-2 text-xs text-white/60" htmlFor={`skill-enabled-${selectedSkill.id}`}>
+                  <label
+                    className="flex items-center gap-2 text-xs text-white/60"
+                    htmlFor={`skill-enabled-${selectedSkill.id}`}
+                  >
                     启用
                     <Switch
                       id={`skill-enabled-${selectedSkill.id}`}
@@ -175,7 +183,10 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/40">文件位置:</span>
-                  <span className="text-white/80 truncate max-w-[280px]" title={selectedSkill.location}>
+                  <span
+                    className="text-white/80 truncate max-w-[280px]"
+                    title={selectedSkill.location}
+                  >
                     {selectedSkill.location.replace(/^\/Users\/[^/]+/, "~")}
                   </span>
                 </div>
@@ -200,7 +211,9 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
                   系统级提示词内容 (Content):
                 </label>
                 <div className="flex-1 rounded-[6px] border border-white/5 bg-black/35 p-3 font-mono text-xs text-white/85 whitespace-pre-wrap leading-relaxed max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {selectedSkill.content || <span className="text-white/20 italic">正文内容为空</span>}
+                  {selectedSkill.content || (
+                    <span className="text-white/20 italic">正文内容为空</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -209,7 +222,15 @@ export const SkillsSection = ({ settings, updateSettings }: SkillsSectionProps):
               <Cpu className="h-8 w-8 text-white/10 mb-2.5" />
               <h3 className="text-sm font-bold text-white/70">添加你的自定义技能</h3>
               <p className="mt-2 max-w-xs text-xs text-white/40 leading-relaxed">
-                在 macOS 上，你可以在 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">~/.mc/skills</code> 下创建 <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">技能名/skill.md</code> 格式的技能文件。
+                在 macOS 上，你可以在{" "}
+                <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">
+                  ~/.mc/skills
+                </code>{" "}
+                下创建{" "}
+                <code className="rounded bg-black/30 px-1 py-0.5 text-[11px] font-mono">
+                  技能名/skill.md
+                </code>{" "}
+                格式的技能文件。
               </p>
               <div className="mt-4 rounded-[6px] border border-white/5 bg-black/30 p-2.5 text-left text-[11px] leading-relaxed text-white/50 font-mono">
                 示例前置元数据 (Frontmatter)：
@@ -220,8 +241,7 @@ description: 学术级中英双向翻译
 supportedAgents:
   - common
 ---
-[技能实际系统角色提示词]`
-                  }
+[技能实际系统角色提示词]`}
                 </pre>
               </div>
             </div>
@@ -229,5 +249,5 @@ supportedAgents:
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

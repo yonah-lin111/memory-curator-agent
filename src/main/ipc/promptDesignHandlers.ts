@@ -1,8 +1,8 @@
 import { ipcMain } from "electron"
 import fs from "fs"
 import path from "path"
-import { promptDesignService } from "../services/promptDesignService"
 import { getMatchScore } from "@/lib/promptDesignUtils"
+import { promptDesignService } from "../services/promptDesignService"
 
 const IGNORE_DIRS = new Set([
   "node_modules",
@@ -13,71 +13,74 @@ const IGNORE_DIRS = new Set([
   ".next",
   ".nuxt",
   ".idea",
-  ".vscode"
+  ".vscode",
 ])
 
 export const registerPromptDesignHandlers = (): void => {
   // 文件
-  ipcMain.handle("prompt-design:files:search", (_, { directory, query }: { directory: string, query: string }) => {
-    const results: { path: string; isDirectory: boolean; score: number }[] = []
-    const maxResults = 100
+  ipcMain.handle(
+    "prompt-design:files:search",
+    (_, { directory, query }: { directory: string; query: string }) => {
+      const results: { path: string; isDirectory: boolean; score: number }[] = []
+      const maxResults = 100
 
-    const cleanQuery = query.toLowerCase().replace(/^@/, "").trim()
+      const cleanQuery = query.toLowerCase().replace(/^@/, "").trim()
 
-    function walk(currentDir: string) {
-      let entries
-      try {
-        entries = fs.readdirSync(currentDir, { withFileTypes: true })
-      } catch (err) {
-        return
-      }
-
-      for (const entry of entries) {
-        const fullPath = path.join(currentDir, entry.name)
-        const relativePath = path.relative(directory, fullPath)
-        const normalizedRelativePath = relativePath.split(path.sep).join("/")
-
-        if (entry.isSymbolicLink()) {
-          continue
+      function walk(currentDir: string) {
+        let entries
+        try {
+          entries = fs.readdirSync(currentDir, { withFileTypes: true })
+        } catch (err) {
+          return
         }
 
-        if (entry.isDirectory()) {
-          if (!IGNORE_DIRS.has(entry.name) && !entry.name.startsWith(".")) {
-            const directoryPath = `${normalizedRelativePath}/`
+        for (const entry of entries) {
+          const fullPath = path.join(currentDir, entry.name)
+          const relativePath = path.relative(directory, fullPath)
+          const normalizedRelativePath = relativePath.split(path.sep).join("/")
+
+          if (entry.isSymbolicLink()) {
+            continue
+          }
+
+          if (entry.isDirectory()) {
+            if (!IGNORE_DIRS.has(entry.name) && !entry.name.startsWith(".")) {
+              const directoryPath = `${normalizedRelativePath}/`
+              const score = getMatchScore(normalizedRelativePath, cleanQuery)
+              if (score > 0) {
+                results.push({ path: directoryPath, isDirectory: true, score })
+              }
+              walk(fullPath)
+            }
+          } else if (entry.isFile()) {
+            if (entry.name === ".DS_Store") continue
+
             const score = getMatchScore(normalizedRelativePath, cleanQuery)
             if (score > 0) {
-              results.push({ path: directoryPath, isDirectory: true, score })
+              results.push({ path: normalizedRelativePath, isDirectory: false, score })
             }
-            walk(fullPath)
-          }
-        } else if (entry.isFile()) {
-          if (entry.name === ".DS_Store") continue
-
-          const score = getMatchScore(normalizedRelativePath, cleanQuery)
-          if (score > 0) {
-            results.push({ path: normalizedRelativePath, isDirectory: false, score })
           }
         }
       }
-    }
 
-    try {
-      walk(directory)
-    } catch (err) {
-      console.error("Error walking directory:", err)
-    }
+      try {
+        walk(directory)
+      } catch (err) {
+        console.error("Error walking directory:", err)
+      }
 
-    // 按得分降序排序，若得分相同按字母升序，取前 maxResults 个
-    return results
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score
-        }
-        return a.path.localeCompare(b.path)
-      })
-      .slice(0, maxResults)
-      .map(({ path: itemPath, isDirectory }) => ({ path: itemPath, isDirectory }))
-  })
+      // 按得分降序排序，若得分相同按字母升序，取前 maxResults 个
+      return results
+        .sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score
+          }
+          return a.path.localeCompare(b.path)
+        })
+        .slice(0, maxResults)
+        .map(({ path: itemPath, isDirectory }) => ({ path: itemPath, isDirectory }))
+    },
+  )
 
   // 项目
   ipcMain.handle("prompt-design:projects:list", () => {

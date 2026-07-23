@@ -1,9 +1,9 @@
-import { useState, useRef } from "react"
-import { Folder, Edit3, X } from "lucide-react"
-import { Tag } from "@/components/ui/Tag"
+import { Edit3, Folder, X } from "lucide-react"
+import { useRef, useState } from "react"
 import { IconButton } from "@/components/ui/IconButton"
-import { Tooltip } from "@/components/ui/Tooltip"
 import { Input } from "@/components/ui/Input"
+import { Tag } from "@/components/ui/Tag"
+import { Tooltip } from "@/components/ui/Tooltip"
 
 /** 分类项类型。 */
 export interface NoteCategory {
@@ -28,7 +28,7 @@ export const NoteCategoryPanel = ({
   onSelectCategory,
   onCreate,
   onUpdate,
-  onDelete
+  onDelete,
 }: NoteCategoryPanelProps): React.JSX.Element => {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editValue, setEditValue] = useState("")

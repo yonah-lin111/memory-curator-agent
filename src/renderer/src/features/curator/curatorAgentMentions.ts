@@ -1,77 +1,86 @@
-import type { CuratorMessagePart } from "@/features/curator/types";
+import type { CuratorMessagePart } from "@/features/curator/types"
 
 // AI 输入框可选择的 agent 标识。
-export type CuratorAgentId = "people" | "personal" | "todo" | "snippets" | "journal" | "notes" | "today" | "common" | "bills";
+export type CuratorAgentId =
+  | "people"
+  | "personal"
+  | "todo"
+  | "snippets"
+  | "journal"
+  | "notes"
+  | "today"
+  | "common"
+  | "bills"
 
 // AI 输入框 agent mention 选项。
 export type CuratorAgentMentionOption = {
   // Agent 唯一标识。
-  id: CuratorAgentId;
+  id: CuratorAgentId
   // 写入输入框的完整 token。
-  token: string;
+  token: string
   // 面板展示名称。
-  label: string;
+  label: string
   // 面板展示描述。
-  description: string;
-};
+  description: string
+}
 
 // AI 输入框已选择 agent mention。
 export type CuratorInputAgentMention = {
   // Agent 唯一标识。
-  id: CuratorAgentId;
+  id: CuratorAgentId
   // 输入框中的完整 token。
-  token: string;
+  token: string
   // 展示名称。
-  label: string;
+  label: string
   // 本轮 agent 优先级，数字越小越优先。
-  priority: number;
-};
+  priority: number
+}
 
 // 发送给对话控制器的干净输入载荷。
 export type CuratorSendPayload = {
   // 已剥离 agent token 的用户正文。
-  text: string;
+  text: string
   // 本轮选择的 agent mention。
-  agents: CuratorInputAgentMention[];
+  agents: CuratorInputAgentMention[]
   // 本轮附带的多模态消息片段。
-  parts?: CuratorMessagePart[];
-};
+  parts?: CuratorMessagePart[]
+}
 
 // 发送给主进程的 agent hint。
 export type CuratorAgentHint = {
   // Agent 唯一标识。
-  id: CuratorAgentId;
+  id: CuratorAgentId
   // 本轮 agent 优先级，数字越小越优先。
-  priority: number;
-};
+  priority: number
+}
 
 // Agent token 在输入文本中的位置。
 export type CuratorAgentMentionRange = {
   // token 起始位置。
-  start: number;
+  start: number
   // token 结束位置。
-  end: number;
+  end: number
   // 匹配到的 agent 选项。
-  option: CuratorAgentMentionOption;
-};
+  option: CuratorAgentMentionOption
+}
 
 // 解析后的输入文本。
 export type CuratorParsedAgentMentionText = {
   // 已剥离 agent token 的用户正文。
-  text: string;
+  text: string
   // 本轮选择的 agent mention。
-  agents: CuratorInputAgentMention[];
+  agents: CuratorInputAgentMention[]
   // 完整 token 在原始文本中的范围。
-  ranges: CuratorAgentMentionRange[];
-};
+  ranges: CuratorAgentMentionRange[]
+}
 
 // 删除完整 agent token 的范围。
 export type CuratorAgentMentionDeletionRange = {
   // 删除起始位置。
-  start: number;
+  start: number
   // 删除结束位置。
-  end: number;
-};
+  end: number
+}
 
 // 输入框支持的 agent mention 选项。
 export const CURATOR_AGENT_MENTION_OPTIONS: CuratorAgentMentionOption[] = [
@@ -129,10 +138,11 @@ export const CURATOR_AGENT_MENTION_OPTIONS: CuratorAgentMentionOption[] = [
     label: "common",
     description: "直接解答，仅可使用通用工具，不调用业务 Agent",
   },
-];
+]
 
 // Tool token 匹配表达式，只接受空白边界包围的带有 [tool] 后缀的完整 token。
-const AGENT_TOKEN_PATTERN = /(^|\s)(@(people|person|personal|profile|todos?|snippets?|journals?|notes?|today|bills?|common)\[tool\])(?=$|\s)/g;
+const AGENT_TOKEN_PATTERN =
+  /(^|\s)(@(people|person|personal|profile|todos?|snippets?|journals?|notes?|today|bills?|common)\[tool\])(?=$|\s)/g
 
 // 提及关键字到内置 CuratorAgentId 的归一化映射。
 const NORMALIZE_ID_MAP: Record<string, CuratorAgentId> = {
@@ -152,146 +162,149 @@ const NORMALIZE_ID_MAP: Record<string, CuratorAgentId> = {
   bill: "bills",
   bills: "bills",
   common: "common",
-};
+}
 
 // Agent 选项索引。
-const AGENT_OPTIONS_BY_ID = new Map(CURATOR_AGENT_MENTION_OPTIONS.map((option) => [option.id, option]));
+const AGENT_OPTIONS_BY_ID = new Map(
+  CURATOR_AGENT_MENTION_OPTIONS.map((option) => [option.id, option]),
+)
 
 /**
  * 判断字符串是否为内置 agent 标识。
  */
-export const isCuratorAgentId = (value: string): value is CuratorAgentId => AGENT_OPTIONS_BY_ID.has(value as CuratorAgentId);
+export const isCuratorAgentId = (value: string): value is CuratorAgentId =>
+  AGENT_OPTIONS_BY_ID.has(value as CuratorAgentId)
 
 /**
  * 通过 agent 标识获取配置。
  */
 export const getCuratorAgentMentionOption = (id: CuratorAgentId): CuratorAgentMentionOption => {
-  const option = AGENT_OPTIONS_BY_ID.get(id);
+  const option = AGENT_OPTIONS_BY_ID.get(id)
   if (!option) {
-    throw new Error(`Unknown AI chat agent mention: ${id}`);
+    throw new Error(`Unknown AI chat agent mention: ${id}`)
   }
 
-  return option;
-};
+  return option
+}
 
 /**
  * 使用子序列规则匹配 agent 查询词。
  */
 const isFuzzyAgentMatch = (query: string, keyword: string): boolean => {
   if (!query) {
-    return true;
+    return true
   }
 
-  let queryIndex = 0;
+  let queryIndex = 0
   for (const character of keyword) {
     if (character === query[queryIndex]) {
-      queryIndex += 1;
+      queryIndex += 1
     }
 
     if (queryIndex === query.length) {
-      return true;
+      return true
     }
   }
 
-  return false;
-};
+  return false
+}
 
 /**
  * 获取当前 @ 查询可匹配的 agent 列表。
  */
 export const getMatchedCuratorAgentMentions = (query: string): CuratorAgentMentionOption[] => {
-  const normalizedQuery = query.trim().toLowerCase().replace(/^@/, "");
+  const normalizedQuery = query.trim().toLowerCase().replace(/^@/, "")
 
   return CURATOR_AGENT_MENTION_OPTIONS.filter((option) =>
     [option.id, option.label, option.token.replace(/^@/, "")].some((keyword) =>
       isFuzzyAgentMatch(normalizedQuery, keyword.toLowerCase()),
     ),
-  );
-};
+  )
+}
 
 /**
  * 查找输入文本中的完整 agent token。
  */
 const collectAgentMentionRanges = (value: string): CuratorAgentMentionRange[] => {
-  const ranges: CuratorAgentMentionRange[] = [];
-  AGENT_TOKEN_PATTERN.lastIndex = 0;
+  const ranges: CuratorAgentMentionRange[] = []
+  AGENT_TOKEN_PATTERN.lastIndex = 0
 
-  let match = AGENT_TOKEN_PATTERN.exec(value);
+  let match = AGENT_TOKEN_PATTERN.exec(value)
   while (match) {
-    const prefix = match[1] ?? "";
-    const token = match[2] ?? "";
-    const rawId = match[3] ?? "";
-    const id = NORMALIZE_ID_MAP[rawId.toLowerCase()] || "";
+    const prefix = match[1] ?? ""
+    const token = match[2] ?? ""
+    const rawId = match[3] ?? ""
+    const id = NORMALIZE_ID_MAP[rawId.toLowerCase()] || ""
 
     if (isCuratorAgentId(id)) {
-      const start = match.index + prefix.length;
+      const start = match.index + prefix.length
       ranges.push({
         start,
         end: start + token.length,
         option: getCuratorAgentMentionOption(id),
-      });
+      })
     }
 
-    match = AGENT_TOKEN_PATTERN.exec(value);
+    match = AGENT_TOKEN_PATTERN.exec(value)
   }
 
-  return ranges;
-};
+  return ranges
+}
 
 /**
  * 剥离完整 agent token 并压缩多余空白。
  */
 const stripAgentMentionTokens = (value: string): string => {
-  AGENT_TOKEN_PATTERN.lastIndex = 0;
+  AGENT_TOKEN_PATTERN.lastIndex = 0
 
   return value
     .replace(AGENT_TOKEN_PATTERN, (_match, prefix: string) => prefix)
     .replace(/[ \t]{2,}/g, " ")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
-    .trim();
-};
+    .trim()
+}
 
 /**
  * 解析输入文本中的 agent token 和干净正文。
  */
 export const parseCuratorAgentMentionText = (value: string): CuratorParsedAgentMentionText => {
-  const ranges = collectAgentMentionRanges(value);
-  const seenAgentIds = new Set<CuratorAgentId>();
-  const agents: CuratorInputAgentMention[] = [];
+  const ranges = collectAgentMentionRanges(value)
+  const seenAgentIds = new Set<CuratorAgentId>()
+  const agents: CuratorInputAgentMention[] = []
 
   for (const range of ranges) {
     if (seenAgentIds.has(range.option.id)) {
-      continue;
+      continue
     }
 
-    seenAgentIds.add(range.option.id);
+    seenAgentIds.add(range.option.id)
     agents.push({
       id: range.option.id,
       token: range.option.token,
       label: range.option.label,
       priority: agents.length + 1,
-    });
+    })
   }
 
   return {
     text: stripAgentMentionTokens(value),
     agents,
     ranges,
-  };
-};
+  }
+}
 
 /**
  * 创建发送给 AI 对话控制器的干净载荷。
  */
 export const createCuratorSendPayload = (value: string): CuratorSendPayload => {
-  const parsed = parseCuratorAgentMentionText(value);
+  const parsed = parseCuratorAgentMentionText(value)
 
   return {
     text: parsed.text,
     agents: parsed.agents,
-  };
-};
+  }
+}
 
 /**
  * 转成主进程只需要的 agent hint。
@@ -300,7 +313,7 @@ export const toCuratorAgentHints = (agents: CuratorInputAgentMention[]): Curator
   agents.map((agent) => ({
     id: agent.id,
     priority: agent.priority,
-  }));
+  }))
 
 /**
  * 获取 Backspace 应删除的完整 agent token 范围。
@@ -309,25 +322,25 @@ export const getCuratorAgentMentionDeletionRange = (
   value: string,
   cursor: number,
 ): CuratorAgentMentionDeletionRange | null => {
-  const ranges = collectAgentMentionRanges(value);
-  const directRange = ranges.find((range) => range.end === cursor);
+  const ranges = collectAgentMentionRanges(value)
+  const directRange = ranges.find((range) => range.end === cursor)
   if (directRange) {
     return {
       start: directRange.start,
       end: directRange.end,
-    };
+    }
   }
 
-  const previousCharacter = value[cursor - 1];
+  const previousCharacter = value[cursor - 1]
   if (previousCharacter && /\s/.test(previousCharacter)) {
-    const rangeBeforeSpace = ranges.find((range) => range.end === cursor - 1);
+    const rangeBeforeSpace = ranges.find((range) => range.end === cursor - 1)
     if (rangeBeforeSpace) {
       return {
         start: rangeBeforeSpace.start,
         end: cursor,
-      };
+      }
     }
   }
 
-  return null;
-};
+  return null
+}

@@ -1,13 +1,13 @@
-import type React from "react";
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/Input";
-import { evaluateMathExpression } from "@/pages/bills/components/billShared";
+import type React from "react"
+import { useEffect, useState } from "react"
+import { Input } from "@/components/ui/Input"
+import { evaluateMathExpression } from "@/pages/bills/components/billShared"
 
 export interface AmountInputProps {
-  value: string;
-  onChange: (val: string) => void;
-  onEnter?: () => void;
-  label?: string;
+  value: string
+  onChange: (val: string) => void
+  onEnter?: () => void
+  label?: string
 }
 
 export const AmountInput = ({
@@ -16,37 +16,37 @@ export const AmountInput = ({
   onEnter,
   label,
 }: AmountInputProps): React.JSX.Element => {
-  const [liveResult, setLiveResult] = useState<number | null>(null);
+  const [liveResult, setLiveResult] = useState<number | null>(null)
 
   useEffect(() => {
     if (/[\+\-\*\/]/.test(value)) {
-      const result = evaluateMathExpression(value);
+      const result = evaluateMathExpression(value)
       if (result !== null && result > 0 && String(result) !== value) {
-        setLiveResult(result);
+        setLiveResult(result)
       } else {
-        setLiveResult(null);
+        setLiveResult(null)
       }
     } else {
-      setLiveResult(null);
+      setLiveResult(null)
     }
-  }, [value]);
+  }, [value])
 
   const handleResolve = () => {
     if (liveResult !== null) {
-      onChange(liveResult.toFixed(2));
+      onChange(liveResult.toFixed(2))
     }
-  };
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
-      e.preventDefault();
+      e.preventDefault()
       if (liveResult !== null) {
-        onChange(liveResult.toFixed(2));
+        onChange(liveResult.toFixed(2))
       } else if (onEnter) {
-        onEnter();
+        onEnter()
       }
     }
-  };
+  }
 
   const inputNode = (
     <Input
@@ -62,7 +62,7 @@ export const AmountInput = ({
         liveResult !== null ? "border-green-400/30 focus-within:border-green-400/50" : ""
       }`}
     />
-  );
+  )
 
   if (label) {
     return (
@@ -77,8 +77,8 @@ export const AmountInput = ({
         </div>
         {inputNode}
       </div>
-    );
+    )
   }
 
-  return inputNode;
-};
+  return inputNode
+}

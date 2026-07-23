@@ -1,8 +1,8 @@
-import type React from "react";
-import { CuratorHistoryList } from "./components/CuratorHistoryList";
-import { PromptSidebarList } from "./components/PromptSidebarList";
-import type { CuratorSession } from "@/features/curator/types";
-import { SidebarNavigationList } from "./components/SidebarNavigationList";
+import type React from "react"
+import type { CuratorSession } from "@/features/curator/types"
+import { CuratorHistoryList } from "./components/CuratorHistoryList"
+import { PromptSidebarList } from "./components/PromptSidebarList"
+import { SidebarNavigationList } from "./components/SidebarNavigationList"
 
 /* ==========================================
  * TS 类型定义 (Interfaces & Types)
@@ -23,50 +23,50 @@ export type SidebarPageId =
   | "personal-info"
   | "showcase"
   | "style-test"
-  | "settings";
+  | "settings"
 
 // Sidebar 内容模式类型，描述左侧栏当前渲染主导航还是 AI 对话历史。
-type SidebarMode = "navigation" | "chat" | "prompts";
+type SidebarMode = "navigation" | "chat" | "prompts"
 
 // Sidebar 组件属性类型，描述左侧栏折叠、当前页面与切换入口。
 type SidebarProps = {
   // 当前左侧栏是否处于折叠状态。
-  isCollapsed: boolean;
+  isCollapsed: boolean
   // 当前选中的侧栏页面。
-  activePage: SidebarPageId;
+  activePage: SidebarPageId
   // 左侧栏内容模式。
-  mode: SidebarMode;
+  mode: SidebarMode
   // AI 对话会话列表。
-  chatSessions: CuratorSession[];
+  chatSessions: CuratorSession[]
   // 当前激活的 AI 对话会话标识。
-  activeChatId: string;
+  activeChatId: string
   // 已完成但尚未查看的 AI 会话 ID。
-  completionNoticeSessionIds: Set<string>;
+  completionNoticeSessionIds: Set<string>
   // 左侧栏折叠状态改变回调。
-  onCollapsedChange: (collapsed: boolean) => void;
+  onCollapsedChange: (collapsed: boolean) => void
   // 侧栏页面切换回调。
-  onPageChange: (pageId: SidebarPageId) => void;
+  onPageChange: (pageId: SidebarPageId) => void
   // AI 对话会话切换回调。
-  onChatSessionChange: (sessionId: string) => void;
+  onChatSessionChange: (sessionId: string) => void
   // 清理指定 AI 对话完成提醒回调。
-  onCompletionNoticeClear: (sessionId: string) => void;
+  onCompletionNoticeClear: (sessionId: string) => void
   // 新建 AI 对话回调。
-  onNewChat: () => void;
+  onNewChat: () => void
   // 重命名 AI 对话回调。
-  onRenameChat: (sessionId: string, title: string) => Promise<boolean>;
+  onRenameChat: (sessionId: string, title: string) => Promise<boolean>
   // 删除 AI 对话回调。
-  onDeleteChat: (sessionId: string) => Promise<boolean>;
+  onDeleteChat: (sessionId: string) => Promise<boolean>
   // 批量删除 AI 对话回调。
-  onBatchDeleteChats: (sessionIds: string[]) => Promise<boolean>;
+  onBatchDeleteChats: (sessionIds: string[]) => Promise<boolean>
   // 加载更多 AI 历史回调。
-  onLoadMoreChatSessions: () => Promise<void>;
+  onLoadMoreChatSessions: () => Promise<void>
   // AI 历史是否还有下一页。
-  hasMoreChatSessions: boolean;
+  hasMoreChatSessions: boolean
   // AI 历史是否正在加载下一页。
-  isLoadingMoreChatSessions: boolean;
+  isLoadingMoreChatSessions: boolean
   // 选择 Prompt Design 的回调
-  onPromptDesignSelected?: () => void;
-};
+  onPromptDesignSelected?: () => void
+}
 
 /**
  * Sidebar 组件 - 负责左侧多维导航栏。
@@ -92,7 +92,7 @@ export const Sidebar = ({
   onPromptDesignSelected,
 }: SidebarProps): React.JSX.Element => {
   // 统一的折叠布局判定，主导航与 AI 历史均支持折叠。
-  const shouldUseCollapsedLayout = isCollapsed;
+  const shouldUseCollapsedLayout = isCollapsed
 
   return (
     <div className="relative flex h-auto min-h-0 lg:h-full flex-shrink-0">
@@ -163,7 +163,6 @@ export const Sidebar = ({
           />
         </div>
       </aside>
-
     </div>
-  );
-};
+  )
+}

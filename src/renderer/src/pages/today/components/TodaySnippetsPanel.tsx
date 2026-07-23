@@ -1,41 +1,37 @@
-import type React from "react";
-import { useState } from "react";
-import { StickyNote, Tag as TagIcon } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Input } from "@/components/ui/Input";
-import { Tag } from "@/components/ui/Tag";
-import type { NoteItem } from "./TodayNoteEntryModal";
+import { StickyNote, Tag as TagIcon } from "lucide-react"
+import type React from "react"
+import { useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { Tag } from "@/components/ui/Tag"
+import { Tooltip } from "@/components/ui/Tooltip"
+import type { NoteItem } from "./TodayNoteEntryModal"
 
 // 编辑草稿类型
 type EditDraft = {
-  title: string;
-  content: string;
-  tags: string[];
-};
+  title: string
+  content: string
+  tags: string[]
+}
 
 interface TodaySnippetsPanelProps {
   // 自由随记卡片列表
-  notes: NoteItem[];
+  notes: NoteItem[]
   // 是否正在加载
-  isLoading: boolean;
+  isLoading: boolean
   // 当前错误文案
-  errorMessage: string | null;
+  errorMessage: string | null
   // 删除随记卡片回调
-  onDeleteNote: (id: number) => Promise<boolean>;
+  onDeleteNote: (id: number) => Promise<boolean>
   // 新建随记卡片回调
-  onCreateNote?: (note: {
-    title: string;
-    content: string;
-    tags: string[];
-  }) => Promise<boolean>;
+  onCreateNote?: (note: { title: string; content: string; tags: string[] }) => Promise<boolean>
   // 更新随记卡片回调（用于 Tooltip 内联编辑）
   onUpdateNote?: (note: {
-    id: number;
-    title: string;
-    content: string;
-    tags: string[];
-  }) => Promise<boolean>;
+    id: number
+    title: string
+    content: string
+    tags: string[]
+  }) => Promise<boolean>
 }
 
 /**
@@ -51,35 +47,35 @@ export const TodaySnippetsPanel = ({
   onUpdateNote,
 }: TodaySnippetsPanelProps): React.JSX.Element => {
   // 正在执行删除动画的随记 ID 列表
-  const [deletingIds, setDeletingIds] = useState<number[]>([]);
+  const [deletingIds, setDeletingIds] = useState<number[]>([])
   // 内联编辑草稿
   const [editDraft, setEditDraft] = useState<EditDraft>({
     title: "",
     content: "",
     tags: [],
-  });
+  })
   // 新建草稿
   const [addDraft, setAddDraft] = useState<EditDraft>({
     title: "",
     content: "",
     tags: [],
-  });
+  })
 
   /**
    * 触发删除动画并回调删除逻辑
    */
   const handleDeleteNote = (event: React.MouseEvent, id: number): void => {
-    event.stopPropagation();
-    setDeletingIds((currentIds) => [...currentIds, id]);
+    event.stopPropagation()
+    setDeletingIds((currentIds) => [...currentIds, id])
 
     window.setTimeout(async () => {
       try {
-        await onDeleteNote(id);
+        await onDeleteNote(id)
       } finally {
-        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id))
       }
-    }, 240);
-  };
+    }, 240)
+  }
 
   /**
    * 将随记填入编辑草稿。
@@ -89,45 +85,45 @@ export const TodaySnippetsPanel = ({
       title: note.title,
       content: note.content,
       tags: note.tags,
-    });
-  };
+    })
+  }
 
   /**
    * 提交内联编辑并回调保存。
    */
   const handleEditConfirm = async (id: number): Promise<void> => {
-    if (!onUpdateNote) return;
-    if (!editDraft.title.trim() && !editDraft.content.trim()) return;
+    if (!onUpdateNote) return
+    if (!editDraft.title.trim() && !editDraft.content.trim()) return
     await onUpdateNote({
       id,
       title: editDraft.title.trim(),
       content: editDraft.content.trim(),
       tags: editDraft.tags,
-    });
-  };
+    })
+  }
 
   /**
    * 提交新建并回调保存。
    */
   const handleAddConfirm = async (): Promise<void> => {
-    if (!onCreateNote) return;
-    if (!addDraft.title.trim() && !addDraft.content.trim()) return;
+    if (!onCreateNote) return
+    if (!addDraft.title.trim() && !addDraft.content.trim()) return
     const success = await onCreateNote({
       title: addDraft.title.trim(),
       content: addDraft.content.trim(),
       tags: addDraft.tags,
-    });
+    })
     if (success) {
-      setAddDraft({ title: "", content: "", tags: [] });
+      setAddDraft({ title: "", content: "", tags: [] })
     }
-  };
+  }
 
   /**
    * 重置新建草稿。
    */
   const handleAddCancel = (): void => {
-    setAddDraft({ title: "", content: "", tags: [] });
-  };
+    setAddDraft({ title: "", content: "", tags: [] })
+  }
 
   /**
    * 渲染笔记表单（用于 Tooltip form，新建和编辑复用）。
@@ -143,9 +139,7 @@ export const TodaySnippetsPanel = ({
           <Input
             type="text"
             value={draft.title}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, title: e.target.value }))
-            }
+            onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
             placeholder="片段标题"
             size="xs"
             className="!h-[28px]"
@@ -156,9 +150,7 @@ export const TodaySnippetsPanel = ({
           <Input
             as="textarea"
             value={draft.content}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, content: e.target.value }))
-            }
+            onChange={(e) => setDraft((prev) => ({ ...prev, content: e.target.value }))}
             placeholder="片段内容"
             size="xs"
           />
@@ -175,17 +167,15 @@ export const TodaySnippetsPanel = ({
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 h-[360px]">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
         <div className="flex items-center gap-2">
           <StickyNote className="h-4 w-4 text-white/60" />
-          <span className="text-sm font-bold tracking-wide text-white/80">
-            自由随记片段
-          </span>
+          <span className="text-sm font-bold tracking-wide text-white/80">自由随记片段</span>
         </div>
         <div className="flex items-center gap-2">
           <Tooltip
@@ -217,9 +207,7 @@ export const TodaySnippetsPanel = ({
         {!isLoading && notes.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <StickyNote className="h-7 w-7 text-white/30" />
-            <h2 className="mt-3 text-sm font-bold text-white/80">
-              暂无自由随记
-            </h2>
+            <h2 className="mt-3 text-sm font-bold text-white/80">暂无自由随记</h2>
             <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
               今天还没有片段，点击右上角加号，捕捉第一条瞬时想法。
             </p>
@@ -227,15 +215,13 @@ export const TodaySnippetsPanel = ({
         ) : null}
 
         {notes.map((note) => {
-          const isDeleting = deletingIds.includes(note.id);
+          const isDeleting = deletingIds.includes(note.id)
 
           return (
             <div
               key={note.id}
               className={`flex flex-col gap-2 rounded-[6px] border border-white/5 bg-white/[0.01] p-2.5 hover:border-white/15 hover:bg-white/[0.03] transition-all duration-150 relative group/card ${
-                isDeleting
-                  ? "animate-todo-item-exit"
-                  : "animate-todo-item-enter"
+                isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -254,8 +240,8 @@ export const TodaySnippetsPanel = ({
                       aria-label={`Edit snippet ${note.title || "Untitled snippet"}`}
                       preset="edit"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(note);
+                        e.stopPropagation()
+                        handleStartEdit(note)
                       }}
                     />
                   </Tooltip>
@@ -266,9 +252,7 @@ export const TodaySnippetsPanel = ({
                   />
                 </div>
               </div>
-              <p className="text-xs text-white/50 leading-relaxed line-clamp-2">
-                {note.content}
-              </p>
+              <p className="text-xs text-white/50 leading-relaxed line-clamp-2">{note.content}</p>
               <div className="flex items-center justify-between gap-2 mt-0.5">
                 {note.tags && note.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 min-w-0">
@@ -284,14 +268,12 @@ export const TodaySnippetsPanel = ({
                     ))}
                   </div>
                 )}
-                <span className="text-xs font-mono text-white/30 ml-auto">
-                  {note.time}
-                </span>
+                <span className="text-xs font-mono text-white/30 ml-auto">{note.time}</span>
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
-};
+  )
+}

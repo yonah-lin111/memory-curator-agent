@@ -1,9 +1,9 @@
-import type { ProviderType, SettingsSection } from "./types";
+import type { ProviderType, SettingsSection } from "./types"
 
 export const SETTINGS_SECTIONS: Array<{
-  id: SettingsSection;
-  label: string;
-  description: string;
+  id: SettingsSection
+  label: string
+  description: string
 }> = [
   {
     id: "models",
@@ -25,13 +25,13 @@ export const SETTINGS_SECTIONS: Array<{
     label: "技能",
     description: "自定义指令与高级挂载规则",
   },
-];
+]
 
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = [
   "openai-compatible",
   "openai",
   "anthropic",
   "google",
-];
+]
 
-export const DEFAULT_CONFIG_PATH = "/Users/yonah/.mc/config.json";
+export const DEFAULT_CONFIG_PATH = "/Users/yonah/.mc/config.json"

@@ -1,4 +1,4 @@
-import type { NoteCreateInput, NoteMaterialItem, NoteRow, NoteUpdateInput } from '@/db/schema'
+import type { NoteCreateInput, NoteMaterialItem, NoteRow, NoteUpdateInput } from "@/db/schema"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -36,15 +36,15 @@ export type NotesService = {
 const getInsertedRowId = (result: unknown): number => {
   const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
 
-  if (typeof rowId === 'bigint') {
+  if (typeof rowId === "bigint") {
     return Number(rowId)
   }
 
-  if (typeof rowId === 'number') {
+  if (typeof rowId === "number") {
     return rowId
   }
 
-  throw new Error('无法读取新建笔记的主键')
+  throw new Error("无法读取新建笔记的主键")
 }
 
 /**
@@ -64,7 +64,7 @@ const parseStoredTags = (value: string): string[] => {
     return []
   }
 
-  return parsed.filter((tag): tag is string => typeof tag === 'string')
+  return parsed.filter((tag): tag is string => typeof tag === "string")
 }
 
 /**
@@ -72,11 +72,11 @@ const parseStoredTags = (value: string): string[] => {
  */
 const validateNoteInput = (input: NoteCreateInput | NoteUpdateInput): void => {
   if (!input.title.trim() || !input.content.trim()) {
-    throw new Error('笔记标题和正文不能为空')
+    throw new Error("笔记标题和正文不能为空")
   }
 
-  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== 'string')) {
-    throw new Error('笔记标签格式不正确')
+  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== "string")) {
+    throw new Error("笔记标签格式不正确")
   }
 }
 
@@ -90,7 +90,7 @@ const mapNoteRow = (row: NoteRow): NoteMaterialItem => ({
   tags: parseStoredTags(row.tags),
   time: row.time,
   categoryId: row.category_id ?? undefined,
-  categoryName: row.category_name ?? undefined
+  categoryName: row.category_name ?? undefined,
 })
 
 /**
@@ -98,16 +98,15 @@ const mapNoteRow = (row: NoteRow): NoteMaterialItem => ({
  */
 export const createNotesService = (database: DatabaseConnection): NotesService => ({
   list: (categoryId?) => {
-    const whereClause = categoryId !== undefined ? ' WHERE n.category_id = ?' : ''
+    const whereClause = categoryId !== undefined ? " WHERE n.category_id = ?" : ""
     const stmt = database.prepare(
       `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
        FROM notes n
        LEFT JOIN note_categories nc ON n.category_id = nc.id${whereClause}
-       ORDER BY n.time DESC, n.id DESC`
+       ORDER BY n.time DESC, n.id DESC`,
     )
-    const rows = categoryId !== undefined
-      ? stmt.all(categoryId) as NoteRow[]
-      : stmt.all() as NoteRow[]
+    const rows =
+      categoryId !== undefined ? (stmt.all(categoryId) as NoteRow[]) : (stmt.all() as NoteRow[])
 
     return rows.map(mapNoteRow)
   },
@@ -115,27 +114,25 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
     validateNoteInput(input)
 
     const inserted = database
-      .prepare(
-        'INSERT INTO notes (title, content, tags, time, category_id) VALUES (?, ?, ?, ?, ?)'
-      )
+      .prepare("INSERT INTO notes (title, content, tags, time, category_id) VALUES (?, ?, ?, ?, ?)")
       .run(
         input.title.trim(),
         input.content.trim(),
         JSON.stringify(input.tags),
         createDisplayTime(),
-        input.categoryId ?? null
+        input.categoryId ?? null,
       )
     const row = database
       .prepare(
         `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
          FROM notes n
          LEFT JOIN note_categories nc ON n.category_id = nc.id
-         WHERE n.id = ?`
+         WHERE n.id = ?`,
       )
       .get(getInsertedRowId(inserted)) as NoteRow | undefined
 
     if (!row) {
-      throw new Error('新建笔记后读取失败')
+      throw new Error("新建笔记后读取失败")
     }
 
     return mapNoteRow(row)
@@ -144,13 +141,13 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
     validateNoteInput(input)
 
     database
-      .prepare('UPDATE notes SET title = ?, content = ?, tags = ?, category_id = ? WHERE id = ?')
+      .prepare("UPDATE notes SET title = ?, content = ?, tags = ?, category_id = ? WHERE id = ?")
       .run(
         input.title.trim(),
         input.content.trim(),
         JSON.stringify(input.tags),
         input.categoryId ?? null,
-        id
+        id,
       )
 
     const row = database
@@ -158,20 +155,20 @@ export const createNotesService = (database: DatabaseConnection): NotesService =
         `SELECT n.id, n.title, n.content, n.tags, n.time, n.category_id, nc.name AS category_name
          FROM notes n
          LEFT JOIN note_categories nc ON n.category_id = nc.id
-         WHERE n.id = ?`
+         WHERE n.id = ?`,
       )
       .get(id) as NoteRow | undefined
 
     if (!row) {
-      throw new Error('笔记不存在')
+      throw new Error("笔记不存在")
     }
 
     return mapNoteRow(row)
   },
   delete: (id) => {
-    database.prepare('DELETE FROM notes WHERE id = ?').run(id)
+    database.prepare("DELETE FROM notes WHERE id = ?").run(id)
   },
   querySql: (sql) => {
     return database.prepare(sql).all()
-  }
+  },
 })

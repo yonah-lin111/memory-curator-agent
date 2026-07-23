@@ -1,72 +1,68 @@
-import { ipcMain } from "electron";
-import { getDatabase } from "@/db";
+import { ipcMain } from "electron"
+import { loadProviderConfig } from "@/agent/providers/providerConfig"
+import { createModelProvider } from "@/agent/providers/providerFactory"
+import type { AgentMessage, ModelProvider, ModelStreamEvent } from "@/agent/types"
+import { getDatabase } from "@/db"
+import type { ThemeItem, WeeklySummarySaveInput } from "@/db/schema"
+import { updateThemeDescription } from "@/ipc/themeDescriptionUpdater"
+import { createBillsService } from "@/services/billsService"
+import { createDailyService } from "@/services/dailyService"
+import { createPeopleService } from "@/services/peopleService"
+import { createThemesService } from "@/services/themesService"
 import {
   createWeeklySummaryService,
   type DatabaseConnection,
-} from "@/services/weeklySummaryService";
-import { createThemesService } from "@/services/themesService";
-import { createDailyService } from "@/services/dailyService";
-import { createPeopleService } from "@/services/peopleService";
-import { createBillsService } from "@/services/billsService";
-import { loadProviderConfig } from "@/agent/providers/providerConfig";
-import { createModelProvider } from "@/agent/providers/providerFactory";
-import { updateThemeDescription } from "@/ipc/themeDescriptionUpdater";
-import type { ThemeItem, WeeklySummarySaveInput } from "@/db/schema";
-import type {
-  AgentMessage,
-  ModelProvider,
-  ModelStreamEvent,
-} from "@/agent/types";
+} from "@/services/weeklySummaryService"
 
 // 周度总结生成载荷。
 type WeeklySummaryGeneratePayload = {
   // 周起始日期，格式 'YYYY-MM-DD'（周一）。
-  weekStartDate: string;
+  weekStartDate: string
   // 可选模型标识，不传则使用默认模型。
-  model?: string;
+  model?: string
   // 可选 provider 标识，不传则使用默认 provider。
-  provider?: string;
-};
+  provider?: string
+}
 
 /**
  * 计算从周一起的 7 天日期列表。
  */
 const getWeekDates = (weekStartDate: string): string[] => {
-  const start = new Date(weekStartDate);
+  const start = new Date(weekStartDate)
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
-};
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+}
 
 /**
  * 格式化当前时间为 'YYYY-MM-DD HH:mm'。
  */
 const formatNow = (): string => {
-  return new Date().toISOString();
-};
+  return new Date().toISOString()
+}
 
 /** 把关检查结果 */
 type GatekeeperResult = {
   /** 是否值得生成 */
-  shouldGenerate: boolean;
+  shouldGenerate: boolean
   /** 跳过时使用的默认内容 */
-  defaultContent: string;
-};
+  defaultContent: string
+}
 
 /** AI 提取的主题条目 */
 type ThemeExtractionItem = {
-  name: string;
-  confidence: number;
-  evidence: string;
-};
+  name: string
+  confidence: number
+  evidence: string
+}
 
 /** AI 主题提取落库结果 */
 type SaveExtractedThemesResult = {
-  count: number;
-  themeExternalIds: string[];
-};
+  count: number
+  themeExternalIds: string[]
+}
 
 /**
  * 调用 AI 做生成前的把关检查，判断是否值得生成完整内容。
@@ -80,28 +76,27 @@ const gatekeeperCheck = async (
   const messages: AgentMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userData },
-  ];
+  ]
 
-  let fullResponse = "";
+  let fullResponse = ""
   for await (const event of provider.streamTurn({
     model,
     messages,
     tools: [],
   })) {
     if (event.type === "text_delta") {
-      fullResponse += event.delta;
+      fullResponse += event.delta
     }
   }
 
-  const firstLine = fullResponse.split("\n")[0]?.trim() ?? "";
-  const shouldGenerate = firstLine.toUpperCase() === "YES";
+  const firstLine = fullResponse.split("\n")[0]?.trim() ?? ""
+  const shouldGenerate = firstLine.toUpperCase() === "YES"
   const defaultContent = shouldGenerate
     ? ""
-    : fullResponse.substring(firstLine.length).trim() ||
-      "本周暂无值得总结的记录。";
+    : fullResponse.substring(firstLine.length).trim() || "本周暂无值得总结的记录。"
 
-  return { shouldGenerate, defaultContent };
-};
+  return { shouldGenerate, defaultContent }
+}
 
 /**
  * 调用 AI 从已生成的总结中提取长期主题建议。
@@ -116,7 +111,7 @@ const extractThemesWithAI = async (
   const existingThemesText =
     existingThemes.length > 0
       ? existingThemes.map((theme) => `- ${theme.name}`).join("\n")
-      : "（目前无已有主题）";
+      : "（目前无已有主题）"
   const systemPrompt = `你是一位专注于个人成长的主题策展助手。你的任务是从周度总结中识别可长期追踪的主题。
   你的首要准则是【语义重用与对齐】。系统里已存在以下主题候选池：
   ${existingThemesText}
@@ -135,23 +130,23 @@ const extractThemesWithAI = async (
        - 必须具体且完整地描述涉及的人物（如使用具体的姓名、称呼或明确的社会/家庭关系，例如「伴侣」「同事小李」「主管」等）以及具体的事件内容，确保该段关联说明即便脱离周度总结上下文，依然具有完全自洽的主体、人物和语义清晰度。
 
   正确输出示例：
-  [{"name":"技能提升","confidence":85,"evidence":"本周我完成了 Rust 编程语言中关于所有权、生命周期与 Trait 相关的三章基础内容学习。"},{"name":"健康管理","confidence":70,"evidence":"本周我作息管理上取得进展，连续四天在晚上 23:30 前按时入睡。"}]`;
+  [{"name":"技能提升","confidence":85,"evidence":"本周我完成了 Rust 编程语言中关于所有权、生命周期与 Trait 相关的三章基础内容学习。"},{"name":"健康管理","confidence":70,"evidence":"本周我作息管理上取得进展，连续四天在晚上 23:30 前按时入睡。"}]`
 
-  const userMessage = `请从以下周度总结中提取长期主题：\n\n${summaryContent}`;
+  const userMessage = `请从以下周度总结中提取长期主题：\n\n${summaryContent}`
 
   const messages: AgentMessage[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: userMessage },
-  ];
+  ]
 
-  let fullResponse = "";
+  let fullResponse = ""
   for await (const event of provider.streamTurn({
     model,
     messages,
     tools: [],
   })) {
     if (event.type === "text_delta") {
-      fullResponse += event.delta;
+      fullResponse += event.delta
     }
   }
 
@@ -160,26 +155,26 @@ const extractThemesWithAI = async (
     const cleaned = fullResponse
       .replace(/```json\s*/gi, "")
       .replace(/```\s*/g, "")
-      .trim();
+      .trim()
 
     // 从响应中精准提取 JSON 数组（模型可能在前后添加文字说明）
-    const arrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    const arrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/)
     if (!arrayMatch) {
-      return [];
+      return []
     }
 
-    const parsed = JSON.parse(arrayMatch[0]);
+    const parsed = JSON.parse(arrayMatch[0])
     if (Array.isArray(parsed)) {
       return parsed.filter(
         (item): item is ThemeExtractionItem =>
           typeof item.name === "string" && item.name.trim().length > 0,
-      );
+      )
     }
-    return [];
+    return []
   } catch {
-    return [];
+    return []
   }
-};
+}
 
 /**
  * 将 AI 提取的主题写入数据库。
@@ -190,51 +185,49 @@ const saveExtractedThemes = (
   summaryId: number,
 ): SaveExtractedThemesResult => {
   try {
-    const database = getDatabase();
+    const database = getDatabase()
     database
       .prepare(
         "DELETE FROM theme_items WHERE source_type = ? AND source_id = ? AND ai_extracted = 1",
       )
-      .run("weekly_summary", String(summaryId));
+      .run("weekly_summary", String(summaryId))
   } catch {
     // 清理旧关联失败不影响后续流程
   }
 
   if (!extracted.length) {
-    themesService.cleanupOrphanedAiThemes();
-    return { count: 0, themeExternalIds: [] };
+    themesService.cleanupOrphanedAiThemes()
+    return { count: 0, themeExternalIds: [] }
   }
 
-  let count = 0;
-  const themeExternalIds = new Set<string>();
+  let count = 0
+  const themeExternalIds = new Set<string>()
 
   for (const theme of extracted) {
-    if (!theme.name?.trim()) continue;
+    if (!theme.name?.trim()) continue
 
     // 模糊匹配已有主题（双向包含匹配）
-    const allThemes = themesService.list();
+    const allThemes = themesService.list()
     const matched = allThemes.find(
-      (t) =>
-        t.name.includes(theme.name.trim()) ||
-        theme.name.trim().includes(t.name),
-    );
+      (t) => t.name.includes(theme.name.trim()) || theme.name.trim().includes(t.name),
+    )
 
-    let themeExternalId: string;
+    let themeExternalId: string
     if (matched) {
-      themeExternalId = matched.externalId;
+      themeExternalId = matched.externalId
       // 更新已有主题时间 + 追加新 evidence 到描述
       themesService.update(themeExternalId, {
         description: matched.description
           ? `${matched.description}; ${theme.evidence?.slice(0, 100) ?? ""}`
           : (theme.evidence?.slice(0, 200) ?? ""),
-      });
+      })
     } else {
       const created = themesService.create({
         name: theme.name.trim(),
         description: theme.evidence?.slice(0, 200) ?? "",
         aiGenerated: 1,
-      });
-      themeExternalId = created.externalId;
+      })
+      themeExternalId = created.externalId
     }
 
     // 关联到本周总结（ON CONFLICT 自动跳过重复）
@@ -245,113 +238,106 @@ const saveExtractedThemes = (
         sourceId: String(summaryId),
         relevanceNote: theme.evidence?.slice(0, 200) ?? "",
         aiExtracted: 1,
-      });
-      themeExternalIds.add(themeExternalId);
-      count++;
+      })
+      themeExternalIds.add(themeExternalId)
+      count++
     } catch {
       // 主题关联失败，跳过
     }
   }
 
   try {
-    themesService.cleanupOrphanedAiThemes();
+    themesService.cleanupOrphanedAiThemes()
   } catch {
     // 清理孤立主题失败不影响主流程
   }
 
-  return { count, themeExternalIds: Array.from(themeExternalIds) };
-};
+  return { count, themeExternalIds: Array.from(themeExternalIds) }
+}
 
 /**
  * 注册周度总结相关 IPC handlers。
  */
 export const registerWeeklyHandlers = (): void => {
-  const database = getDatabase();
-  const weeklySummaryService = createWeeklySummaryService(
-    database as unknown as DatabaseConnection,
-  );
+  const database = getDatabase()
+  const weeklySummaryService = createWeeklySummaryService(database as unknown as DatabaseConnection)
   const dailyService = createDailyService(
     database as unknown as import("@/services/dailyService").DatabaseConnection,
-  );
+  )
   const peopleService = createPeopleService(
     database as unknown as import("@/services/peopleService").DatabaseConnection,
-  );
+  )
   const billsService = createBillsService(
     database as unknown as import("@/services/billsService").DatabaseConnection,
-  );
+  )
 
   // 获取某周总结。
   ipcMain.handle("weekly:summary:get", (_, weekStartDate: string) =>
     weeklySummaryService.getByWeekStart(weekStartDate, "summary"),
-  );
+  )
 
   // 手动保存总结。
   ipcMain.handle("weekly:summary:save", (_, input: WeeklySummarySaveInput) =>
     weeklySummaryService.save({ ...input, type: "summary" }),
-  );
+  )
 
   // 删除总结。
   ipcMain.handle("weekly:summary:delete", (_, weekStartDate: string) =>
     weeklySummaryService.delete(weekStartDate, "summary"),
-  );
+  )
 
   // AI 流式生成统一周度报告（个人成长 + 人际关系）。
   ipcMain.handle(
     "weekly:summary:generate",
     async (event, payload: WeeklySummaryGeneratePayload) => {
-      const {
-        weekStartDate,
-        model: requestedModel,
-        provider: requestedProvider,
-      } = payload;
+      const { weekStartDate, model: requestedModel, provider: requestedProvider } = payload
 
       // 并发拉取 7 天数据。
-      const dates = getWeekDates(weekStartDate);
+      const dates = getWeekDates(weekStartDate)
       const dayDataList = await Promise.all(
         dates.map(async (d) => {
-          const dayData = await dailyService.listDay(d);
-          const billsData = billsService.list({ billDate: d });
-          return { ...dayData, bills: billsData };
+          const dayData = await dailyService.listDay(d)
+          const billsData = billsService.list({ billDate: d })
+          return { ...dayData, bills: billsData }
         }),
-      );
+      )
 
       // 构造数据摘要（限制 token 消耗，每天各 500 字以内）。
       const weekDataSummary = dates
         .map((date, i) => {
-          const day = dayDataList[i];
-          const todos = day.todos
-            .map((t) => `[${t.completed ? "x" : " "}] ${t.text}`)
-            .join("\n");
+          const day = dayDataList[i]
+          const todos = day.todos.map((t) => `[${t.completed ? "x" : " "}] ${t.text}`).join("\n")
           const snippets = day.snippets
             .map((s) => `${s.title}: ${s.content.slice(0, 200)}`)
-            .join("\n");
+            .join("\n")
           const bills = day.bills
-            .map((b) => `[${b.billType === "expense" ? "支出" : "收入"}] ¥${(b.amount / 100).toFixed(2)} ${b.category} ${b.note ? `- ${b.note}` : ""}`)
-            .join("\n");
-          const journal = day.journal
-            ? day.journal.content.slice(0, 500)
-            : "（无日记）";
-          return `## ${date}\n### 待办\n${todos || "无"}\n### 片段\n${snippets || "无"}\n### 账单\n${bills || "无"}\n### 日记\n${journal}`;
+            .map(
+              (b) =>
+                `[${b.billType === "expense" ? "支出" : "收入"}] ¥${(b.amount / 100).toFixed(2)} ${b.category} ${b.note ? `- ${b.note}` : ""}`,
+            )
+            .join("\n")
+          const journal = day.journal ? day.journal.content.slice(0, 500) : "（无日记）"
+          return `## ${date}\n### 待办\n${todos || "无"}\n### 片段\n${snippets || "无"}\n### 账单\n${bills || "无"}\n### 日记\n${journal}`
         })
-        .join("\n\n");
+        .join("\n\n")
 
       // 拉取系统内所有录入的人物档案列表（供统一报告的人际维度使用）。
-      const peopleList = peopleService.list();
+      const peopleList = peopleService.list()
       const peopleSummary = peopleList
         .map((p, i) => {
-          return `### 关联人物 ${i + 1}: ${p.name}\n- 关系: ${p.relationship}\n- 性别: ${p.gender}\n- 状态: ${p.status}\n- 标签: ${p.tags.join(", ")}\n- 详细档案:\n${p.details}`;
+          return `### 关联人物 ${i + 1}: ${p.name}\n- 关系: ${p.relationship}\n- 性别: ${p.gender}\n- 状态: ${p.status}\n- 标签: ${p.tags.join(", ")}\n- 详细档案:\n${p.details}`
         })
-        .join("\n\n");
+        .join("\n\n")
 
       // 加载 provider 配置并创建 provider。
-      const config = loadProviderConfig();
-      const providerId = requestedProvider ?? config.weeklySummary.provider;
-      const modelId = requestedModel ?? config.weeklySummary.model;
-      const providerConfig = config.providers[providerId];
+      const config = loadProviderConfig()
+      const providerId = requestedProvider ?? config.weeklySummary.provider
+      const modelId = requestedModel ?? config.weeklySummary.model
+      const providerConfig = config.providers[providerId]
       if (!providerConfig) {
-        throw new Error(`Provider not found: ${providerId}`);
+        throw new Error(`Provider not found: ${providerId}`)
       }
-      const provider = await createModelProvider(providerConfig);
+      const provider = await createModelProvider(providerConfig)
 
       // 把关检查：判断本周是否有实质内容值得总结。
       const summaryGateResult = await gatekeeperCheck(
@@ -364,10 +350,10 @@ export const registerWeeklyHandlers = (): void => {
 如果一周数据完全为空或没有任何实质内容，仅回复：NO
 并在下一行提供默认总结文本，例如：本周暂无值得总结的记录。`,
         `请判断以下一周数据是否有实质内容：\n\n${weekDataSummary}`,
-      );
+      )
 
       if (!summaryGateResult.shouldGenerate) {
-        const defaultContent = summaryGateResult.defaultContent;
+        const defaultContent = summaryGateResult.defaultContent
         const saveInput: WeeklySummarySaveInput = {
           weekStartDate,
           type: "summary",
@@ -376,14 +362,14 @@ export const registerWeeklyHandlers = (): void => {
           modelUsed: modelId,
           generatedAt: formatNow(),
           isMeaningful: 0,
-        };
-        const savedItem = weeklySummaryService.save(saveInput);
+        }
+        const savedItem = weeklySummaryService.save(saveInput)
         event.sender.send("weekly:summary:delta", {
           weekStartDate,
           text: defaultContent,
-        });
-        event.sender.send("weekly:summary:done", savedItem);
-        return savedItem;
+        })
+        event.sender.send("weekly:summary:done", savedItem)
+        return savedItem
       }
 
       //       构造 prompt。
@@ -469,35 +455,34 @@ mindmap
 - 人际关系相关内容务必与【核心人物档案】交叉印证，对人物称呼保持档案中的正式名称。
 - 如果【核心人物档案】中某人物状态或详情暗示存在未解决矛盾/关系紧张，则本周报告中不得包含该人物的任何内容。
 - Mermaid 图表必须用 \`\`\`mermaid 代码块包裹，语法必须正确，节点文字避免特殊字符和换行。`,
-      };
+      }
 
       const userMessage: AgentMessage = {
         role: "user",
         content: `以下是我系统里存储的【核心人物档案】：\n\n${peopleSummary || "（暂无核心人物档案记录）"}\n\n以下是我本周（${weekStartDate} 起）的记录数据，请生成统一周度报告：\n\n${weekDataSummary}`,
-      };
+      }
 
       // 流式生成，收集完整文本并发送 delta 事件。
-      let fullText = "";
+      let fullText = ""
       const stream: AsyncIterable<ModelStreamEvent> = provider.streamTurn({
         model: modelId,
         messages: [systemMessage, userMessage],
         tools: [],
-      });
+      })
 
       for await (const streamEvent of stream) {
         if (streamEvent.type === "text_delta") {
-          fullText += streamEvent.delta;
+          fullText += streamEvent.delta
           event.sender.send("weekly:summary:delta", {
             weekStartDate,
             text: streamEvent.delta,
-          });
+          })
         }
       }
 
       // 提取标题（首行 # 后内容）并保存。
-      const firstLine = fullText.split("\n")[0] ?? "";
-      const title =
-        firstLine.replace(/^#+\s*/, "").trim() || `${weekStartDate} 周度总结`;
+      const firstLine = fullText.split("\n")[0] ?? ""
+      const title = firstLine.replace(/^#+\s*/, "").trim() || `${weekStartDate} 周度总结`
       const saveInput: WeeklySummarySaveInput = {
         weekStartDate,
         type: "summary",
@@ -506,31 +491,27 @@ mindmap
         modelUsed: modelId,
         generatedAt: formatNow(),
         isMeaningful: 1,
-      };
-      const savedItem = weeklySummaryService.save(saveInput);
+      }
+      const savedItem = weeklySummaryService.save(saveInput)
 
       // 自动提取主题建议（AI 把关）
       if (savedItem.isMeaningful === 1) {
         try {
           const themesService = createThemesService(
             database as unknown as import("@/services/themesService").DatabaseConnection,
-          );
-          const existingThemes = themesService.list("active");
+          )
+          const existingThemes = themesService.list("active")
           // 用独立的 AI 调用从已生成总结中提取主题，并优先归入已有主题候选池。
           const extractedThemes = await extractThemesWithAI(
             provider,
             modelId,
             fullText,
             existingThemes,
-          );
-          const extractedResult = saveExtractedThemes(
-            themesService,
-            extractedThemes,
-            savedItem.id,
-          );
+          )
+          const extractedResult = saveExtractedThemes(themesService, extractedThemes, savedItem.id)
           if (extractedResult.count > 0) {
             for (const themeExternalId of extractedResult.themeExternalIds) {
-              void updateThemeDescription(themesService, themeExternalId);
+              void updateThemeDescription(themesService, themeExternalId)
             }
           }
         } catch {
@@ -539,9 +520,9 @@ mindmap
       }
 
       // 通知前端生成完成。
-      event.sender.send("weekly:summary:done", savedItem);
+      event.sender.send("weekly:summary:done", savedItem)
 
-      return savedItem;
+      return savedItem
     },
-  );
-};
+  )
+}

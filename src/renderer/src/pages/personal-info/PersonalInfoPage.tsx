@@ -1,21 +1,13 @@
-import type React from "react";
-import {
-  User,
-  Calendar,
-  Phone,
-  Clock,
-  Tag as TagIcon,
-  Sparkles,
-  Info,
-} from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tag } from "@/components/ui/Tag";
-import { PersonalInfoForm } from "./components/PersonalInfoForm";
-import { usePersonalInfo } from "./components/usePersonalInfo";
-import { MdPreview } from "md-editor-rt";
-import "md-editor-rt/lib/preview.css";
+import { Calendar, Clock, Info, Phone, Sparkles, Tag as TagIcon, User } from "lucide-react"
+import { MdPreview } from "md-editor-rt"
+import type React from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Tag } from "@/components/ui/Tag"
+import { PersonalInfoForm } from "./components/PersonalInfoForm"
+import { usePersonalInfo } from "./components/usePersonalInfo"
+import "md-editor-rt/lib/preview.css"
 
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Tooltip } from "@/components/ui/Tooltip"
 
 const getTagColor = (
   tag: string,
@@ -31,35 +23,15 @@ const getTagColor = (
   | "sky"
   | "orange" => {
   const colors: Array<
-    | "pink"
-    | "amber"
-    | "blue"
-    | "teal"
-    | "emerald"
-    | "rose"
-    | "purple"
-    | "indigo"
-    | "sky"
-    | "orange"
-  > = [
-    "pink",
-    "amber",
-    "blue",
-    "teal",
-    "emerald",
-    "rose",
-    "purple",
-    "indigo",
-    "sky",
-    "orange",
-  ];
-  let hash = 0;
+    "pink" | "amber" | "blue" | "teal" | "emerald" | "rose" | "purple" | "indigo" | "sky" | "orange"
+  > = ["pink", "amber", "blue", "teal", "emerald", "rose", "purple", "indigo", "sky", "orange"]
+  let hash = 0
   for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash)
   }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
+  const index = Math.abs(hash) % colors.length
+  return colors[index]
+}
 
 export const PersonalInfoPage = (): React.JSX.Element => {
   const {
@@ -72,21 +44,18 @@ export const PersonalInfoPage = (): React.JSX.Element => {
     handleSaveForm,
     handleClearProfile,
     setMode,
-  } = usePersonalInfo();
+  } = usePersonalInfo()
 
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center text-white/50 text-sm">
         正在加载个人信息...
       </div>
-    );
+    )
   }
 
   return (
-    <section
-      aria-label="Personal Info Page"
-      className="flex h-full min-h-0 flex-col text-white"
-    >
+    <section aria-label="Personal Info Page" className="flex h-full min-h-0 flex-col text-white">
       <div className="flex-1 flex flex-col min-h-0 rounded-[6px] border border-white/6 bg-[#212121] overflow-hidden">
         {mode === "view" ? (
           <div className="flex-1 flex flex-col min-h-0">
@@ -125,12 +94,8 @@ export const PersonalInfoPage = (): React.JSX.Element => {
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
-                    <IconButton
-                      preset="edit"
-                      onClick={enterEditMode}
-                      title="编辑个人信息"
-                    />
-                    
+                    <IconButton preset="edit" onClick={enterEditMode} title="编辑个人信息" />
+
                     <Tooltip
                       title="确认要清空个人信息吗？"
                       description={`清空后，所有已填写的个人特征标签、联系方式及详细备注等数据将被永久擦除，此操作无法撤销。`}
@@ -228,13 +193,17 @@ export const PersonalInfoPage = (): React.JSX.Element => {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-black/5">
                 <User className="h-12 w-12 text-white/20 mb-4" />
-                <h3 className="text-base font-bold text-white/80 mb-2">
-                  尚未建立个人档案
-                </h3>
+                <h3 className="text-base font-bold text-white/80 mb-2">尚未建立个人档案</h3>
                 <p className="max-w-[400px] text-xs leading-relaxed text-white/40 mb-6">
                   这是你个人的信息中枢。在这里，你可以记录自己的特征标签、重要日子、以及专属的详细备忘录。
                 </p>
-                <IconButton preset="add" iconOnly={false} className="gap-2 px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-[6px]" onClick={enterEditMode} title="创建档案">
+                <IconButton
+                  preset="add"
+                  iconOnly={false}
+                  className="gap-2 px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded-[6px]"
+                  onClick={enterEditMode}
+                  title="创建档案"
+                >
                   <span>创建个人信息</span>
                 </IconButton>
               </div>
@@ -251,5 +220,5 @@ export const PersonalInfoPage = (): React.JSX.Element => {
         )}
       </div>
     </section>
-  );
-};
+  )
+}

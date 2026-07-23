@@ -1,9 +1,4 @@
-import type {
-  SnippetCreateInput,
-  SnippetItem,
-  SnippetRow,
-  SnippetUpdateInput
-} from '@/db/schema'
+import type { SnippetCreateInput, SnippetItem, SnippetRow, SnippetUpdateInput } from "@/db/schema"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -41,11 +36,11 @@ export type SnippetsService = {
 const getInsertedRowId = (result: unknown, entityName: string): number => {
   const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
 
-  if (typeof rowId === 'bigint') {
+  if (typeof rowId === "bigint") {
     return Number(rowId)
   }
 
-  if (typeof rowId === 'number') {
+  if (typeof rowId === "number") {
     return rowId
   }
 
@@ -63,11 +58,15 @@ const createTimestamp = (): string => {
  * 从时间戳提取列表展示时间。
  */
 const toDisplayTime = (timestamp: string): string => {
-  if (!timestamp) return "";
+  if (!timestamp) return ""
   if (timestamp.includes("T")) {
-    return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return new Date(timestamp).toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
   }
-  return timestamp.slice(11, 16) || timestamp;
+  return timestamp.slice(11, 16) || timestamp
 }
 
 /**
@@ -80,7 +79,7 @@ const parseStoredTags = (value: string): string[] => {
     return []
   }
 
-  return parsed.filter((tag): tag is string => typeof tag === 'string')
+  return parsed.filter((tag): tag is string => typeof tag === "string")
 }
 
 /**
@@ -88,26 +87,24 @@ const parseStoredTags = (value: string): string[] => {
  */
 const validateEntryDate = (entryDate: string): void => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
-    throw new Error('工作台日期格式不正确')
+    throw new Error("工作台日期格式不正确")
   }
 }
 
 /**
  * 校验片段输入。
  */
-const validateSnippetInput = (
-  input: SnippetCreateInput | SnippetUpdateInput
-): void => {
-  if ('entryDate' in input) {
+const validateSnippetInput = (input: SnippetCreateInput | SnippetUpdateInput): void => {
+  if ("entryDate" in input) {
     validateEntryDate(input.entryDate)
   }
 
   if (!input.title.trim() && !input.content.trim()) {
-    throw new Error('片段标题或内容至少保留一项')
+    throw new Error("片段标题或内容至少保留一项")
   }
 
-  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== 'string')) {
-    throw new Error('片段标签格式不正确')
+  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== "string")) {
+    throw new Error("片段标签格式不正确")
   }
 }
 
@@ -122,7 +119,7 @@ const mapSnippetRow = (row: SnippetRow): SnippetItem => ({
   tags: parseStoredTags(row.tags),
   time: toDisplayTime(row.created_at),
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
 })
 
 /**
@@ -134,7 +131,7 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
 
     const rows = database
       .prepare(
-        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE entry_date = ? ORDER BY created_at DESC, id DESC'
+        "SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE entry_date = ? ORDER BY created_at DESC, id DESC",
       )
       .all(entryDate) as SnippetRow[]
 
@@ -146,7 +143,7 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
     const timestamp = createTimestamp()
     const inserted = database
       .prepare(
-        'INSERT INTO snippets (entry_date, title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        "INSERT INTO snippets (entry_date, title, content, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
       )
       .run(
         input.entryDate,
@@ -154,16 +151,16 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
         input.content.trim(),
         JSON.stringify(input.tags),
         timestamp,
-        timestamp
+        timestamp,
       )
     const row = database
       .prepare(
-        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
+        "SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?",
       )
-      .get(getInsertedRowId(inserted, '片段')) as SnippetRow | undefined
+      .get(getInsertedRowId(inserted, "片段")) as SnippetRow | undefined
 
     if (!row) {
-      throw new Error('新建片段后读取失败')
+      throw new Error("新建片段后读取失败")
     }
 
     return mapSnippetRow(row)
@@ -173,17 +170,17 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
 
     const existing = database
       .prepare(
-        'SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?'
+        "SELECT id, entry_date, title, content, tags, created_at, updated_at FROM snippets WHERE id = ?",
       )
       .get(id) as SnippetRow | undefined
 
     if (!existing) {
-      throw new Error('片段不存在')
+      throw new Error("片段不存在")
     }
 
     const updatedAt = createTimestamp()
     database
-      .prepare('UPDATE snippets SET title = ?, content = ?, tags = ?, updated_at = ? WHERE id = ?')
+      .prepare("UPDATE snippets SET title = ?, content = ?, tags = ?, updated_at = ? WHERE id = ?")
       .run(input.title.trim(), input.content.trim(), JSON.stringify(input.tags), updatedAt, id)
 
     return mapSnippetRow({
@@ -191,13 +188,13 @@ export const createSnippetsService = (database: DatabaseConnection): SnippetsSer
       title: input.title.trim(),
       content: input.content.trim(),
       tags: JSON.stringify(input.tags),
-      updated_at: updatedAt
+      updated_at: updatedAt,
     })
   },
   delete: (id) => {
-    database.prepare('DELETE FROM snippets WHERE id = ?').run(id)
+    database.prepare("DELETE FROM snippets WHERE id = ?").run(id)
   },
   querySql: (sql) => {
     return database.prepare(sql).all()
-  }
+  },
 })

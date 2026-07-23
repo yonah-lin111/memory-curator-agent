@@ -1,17 +1,17 @@
-import type React from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
-import { formatEntryDateLabel, formatEntryMonthLabel, formatWeekLabel } from "@/lib/dailyShared";
+import { CalendarDays, ChevronDown } from "lucide-react"
+import type React from "react"
+import { formatEntryDateLabel, formatEntryMonthLabel, formatWeekLabel } from "@/lib/dailyShared"
 
 /**
  * DatePickerButton 组件属性接口
  */
 export interface DatePickerButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   // 当前选中日期，格式 YYYY-MM-DD 或 YYYY-MM
-  value?: string;
+  value?: string
   // 选择模式：按日、按周、按月
-  mode?: "date" | "week" | "month";
+  mode?: "date" | "week" | "month"
   // 占位文本
-  placeholder?: string;
+  placeholder?: string
 }
 
 /**
@@ -26,15 +26,15 @@ export const DatePickerButton = ({
   ...props
 }: DatePickerButtonProps): React.JSX.Element => {
   const getDisplayValue = (): string => {
-    if (!value) return placeholder;
+    if (!value) return placeholder
     if (mode === "month") {
-      return formatEntryMonthLabel(value);
+      return formatEntryMonthLabel(value)
     }
     if (mode === "week") {
-      return formatWeekLabel(value);
+      return formatWeekLabel(value)
     }
-    return formatEntryDateLabel(value);
-  };
+    return formatEntryDateLabel(value)
+  }
 
   return (
     <button
@@ -43,10 +43,8 @@ export const DatePickerButton = ({
       {...props}
     >
       <CalendarDays className="h-3 w-3 flex-shrink-0 text-white/40" />
-      <span className="font-mono flex-1">
-        {getDisplayValue()}
-      </span>
+      <span className="font-mono flex-1">{getDisplayValue()}</span>
       <ChevronDown className="h-3 w-3 flex-shrink-0 text-white/30 transition-transform duration-150 group-data-[open=true]:rotate-180 group-aria-expanded:rotate-180" />
     </button>
-  );
-};
+  )
+}

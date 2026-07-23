@@ -1,2 +1,3 @@
-import { MiniMapNodeProps } from '@xyflow/react';
-type K = keyof MiniMapNodeProps;
+import { MiniMapNodeProps } from "@xyflow/react"
+
+type K = keyof MiniMapNodeProps

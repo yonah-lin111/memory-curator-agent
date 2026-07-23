@@ -1,31 +1,30 @@
-import React from "react";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { IconButton } from "@/components/ui/IconButton";
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
+import { IconButton } from "@/components/ui/IconButton"
 
 // Modal 变体类型
-export type ModalVariant = "primary" | "danger";
+export type ModalVariant = "primary" | "danger"
 
 // Modal 组件属性接口
 export interface ModalProps {
   // 是否显示弹窗
-  isOpen: boolean;
+  isOpen: boolean
   // 关闭弹窗回调
-  onClose: () => void;
+  onClose: () => void
   // 弹窗标题
-  title?: string;
+  title?: string
   // 弹窗描述/内容文本（当 form 为空时作为主要内容展示）
-  description?: string;
+  description?: string
   // 自定义表单内容（与 description 二选一，form 优先）
-  form?: React.ReactNode;
+  form?: React.ReactNode
   // 确认回调（若提供则显示确认/取消按钮）
-  onConfirm?: () => void;
+  onConfirm?: () => void
   // 取消回调（可选）
-  onCancel?: () => void;
+  onCancel?: () => void
   // 确认按钮样式类型
-  variant?: ModalVariant;
+  variant?: ModalVariant
   // 额外的弹窗容器样式名
-  className?: string;
+  className?: string
 }
 
 /**
@@ -44,94 +43,90 @@ export const Modal = ({
   variant = "primary",
   className = "",
 }: ModalProps): React.JSX.Element | null => {
-  const [isAnimatingOut, setIsAnimatingOut] = useState<boolean>(false);
-  const [shouldRender, setShouldRender] = useState<boolean>(false);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
+  const [isAnimatingOut, setIsAnimatingOut] = useState<boolean>(false)
+  const [shouldRender, setShouldRender] = useState<boolean>(false)
+  const modalRef = useRef<HTMLDivElement>(null)
+  const backdropRef = useRef<HTMLDivElement>(null)
   /** 记录 mousedown 起点是否在 backdrop 上，防止拖选文字后松开导致误关 */
-  const isMouseDownOnBackdrop = useRef<boolean>(false);
+  const isMouseDownOnBackdrop = useRef<boolean>(false)
 
   // 是否为确认模式（有 onConfirm 回调）
-  const isConfirmMode = typeof onConfirm === "function";
+  const isConfirmMode = typeof onConfirm === "function"
 
   // 控制渲染与动画状态
   useEffect(() => {
-    let animTimeout: NodeJS.Timeout;
+    let animTimeout: NodeJS.Timeout
     if (isOpen) {
-      setShouldRender(true);
-      setIsAnimatingOut(false);
+      setShouldRender(true)
+      setIsAnimatingOut(false)
     } else {
       if (shouldRender) {
-        setIsAnimatingOut(true);
+        setIsAnimatingOut(true)
         animTimeout = setTimeout(() => {
-          setShouldRender(false);
-          setIsAnimatingOut(false);
-        }, 120);
+          setShouldRender(false)
+          setIsAnimatingOut(false)
+        }, 120)
       }
     }
     return () => {
-      if (animTimeout) clearTimeout(animTimeout);
-    };
-  }, [isOpen, shouldRender]);
+      if (animTimeout) clearTimeout(animTimeout)
+    }
+  }, [isOpen, shouldRender])
 
   // ESC 键关闭
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        onClose();
+        onClose()
         if (isConfirmMode) {
-          onCancel?.();
+          onCancel?.()
         }
       }
-    };
+    }
 
     if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown)
     }
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, isConfirmMode, onClose, onCancel]);
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [isOpen, isConfirmMode, onClose, onCancel])
 
   /** mousedown 起点追踪 */
   const handleBackdropMouseDown = (e: React.MouseEvent): void => {
-    isMouseDownOnBackdrop.current = e.target === backdropRef.current;
-  };
+    isMouseDownOnBackdrop.current = e.target === backdropRef.current
+  }
 
   /** 仅当 mousedown 和 click 均发生在 backdrop 上时才关闭 */
   const handleBackdropClick = (e: React.MouseEvent): void => {
-    if (
-      isMouseDownOnBackdrop.current &&
-      backdropRef.current &&
-      e.target === backdropRef.current
-    ) {
-      onClose();
+    if (isMouseDownOnBackdrop.current && backdropRef.current && e.target === backdropRef.current) {
+      onClose()
       if (isConfirmMode) {
-        onCancel?.();
+        onCancel?.()
       }
     }
-    isMouseDownOnBackdrop.current = false;
-  };
+    isMouseDownOnBackdrop.current = false
+  }
 
   /** 关闭并触发取消回调 */
   const handleClose = useCallback((): void => {
-    onClose();
+    onClose()
     if (isConfirmMode) {
-      onCancel?.();
+      onCancel?.()
     }
-  }, [onClose, onCancel, isConfirmMode]);
+  }, [onClose, onCancel, isConfirmMode])
 
   // 处理确认提交
   const handleConfirm = (e: React.FormEvent): void => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClose();
-    onConfirm?.();
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    onClose()
+    onConfirm?.()
+  }
 
-  if (!shouldRender) return null;
+  if (!shouldRender) return null
 
-  const animationClass = isAnimatingOut ? "animate-tooltip-out" : "animate-tooltip-in";
+  const animationClass = isAnimatingOut ? "animate-tooltip-out" : "animate-tooltip-in"
 
   const modalContent = (
     <div
@@ -150,15 +145,13 @@ export const Modal = ({
         {/* 标题行 */}
         {title && (
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-white/90">
-              {title}
-            </h3>
+            <h3 className="text-sm font-semibold text-white/90">{title}</h3>
             <IconButton
               preset="close"
               size="small"
               onClick={(e) => {
-                e.stopPropagation();
-                handleClose();
+                e.stopPropagation()
+                handleClose()
               }}
               title="关闭"
             />
@@ -175,8 +168,8 @@ export const Modal = ({
                   type="button"
                   preset="close"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    handleClose();
+                    e.stopPropagation()
+                    handleClose()
                   }}
                   title="取消"
                 />
@@ -191,27 +184,23 @@ export const Modal = ({
         ) : (
           <>
             {/* 纯消息模式 */}
-            {description && (
-              <p className="text-xs text-white/60 leading-relaxed">
-                {description}
-              </p>
-            )}
+            {description && <p className="text-xs text-white/60 leading-relaxed">{description}</p>}
             {isConfirmMode && (
               <div className="flex items-center justify-end mt-3 gap-1.5">
                 <IconButton
                   preset="close"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    handleClose();
+                    e.stopPropagation()
+                    handleClose()
                   }}
                   title="取消"
                 />
                 <IconButton
                   preset={variant === "danger" ? "delete" : "confirm"}
                   onClick={(e) => {
-                    e.stopPropagation();
-                    onClose();
-                    onConfirm?.();
+                    e.stopPropagation()
+                    onClose()
+                    onConfirm?.()
                   }}
                   title="确认"
                 />
@@ -221,7 +210,7 @@ export const Modal = ({
         )}
       </div>
     </div>
-  );
+  )
 
-  return createPortal(modalContent, document.body);
-};
+  return createPortal(modalContent, document.body)
+}

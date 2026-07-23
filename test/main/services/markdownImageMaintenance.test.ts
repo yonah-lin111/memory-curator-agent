@@ -1,20 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { FilesService } from "@/services/filesService"
 import {
   MARKDOWN_IMAGE_CLEANUP_DELAY_MS,
   MARKDOWN_IMAGE_STARTUP_DELAY_MS,
   scheduleMarkdownImageMaintenance,
-  scheduleStartupMarkdownImageMaintenance
-} from '@/services/markdownImageMaintenance'
-import type { FilesService } from '@/services/filesService'
+  scheduleStartupMarkdownImageMaintenance,
+} from "@/services/markdownImageMaintenance"
 
 // 测试用文件服务。
 const filesService: FilesService = {
-      saveMarkdownImage: vi.fn(),
-      savePeopleAvatar: vi.fn(),
-      deletePeopleAvatar: vi.fn(),
-      savePersonalAvatar: vi.fn(),
-      deletePersonalAvatar: vi.fn(),
-      saveAiChatImage: vi.fn(),
+  saveMarkdownImage: vi.fn(),
+  savePeopleAvatar: vi.fn(),
+  deletePeopleAvatar: vi.fn(),
+  savePersonalAvatar: vi.fn(),
+  deletePersonalAvatar: vi.fn(),
+  saveAiChatImage: vi.fn(),
   listUnusedMarkdownImages: vi.fn(),
   restoreReferencedMarkdownImages: vi.fn(),
   deleteUnusedMarkdownImages: vi.fn(),
@@ -24,20 +24,20 @@ const filesService: FilesService = {
   saveAiChatTextFile: vi.fn(),
   deleteAiChatTextFile: vi.fn(),
   readAiChatTextFile: vi.fn(),
-  cleanExpiredTrash: vi.fn()
+  cleanExpiredTrash: vi.fn(),
 }
 
-describe('markdownImageMaintenance', () => {
+describe("markdownImageMaintenance", () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     vi.mocked(filesService.restoreReferencedMarkdownImages).mockResolvedValue({
       restoredCount: 0,
-      restoredImages: []
+      restoredImages: [],
     })
     vi.mocked(filesService.deleteUnusedMarkdownImages).mockResolvedValue({
       deletedCount: 0,
-      deletedImages: []
+      deletedImages: [],
     })
     vi.mocked(filesService.cleanExpiredTrash).mockResolvedValue(undefined)
   })
@@ -46,25 +46,25 @@ describe('markdownImageMaintenance', () => {
     vi.useRealTimers()
   })
 
-  it('restores referenced images immediately and delays cleanup', async () => {
+  it("restores referenced images immediately and delays cleanup", async () => {
     scheduleMarkdownImageMaintenance(filesService)
 
     await vi.runOnlyPendingTimersAsync()
 
     expect(filesService.restoreReferencedMarkdownImages).toHaveBeenCalledTimes(2)
     expect(filesService.deleteUnusedMarkdownImages).toHaveBeenCalledWith({
-      minUnusedAgeMs: MARKDOWN_IMAGE_CLEANUP_DELAY_MS
+      minUnusedAgeMs: MARKDOWN_IMAGE_CLEANUP_DELAY_MS,
     })
   })
 
-  it('runs startup maintenance after startup delay', async () => {
+  it("runs startup maintenance after startup delay", async () => {
     scheduleStartupMarkdownImageMaintenance(filesService)
 
     await vi.advanceTimersByTimeAsync(MARKDOWN_IMAGE_STARTUP_DELAY_MS)
 
     expect(filesService.restoreReferencedMarkdownImages).toHaveBeenCalledTimes(1)
     expect(filesService.deleteUnusedMarkdownImages).toHaveBeenCalledWith({
-      minUnusedAgeMs: MARKDOWN_IMAGE_CLEANUP_DELAY_MS
+      minUnusedAgeMs: MARKDOWN_IMAGE_CLEANUP_DELAY_MS,
     })
   })
 })

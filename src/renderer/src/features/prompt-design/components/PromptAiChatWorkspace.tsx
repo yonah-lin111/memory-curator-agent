@@ -1,19 +1,31 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import { useToast } from "@/components/ui/Toast";
-import { Bot } from "lucide-react";
-import { PromptAiChatMessageBubble, type PromptAiMessageContextMenuRequest } from "@/features/prompt-design/components/PromptAiChatMessageBubble";
-import { PromptAiMessageContextMenu } from "@/features/prompt-design/components/PromptAiMessageContextMenu";
-import { PromptAiChatInput } from "@/features/prompt-design/components/PromptAiChatInput";
-import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController";
-import type { PromptDesignReference } from "@/features/prompt-design/types";
+import { Bot } from "lucide-react"
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import { useToast } from "@/components/ui/Toast"
+import { PromptAiChatInput } from "@/features/prompt-design/components/PromptAiChatInput"
+import {
+  PromptAiChatMessageBubble,
+  type PromptAiMessageContextMenuRequest,
+} from "@/features/prompt-design/components/PromptAiChatMessageBubble"
+import { PromptAiMessageContextMenu } from "@/features/prompt-design/components/PromptAiMessageContextMenu"
+import { usePromptAiChatController } from "@/features/prompt-design/components/usePromptAiChatController"
+import type { PromptDesignReference } from "@/features/prompt-design/types"
 
 // 底部占位计算所需的 DOM 参数。
 type BottomSpacerParams = {
-  container: HTMLDivElement;
-  triggerMessage: HTMLDivElement;
-  currentSpacerHeight: number;
-  topOffset: number;
-};
+  container: HTMLDivElement
+  triggerMessage: HTMLDivElement
+  currentSpacerHeight: number
+  topOffset: number
+}
 
 /**
  * calculateBottomSpacerHeight - 计算用户消息置顶时需要保留的底部空间。
@@ -24,195 +36,195 @@ const calculateBottomSpacerHeight = ({
   currentSpacerHeight,
   topOffset,
 }: BottomSpacerParams): number => {
-  const viewportHeight = container.clientHeight;
-  const targetScrollTop = Math.max(triggerMessage.offsetTop - topOffset, 0);
+  const viewportHeight = container.clientHeight
+  const targetScrollTop = Math.max(triggerMessage.offsetTop - topOffset, 0)
 
   return Math.round(
-    Math.max(
-      0,
-      targetScrollTop +
-        viewportHeight -
-        container.scrollHeight +
-        currentSpacerHeight,
-    ),
-  );
-};
+    Math.max(0, targetScrollTop + viewportHeight - container.scrollHeight + currentSpacerHeight),
+  )
+}
 
 export type PromptAiChatWorkspaceHandle = {
-  scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void;
-};
+  scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void
+}
 
 export const PromptAiChatWorkspace = forwardRef<
   PromptAiChatWorkspaceHandle,
   {
-    controller: ReturnType<typeof usePromptAiChatController>;
-    onReferenceSelect?: (reference: PromptDesignReference) => void;
-    chatInputFocusVersion?: number;
+    controller: ReturnType<typeof usePromptAiChatController>
+    onReferenceSelect?: (reference: PromptDesignReference) => void
+    chatInputFocusVersion?: number
     mcpStatus?: {
-      total: number;
-      connected: number;
-      failed: number;
-      names: string[];
-      failedNames: string[];
-    };
+      total: number
+      connected: number
+      failed: number
+      names: string[]
+      failedNames: string[]
+    }
   }
 >(({ controller, mcpStatus, onReferenceSelect, chatInputFocusVersion }, ref) => {
-  const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } =
-    controller;
+  const { messages, sendMessage, isGenerating, LATEST_ASSISTANT_TOP_OFFSET } = controller
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const latestTriggerMessageRef = useRef<HTMLDivElement>(null);
-  const prevScrolledTriggerMessageIdRef = useRef<string | null>(null);
-  const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const latestTriggerMessageRef = useRef<HTMLDivElement>(null)
+  const prevScrolledTriggerMessageIdRef = useRef<string | null>(null)
+  const [bottomSpacerHeight, setBottomSpacerHeight] = useState(0)
   // 手动刷新建议问题时递增，用于通知对应消息气泡重新请求。
-  const [suggestedQuestionGenerationVersion, setSuggestedQuestionGenerationVersion] = useState(0);
+  const [suggestedQuestionGenerationVersion, setSuggestedQuestionGenerationVersion] = useState(0)
   // 手动命令指定的建议问题目标，独立于自动触发开关。
-  const [manualSuggestedQuestionMessageId, setManualSuggestedQuestionMessageId] = useState<string | null>(null);
-  const [messageContextMenu, setMessageContextMenu] = useState<PromptAiMessageContextMenuRequest | null>(null);
-  const escCancelStateRef = useRef<"idle" | "pending">("idle");
-  const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const toast = useToast();
+  const [manualSuggestedQuestionMessageId, setManualSuggestedQuestionMessageId] = useState<
+    string | null
+  >(null)
+  const [messageContextMenu, setMessageContextMenu] =
+    useState<PromptAiMessageContextMenuRequest | null>(null)
+  const escCancelStateRef = useRef<"idle" | "pending">("idle")
+  const escCancelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toast = useToast()
 
   const latestTriggerMessageId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
+      const message = messages[index]
       if (message.role === "user" || message.role === "system_command") {
-        return message.id;
+        return message.id
       }
     }
 
-    return null;
-  }, [messages]);
+    return null
+  }, [messages])
 
   const latestAssistantMessageId = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
+      const message = messages[index]
       if (message.role === "assistant") {
-        return message.id;
+        return message.id
       }
     }
 
-    return null;
-  }, [messages]);
+    return null
+  }, [messages])
 
-  const handleSend = (text: string, selectedModel?: string, options?: { references?: typeof controller.references }) => {
-    sendMessage(text, selectedModel, options);
-  };
+  const handleSend = (
+    text: string,
+    selectedModel?: string,
+    options?: { references?: typeof controller.references },
+  ) => {
+    sendMessage(text, selectedModel, options)
+  }
 
   /**
    * 双击 Esc 时取消当前生成，避免单次误触打断流式输出。
    */
   const handleCancelEsc = useCallback((): void => {
     if (!isGenerating) {
-      return;
+      return
     }
 
     if (escCancelStateRef.current === "idle") {
-      escCancelStateRef.current = "pending";
-      toast.info("再按一次 Esc 取消 AI 回答");
+      escCancelStateRef.current = "pending"
+      toast.info("再按一次 Esc 取消 AI 回答")
       escCancelTimerRef.current = setTimeout(() => {
-        escCancelStateRef.current = "idle";
-        escCancelTimerRef.current = null;
-      }, 2000);
-      return;
+        escCancelStateRef.current = "idle"
+        escCancelTimerRef.current = null
+      }, 2000)
+      return
     }
 
-    escCancelStateRef.current = "idle";
+    escCancelStateRef.current = "idle"
     if (escCancelTimerRef.current) {
-      clearTimeout(escCancelTimerRef.current);
-      escCancelTimerRef.current = null;
+      clearTimeout(escCancelTimerRef.current)
+      escCancelTimerRef.current = null
     }
-    void controller.handleCancelGeneration();
-  }, [controller.handleCancelGeneration, isGenerating, toast]);
+    void controller.handleCancelGeneration()
+  }, [controller.handleCancelGeneration, isGenerating, toast])
 
   useEffect(() => {
     if (!isGenerating) {
-      escCancelStateRef.current = "idle";
+      escCancelStateRef.current = "idle"
       if (escCancelTimerRef.current) {
-        clearTimeout(escCancelTimerRef.current);
-        escCancelTimerRef.current = null;
+        clearTimeout(escCancelTimerRef.current)
+        escCancelTimerRef.current = null
       }
-      return undefined;
+      return undefined
     }
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        handleCancelEsc();
+        handleCancelEsc()
       }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      if (escCancelTimerRef.current) {
-        clearTimeout(escCancelTimerRef.current);
-        escCancelTimerRef.current = null;
-      }
-    };
-  }, [handleCancelEsc, isGenerating]);
-
-  const getTriggerMessageTargetTop = (triggerMessage: HTMLDivElement): number => {
-    return Math.max(triggerMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0);
-  };
-
-  const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void) => {
-    const container = scrollContainerRef.current;
-    const triggerMessage = latestTriggerMessageRef.current;
-    if (!container || !triggerMessage) {
-      onComplete?.();
-      return;
     }
 
-    const targetTop = getTriggerMessageTargetTop(triggerMessage);
-    
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      if (escCancelTimerRef.current) {
+        clearTimeout(escCancelTimerRef.current)
+        escCancelTimerRef.current = null
+      }
+    }
+  }, [handleCancelEsc, isGenerating])
+
+  const getTriggerMessageTargetTop = (triggerMessage: HTMLDivElement): number => {
+    return Math.max(triggerMessage.offsetTop - LATEST_ASSISTANT_TOP_OFFSET, 0)
+  }
+
+  const scrollLatestUserToTop = (behavior: ScrollBehavior, onComplete?: () => void) => {
+    const container = scrollContainerRef.current
+    const triggerMessage = latestTriggerMessageRef.current
+    if (!container || !triggerMessage) {
+      onComplete?.()
+      return
+    }
+
+    const targetTop = getTriggerMessageTargetTop(triggerMessage)
+
     // 如果需要底部留白才能滚到该位置，先计算
     const requiredSpacer = calculateBottomSpacerHeight({
       container,
       triggerMessage,
       currentSpacerHeight: bottomSpacerHeight,
       topOffset: LATEST_ASSISTANT_TOP_OFFSET,
-    });
-    
+    })
+
     if (Math.abs(bottomSpacerHeight - requiredSpacer) > 3) {
-      setBottomSpacerHeight(requiredSpacer);
+      setBottomSpacerHeight(requiredSpacer)
       // Wait for next frame to scroll after spacer is updated
       requestAnimationFrame(() => {
-        container.scrollTo({ top: targetTop, behavior });
+        container.scrollTo({ top: targetTop, behavior })
         // Use a small timeout to let smooth scroll finish before onComplete
         if (onComplete) {
-          if (behavior === 'smooth') {
-             setTimeout(onComplete, 300);
+          if (behavior === "smooth") {
+            setTimeout(onComplete, 300)
           } else {
-             requestAnimationFrame(onComplete);
+            requestAnimationFrame(onComplete)
           }
         }
-      });
+      })
     } else {
-      container.scrollTo({ top: targetTop, behavior });
+      container.scrollTo({ top: targetTop, behavior })
       if (onComplete) {
-        if (behavior === 'smooth') {
-           setTimeout(onComplete, 300);
+        if (behavior === "smooth") {
+          setTimeout(onComplete, 300)
         } else {
-           requestAnimationFrame(onComplete);
+          requestAnimationFrame(onComplete)
         }
       }
     }
-  };
+  }
 
   useImperativeHandle(ref, () => ({
     scrollLatestUserToTop,
-  }));
+  }))
 
   useLayoutEffect(() => {
     if (!latestTriggerMessageId) {
-      setBottomSpacerHeight(0);
-      prevScrolledTriggerMessageIdRef.current = null;
-      return;
+      setBottomSpacerHeight(0)
+      prevScrolledTriggerMessageIdRef.current = null
+      return
     }
 
-    const container = scrollContainerRef.current;
-    const triggerMessage = latestTriggerMessageRef.current;
+    const container = scrollContainerRef.current
+    const triggerMessage = latestTriggerMessageRef.current
 
     if (container && triggerMessage) {
       setBottomSpacerHeight((prev) => {
@@ -221,17 +233,17 @@ export const PromptAiChatWorkspace = forwardRef<
           triggerMessage,
           currentSpacerHeight: prev,
           topOffset: LATEST_ASSISTANT_TOP_OFFSET,
-        });
+        })
 
-        return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
-      });
+        return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev
+      })
     }
-  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET])
 
   useEffect(() => {
     const handleResize = () => {
-      const container = scrollContainerRef.current;
-      const triggerMessage = latestTriggerMessageRef.current;
+      const container = scrollContainerRef.current
+      const triggerMessage = latestTriggerMessageRef.current
 
       if (container && triggerMessage && latestTriggerMessageId) {
         setBottomSpacerHeight((prev) =>
@@ -241,19 +253,19 @@ export const PromptAiChatWorkspace = forwardRef<
             currentSpacerHeight: prev,
             topOffset: LATEST_ASSISTANT_TOP_OFFSET,
           }),
-        );
+        )
       }
-    };
+    }
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize)
     return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET]);
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [latestTriggerMessageId, LATEST_ASSISTANT_TOP_OFFSET])
 
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    const triggerMessage = latestTriggerMessageRef.current;
+    const container = scrollContainerRef.current
+    const triggerMessage = latestTriggerMessageRef.current
 
     if (
       !latestTriggerMessageId ||
@@ -261,141 +273,134 @@ export const PromptAiChatWorkspace = forwardRef<
       !triggerMessage ||
       typeof window.ResizeObserver === "undefined"
     ) {
-      return undefined;
+      return undefined
     }
 
-    let pendingRafId: number | null = null;
+    let pendingRafId: number | null = null
 
     const resizeObserver = new ResizeObserver(() => {
       if (pendingRafId !== null) {
-        return;
+        return
       }
 
       pendingRafId = requestAnimationFrame(() => {
-        pendingRafId = null;
+        pendingRafId = null
         setBottomSpacerHeight((prev) => {
           const requiredSpacer = calculateBottomSpacerHeight({
             container,
             triggerMessage,
             currentSpacerHeight: prev,
             topOffset: LATEST_ASSISTANT_TOP_OFFSET,
-          });
+          })
 
-          return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev;
-        });
-      });
-    });
+          return Math.abs(prev - requiredSpacer) > 3 ? requiredSpacer : prev
+        })
+      })
+    })
 
-    const wrapper = container.firstElementChild;
+    const wrapper = container.firstElementChild
     const elementsToObserve = wrapper
       ? Array.from(wrapper.children)
-      : Array.from(container.children);
+      : Array.from(container.children)
 
     for (const child of elementsToObserve) {
-      if (
-        child instanceof HTMLElement &&
-        child.dataset.aiChatBottomSpacer !== "true"
-      ) {
-        resizeObserver.observe(child);
+      if (child instanceof HTMLElement && child.dataset.aiChatBottomSpacer !== "true") {
+        resizeObserver.observe(child)
       }
     }
 
     return () => {
-      resizeObserver.disconnect();
+      resizeObserver.disconnect()
       if (pendingRafId !== null) {
-        cancelAnimationFrame(pendingRafId);
+        cancelAnimationFrame(pendingRafId)
       }
-    };
-  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
+    }
+  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET])
 
   useLayoutEffect(() => {
-    if (
-      latestTriggerMessageId &&
-      latestTriggerMessageRef.current &&
-      scrollContainerRef.current
-    ) {
+    if (latestTriggerMessageId && latestTriggerMessageRef.current && scrollContainerRef.current) {
       if (prevScrolledTriggerMessageIdRef.current === latestTriggerMessageId) {
-        return;
+        return
       }
 
-      const targetTop = getTriggerMessageTargetTop(latestTriggerMessageRef.current);
+      const targetTop = getTriggerMessageTargetTop(latestTriggerMessageRef.current)
       const animationFrame = requestAnimationFrame(() => {
         scrollContainerRef.current?.scrollTo({
           top: targetTop,
           behavior: "smooth",
-        });
-      });
+        })
+      })
 
-      prevScrolledTriggerMessageIdRef.current = latestTriggerMessageId;
+      prevScrolledTriggerMessageIdRef.current = latestTriggerMessageId
 
       return () => {
-        cancelAnimationFrame(animationFrame);
-      };
+        cancelAnimationFrame(animationFrame)
+      }
     }
 
-    return undefined;
-  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET]);
+    return undefined
+  }, [latestTriggerMessageId, messages.length, LATEST_ASSISTANT_TOP_OFFSET])
 
   useEffect(() => {
-    if (!messageContextMenu) return undefined;
-    const closeContextMenu = (): void => setMessageContextMenu(null);
+    if (!messageContextMenu) return undefined
+    const closeContextMenu = (): void => setMessageContextMenu(null)
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") closeContextMenu();
-    };
-    document.addEventListener("click", closeContextMenu);
-    document.addEventListener("scroll", closeContextMenu, true);
-    window.addEventListener("resize", closeContextMenu);
-    window.addEventListener("keydown", handleKeyDown);
+      if (event.key === "Escape") closeContextMenu()
+    }
+    document.addEventListener("click", closeContextMenu)
+    document.addEventListener("scroll", closeContextMenu, true)
+    window.addEventListener("resize", closeContextMenu)
+    window.addEventListener("keydown", handleKeyDown)
     return () => {
-      document.removeEventListener("click", closeContextMenu);
-      document.removeEventListener("scroll", closeContextMenu, true);
-      window.removeEventListener("resize", closeContextMenu);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [messageContextMenu]);
+      document.removeEventListener("click", closeContextMenu)
+      document.removeEventListener("scroll", closeContextMenu, true)
+      window.removeEventListener("resize", closeContextMenu)
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [messageContextMenu])
 
   /**
    * 写入系统剪贴板，兼容缺失 Clipboard API 的运行时。
    */
   const copyTextToClipboard = async (content: string): Promise<void> => {
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(content);
-      return;
+      await navigator.clipboard.writeText(content)
+      return
     }
-    const textarea = document.createElement("textarea");
-    textarea.value = content;
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-  };
+    const textarea = document.createElement("textarea")
+    textarea.value = content
+    textarea.style.position = "fixed"
+    textarea.style.left = "-9999px"
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand("copy")
+    document.body.removeChild(textarea)
+  }
 
   const handleCopyText = (): void => {
-    if (!messageContextMenu) return;
-    void copyTextToClipboard(messageContextMenu.plainTextContent);
-    setMessageContextMenu(null);
-  };
+    if (!messageContextMenu) return
+    void copyTextToClipboard(messageContextMenu.plainTextContent)
+    setMessageContextMenu(null)
+  }
   const handleCopyMarkdown = (): void => {
-    if (!messageContextMenu) return;
-    void copyTextToClipboard(messageContextMenu.markdownContent);
-    setMessageContextMenu(null);
-  };
+    if (!messageContextMenu) return
+    void copyTextToClipboard(messageContextMenu.markdownContent)
+    setMessageContextMenu(null)
+  }
   const handleRegenerate = (): void => {
-    setMessageContextMenu(null);
-    void controller.handleRegenerateLatestAnswer();
-  };
+    setMessageContextMenu(null)
+    void controller.handleRegenerateLatestAnswer()
+  }
   const handleDeleteQa = (): void => {
-    if (!messageContextMenu) return;
-    const { messageId } = messageContextMenu;
-    setMessageContextMenu(null);
-    void controller.handleDeleteTurn(messageId);
-  };
+    if (!messageContextMenu) return
+    const { messageId } = messageContextMenu
+    setMessageContextMenu(null)
+    void controller.handleDeleteTurn(messageId)
+  }
   const handleEdit = (): void => {
-    messageContextMenu?.onEdit?.();
-    setMessageContextMenu(null);
-  };
+    messageContextMenu?.onEdit?.()
+    setMessageContextMenu(null)
+  }
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#212121]">
@@ -418,20 +423,23 @@ export const PromptAiChatWorkspace = forwardRef<
                   <div className="flex items-center justify-center w-12 h-12 rounded-[6px] bg-white/5 border border-white/5 mb-4 text-white/30 animate-pulse">
                     <Bot className="h-6 w-6" />
                   </div>
-                  <h3 className="text-sm font-bold text-white/80 mb-1.5 font-mono">// 提示词 AI 助手</h3>
+                  <h3 className="text-sm font-bold text-white/80 mb-1.5 font-mono">
+                    // 提示词 AI 助手
+                  </h3>
                   <p className="text-xs text-white/40 leading-relaxed max-w-[280px]">
-                    在此与 AI 助手交流。输入你想调整的提示词思路，或让它为你润色、检查或优化当前选中的提示词设计。
+                    在此与 AI
+                    助手交流。输入你想调整的提示词思路，或让它为你润色、检查或优化当前选中的提示词设计。
                   </p>
                 </div>
               ) : (
                 messages.map((message) => {
                   const isLatestTriggerMessage =
                     (message.role === "user" || message.role === "system_command") &&
-                    message.id === latestTriggerMessageId;
+                    message.id === latestTriggerMessageId
                   const isGeneratingMessage =
                     isGenerating &&
                     message.role !== "user" &&
-                    message.id === messages[messages.length - 1]?.id;
+                    message.id === messages[messages.length - 1]?.id
 
                   return (
                     <div
@@ -459,15 +467,20 @@ export const PromptAiChatWorkspace = forwardRef<
                           message.role === "assistant" &&
                           message.id === messages[messages.length - 1]?.id
                             ? messages
-                              .filter((item): item is typeof item & { role: "user" | "assistant" } => item.role === "user" || item.role === "assistant")
-                              .map((item) => ({ role: item.role, content: item.content }))
+                                .filter(
+                                  (item): item is typeof item & { role: "user" | "assistant" } =>
+                                    item.role === "user" || item.role === "assistant",
+                                )
+                                .map((item) => ({ role: item.role, content: item.content }))
                             : undefined
                         }
                         suggestedQuestionGenerationVersion={suggestedQuestionGenerationVersion}
-                        onSendSuggestedQuestion={(question) => { void controller.sendMessage(question); }}
+                        onSendSuggestedQuestion={(question) => {
+                          void controller.sendMessage(question)
+                        }}
                       />
                     </div>
-                  );
+                  )
                 })
               )}
               {bottomSpacerHeight > 0 && (
@@ -492,17 +505,19 @@ export const PromptAiChatWorkspace = forwardRef<
             onMcp={controller.showMcpTools}
             onSuggestQuestions={() => {
               if (!latestAssistantMessageId || isGenerating) {
-                return;
+                return
               }
-              setManualSuggestedQuestionMessageId(latestAssistantMessageId);
-              setSuggestedQuestionGenerationVersion((version) => version + 1);
+              setManualSuggestedQuestionMessageId(latestAssistantMessageId)
+              setSuggestedQuestionGenerationVersion((version) => version + 1)
               requestAnimationFrame(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-              });
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+              })
             }}
             chatSessions={controller.sessions}
             references={controller.references}
-            onReferenceRemove={(id) => controller.setReferences((items) => items.filter((item) => item.id !== id))}
+            onReferenceRemove={(id) =>
+              controller.setReferences((items) => items.filter((item) => item.id !== id))
+            }
             onReferencesClear={() => controller.setReferences([])}
             onReferenceSelect={onReferenceSelect}
             focusVersion={chatInputFocusVersion}
@@ -522,7 +537,7 @@ export const PromptAiChatWorkspace = forwardRef<
         />
       ) : null}
     </div>
-  );
-});
+  )
+})
 
-PromptAiChatWorkspace.displayName = "PromptAiChatWorkspace";
+PromptAiChatWorkspace.displayName = "PromptAiChatWorkspace"

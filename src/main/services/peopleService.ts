@@ -3,9 +3,9 @@ import type {
   AssociatedPersonItem,
   AssociatedPersonRow,
   AssociatedPersonUpdateInput,
-  PersonRelationship
-} from '@/db/schema'
-import { createCompactUuid } from '@/id'
+  PersonRelationship,
+} from "@/db/schema"
+import { createCompactUuid } from "@/id"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -38,7 +38,7 @@ export type PeopleService = {
 }
 
 // 合法人物关系集合。
-const PERSON_RELATIONSHIPS: PersonRelationship[] = ['女朋友', '家人', '朋友', '同事', '其他']
+const PERSON_RELATIONSHIPS: PersonRelationship[] = ["女朋友", "家人", "朋友", "同事", "其他"]
 
 /**
  * 生成当前时间戳。
@@ -57,25 +57,25 @@ const parseStoredTags = (value: string): string[] => {
     return []
   }
 
-  return parsed.filter((tag): tag is string => typeof tag === 'string')
+  return parsed.filter((tag): tag is string => typeof tag === "string")
 }
 
 /**
  * 校验人物输入。
  */
 const validatePersonInput = (
-  input: AssociatedPersonCreateInput | AssociatedPersonUpdateInput
+  input: AssociatedPersonCreateInput | AssociatedPersonUpdateInput,
 ): void => {
   if (!input.name.trim()) {
-    throw new Error('姓名不能为空')
+    throw new Error("姓名不能为空")
   }
 
   if (!PERSON_RELATIONSHIPS.includes(input.relationship)) {
-    throw new Error('人物关系分类不正确')
+    throw new Error("人物关系分类不正确")
   }
 
-  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== 'string')) {
-    throw new Error('人物标签格式不正确')
+  if (!Array.isArray(input.tags) || input.tags.some((tag) => typeof tag !== "string")) {
+    throw new Error("人物标签格式不正确")
   }
 }
 
@@ -94,7 +94,7 @@ const mapPersonRow = (row: AssociatedPersonRow): AssociatedPersonItem => ({
   tags: parseStoredTags(row.tags),
   details: row.details,
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
 })
 
 /**
@@ -104,7 +104,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
   list: () => {
     const rows = database
       .prepare(
-        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY updated_at DESC, created_at DESC'
+        "SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people ORDER BY updated_at DESC, created_at DESC",
       )
       .all() as AssociatedPersonRow[]
 
@@ -121,7 +121,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
 
     database
       .prepare(
-        'INSERT INTO associated_people (external_id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        "INSERT INTO associated_people (external_id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .run(
         id,
@@ -135,17 +135,17 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
         JSON.stringify(input.tags),
         input.details,
         timestamp,
-        timestamp
+        timestamp,
       )
 
     const row = database
       .prepare(
-        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?'
+        "SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?",
       )
       .get(id) as AssociatedPersonRow | undefined
 
     if (!row) {
-      throw new Error('新建人物后读取失败')
+      throw new Error("新建人物后读取失败")
     }
 
     return mapPersonRow(row)
@@ -155,18 +155,18 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
 
     const existing = database
       .prepare(
-        'SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?'
+        "SELECT external_id AS id, avatar, name, gender, relationship, status, birthday, contact, tags, details, created_at, updated_at FROM associated_people WHERE external_id = ?",
       )
       .get(id) as AssociatedPersonRow | undefined
 
     if (!existing) {
-      throw new Error('人物不存在')
+      throw new Error("人物不存在")
     }
 
     const updatedAt = createTimestamp()
     database
       .prepare(
-        'UPDATE associated_people SET avatar = ?, name = ?, gender = ?, relationship = ?, status = ?, birthday = ?, contact = ?, tags = ?, details = ?, updated_at = ? WHERE external_id = ?'
+        "UPDATE associated_people SET avatar = ?, name = ?, gender = ?, relationship = ?, status = ?, birthday = ?, contact = ?, tags = ?, details = ?, updated_at = ? WHERE external_id = ?",
       )
       .run(
         input.avatar,
@@ -179,7 +179,7 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
         JSON.stringify(input.tags),
         input.details,
         updatedAt,
-        id
+        id,
       )
 
     return mapPersonRow({
@@ -193,10 +193,10 @@ export const createPeopleService = (database: DatabaseConnection): PeopleService
       contact: input.contact.trim(),
       tags: JSON.stringify(input.tags),
       details: input.details,
-      updated_at: updatedAt
+      updated_at: updatedAt,
     })
   },
   delete: (id) => {
-    database.prepare('DELETE FROM associated_people WHERE external_id = ?').run(id)
-  }
+    database.prepare("DELETE FROM associated_people WHERE external_id = ?").run(id)
+  },
 })

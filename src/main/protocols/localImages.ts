@@ -1,23 +1,29 @@
-import { basename, join } from 'node:path'
-import { getAiChatImageDir, getAiChatTextDir, getMarkdownImageDir, getPeopleAvatarDir, getPersonalAvatarDir } from '@/paths'
+import { basename, join } from "node:path"
+import {
+  getAiChatImageDir,
+  getAiChatTextDir,
+  getMarkdownImageDir,
+  getPeopleAvatarDir,
+  getPersonalAvatarDir,
+} from "@/paths"
 
 // 本地图片协议。
-export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
+export const MARKDOWN_IMAGE_PROTOCOL = "mc-img"
 
 // Markdown 图片协议主机名。
-export const MARKDOWN_IMAGE_HOST = 'md'
+export const MARKDOWN_IMAGE_HOST = "md"
 
 // 人物头像协议主机名。
-export const PEOPLE_AVATAR_HOST = 'people'
+export const PEOPLE_AVATAR_HOST = "people"
 
 // 个人头像协议主机名。
-export const PERSONAL_AVATAR_HOST = 'profile'
+export const PERSONAL_AVATAR_HOST = "profile"
 
 // AI 聊天图片协议主机名。
-export const AI_CHAT_IMAGE_HOST = 'chat'
+export const AI_CHAT_IMAGE_HOST = "chat"
 
 // AI 聊天文本文件协议主机名。
-export const AI_CHAT_TEXT_HOST = 'chat-text'
+export const AI_CHAT_TEXT_HOST = "chat-text"
 
 /**
  * 创建 Markdown 图片访问 URL。

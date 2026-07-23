@@ -1,63 +1,52 @@
-import type React from "react";
-import { useEffect, useMemo, useState, useRef } from "react";
-import { ArrowUpDown, CheckSquare, Ellipsis, Square } from "lucide-react";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
-import { Radio, RadioGroup } from "@/components/ui/Radio";
-import { useHeaderStore } from "@/lib/headerStore";
-import { useToast } from "@/components/ui/Toast";
-import { IconButton } from "@/components/ui/IconButton";
-import { Input } from "@/components/ui/Input";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { TodoControlTower } from "@/pages/todo/components/TodoControlTower";
-import {
-  sortTodoItems,
-  getNextTodoPriority,
-} from "@/pages/todo/components/todoShared";
-import {
-  createTodayEntryDate,
-  getEntryMonth,
-  hasDailyBridge,
-} from "@/lib/dailyShared";
+import { ArrowUpDown, CheckSquare, Ellipsis, Square } from "lucide-react"
+import type React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { DatePicker } from "@/components/ui/DatePicker"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator"
+import { Radio, RadioGroup } from "@/components/ui/Radio"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { createTodayEntryDate, getEntryMonth, hasDailyBridge } from "@/lib/dailyShared"
+import { useHeaderStore } from "@/lib/headerStore"
+import { TodoControlTower } from "@/pages/todo/components/TodoControlTower"
+import { getNextTodoPriority, sortTodoItems } from "@/pages/todo/components/todoShared"
 
 // 待办记录类型，直接从 bridge 签名反推。
-type DailyTodoRecord = Awaited<
-  ReturnType<Window["api"]["daily"]["listDay"]>
->["todos"][number];
+type DailyTodoRecord = Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>["todos"][number]
 
 // 待办优先级类型，直接从 createTodo 签名反推。
-type DailyTodoPriorityValue = Parameters<
-  Window["api"]["daily"]["createTodo"]
->[0]["priority"];
+type DailyTodoPriorityValue = Parameters<Window["api"]["daily"]["createTodo"]>[0]["priority"]
 
 // 新建待办草稿，仅保留必要字段。
 interface TodoComposerDraft {
   // 草稿文本。
-  text: string;
+  text: string
   // 草稿优先级。
-  priority: DailyTodoPriorityValue;
+  priority: DailyTodoPriorityValue
 }
 
 // 行内编辑草稿，仅跟踪单条待办。
 interface EditingTodoDraft {
   // 正在编辑的待办 ID。
-  id: number;
+  id: number
   // 正在编辑的文本。
-  text: string;
+  text: string
 }
 
 // 单条待办操作菜单属性。
 interface TodoActionMenuProps {
   // 待办 ID。
-  id: number;
+  id: number
   // 待办标题。
-  text: string;
+  text: string
   // 当前待办所属日期。
-  entryDate: string;
+  entryDate: string
   // 移动待办回调。
-  onMove: (entryDate: string) => void;
+  onMove: (entryDate: string) => void
   // 删除待办回调。
-  onDelete: () => void;
+  onDelete: () => void
 }
 
 // 不同优先级在激活态下的视觉样式。
@@ -66,21 +55,18 @@ const PRIORITY_TONE_MAP: Record<DailyTodoPriorityValue, string> = {
   P1: "border-amber-500/20 bg-amber-500/8 text-amber-400 hover:bg-amber-500/12",
   P2: "border-sky-500/20 bg-sky-500/8 text-sky-400 hover:bg-sky-500/12",
   P3: "border-neutral-500/20 bg-neutral-500/8 text-neutral-400 hover:bg-neutral-500/12",
-};
+}
 
 /**
  * 根据完成状态与优先级生成标签样式。
  */
-const getPriorityClassName = (
-  priority: DailyTodoPriorityValue,
-  completed: boolean,
-): string => {
+const getPriorityClassName = (priority: DailyTodoPriorityValue, completed: boolean): string => {
   if (completed) {
-    return "border-white/6 bg-white/[0.02] text-white/25 hover:bg-white/[0.04]";
+    return "border-white/6 bg-white/[0.02] text-white/25 hover:bg-white/[0.04]"
   }
 
-  return PRIORITY_TONE_MAP[priority];
-};
+  return PRIORITY_TONE_MAP[priority]
+}
 
 /**
  * 单条待办的更多操作菜单。
@@ -93,9 +79,9 @@ const TodoActionMenu = ({
   onDelete,
 }: TodoActionMenuProps): React.JSX.Element => {
   // 移动目标日期。
-  const [targetDate, setTargetDate] = useState(entryDate);
+  const [targetDate, setTargetDate] = useState(entryDate)
   // 是否在确认时删除待办，默认关闭以避免误删。
-  const [shouldDelete, setShouldDelete] = useState(false);
+  const [shouldDelete, setShouldDelete] = useState(false)
 
   return (
     <Tooltip
@@ -103,9 +89,7 @@ const TodoActionMenu = ({
         <div className="flex flex-col gap-2">
           <span className="text-sm text-white/80">待办操作</span>
           <div className="flex flex-col gap-1 text-left">
-            <span className="text-[11px] font-semibold text-white/40">
-              移动到指定日期
-            </span>
+            <span className="text-[11px] font-semibold text-white/40">移动到指定日期</span>
             <DatePicker
               className="w-full"
               triggerClassName="w-full"
@@ -114,19 +98,14 @@ const TodoActionMenu = ({
             />
           </div>
           <div className="flex flex-col gap-1 text-left">
-            <span className="text-[11px] font-semibold text-white/40">
-              是否删除
-            </span>
+            <span className="text-[11px] font-semibold text-white/40">是否删除</span>
             <RadioGroup
               className="flex items-center gap-3"
               name={`delete-todo-${id}`}
               value={shouldDelete ? "yes" : "no"}
               onChange={(value) => setShouldDelete(value === "yes")}
             >
-              <Radio
-                label={<span className="text-rose-300">是</span>}
-                value="yes"
-              />
+              <Radio label={<span className="text-rose-300">是</span>} value="yes" />
               <Radio label="否" value="no" />
             </RadioGroup>
           </div>
@@ -137,10 +116,10 @@ const TodoActionMenu = ({
       onCancel={() => setShouldDelete(false)}
       onConfirm={() => {
         if (shouldDelete) {
-          onDelete();
-          return;
+          onDelete()
+          return
         }
-        onMove(targetDate);
+        onMove(targetDate)
       }}
     >
       <IconButton
@@ -151,110 +130,105 @@ const TodoActionMenu = ({
         <Ellipsis className="h-3.5 w-3.5" />
       </IconButton>
     </Tooltip>
-  );
-};
+  )
+}
 
 /**
  * TodoPage 组件 - 单日待办执行控制台。
  */
 export const TodoPage = (): React.JSX.Element => {
   // 全局提示实例。
-  const toast = useToast();
+  const toast = useToast()
   // 当前页面日期。
-  const [entryDate, setEntryDate] = useState<string>(() =>
-    createTodayEntryDate(),
-  );
+  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate())
   // 当前月历可见月份。
   const [visibleMonth, setVisibleMonth] = useState<string>(() =>
     getEntryMonth(createTodayEntryDate()),
-  );
+  )
   // 当前可见月份的待办角标映射。
-  const [monthEntryCounts, setMonthEntryCounts] = useState<
-    Record<string, number>
-  >({});
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>({})
   // 当前待办列表。
-  const [todos, setTodos] = useState<DailyTodoRecord[]>([]);
+  const [todos, setTodos] = useState<DailyTodoRecord[]>([])
   // 加载状态。
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   // 错误文案。
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   // 月历标记是否正在加载。
-  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
-    useState<boolean>(true);
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] = useState<boolean>(true)
   // 头部导航器 setter。
-  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator)
 
   // 快速录入草稿。
   const [composerDraft, setComposerDraft] = useState<TodoComposerDraft>({
     text: "",
     priority: "P1",
-  });
+  })
   // 控制是否显示快速录入输入框。
-  const [showComposer, setShowComposer] = useState(false);
+  const [showComposer, setShowComposer] = useState(false)
   // 当前行内编辑草稿。
-  const [editingTodo, setEditingTodo] = useState<EditingTodoDraft | null>(null);
+  const [editingTodo, setEditingTodo] = useState<EditingTodoDraft | null>(null)
   // 正在执行删除动画的待办 ID 列表。
-  const [deletingIds, setDeletingIds] = useState<number[]>([]);
+  const [deletingIds, setDeletingIds] = useState<number[]>([])
   // 快速录入输入框引用，用于头部按钮聚焦。
-  const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     /**
      * 读取指定日期的待办列表。
      */
     const loadTodos = async (): Promise<void> => {
-      setIsLoading(true);
-      setErrorMessage(null);
+      setIsLoading(true)
+      setErrorMessage(null)
 
       try {
         if (!hasDailyBridge()) {
-          setTodos([]);
-          return;
+          setTodos([])
+          return
         }
 
-        const todayData = await window.api.daily.listDay(entryDate);
-        setTodos(todayData.todos);
+        const todayData = await window.api.daily.listDay(entryDate)
+        setTodos(todayData.todos)
       } catch {
-        setErrorMessage("读取待办失败，请稍后再试。");
-        toast.error("读取待办失败");
+        setErrorMessage("读取待办失败，请稍后再试。")
+        toast.error("读取待办失败")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    void loadTodos();
-  }, [entryDate, toast]);
+    void loadTodos()
+  }, [entryDate, toast])
 
   useEffect(() => {
     /**
      * 读取当前可见月份的待办角标概览。
      */
     const loadMonthOverview = async (): Promise<void> => {
-      setIsMonthOverviewLoading(true);
+      setIsMonthOverviewLoading(true)
 
       try {
         if (!hasDailyBridge()) {
-          setMonthEntryCounts({});
-          return;
+          setMonthEntryCounts({})
+          return
         }
 
-        const overview = await window.api.daily.listMonthOverview(visibleMonth);
+        const overview = await window.api.daily.listMonthOverview(visibleMonth)
         setMonthEntryCounts(
           Object.fromEntries(
             overview.entries
               .filter((item) => item.todoCount > 0)
               .map((item) => [item.entryDate, item.todoCount]),
           ),
-        );
+        )
       } catch {
-        toast.error("读取月历标记失败");
+        toast.error("读取月历标记失败")
       } finally {
-        setIsMonthOverviewLoading(false);
+        setIsMonthOverviewLoading(false)
       }
-    };
+    }
 
-    void loadMonthOverview();
-  }, [toast, visibleMonth]);
+    void loadMonthOverview()
+  }, [toast, visibleMonth])
 
   useEffect(() => {
     setDateNavigator(
@@ -264,60 +238,50 @@ export const TodoPage = (): React.JSX.Element => {
         isMonthOverviewLoading={isMonthOverviewLoading}
         visibleMonth={visibleMonth}
         onChange={(nextDate) => {
-          setVisibleMonth(getEntryMonth(nextDate));
-          setEntryDate(nextDate);
+          setVisibleMonth(getEntryMonth(nextDate))
+          setEntryDate(nextDate)
         }}
         onVisibleMonthChange={setVisibleMonth}
       />,
-    );
+    )
 
     return () => {
-      setDateNavigator(null);
-    };
-  }, [
-    entryDate,
-    visibleMonth,
-    monthEntryCounts,
-    isMonthOverviewLoading,
-    setDateNavigator,
-  ]);
+      setDateNavigator(null)
+    }
+  }, [entryDate, visibleMonth, monthEntryCounts, isMonthOverviewLoading, setDateNavigator])
 
   // 已完成数量。
-  const completedCount = useMemo(
-    () => todos.filter((todo) => todo.completed).length,
-    [todos],
-  );
+  const completedCount = useMemo(() => todos.filter((todo) => todo.completed).length, [todos])
   // 未完成 P0 数量。
   const p0Count = useMemo(
-    () =>
-      todos.filter((todo) => !todo.completed && todo.priority === "P0").length,
+    () => todos.filter((todo) => !todo.completed && todo.priority === "P0").length,
     [todos],
-  );
+  )
 
   /**
    * 创建一条新的待办。
    */
   const handleCreateTodo = async (draft: {
-    text: string;
-    priority: DailyTodoPriorityValue;
+    text: string
+    priority: DailyTodoPriorityValue
   }): Promise<boolean> => {
     try {
       const created = await window.api.daily.createTodo({
         entryDate,
         ...draft,
-      });
-      setTodos((currentTodos) => [created, ...currentTodos]);
+      })
+      setTodos((currentTodos) => [created, ...currentTodos])
       setMonthEntryCounts((currentCounts) => ({
         ...currentCounts,
         [entryDate]: (currentCounts[entryDate] ?? todos.length) + 1,
-      }));
-      return true;
+      }))
+      return true
     } catch {
-      setErrorMessage("保存待办失败，请稍后再试。");
-      toast.error("保存待办失败");
-      return false;
+      setErrorMessage("保存待办失败，请稍后再试。")
+      toast.error("保存待办失败")
+      return false
     }
-  };
+  }
 
   /**
    * 更新一条待办。
@@ -325,65 +289,57 @@ export const TodoPage = (): React.JSX.Element => {
   const handleUpdateTodo = async (
     id: number,
     patch: {
-      text: string;
-      priority: DailyTodoPriorityValue;
-      completed: boolean;
+      text: string
+      priority: DailyTodoPriorityValue
+      completed: boolean
     },
   ): Promise<boolean> => {
     try {
-      const updated = await window.api.daily.updateTodo(id, patch);
-      setTodos((currentTodos) =>
-        currentTodos.map((todo) => (todo.id === id ? updated : todo)),
-      );
-      return true;
+      const updated = await window.api.daily.updateTodo(id, patch)
+      setTodos((currentTodos) => currentTodos.map((todo) => (todo.id === id ? updated : todo)))
+      return true
     } catch {
-      setErrorMessage("更新待办失败，请稍后再试。");
-      toast.error("更新待办失败");
-      return false;
+      setErrorMessage("更新待办失败，请稍后再试。")
+      toast.error("更新待办失败")
+      return false
     }
-  };
+  }
 
   /**
    * 删除一条待办。
    */
   const handleDeleteTodo = async (id: number): Promise<boolean> => {
     try {
-      await window.api.daily.deleteTodo(id);
-      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+      await window.api.daily.deleteTodo(id)
+      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id))
       setMonthEntryCounts((currentCounts) => {
-        const nextCount = Math.max(
-          (currentCounts[entryDate] ?? todos.length) - 1,
-          0,
-        );
+        const nextCount = Math.max((currentCounts[entryDate] ?? todos.length) - 1, 0)
 
         if (nextCount === 0) {
-          const nextCounts = { ...currentCounts };
-          delete nextCounts[entryDate];
-          return nextCounts;
+          const nextCounts = { ...currentCounts }
+          delete nextCounts[entryDate]
+          return nextCounts
         }
 
         return {
           ...currentCounts,
           [entryDate]: nextCount,
-        };
-      });
-      return true;
+        }
+      })
+      return true
     } catch {
-      setErrorMessage("删除待办失败，请稍后再试。");
-      toast.error("删除待办失败");
-      return false;
+      setErrorMessage("删除待办失败，请稍后再试。")
+      toast.error("删除待办失败")
+      return false
     }
-  };
+  }
 
   /**
    * 移动一条待办至指定日期。
    */
-  const handleMoveTodo = async (
-    todo: DailyTodoRecord,
-    targetEntryDate: string,
-  ): Promise<void> => {
+  const handleMoveTodo = async (todo: DailyTodoRecord, targetEntryDate: string): Promise<void> => {
     if (targetEntryDate === entryDate) {
-      return;
+      return
     }
 
     try {
@@ -393,33 +349,28 @@ export const TodoPage = (): React.JSX.Element => {
           priority: todo.priority as DailyTodoPriorityValue,
           completed: todo.completed,
           entryDate: targetEntryDate,
-        });
+        })
       }
 
-      setTodos((currentTodos) =>
-        currentTodos.filter((item) => item.id !== todo.id),
-      );
+      setTodos((currentTodos) => currentTodos.filter((item) => item.id !== todo.id))
       setMonthEntryCounts((currentCounts) => {
-        const nextCounts = { ...currentCounts };
-        const currentCount = Math.max(
-          (nextCounts[entryDate] ?? todos.length) - 1,
-          0,
-        );
+        const nextCounts = { ...currentCounts }
+        const currentCount = Math.max((nextCounts[entryDate] ?? todos.length) - 1, 0)
 
         if (currentCount === 0) {
-          delete nextCounts[entryDate];
+          delete nextCounts[entryDate]
         } else {
-          nextCounts[entryDate] = currentCount;
+          nextCounts[entryDate] = currentCount
         }
-        nextCounts[targetEntryDate] = (nextCounts[targetEntryDate] ?? 0) + 1;
-        return nextCounts;
-      });
-      toast.success(`已移动待办至 ${targetEntryDate}`);
+        nextCounts[targetEntryDate] = (nextCounts[targetEntryDate] ?? 0) + 1
+        return nextCounts
+      })
+      toast.success(`已移动待办至 ${targetEntryDate}`)
     } catch {
-      setErrorMessage("移动待办失败，请稍后再试。");
-      toast.error("移动待办失败");
+      setErrorMessage("移动待办失败，请稍后再试。")
+      toast.error("移动待办失败")
     }
-  };
+  }
 
   /**
    * 按当前顺序持久化待办列表。
@@ -429,22 +380,22 @@ export const TodoPage = (): React.JSX.Element => {
       const reordered = await window.api.daily.sortTodos({
         entryDate,
         ids: sortTodoItems(todos).map((todo) => todo.id),
-      });
-      setTodos(reordered);
-      return true;
+      })
+      setTodos(reordered)
+      return true
     } catch {
-      setErrorMessage("重排待办失败，请稍后再试。");
-      toast.error("重排待办失败");
-      return false;
+      setErrorMessage("重排待办失败，请稍后再试。")
+      toast.error("重排待办失败")
+      return false
     }
-  };
+  }
 
   /**
    * 聚焦快速录入框，维持主流列表的单入口添加体验。
    */
   const focusComposer = (): void => {
-    composerInputRef.current?.focus();
-  };
+    composerInputRef.current?.focus()
+  }
 
   /**
    * 切换新待办优先级。
@@ -452,37 +403,35 @@ export const TodoPage = (): React.JSX.Element => {
   const handleCycleComposerPriority = (): void => {
     setComposerDraft((currentDraft) => ({
       ...currentDraft,
-      priority: getNextTodoPriority(
-        currentDraft.priority,
-      ) as DailyTodoPriorityValue,
-    }));
-  };
+      priority: getNextTodoPriority(currentDraft.priority) as DailyTodoPriorityValue,
+    }))
+  }
 
   /**
    * 提交一条新的待办。
    */
   const handleAddTodo = async (): Promise<void> => {
-    const nextText = composerDraft.text.trim();
+    const nextText = composerDraft.text.trim()
 
     if (!nextText) {
-      return;
+      return
     }
 
     const isCreated = await handleCreateTodo({
       text: nextText,
       priority: composerDraft.priority,
-    });
+    })
 
     if (!isCreated) {
-      return;
+      return
     }
 
     setComposerDraft({
       text: "",
       priority: composerDraft.priority,
-    });
-    focusComposer();
-  };
+    })
+    focusComposer()
+  }
 
   /**
    * 切换待办完成状态。
@@ -492,21 +441,19 @@ export const TodoPage = (): React.JSX.Element => {
       text: todo.text,
       priority: todo.priority as DailyTodoPriorityValue,
       completed: !todo.completed,
-    });
-  };
+    })
+  }
 
   /**
    * 直接切换单条待办的优先级，无需进入编辑态。
    */
-  const handleCycleTodoPriority = async (
-    todo: DailyTodoRecord,
-  ): Promise<void> => {
+  const handleCycleTodoPriority = async (todo: DailyTodoRecord): Promise<void> => {
     await handleUpdateTodo(todo.id, {
       text: todo.text,
       priority: getNextTodoPriority(todo.priority) as DailyTodoPriorityValue,
       completed: todo.completed,
-    });
-  };
+    })
+  }
 
   /**
    * 开始编辑待办文本。
@@ -515,61 +462,58 @@ export const TodoPage = (): React.JSX.Element => {
     setEditingTodo({
       id: todo.id,
       text: todo.text,
-    });
-  };
+    })
+  }
 
   /**
    * 提交行内编辑结果；空文本时保持原值，避免误删。
    */
   const handleCommitEdit = async (todo: DailyTodoRecord): Promise<void> => {
     if (!editingTodo) {
-      return;
+      return
     }
 
-    const nextText = editingTodo.text.trim();
+    const nextText = editingTodo.text.trim()
 
     if (!nextText) {
-      setEditingTodo(null);
-      return;
+      setEditingTodo(null)
+      return
     }
 
     const isUpdated = await handleUpdateTodo(todo.id, {
       text: nextText,
       priority: todo.priority as DailyTodoPriorityValue,
       completed: todo.completed,
-    });
+    })
 
     if (!isUpdated) {
-      return;
+      return
     }
 
-    setEditingTodo(null);
-  };
+    setEditingTodo(null)
+  }
 
   /**
    * 删除指定待办（附带优雅缩放淡出与折叠动画）。
    */
   const handleDeleteTodoWithAnimation = (id: number): void => {
-    setDeletingIds((currentIds) => [...currentIds, id]);
+    setDeletingIds((currentIds) => [...currentIds, id])
 
     window.setTimeout(async () => {
       try {
-        await handleDeleteTodo(id);
+        await handleDeleteTodo(id)
       } finally {
-        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id));
+        setDeletingIds((currentIds) => currentIds.filter((x) => x !== id))
 
         if (editingTodo?.id === id) {
-          setEditingTodo(null);
+          setEditingTodo(null)
         }
       }
-    }, 240);
-  };
+    }, 240)
+  }
 
   return (
-    <section
-      aria-label="Todo Page"
-      className="flex h-full min-h-0 flex-col gap-3 text-white"
-    >
+    <section aria-label="Todo Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
         <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col gap-3 min-h-0 flex-1">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -591,14 +535,14 @@ export const TodoPage = (): React.JSX.Element => {
                 className={showComposer ? "bg-white/5 text-white" : ""}
                 onClick={() => {
                   setShowComposer((prev) => {
-                    const next = !prev;
+                    const next = !prev
                     if (next) {
                       window.setTimeout(() => {
-                        focusComposer();
-                      }, 50);
+                        focusComposer()
+                      }, 50)
                     }
-                    return next;
-                  });
+                    return next
+                  })
                 }}
                 title="添加待办"
               />
@@ -621,15 +565,15 @@ export const TodoPage = (): React.JSX.Element => {
                 }
                 onKeyDown={(event) => {
                   if (event.nativeEvent.isComposing) {
-                    return;
+                    return
                   }
                   if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    void handleAddTodo();
+                    event.preventDefault()
+                    void handleAddTodo()
                   }
                   if (event.key === "Tab") {
-                    event.preventDefault();
-                    handleCycleComposerPriority();
+                    event.preventDefault()
+                    handleCycleComposerPriority()
                   }
                 }}
                 prefix={
@@ -668,9 +612,7 @@ export const TodoPage = (): React.JSX.Element => {
             {!isLoading && todos.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <CheckSquare className="h-7 w-7 text-white/30" />
-                <h2 className="mt-3 text-sm font-bold text-white/80">
-                  暂无每日待办
-                </h2>
+                <h2 className="mt-3 text-sm font-bold text-white/80">暂无每日待办</h2>
                 <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
                   今天还没有待办，点击右上角加号，写下第一条。
                 </p>
@@ -678,15 +620,13 @@ export const TodoPage = (): React.JSX.Element => {
             ) : null}
 
             {todos.map((todo) => {
-              const isEditing = editingTodo?.id === todo.id;
-              const isDeleting = deletingIds.includes(todo.id);
+              const isEditing = editingTodo?.id === todo.id
+              const isDeleting = deletingIds.includes(todo.id)
               return (
                 <div
                   key={todo.id}
                   className={`group flex items-center gap-2.5 rounded-[6px] border px-2 py-2 transition-all duration-300 ease-out ${
-                    isDeleting
-                      ? "animate-todo-item-exit"
-                      : "animate-todo-item-enter"
+                    isDeleting ? "animate-todo-item-exit" : "animate-todo-item-enter"
                   } ${
                     todo.completed
                       ? "border-white/[0.03] bg-white/[0.02]"
@@ -695,15 +635,9 @@ export const TodoPage = (): React.JSX.Element => {
                   data-testid="today-todo-item"
                 >
                   <button
-                    aria-label={
-                      todo.completed
-                        ? "Mark as incomplete"
-                        : "Mark as completed"
-                    }
+                    aria-label={todo.completed ? "Mark as incomplete" : "Mark as completed"}
                     className={`flex h-4 w-4 flex-shrink-0 items-center justify-center transition-colors relative ${
-                      todo.completed
-                        ? "text-emerald-500"
-                        : "text-white/35 hover:text-white"
+                      todo.completed ? "text-emerald-500" : "text-white/35 hover:text-white"
                     }`}
                     type="button"
                     onClick={() => void handleToggleTodo(todo)}
@@ -757,19 +691,19 @@ export const TodoPage = (): React.JSX.Element => {
                         onFocus={(event) => event.target.select()}
                         onKeyDown={(event) => {
                           if (event.nativeEvent.isComposing) {
-                            return;
+                            return
                           }
                           if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            void handleCommitEdit(todo);
+                            event.preventDefault()
+                            void handleCommitEdit(todo)
                           }
                           if (event.key === "Tab") {
-                            event.preventDefault();
-                            void handleCycleTodoPriority(todo);
+                            event.preventDefault()
+                            void handleCycleTodoPriority(todo)
                           }
 
                           if (event.key === "Escape") {
-                            setEditingTodo(null);
+                            setEditingTodo(null)
                           }
                         }}
                         value={editingTodo.text}
@@ -795,12 +729,10 @@ export const TodoPage = (): React.JSX.Element => {
                     id={todo.id}
                     text={todo.text}
                     onDelete={() => handleDeleteTodoWithAnimation(todo.id)}
-                    onMove={(targetEntryDate) =>
-                      void handleMoveTodo(todo, targetEntryDate)
-                    }
+                    onMove={(targetEntryDate) => void handleMoveTodo(todo, targetEntryDate)}
                   />
                 </div>
-              );
+              )
             })}
           </div>
         </div>
@@ -811,5 +743,5 @@ export const TodoPage = (): React.JSX.Element => {
         />
       </div>
     </section>
-  );
-};
+  )
+}

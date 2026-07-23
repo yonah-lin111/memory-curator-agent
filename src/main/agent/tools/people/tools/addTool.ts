@@ -1,27 +1,27 @@
-import type { AssociatedPersonCreateInput } from '@/db/schema';
-import type { PeopleService } from '@/services/peopleService';
-import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation';
-import type { PeopleWriteTool } from '../types';
-import { PEOPLE_PROFILE_REQUIRED, PEOPLE_PROFILE_PROPERTIES } from '../constants';
+import type { ToolConfirmationConfig } from "@/agent/tools/toolConfirmation"
+import type { AssociatedPersonCreateInput } from "@/db/schema"
+import type { PeopleService } from "@/services/peopleService"
+import { PEOPLE_PROFILE_PROPERTIES, PEOPLE_PROFILE_REQUIRED } from "../constants"
+import type { PeopleWriteTool } from "../types"
 import {
   isRecord,
   parsePersonProfileInput,
-  renderPeopleMutationTarget,
-  renderPeopleMutationSummary,
   renderPeopleMutationCompletion,
+  renderPeopleMutationSummary,
+  renderPeopleMutationTarget,
   toToolItem,
-} from '../utils';
+} from "../utils"
 
 /**
  * 解析 People 新建入参。
  */
 const parseCreateInput = (input: unknown): AssociatedPersonCreateInput => {
   if (!isRecord(input)) {
-    throw new Error("People profile input must be an object");
+    throw new Error("People profile input must be an object")
   }
 
-  return parsePersonProfileInput(input as Record<string, unknown>);
-};
+  return parsePersonProfileInput(input as Record<string, unknown>)
+}
 
 // People 创建确认配置。
 const PEOPLE_ADD_CONFIRMATION: ToolConfirmationConfig = {
@@ -35,7 +35,7 @@ const PEOPLE_ADD_CONFIRMATION: ToolConfirmationConfig = {
     renderMessage: (input, result) =>
       renderPeopleMutationCompletion("add", input, result as { data: unknown }),
   },
-};
+}
 
 /**
  * 创建 People 新建工具。
@@ -80,7 +80,8 @@ export const createPeopleAddTool = (
       "Write details as Markdown content, not plain unstructured fragments.",
       "Never invent profile facts the user did not provide or confirm.",
     ],
-    output: "Include confirmationSummary in the tool arguments with key created facts; return the created people profile facts needed by the user.",
+    output:
+      "Include confirmationSummary in the tool arguments with key created facts; return the created people profile facts needed by the user.",
     examples: [
       '{"confirmationSummary":"将创建人物档案：**小陈**（朋友）。\\n- 状态：新朋友\\n- 标签：设计","name":"小陈","gender":"","relationship":"朋友","status":"新朋友","birthday":"","contact":"","tags":["设计"],"details":"","avatar":""}',
     ],
@@ -91,13 +92,13 @@ export const createPeopleAddTool = (
     properties: PEOPLE_PROFILE_PROPERTIES,
   },
   execute: async (input) => {
-    const created = peopleService.create(parseCreateInput(input));
+    const created = peopleService.create(parseCreateInput(input))
 
     return {
       observation: `Created people profile: ${created.name}.`,
       data: {
         item: toToolItem(created),
       },
-    };
+    }
   },
-});
+})

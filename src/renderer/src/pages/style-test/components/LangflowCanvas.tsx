@@ -1,22 +1,22 @@
-import { useCallback } from "react";
-import { 
-  ReactFlow, 
-  Background, 
-  Controls, 
-  MiniMap,
-  useNodesState,
-  useEdgesState,
+import {
   addEdge,
+  Background,
   Connection,
+  Controls,
   Edge,
-  NodeTypes
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { LangflowNode, type LangflowNodeData } from "./LangflowNode";
+  MiniMap,
+  NodeTypes,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
+} from "@xyflow/react"
+import { useCallback } from "react"
+import "@xyflow/react/dist/style.css"
+import { LangflowNode, type LangflowNodeData } from "./LangflowNode"
 
 const nodeTypes: NodeTypes = {
   langflowNode: LangflowNode,
-};
+}
 
 const initialNodes = [
   {
@@ -32,9 +32,7 @@ const initialNodes = [
         { id: "input-api-key", name: "API Key", type: "string" },
         { id: "input-prompt", name: "Prompt", type: "Prompt" },
       ],
-      outputs: [
-        { id: "output-text", name: "Text", type: "string" },
-      ],
+      outputs: [{ id: "output-text", name: "Text", type: "string" }],
     } as LangflowNodeData,
   },
   {
@@ -46,12 +44,8 @@ const initialNodes = [
       description: "创建一个带有变量的提示词模板。",
       icon: "FileText",
       nodeType: "prompt",
-      inputs: [
-        { id: "input-topic", name: "Topic", type: "string" },
-      ],
-      outputs: [
-        { id: "output-prompt", name: "Prompt", type: "Prompt" },
-      ],
+      inputs: [{ id: "input-topic", name: "Topic", type: "string" }],
+      outputs: [{ id: "output-prompt", name: "Prompt", type: "Prompt" }],
     } as LangflowNodeData,
   },
   {
@@ -63,46 +57,50 @@ const initialNodes = [
       description: "执行外部操作的智能体工具。",
       icon: "Wrench",
       nodeType: "tool",
-      inputs: [
-        { id: "input-text", name: "Input Text", type: "string" },
-      ],
+      inputs: [{ id: "input-text", name: "Input Text", type: "string" }],
       outputs: [],
     } as LangflowNodeData,
-  }
-];
+  },
+]
 
 const initialEdges: Edge[] = [
-  { 
-    id: "e1-2", 
-    source: "node-2", 
-    target: "node-1", 
-    sourceHandle: "output-prompt", 
+  {
+    id: "e1-2",
+    source: "node-2",
+    target: "node-1",
+    sourceHandle: "output-prompt",
     targetHandle: "input-prompt",
     animated: true,
-    style: { stroke: '#818cf8', strokeWidth: 2 }
+    style: { stroke: "#818cf8", strokeWidth: 2 },
   },
-  { 
-    id: "e2-3", 
-    source: "node-1", 
-    target: "node-3", 
-    sourceHandle: "output-text", 
+  {
+    id: "e2-3",
+    source: "node-1",
+    target: "node-3",
+    sourceHandle: "output-text",
     targetHandle: "input-text",
-    style: { stroke: '#818cf8', strokeWidth: 2 }
+    style: { stroke: "#818cf8", strokeWidth: 2 },
   },
-];
+]
 
 export const LangflowCanvas = () => {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   const onConnect = useCallback(
-    (params: Connection | Edge) => setEdges((eds) => addEdge({
-      ...params,
-      animated: true,
-      style: { stroke: '#818cf8', strokeWidth: 2 }
-    } as Edge, eds)),
+    (params: Connection | Edge) =>
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            animated: true,
+            style: { stroke: "#818cf8", strokeWidth: 2 },
+          } as Edge,
+          eds,
+        ),
+      ),
     [setEdges],
-  );
+  )
 
   return (
     <div className="h-full w-full bg-[#111111] rounded-[6px] overflow-hidden">
@@ -120,16 +118,16 @@ export const LangflowCanvas = () => {
         proOptions={{ hideAttribution: true }}
       >
         <Background color="#444" gap={20} size={1} />
-        <Controls 
-          className="!bg-[#212121] !border-white/10 !fill-white/80" 
+        <Controls
+          className="!bg-[#212121] !border-white/10 !fill-white/80"
           showInteractive={false}
         />
-        <MiniMap 
+        <MiniMap
           nodeColor={(n) => {
-            if (n.data?.nodeType === 'model') return '#10b981';
-            if (n.data?.nodeType === 'prompt') return '#f59e0b';
-            if (n.data?.nodeType === 'tool') return '#3b82f6';
-            return '#6366f1';
+            if (n.data?.nodeType === "model") return "#10b981"
+            if (n.data?.nodeType === "prompt") return "#f59e0b"
+            if (n.data?.nodeType === "tool") return "#3b82f6"
+            return "#6366f1"
           }}
           maskColor="rgba(0, 0, 0, 0.7)"
           className="!bg-[#212121] !border-white/10"
@@ -137,5 +135,5 @@ export const LangflowCanvas = () => {
         />
       </ReactFlow>
     </div>
-  );
-};
+  )
+}

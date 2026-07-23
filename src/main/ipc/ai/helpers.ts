@@ -1,15 +1,15 @@
-import { type WebContents } from "electron";
-import { type AgentMessage } from "@/agent/types";
-import { loadProviderConfig } from "@/agent/providers/providerConfig";
-import { createModelProvider } from "@/agent/providers/providerFactory";
-import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService";
-import { type AiChatMessagePart } from "@/db/schema";
+import { type WebContents } from "electron"
+import { loadProviderConfig } from "@/agent/providers/providerConfig"
+import { createModelProvider } from "@/agent/providers/providerFactory"
+import { type AgentMessage } from "@/agent/types"
+import { type AiChatMessagePart } from "@/db/schema"
+import { loadCuratorAgentPrompt } from "@/services/agentPromptService"
+import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService"
 import {
+  type AiChatSessionTitleUpdatedEvent,
   type AiModelOptionsResponse,
   DEFAULT_CHAT_SESSION_TITLE,
-  type AiChatSessionTitleUpdatedEvent,
-} from "./types";
-import { loadCuratorAgentPrompt } from "@/services/agentPromptService";
+} from "./types"
 
 /**
  * 创建 Agent 系统提示词。
@@ -17,13 +17,13 @@ import { loadCuratorAgentPrompt } from "@/services/agentPromptService";
 export const createSystemPrompt = (): AgentMessage => ({
   role: "system",
   content: loadCuratorAgentPrompt(),
-});
+})
 
 /**
  * 创建不含密钥的 AI 模型选项。
  */
 export const createModelOptionsResponse = (): AiModelOptionsResponse => {
-  const config = loadProviderConfig();
+  const config = loadProviderConfig()
 
   return {
     defaultProvider: config.defaultProvider,
@@ -39,32 +39,36 @@ export const createModelOptionsResponse = (): AiModelOptionsResponse => {
         modalities: model.modalities,
       })),
     })),
-  };
-};
+  }
+}
 
 /**
  * 创建时间戳。
  */
 export const createTimestamp = (): string => {
-  return new Date().toISOString();
-};
+  return new Date().toISOString()
+}
 
 /**
  * 提取展示时间 (HH:mm)
  */
 export const createDisplayTime = (timestamp: string): string => {
-  if (!timestamp) return "";
+  if (!timestamp) return ""
   if (timestamp.includes("T")) {
-    return new Date(timestamp).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return new Date(timestamp).toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
   }
-  return timestamp.slice(11, 16) || timestamp;
-};
+  return timestamp.slice(11, 16) || timestamp
+}
 
 /**
  * 从用户消息生成兜底会话标题。
  */
 export const createFallbackSessionTitle = (message: string): string =>
-  message.slice(0, 15) + (message.length > 15 ? "..." : "");
+  message.slice(0, 15) + (message.length > 15 ? "..." : "")
 
 /**
  * 清理标题总结模型输出，避免把解释或换行写入列表标题。
@@ -75,10 +79,10 @@ export const normalizeGeneratedSessionTitle = (title: string): string => {
     .map((line) => line.replace(/^[-*#\d.、\s]+/, "").trim())
     .find(Boolean)
     ?.replace(/^["'“”‘’《》]+|["'“”‘’《》]+$/g, "")
-    .trim();
+    .trim()
 
-  return normalizedTitle ? normalizedTitle.slice(0, 18) : "";
-};
+  return normalizedTitle ? normalizedTitle.slice(0, 18) : ""
+}
 
 /**
  * 使用配置中的标题总结模型，为首条用户消息生成极短标题。
@@ -88,19 +92,16 @@ export const createSessionTitle = async (
   message: string,
   purpose: "chat" | "prompt-design" = "chat",
 ): Promise<string> => {
-  const titleProviderConfig = config.providers[config.titleSummary.provider];
-  const fallbackTitle = createFallbackSessionTitle(message);
+  const titleProviderConfig = config.providers[config.titleSummary.provider]
+  const fallbackTitle = createFallbackSessionTitle(message)
 
-  if (
-    !titleProviderConfig ||
-    !titleProviderConfig.models[config.titleSummary.model]
-  ) {
-    return fallbackTitle;
+  if (!titleProviderConfig || !titleProviderConfig.models[config.titleSummary.model]) {
+    return fallbackTitle
   }
 
   try {
-    const provider = await createModelProvider(titleProviderConfig);
-    let title = "";
+    const provider = await createModelProvider(titleProviderConfig)
+    let title = ""
 
     for await (const event of provider.streamTurn({
       model: config.titleSummary.model,
@@ -120,52 +121,48 @@ export const createSessionTitle = async (
       tools: [],
     })) {
       if (event.type === "text_delta") {
-        title += event.delta;
+        title += event.delta
       }
     }
 
-    return normalizeGeneratedSessionTitle(title) || fallbackTitle;
+    return normalizeGeneratedSessionTitle(title) || fallbackTitle
   } catch {
-    return fallbackTitle;
+    return fallbackTitle
   }
-};
+}
 
 /**
  * 判断当前会话是否需要生成首个标题。
  */
 export const shouldCreateInitialSessionTitle = (
-  session: ReturnType<
-    ReturnType<typeof createAiChatPersistenceService>["getSession"]
-  >,
+  session: ReturnType<ReturnType<typeof createAiChatPersistenceService>["getSession"]>,
 ): boolean =>
-  !session ||
-  (session.title === DEFAULT_CHAT_SESSION_TITLE &&
-    session.messages.length === 0);
+  !session || (session.title === DEFAULT_CHAT_SESSION_TITLE && session.messages.length === 0)
 
 /**
  * 后台生成首个会话标题并回填持久化与渲染层。
  */
 export const scheduleInitialSessionTitle = (
   input: {
-    config: ReturnType<typeof loadProviderConfig>;
-    message: string;
-    runId: string;
-    sessionId: string;
-    sender: WebContents;
+    config: ReturnType<typeof loadProviderConfig>
+    message: string
+    runId: string
+    sessionId: string
+    sender: WebContents
   },
   aiChatService: ReturnType<typeof createAiChatPersistenceService>,
 ): void => {
   void (async () => {
-    const title = await createSessionTitle(input.config, input.message);
-    const currentSession = aiChatService.getSession(input.sessionId);
+    const title = await createSessionTitle(input.config, input.message)
+    const currentSession = aiChatService.getSession(input.sessionId)
 
     if (currentSession?.title !== createFallbackSessionTitle(input.message)) {
-      return;
+      return
     }
 
-    aiChatService.updateSessionTitle(input.sessionId, title, createTimestamp());
+    aiChatService.updateSessionTitle(input.sessionId, title, createTimestamp())
     if (input.sender.isDestroyed?.()) {
-      return;
+      return
     }
 
     input.sender.send("ai:chat:event", {
@@ -173,9 +170,9 @@ export const scheduleInitialSessionTitle = (
       runId: input.runId,
       sessionId: input.sessionId,
       title,
-    } satisfies AiChatSessionTitleUpdatedEvent);
-  })();
-};
+    } satisfies AiChatSessionTitleUpdatedEvent)
+  })()
+}
 
 /**
  * 追加助手文本片段并合并连续文本。
@@ -185,7 +182,7 @@ export const appendTextPart = (
   messageId: string,
   chunk: string,
 ): AiChatMessagePart[] => {
-  const lastPart = parts[parts.length - 1];
+  const lastPart = parts[parts.length - 1]
 
   if (lastPart?.kind === "text") {
     return parts.map((part) =>
@@ -195,7 +192,7 @@ export const appendTextPart = (
             content: `${part.content}${chunk}`,
           }
         : part,
-    );
+    )
   }
 
   return [
@@ -205,8 +202,8 @@ export const appendTextPart = (
       kind: "text",
       content: chunk,
     },
-  ];
-};
+  ]
+}
 
 /**
  * 追加助手思考片段并合并同一 reasoning ID 的连续增量。
@@ -218,7 +215,7 @@ export const appendReasoningPart = (
   reasoningId: string,
   chunk: string,
 ): AiChatMessagePart[] => {
-  const lastPart = parts[parts.length - 1];
+  const lastPart = parts[parts.length - 1]
 
   if (lastPart?.kind === "reasoning" && lastPart.id === reasoningId) {
     return parts.map((part) =>
@@ -228,12 +225,12 @@ export const appendReasoningPart = (
             content: `${part.content}${chunk}`,
           }
         : part,
-    );
+    )
   }
 
   const existingIndex = parts.findIndex(
     (part) => part.kind === "reasoning" && part.id === reasoningId,
-  );
+  )
 
   if (existingIndex >= 0) {
     return parts.map((part, idx) =>
@@ -243,7 +240,7 @@ export const appendReasoningPart = (
             content: `${part.content}${chunk}`,
           }
         : part,
-    );
+    )
   }
 
   return [
@@ -253,8 +250,8 @@ export const appendReasoningPart = (
       kind: "reasoning",
       content: chunk,
     },
-  ];
-};
+  ]
+}
 
 /**
  * 追加工具片段，保持工具与文本出现顺序。
@@ -265,7 +262,7 @@ export const appendToolPart = (
   stepId: string,
 ): AiChatMessagePart[] => {
   if (parts.some((part) => part.kind === "tool" && part.stepId === stepId)) {
-    return parts;
+    return parts
   }
 
   return [
@@ -275,5 +272,5 @@ export const appendToolPart = (
       kind: "tool",
       stepId,
     },
-  ];
-};
+  ]
+}

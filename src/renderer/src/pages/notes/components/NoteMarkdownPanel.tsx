@@ -1,26 +1,26 @@
-import type React from "react";
-import { useEffect, useMemo, useState } from "react";
-import { FileText, Folder, Tag as TagIcon } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Input } from "@/components/ui/Input";
-import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
-import { Select, type SelectOption } from "@/components/ui/Select";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { useHeaderStore } from "@/lib/headerStore";
-import type { NoteDraft } from "@/pages/notes/NotesPage";
-import type { NoteCategory } from "@/pages/notes/components/NoteCategoryPanel";
+import { FileText, Folder, Tag as TagIcon } from "lucide-react"
+import type React from "react"
+import { useEffect, useMemo, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor"
+import { Select, type SelectOption } from "@/components/ui/Select"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { useHeaderStore } from "@/lib/headerStore"
+import type { NoteCategory } from "@/pages/notes/components/NoteCategoryPanel"
+import type { NoteDraft } from "@/pages/notes/NotesPage"
 
 // 笔记编辑面板属性。
 type NoteMarkdownPanelProps = {
   // 面板关闭回调。
-  onClose: () => void;
+  onClose: () => void
   // 保存 Markdown 笔记回调。
-  onSave: (draft: NoteDraft) => void;
+  onSave: (draft: NoteDraft) => void
   // 初始草稿（编辑时传入）。
-  initialDraft?: NoteDraft;
+  initialDraft?: NoteDraft
   // 可选分类列表。
-  categories: NoteCategory[];
-};
+  categories: NoteCategory[]
+}
 
 // Markdown 笔记初始草稿。
 const INITIAL_NOTE_DRAFT: NoteDraft = {
@@ -28,32 +28,32 @@ const INITIAL_NOTE_DRAFT: NoteDraft = {
   content:
     "## 今天的新素材\n\n- [ ] 先保留原始想法\n- [ ] 再交给 Agent 做主题策展\n\n> Markdown 支持标题、列表、引用、表格与任务列表。\n\n| 字段 | 状态 |\n| --- | --- |\n| 分类 | 待整理 |",
   tags: [],
-};
+}
 
 // 顶部标题输入框受控组件。
 type HeaderTitleInputProps = {
-  value: string;
-  placeholder: string;
-  onChange: (value: string) => void;
-};
+  value: string
+  placeholder: string
+  onChange: (value: string) => void
+}
 
 const HeaderTitleInput = ({
   value,
   placeholder,
   onChange,
 }: HeaderTitleInputProps): React.JSX.Element => {
-  const [val, setVal] = useState(value);
+  const [val, setVal] = useState(value)
 
   // 监听外部 value 属性的变化（用于初始草稿加载）
   useEffect(() => {
-    setVal(value);
-  }, [value]);
+    setVal(value)
+  }, [value])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value;
-    setVal(newVal);
-    onChange(newVal);
-  };
+    const newVal = e.target.value
+    setVal(newVal)
+    onChange(newVal)
+  }
 
   return (
     <input
@@ -63,8 +63,8 @@ const HeaderTitleInput = ({
       value={val}
       onChange={handleChange}
     />
-  );
-};
+  )
+}
 
 /**
  * NoteMarkdownPanel - Markdown 笔记编辑面板。
@@ -77,12 +77,9 @@ export const NoteMarkdownPanel = ({
   categories,
 }: NoteMarkdownPanelProps): React.JSX.Element => {
   // 当前 Markdown 草稿。
-  const [draft, setDraft] = useState<NoteDraft>(
-    initialDraft || INITIAL_NOTE_DRAFT,
-  );
+  const [draft, setDraft] = useState<NoteDraft>(initialDraft || INITIAL_NOTE_DRAFT)
   // 全局标题与右侧动作 Store。
-  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
-    useHeaderStore();
+  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } = useHeaderStore()
 
   // 分类下拉选项（含"无分类"项，用空字符串表示）。
   // 用 useMemo 稳定引用，避免每次渲染产生新数组触发 useEffect 循环。
@@ -92,25 +89,25 @@ export const NoteMarkdownPanel = ({
       ...categories.map((cat) => ({ value: String(cat.id), label: cat.name })),
     ],
     [categories],
-  );
+  )
 
   /**
    * 更新草稿局部字段。
    */
   const handleDraftChange = (patch: Partial<NoteDraft>): void => {
-    setDraft((currentDraft) => ({ ...currentDraft, ...patch }));
-  };
+    setDraft((currentDraft) => ({ ...currentDraft, ...patch }))
+  }
 
   /**
    * 保存当前 Markdown 草稿。
    */
   const handleSave = (): void => {
     if (!draft.title.trim() || !draft.content.trim()) {
-      return;
+      return
     }
 
-    onSave(draft);
-  };
+    onSave(draft)
+  }
 
   // 1. 同步标题输入框至全局 Header 面包屑后面
   useEffect(() => {
@@ -119,30 +116,22 @@ export const NoteMarkdownPanel = ({
         <FileText className="h-3.5 w-3.5 text-white/45 flex-shrink-0" />
         <HeaderTitleInput
           value={draft.title}
-          placeholder={
-            initialDraft ? "编辑笔记标题..." : "给笔记一个临时标题..."
-          }
+          placeholder={initialDraft ? "编辑笔记标题..." : "给笔记一个临时标题..."}
           onChange={(val) => handleDraftChange({ title: val })}
         />
       </div>,
-    );
-    setHideChatButton(true);
+    )
+    setHideChatButton(true)
 
     return () => {
-      resetHeader();
-    };
-  }, [
-    draft.title,
-    initialDraft,
-    setCustomTitle,
-    setHideChatButton,
-    resetHeader,
-  ]);
+      resetHeader()
+    }
+  }, [draft.title, initialDraft, setCustomTitle, setHideChatButton, resetHeader])
 
   // 2. 同步设置标签、分类的 Tooltip 弹出面板，以及关闭和保存按钮至全局 Header 右侧
   useEffect(() => {
-    const isSaveDisabled = !draft.title.trim() || !draft.content.trim();
-    const activeCategory = categories.find((c) => c.id === draft.categoryId);
+    const isSaveDisabled = !draft.title.trim() || !draft.content.trim()
+    const activeCategory = categories.find((c) => c.id === draft.categoryId)
 
     setExtraActions(
       <>
@@ -213,15 +202,10 @@ export const NoteMarkdownPanel = ({
         />
 
         {/* 关闭按钮 */}
-        <IconButton
-          preset="close"
-          onClick={onClose}
-          title="取消编辑"
-          aria-label="Cancel"
-        />
+        <IconButton preset="close" onClick={onClose} title="取消编辑" aria-label="Cancel" />
       </>,
-    );
-  }, [draft, initialDraft, onClose, setExtraActions, categories, categorySelectOptions]);
+    )
+  }, [draft, initialDraft, onClose, setExtraActions, categories, categorySelectOptions])
 
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in rounded-[6px] border border-white/6 bg-[#212121]">
@@ -236,5 +220,5 @@ export const NoteMarkdownPanel = ({
         />
       </div>
     </div>
-  );
-};
+  )
+}

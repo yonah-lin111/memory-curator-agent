@@ -1,9 +1,9 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
-import type { AgentTool, AgentToolResult } from '@/agent/types'
-import { assertInsideProject } from './pathGuard'
+import { execFile } from "node:child_process"
+import fs from "node:fs"
+import path from "node:path"
+import { promisify } from "node:util"
+import type { AgentTool, AgentToolResult } from "@/agent/types"
+import { assertInsideProject } from "./pathGuard"
 
 const execFileAsync = promisify(execFile)
 
@@ -16,11 +16,11 @@ const MAX_RESULTS = 100
  */
 const globWithRipgrep = async (pattern: string, cwd: string): Promise<string[]> => {
   try {
-    const { stdout } = await execFileAsync('rg', ['--files', '--glob', pattern, cwd], {
+    const { stdout } = await execFileAsync("rg", ["--files", "--glob", pattern, cwd], {
       timeout: 10_000,
       maxBuffer: 1024 * 1024,
     })
-    return stdout.trim().split('\n').filter(Boolean)
+    return stdout.trim().split("\n").filter(Boolean)
   } catch {
     return []
   }
@@ -35,10 +35,10 @@ const globWithNode = async (pattern: string, cwd: string): Promise<string[]> => 
 
   // 简化 glob → 正则（支持 ** 和 *）
   const regexStr = pattern
-    .replace(/\./g, '\\.')
-    .replace(/\*\*/g, '{{DOUBLE_STAR}}')
-    .replace(/\*/g, '[^/]*')
-    .replace(/\{\{DOUBLE_STAR\}\}/g, '.*')
+    .replace(/\./g, "\\.")
+    .replace(/\*\*/g, "{{DOUBLE_STAR}}")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\{\{DOUBLE_STAR\}\}/g, ".*")
   const regex = new RegExp(`^${regexStr}$`)
 
   const walk = async (dir: string): Promise<void> => {
@@ -51,7 +51,7 @@ const globWithNode = async (pattern: string, cwd: string): Promise<string[]> => 
 
     for (const entry of entries) {
       // 跳过隐藏目录和 node_modules
-      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+      if (entry.name.startsWith(".") || entry.name === "node_modules") continue
 
       const fullPath = path.join(dir, entry.name)
       const relPath = path.relative(cwd, fullPath)
@@ -80,11 +80,9 @@ const sortByMtime = async (files: string[]): Promise<string[]> => {
       } catch {
         return { path: f, mtime: 0 }
       }
-    })
+    }),
   )
-  return withMtime
-    .sort((a, b) => b.mtime - a.mtime)
-    .map((f) => f.path)
+  return withMtime.sort((a, b) => b.mtime - a.mtime).map((f) => f.path)
 }
 
 /**
@@ -92,21 +90,22 @@ const sortByMtime = async (files: string[]): Promise<string[]> => {
  * 优先使用 ripgrep，不可用时回退到 Node.js 递归遍历。
  */
 export const createGlobTool = (projectRoot: string): AgentTool => ({
-  name: 'prompt_glob',
-  description: 'Search for files matching a glob pattern within the project. Returns file paths sorted by modification time. Useful for finding files by name or extension.',
+  name: "prompt_glob",
+  description:
+    "Search for files matching a glob pattern within the project. Returns file paths sorted by modification time. Useful for finding files by name or extension.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
       pattern: {
-        type: 'string',
-        description: 'Glob pattern to match files. Examples: "**/*.ts", "src/**/*.tsx", "*.json".'
+        type: "string",
+        description: 'Glob pattern to match files. Examples: "**/*.ts", "src/**/*.tsx", "*.json".',
       },
       path: {
-        type: 'string',
-        description: 'Subdirectory to search in. Defaults to project root.'
-      }
+        type: "string",
+        description: "Subdirectory to search in. Defaults to project root.",
+      },
     },
-    required: ['pattern']
+    required: ["pattern"],
   },
   execute: async (input: unknown): Promise<AgentToolResult> => {
     const { pattern, path: searchPath } = input as {
@@ -116,18 +115,16 @@ export const createGlobTool = (projectRoot: string): AgentTool => ({
 
     let cwd: string
     try {
-      cwd = searchPath
-        ? assertInsideProject(projectRoot, searchPath)
-        : projectRoot
+      cwd = searchPath ? assertInsideProject(projectRoot, searchPath) : projectRoot
     } catch (err: any) {
       return {
         observation: `Error: Access denied or directory path invalid.\n- Requested Path: "${searchPath}"\n- Project Root: "${projectRoot}"\n\nSuggestion: Please check the path and make sure it is inside the project root.`,
         data: {
-          error: 'ACCESS_DENIED_OR_INVALID',
+          error: "ACCESS_DENIED_OR_INVALID",
           requestedPath: searchPath,
           projectRoot,
-          suggestion: 'Ensure the subdirectory path is valid and inside project root.'
-        }
+          suggestion: "Ensure the subdirectory path is valid and inside project root.",
+        },
       }
     }
 
@@ -138,23 +135,23 @@ export const createGlobTool = (projectRoot: string): AgentTool => ({
         return {
           observation: `Error: The specified path is not a directory.\n- Requested Path: "${searchPath}"\n- Resolved Path: "${cwd}"\n- Project Root: "${projectRoot}"`,
           data: {
-            error: 'NOT_A_DIRECTORY',
+            error: "NOT_A_DIRECTORY",
             requestedPath: searchPath,
             resolvedPath: cwd,
-            projectRoot
-          }
+            projectRoot,
+          },
         }
       }
     } catch (err: any) {
-      if (err.code === 'ENOENT') {
+      if (err.code === "ENOENT") {
         return {
           observation: `Error: The specified directory does not exist.\n- Requested Path: "${searchPath}"\n- Resolved Path: "${cwd}"\n- Project Root: "${projectRoot}"`,
           data: {
-            error: 'ENOENT',
+            error: "ENOENT",
             requestedPath: searchPath,
             resolvedPath: cwd,
-            projectRoot
-          }
+            projectRoot,
+          },
         }
       }
       throw err
@@ -172,14 +169,14 @@ export const createGlobTool = (projectRoot: string): AgentTool => ({
     if (sorted.length === 0) {
       return {
         observation: `No files found matching pattern: ${pattern}`,
-        data: { pattern, cwd, totalFound: 0 }
+        data: { pattern, cwd, totalFound: 0 },
       }
     }
 
-    const formatted = sorted.map((f) => path.relative(cwd, f)).join('\n')
+    const formatted = sorted.map((f) => path.relative(cwd, f)).join("\n")
     return {
       observation: `Found ${sorted.length} files matching "${pattern}":\n${formatted}`,
-      data: { pattern, cwd, totalFound: sorted.length, truncated: results.length > MAX_RESULTS }
+      data: { pattern, cwd, totalFound: sorted.length, truncated: results.length > MAX_RESULTS },
     }
-  }
+  },
 })

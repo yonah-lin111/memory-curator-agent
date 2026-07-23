@@ -1,40 +1,40 @@
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import { codeInspectorPlugin } from 'code-inspector-plugin'
-import { resolve } from 'node:path'
+import { resolve } from "node:path"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
+import { codeInspectorPlugin } from "code-inspector-plugin"
+import { defineConfig, externalizeDepsPlugin } from "electron-vite"
 
 export default defineConfig(() => {
   return {
     main: {
       resolve: {
         alias: {
-          '@': resolve('src/main')
-        }
+          "@": resolve("src/main"),
+        },
       },
-      plugins: [externalizeDepsPlugin()]
+      plugins: [externalizeDepsPlugin()],
     },
     preload: {
       resolve: {
         alias: {
-          '@': resolve('src/preload')
-        }
+          "@": resolve("src/preload"),
+        },
       },
-      plugins: [externalizeDepsPlugin()]
+      plugins: [externalizeDepsPlugin()],
     },
     renderer: {
       resolve: {
         alias: {
-          '@': resolve('src/renderer/src')
-        }
+          "@": resolve("src/renderer/src"),
+        },
       },
       plugins: [
         react(),
         tailwindcss(),
         codeInspectorPlugin({
-          bundler: 'vite'
-        })
-      ]
-    }
+          bundler: "vite",
+        }),
+      ],
+    },
   }
 })

@@ -1,26 +1,26 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { existsSync, readFileSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import type {
   AgentConfig,
   CompactionConfig,
-  ModelConfig,
   McpServerConfig,
+  ModelConfig,
   NormalizedAiConfig,
   NormalizedProviderConfig,
   ProviderTransportType,
-  TitleSummaryConfig
-} from '@/agent/types'
+  TitleSummaryConfig,
+} from "@/agent/types"
 
 // 默认配置路径。
-export const DEFAULT_MC_CONFIG_PATH = join(homedir(), '.mc', 'config.json')
+export const DEFAULT_MC_CONFIG_PATH = join(homedir(), ".mc", "config.json")
 
 // 默认 Agent 配置。
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   context: {
     toolOutputMaxChars: 8000,
-    recentToolResultLimit: 6
-  }
+    recentToolResultLimit: 6,
+  },
 }
 
 // 原始 provider 配置形状。
@@ -58,7 +58,7 @@ type RawAgentConfig = {
 // 原始 MCP 服务配置形状。
 type RawMcpServerConfig = {
   // 服务类型，仅支持本地标准输入输出服务。
-  type?: 'local'
+  type?: "local"
   // 是否启用服务。
   enabled?: boolean
   // 服务展示名称。
@@ -110,7 +110,9 @@ type RawConfigFile = {
 /**
  * 归一化已启用的本地 MCP 服务。
  */
-const normalizeMcpServers = (mcp: Record<string, RawMcpServerConfig> | undefined): McpServerConfig[] => {
+const normalizeMcpServers = (
+  mcp: Record<string, RawMcpServerConfig> | undefined,
+): McpServerConfig[] => {
   if (!mcp) {
     return []
   }
@@ -120,22 +122,24 @@ const normalizeMcpServers = (mcp: Record<string, RawMcpServerConfig> | undefined
       return []
     }
 
-    if (server.type && server.type !== 'local') {
+    if (server.type && server.type !== "local") {
       throw new Error(`MCP server ${id} must use the local transport`)
     }
 
     const [command, ...args] = server.command ?? []
-    if (!command || !server.command?.every((part) => typeof part === 'string' && part.trim())) {
+    if (!command || !server.command?.every((part) => typeof part === "string" && part.trim())) {
       throw new Error(`MCP server ${id} must provide a non-empty command array`)
     }
 
-    return [{
-      id,
-      name: server.name?.trim() || id,
-      command,
-      args,
-      timeout: normalizePositiveInteger(server.timeout, 30_000)
-    }]
+    return [
+      {
+        id,
+        name: server.name?.trim() || id,
+        command,
+        args,
+        timeout: normalizePositiveInteger(server.timeout, 30_000),
+      },
+    ]
   })
 }
 
@@ -147,19 +151,19 @@ const inferProviderType = (provider: RawProviderConfig): ProviderTransportType =
     return provider.type
   }
 
-  if (provider.npm === '@ai-sdk/google') {
-    return 'google'
+  if (provider.npm === "@ai-sdk/google") {
+    return "google"
   }
 
-  if (provider.npm === '@ai-sdk/anthropic') {
-    return 'anthropic'
+  if (provider.npm === "@ai-sdk/anthropic") {
+    return "anthropic"
   }
 
-  if (provider.npm === '@ai-sdk/openai') {
-    return 'openai'
+  if (provider.npm === "@ai-sdk/openai") {
+    return "openai"
   }
 
-  return 'openai-compatible'
+  return "openai-compatible"
 }
 
 /**
@@ -180,9 +184,9 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): NormalizedP
     name: provider.name ?? id,
     options: {
       apiKey: provider.options.apiKey,
-      baseURL: provider.options.baseURL.replace(/\/$/, '')
+      baseURL: provider.options.baseURL.replace(/\/$/, ""),
     },
-    models: provider.models ?? {}
+    models: provider.models ?? {},
   }
 }
 
@@ -190,7 +194,7 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): NormalizedP
  * 归一化正整数配置，非法值回落到默认值。
  */
 const normalizePositiveInteger = (value: unknown, fallback: number): number => {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback
 }
 
 /**
@@ -200,23 +204,23 @@ const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig =>
   context: {
     toolOutputMaxChars: normalizePositiveInteger(
       agent?.context?.toolOutputMaxChars,
-      DEFAULT_AGENT_CONFIG.context.toolOutputMaxChars
+      DEFAULT_AGENT_CONFIG.context.toolOutputMaxChars,
     ),
     recentToolResultLimit:
       agent?.context?.recentToolResultLimit !== undefined &&
-      typeof agent.context.recentToolResultLimit === 'number' &&
+      typeof agent.context.recentToolResultLimit === "number" &&
       Number.isInteger(agent.context.recentToolResultLimit) &&
       agent.context.recentToolResultLimit >= 0
         ? agent.context.recentToolResultLimit
         : DEFAULT_AGENT_CONFIG.context.recentToolResultLimit,
     maxTurns:
       agent?.context?.maxTurns !== undefined &&
-      typeof agent.context.maxTurns === 'number' &&
+      typeof agent.context.maxTurns === "number" &&
       Number.isInteger(agent.context.maxTurns) &&
       agent.context.maxTurns > 0
         ? agent.context.maxTurns
-        : undefined
-  }
+        : undefined,
+  },
 })
 
 /**
@@ -225,27 +229,27 @@ const normalizeAgentConfig = (agent: RawAgentConfig | undefined): AgentConfig =>
 const normalizeDefaultModelConfig = (
   value: RawDefaultModelConfig | undefined,
   legacyProvider: string | undefined,
-  providers: Record<string, NormalizedProviderConfig>
+  providers: Record<string, NormalizedProviderConfig>,
 ): TitleSummaryConfig => {
   const providerIds = Object.keys(providers)
-  const requestedProvider = typeof value === 'object' ? value.provider : legacyProvider
-  const configuredProvider = requestedProvider ?? 'bailian'
+  const requestedProvider = typeof value === "object" ? value.provider : legacyProvider
+  const configuredProvider = requestedProvider ?? "bailian"
   const provider = providers[configuredProvider] ? configuredProvider : providerIds[0]
 
   if (!provider) {
-    throw new Error('No available provider is enabled')
+    throw new Error("No available provider is enabled")
   }
 
   const providerModels = providers[provider].models
-  const requestedModel = typeof value === 'string' ? value : value?.model
+  const requestedModel = typeof value === "string" ? value : value?.model
   const model =
     requestedModel && providerModels[requestedModel]
       ? requestedModel
-      : Object.keys(providerModels)[0] ?? requestedModel ?? 'MiniMax-M2.5'
+      : (Object.keys(providerModels)[0] ?? requestedModel ?? "MiniMax-M2.5")
 
   return {
     provider,
-    model
+    model,
   }
 }
 
@@ -256,15 +260,18 @@ const normalizeTitleSummaryConfig = (
   value: RawModelSelectionConfig | undefined,
   providers: Record<string, NormalizedProviderConfig>,
   defaultProvider: string,
-  defaultModel: string
+  defaultModel: string,
 ): TitleSummaryConfig => {
   const provider = value?.provider && providers[value.provider] ? value.provider : defaultProvider
   const providerModels = providers[provider]?.models ?? {}
-  const model = value?.model && providerModels[value.model] ? value.model : Object.keys(providerModels)[0] ?? defaultModel
+  const model =
+    value?.model && providerModels[value.model]
+      ? value.model
+      : (Object.keys(providerModels)[0] ?? defaultModel)
 
   return {
     provider,
-    model
+    model,
   }
 }
 
@@ -275,18 +282,21 @@ const normalizeCompactionConfig = (
   value: RawModelSelectionConfig | undefined,
   providers: Record<string, NormalizedProviderConfig>,
   defaultProvider: string,
-  defaultModel: string
+  defaultModel: string,
 ): CompactionConfig | undefined => {
   if (!value) {
     return undefined
   }
   const provider = value.provider && providers[value.provider] ? value.provider : defaultProvider
   const providerModels = providers[provider]?.models ?? {}
-  const model = value.model && providerModels[value.model] ? value.model : Object.keys(providerModels)[0] ?? defaultModel
+  const model =
+    value.model && providerModels[value.model]
+      ? value.model
+      : (Object.keys(providerModels)[0] ?? defaultModel)
 
   return {
     provider,
-    model
+    model,
   }
 }
 
@@ -298,29 +308,29 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     throw new Error(`Config file does not exist: ${configPath}`)
   }
 
-  const rawText = readFileSync(configPath, 'utf8').trim()
+  const rawText = readFileSync(configPath, "utf8").trim()
   if (!rawText) {
     throw new Error(`Config file is empty: ${configPath}`)
   }
 
   const rawConfig = JSON.parse(rawText) as RawConfigFile
   const rawProviders = rawConfig.ai?.providers ?? {
-    bailian: rawConfig.bailian as RawProviderConfig
+    bailian: rawConfig.bailian as RawProviderConfig,
   }
   const normalizedProviders = Object.fromEntries(
-    Object.entries(rawProviders).map(([id, provider]) => [id, normalizeProvider(id, provider)])
+    Object.entries(rawProviders).map(([id, provider]) => [id, normalizeProvider(id, provider)]),
   )
   const enabledProviderIds = rawConfig.ai?.enabled_providers ?? Object.keys(normalizedProviders)
   const providers = Object.fromEntries(
     enabledProviderIds
       .filter((providerId) => Boolean(normalizedProviders[providerId]))
-      .map((providerId) => [providerId, normalizedProviders[providerId]])
+      .map((providerId) => [providerId, normalizedProviders[providerId]]),
   )
   const providerIds = Object.keys(providers)
   const defaultModelConfig = normalizeDefaultModelConfig(
     rawConfig.ai?.defaultModel,
     rawConfig.ai?.defaultProvider,
-    providers
+    providers,
   )
   const defaultProvider = defaultModelConfig.provider
   const defaultModel = defaultModelConfig.model
@@ -332,13 +342,13 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
       rawConfig.ai?.titleSummary,
       providers,
       defaultProvider,
-      defaultModel
+      defaultModel,
     ),
     weeklySummary: normalizeTitleSummaryConfig(
       rawConfig.ai?.weeklySummary,
       providers,
       defaultProvider,
-      defaultModel
+      defaultModel,
     ),
     enabledProviders: providerIds,
     providers,
@@ -346,6 +356,6 @@ export const loadProviderConfig = (configPath = DEFAULT_MC_CONFIG_PATH): Normali
     mcp: normalizeMcpServers(rawConfig.mcp),
     compaction: rawConfig.ai?.compaction
       ? normalizeCompactionConfig(rawConfig.ai.compaction, providers, defaultProvider, defaultModel)
-      : undefined
+      : undefined,
   }
 }

@@ -1,8 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-  loadCuratorAgentPrompt,
-  loadPromptDesignAgentPrompt,
-} from "@/services/agentPromptService";
+import { describe, expect, it } from "vitest"
+import { loadCuratorAgentPrompt, loadPromptDesignAgentPrompt } from "@/services/agentPromptService"
 
 describe("Prompt Design system prompt requirements", () => {
   it("should contain the required strict tool usage rules for design intents", () => {
@@ -22,45 +19,51 @@ describe("Prompt Design system prompt requirements", () => {
       "<current-editor-context>",
       "<repository-context>",
       "<available-skills>",
-      "getAvailableSkillsForAgent(\"prompt-design\")",
+      'getAvailableSkillsForAgent("prompt-design")',
       "createSkillTool(availableSkills)",
-      "escapeXmlText(skill.description || skill.name)"
-    ];
-    
+      "escapeXmlText(skill.description || skill.name)",
+    ]
+
     // Instead of mocking the whole file, we can read the source file directly for a lightweight verification
     // This ensures the strict rules stay in the source code.
-    const fs = require('fs');
-    const path = require('path');
-    
-    const sourceCode = fs.readFileSync(path.join(__dirname, '../promptAiHandlers.ts'), 'utf-8');
-    const promptService = fs.readFileSync(path.join(__dirname, '../../services/agentPromptService.ts'), 'utf-8');
-    const promptFile = fs.readFileSync(path.join(process.env.HOME || '', '.mc/system prompt/prompt-design.xml'), 'utf-8');
-    const promptSource = `${sourceCode}\n${promptService}\n${promptFile}`;
-    
+    const fs = require("fs")
+    const path = require("path")
+
+    const sourceCode = fs.readFileSync(path.join(__dirname, "../promptAiHandlers.ts"), "utf-8")
+    const promptService = fs.readFileSync(
+      path.join(__dirname, "../../services/agentPromptService.ts"),
+      "utf-8",
+    )
+    const promptFile = fs.readFileSync(
+      path.join(process.env.HOME || "", ".mc/system prompt/prompt-design.xml"),
+      "utf-8",
+    )
+    const promptSource = `${sourceCode}\n${promptService}\n${promptFile}`
+
     for (const rule of requiredRules) {
-      expect(promptSource).toContain(rule);
+      expect(promptSource).toContain(rule)
     }
-  });
+  })
 
   it("按标签将用户提示词注入内置系统提示词", () => {
-    const prompt = loadPromptDesignAgentPrompt();
+    const prompt = loadPromptDesignAgentPrompt()
 
-    expect(prompt.match(/<system>/g)).toHaveLength(1);
-    expect(prompt).toContain("<prompt-structure>");
-    expect(prompt).toContain("<information-policy>");
-    expect(prompt).not.toContain("<principle></principle>");
-    expect(prompt).not.toContain("<constraint></constraint>");
-    expect(prompt).not.toContain("<rule></rule>");
-    expect(prompt.indexOf("<prompt-structure>")).toBeGreaterThan(prompt.indexOf("<policies>"));
-  });
-});
+    expect(prompt.match(/<system>/g)).toHaveLength(1)
+    expect(prompt).toContain("<prompt-structure>")
+    expect(prompt).toContain("<information-policy>")
+    expect(prompt).not.toContain("<principle></principle>")
+    expect(prompt).not.toContain("<constraint></constraint>")
+    expect(prompt).not.toContain("<rule></rule>")
+    expect(prompt.indexOf("<prompt-structure>")).toBeGreaterThan(prompt.indexOf("<policies>"))
+  })
+})
 
 describe("Curator system prompt", () => {
   it("loads the built-in prompt when the external configuration is empty", () => {
-    const prompt = loadCuratorAgentPrompt();
+    const prompt = loadCuratorAgentPrompt()
 
-    expect(prompt.match(/<system>/g)).toHaveLength(1);
-    expect(prompt).toContain("你是一个可靠的本地优先 AI 助手");
-    expect(prompt).toContain("<tool-efficiency>");
-  });
-});
+    expect(prompt.match(/<system>/g)).toHaveLength(1)
+    expect(prompt).toContain("你是一个可靠的本地优先 AI 助手")
+    expect(prompt).toContain("<tool-efficiency>")
+  })
+})

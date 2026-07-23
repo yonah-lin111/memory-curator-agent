@@ -1,4 +1,4 @@
-import path from 'node:path'
+import path from "node:path"
 
 /**
  * 校验目标路径是否在项目目录内。

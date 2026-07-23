@@ -1,318 +1,312 @@
-import {
-  customType,
-  integer,
-  sqliteTable,
-  text,
-  unique,
-} from "drizzle-orm/sqlite-core";
+import { customType, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core"
 
 // SQLite 时间戳字段类型。
 const timestamp = customType<{ data: string; driverData: string }>({
   dataType: () => "timestamp",
-});
+})
 
 // 待办优先级类型。
-export type TodoPriority = "P0" | "P1" | "P2" | "P3";
+export type TodoPriority = "P0" | "P1" | "P2" | "P3"
 
 // 笔记创建输入类型。
 export type NoteCreateInput = {
   // 笔记标题。
-  title: string;
+  title: string
   // 笔记正文。
-  content: string;
+  content: string
   // 笔记标签列表。
-  tags: string[];
+  tags: string[]
   // 分类 ID。
-  categoryId?: number;
-};
+  categoryId?: number
+}
 
 // 笔记更新输入类型。
-export type NoteUpdateInput = NoteCreateInput;
+export type NoteUpdateInput = NoteCreateInput
 
 // 待办创建输入类型。
 export type TodoCreateInput = {
   // 待办所属日期。
-  entryDate: string;
+  entryDate: string
   // 待办文本。
-  text: string;
+  text: string
   // 待办优先级。
-  priority: TodoPriority;
-};
+  priority: TodoPriority
+}
 
 // 待办更新输入类型。
 export type TodoUpdateInput = {
   // 待办文本。
-  text: string;
+  text: string
   // 待办优先级。
-  priority: TodoPriority;
+  priority: TodoPriority
   // 是否完成。
-  completed: boolean;
+  completed: boolean
   // 待办所属日期。可选，不传则保持原日期。
-  entryDate?: string;
+  entryDate?: string
   // 排序序号。可选，不传则保持原序号。
-  sortOrder?: number;
-};
+  sortOrder?: number
+}
 
 // 待办排序输入类型。
 export type TodoReorderInput = {
   // 待办所属日期。
-  entryDate: string;
+  entryDate: string
   // 排序后的待办 ID 列表。
-  ids: number[];
-};
+  ids: number[]
+}
 
 // 片段创建输入类型。
 export type SnippetCreateInput = {
   // 片段所属日期。
-  entryDate: string;
+  entryDate: string
   // 片段标题。
-  title: string;
+  title: string
   // 片段正文。
-  content: string;
+  content: string
   // 片段标签列表。
-  tags: string[];
-};
+  tags: string[]
+}
 
 // 片段更新输入类型。
 export type SnippetUpdateInput = {
   // 片段标题。
-  title: string;
+  title: string
   // 片段正文。
-  content: string;
+  content: string
   // 片段标签列表。
-  tags: string[];
-};
+  tags: string[]
+}
 
 // 日记保存输入类型。
 export type JournalSaveInput = {
   // 日记所属日期。
-  entryDate: string;
+  entryDate: string
   // 日记正文。
-  content: string;
-};
+  content: string
+}
 
 // 人物关系类型。
-export type PersonRelationship = "女朋友" | "家人" | "朋友" | "同事" | "其他";
+export type PersonRelationship = "女朋友" | "家人" | "朋友" | "同事" | "其他"
 
 // 关联人物创建输入类型。
 export type AssociatedPersonCreateInput = {
   // 头像地址。
-  avatar: string;
+  avatar: string
   // 姓名。
-  name: string;
+  name: string
   // 性别。
-  gender: string;
+  gender: string
   // 关系分类。
-  relationship: PersonRelationship;
+  relationship: PersonRelationship
   // 一句话状态。
-  status: string;
+  status: string
   // 生日。
-  birthday: string;
+  birthday: string
   // 联系方式。
-  contact: string;
+  contact: string
   // 特征标签列表。
-  tags: string[];
+  tags: string[]
   // Markdown 详细档案。
-  details: string;
-};
+  details: string
+}
 
 // 关联人物更新输入类型。
-export type AssociatedPersonUpdateInput = AssociatedPersonCreateInput;
+export type AssociatedPersonUpdateInput = AssociatedPersonCreateInput
 
 // 个人信息更新输入类型。
 export type PersonalProfileUpdateInput = {
   // 头像地址。
-  avatar: string;
+  avatar: string
   // 姓名。
-  name: string;
+  name: string
   // 性别。
-  gender: string;
+  gender: string
   // 一句话状态。
-  status: string;
+  status: string
   // 生日。
-  birthday: string;
+  birthday: string
   // 联系方式。
-  contact: string;
+  contact: string
   // 特征标签列表。
-  tags: string[];
+  tags: string[]
   // Markdown 详细档案。
-  details: string;
-};
+  details: string
+}
 
 // 页面使用的笔记类型。
 export type NoteMaterialItem = {
   // 笔记唯一标识。
-  id: number;
+  id: number
   // 笔记标题。
-  title: string;
+  title: string
   // 笔记正文。
-  content: string;
+  content: string
   // 笔记标签列表。
-  tags: string[];
+  tags: string[]
   // 记录日期与时间。
-  time: string;
+  time: string
   // 分类 ID。
-  categoryId?: number;
+  categoryId?: number
   // 分类名称。
-  categoryName?: string;
-};
+  categoryName?: string
+}
 
 // 页面使用的待办类型。
 export type TodoItem = {
   // 待办唯一标识。
-  id: number;
+  id: number
   // 待办所属日期。
-  entryDate: string;
+  entryDate: string
   // 待办文本。
-  text: string;
+  text: string
   // 是否完成。
-  completed: boolean;
+  completed: boolean
   // 当前优先级。
-  priority: TodoPriority;
+  priority: TodoPriority
   // 排序序号。
-  sortOrder: number;
+  sortOrder: number
   // 创建时间。
-  createdAt: string;
+  createdAt: string
   // 更新时间。
-  updatedAt: string;
-};
+  updatedAt: string
+}
 
 // 页面使用的片段类型。
 export type SnippetItem = {
   // 片段唯一标识。
-  id: number;
+  id: number
   // 片段所属日期。
-  entryDate: string;
+  entryDate: string
   // 片段标题。
-  title: string;
+  title: string
   // 片段正文。
-  content: string;
+  content: string
   // 片段标签列表。
-  tags: string[];
+  tags: string[]
   // 列表展示时间。
-  time: string;
+  time: string
   // 创建时间。
-  createdAt: string;
+  createdAt: string
   // 更新时间。
-  updatedAt: string;
-};
+  updatedAt: string
+}
 
 // 页面使用的日记类型。
 export type JournalItem = {
   // 日记唯一标识。
-  id: number;
+  id: number
   // 日记所属日期。
-  entryDate: string;
+  entryDate: string
   // 日记正文。
-  content: string;
+  content: string
   // 创建时间。
-  createdAt: string;
+  createdAt: string
   // 更新时间。
-  updatedAt: string;
-};
+  updatedAt: string
+}
 
 // 页面使用的关联人物类型。
 export type AssociatedPersonItem = AssociatedPersonCreateInput & {
   // 人物唯一标识。
-  id: string;
+  id: string
   // 创建时间。
-  createdAt: string;
+  createdAt: string
   // 更新时间。
-  updatedAt: string;
-};
+  updatedAt: string
+}
 
 // 页面使用的个人信息类型。
 export type PersonalProfileItem = PersonalProfileUpdateInput & {
   // 自增主键。
-  id: number;
+  id: number
   // 创建时间。
-  createdAt: string;
+  createdAt: string
   // 更新时间。
-  updatedAt: string;
-};
+  updatedAt: string
+}
 
 // AI 对话消息角色。
-export type AiChatMessageRole = "user" | "assistant" | "system" | "system_command";
+export type AiChatMessageRole = "user" | "assistant" | "system" | "system_command"
 
 // AI Agent run 状态。
-export type AiAgentRunStatus = "running" | "completed" | "failed";
+export type AiAgentRunStatus = "running" | "completed" | "failed"
 
 // AI 对话会话状态。
-export type AiChatSessionStatus = "idle" | AiAgentRunStatus;
+export type AiChatSessionStatus = "idle" | AiAgentRunStatus
 
 // AI 工具调用状态。
-export type AiAgentToolCallStatus = "running" | "done" | "failed";
+export type AiAgentToolCallStatus = "running" | "done" | "failed"
 
 // AI 消息片段类型。
 export type AiChatMessagePart =
   | {
       // 片段唯一标识。
-      id: string;
+      id: string
       // 片段类型。
-      kind: "text";
+      kind: "text"
       // Markdown 文本内容。
-      content: string;
+      content: string
     }
   | {
       // 片段唯一标识。
-      id: string;
+      id: string
       // 片段类型。
-      kind: "reasoning";
+      kind: "reasoning"
       // Markdown 思考内容。
-      content: string;
+      content: string
       // 思考片段状态。
-      status?: "streaming" | "done";
+      status?: "streaming" | "done"
     }
   | {
       // 片段唯一标识。
-      id: string;
+      id: string
       // 片段类型。
-      kind: "tool";
+      kind: "tool"
       // 对应工具步骤 ID。
-      stepId: string;
+      stepId: string
     }
   | {
       // 引用快照片段。
-      id: string;
-      kind: "reference";
-      startLine: number;
-      endLine: number;
-      content: string;
+      id: string
+      kind: "reference"
+      startLine: number
+      endLine: number
+      content: string
     }
   | {
       // MCP 服务及工具快照。
-      id: string;
-      kind: "mcp-overview";
+      id: string
+      kind: "mcp-overview"
       servers: Array<{
-        id: string;
-        name: string;
-        tools: Array<{ name: string; description: string }>;
-      }>;
+        id: string
+        name: string
+        tools: Array<{ name: string; description: string }>
+      }>
     }
   | {
       // 图片片段。
-      id: string;
-      kind: "image";
+      id: string
+      kind: "image"
       // 图片的本地协议地址。
-      url: string;
+      url: string
     }
   | {
       // 片段唯一标识。
-      id: string;
+      id: string
       // 片段类型。
-      kind: "text-file";
+      kind: "text-file"
       // 文本文件的本地协议地址。
-      url: string;
+      url: string
       // 原始文件名。
-      fileName?: string;
+      fileName?: string
       // 文件大小（字节）。
-      sizeBytes?: number;
+      sizeBytes?: number
     }
   | {
       // 片段唯一标识。
-      id: string;
+      id: string
       // 片段类型。
-      kind: "agent";
+      kind: "agent"
       // Agent 唯一标识。
       agentId:
         | "people"
@@ -322,546 +316,546 @@ export type AiChatMessagePart =
         | "journal"
         | "notes"
         | "today"
-        | "common";
-};
+        | "common"
+    }
 
 // ==================== Prompt Design ====================
 
 /** 提示词设计项目类型 */
-export type PromptProjectType = "filesystem" | "virtual";
+export type PromptProjectType = "filesystem" | "virtual"
 
 /** 提示词设计项目数据库行 */
 export type PromptDesignProjectRow = {
-  id: number;
-  external_id: string;
-  name: string;
-  type: string;
-  path: string | null;
-  created_at: string;
-  updated_at: string;
-};
+  id: number
+  external_id: string
+  name: string
+  type: string
+  path: string | null
+  created_at: string
+  updated_at: string
+}
 
 /** 提示词设计项目 */
 export type PromptDesignProject = {
-  id: string;
-  name: string;
-  type: PromptProjectType;
-  path?: string;
-  createdAt: string;
-  updatedAt: string;
-};
+  id: string
+  name: string
+  type: PromptProjectType
+  path?: string
+  createdAt: string
+  updatedAt: string
+}
 
 /** 提示词设计项目创建输入 */
 export type PromptDesignProjectCreateInput = {
-  id: string;
-  name: string;
-  type: PromptProjectType;
-  path?: string;
-};
+  id: string
+  name: string
+  type: PromptProjectType
+  path?: string
+}
 
 /** 提示词设计项目更新输入 */
 export type PromptDesignProjectUpdateInput = {
-  name?: string;
-  path?: string;
-};
+  name?: string
+  path?: string
+}
 
 /** 提示词设计模块数据库行 */
 export type PromptDesignModuleRow = {
-  id: number;
-  external_id: string;
-  project_id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-};
+  id: number
+  external_id: string
+  project_id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
 
 /** 提示词设计模块 */
 export type PromptDesignModule = {
-  id: string;
-  projectId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
+  id: string
+  projectId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
 
 /** 提示词设计模块创建输入 */
 export type PromptDesignModuleCreateInput = {
-  id?: string;
-  projectId: string;
-  name: string;
-};
+  id?: string
+  projectId: string
+  name: string
+}
 
 /** 提示词设计模块更新输入 */
 export type PromptDesignModuleUpdateInput = {
-  name?: string;
-};
+  name?: string
+}
 
 /** 提示词设计状态 */
-export type PromptDesignStatus = "todo" | "in_progress" | "completed";
+export type PromptDesignStatus = "todo" | "in_progress" | "completed"
 
 /** 提示词设计数据库行 */
 export type PromptDesignRow = {
-  id: number;
-  external_id: string;
-  project_id: string;
-  module_id: string | null;
-  name: string;
-  design_data: string;
-  status: PromptDesignStatus;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
+  id: number
+  external_id: string
+  project_id: string
+  module_id: string | null
+  name: string
+  design_data: string
+  status: PromptDesignStatus
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
 
 /** 提示词设计 */
 export type PromptDesign = {
-  id: string;
-  projectId: string;
-  moduleId?: string;
-  name: string;
-  designData: string;
-  status: PromptDesignStatus;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-};
+  id: string
+  projectId: string
+  moduleId?: string
+  name: string
+  designData: string
+  status: PromptDesignStatus
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
 
 /** 提示词设计创建输入 */
 export type PromptDesignCreateInput = {
-  id?: string;
-  projectId: string;
-  moduleId?: string;
-  name: string;
-  designData?: string;
-};
+  id?: string
+  projectId: string
+  moduleId?: string
+  name: string
+  designData?: string
+}
 
 /** 提示词设计更新输入 */
 export type PromptDesignUpdateInput = {
-  name?: string;
-  designData?: string;
-  status?: PromptDesignStatus;
-};
+  name?: string
+  designData?: string
+  status?: PromptDesignStatus
+}
 
 /** 提示词业务节点提纯数据库行（方案二 CQRS 核心表） */
 export type PromptActiveNodeRow = {
-  id: number;
-  external_id: string;      // 对应前端 ReactFlow 节点的唯一 id
-  design_item_id: string;   // 关联 prompt_design_items 的 external_id (UUID)
-  parent_node_id: string | null; // 嵌套父容器的 external_id (用于 Task Field 物理定位)
-  node_type: string;        // 节点业务类型 (system_role, task, output_format, 等)
-  title: string;            // 节点标题
-  content: string | null;   // 精华提示词正文
-  sort_order: number;       // 用于后端按顺序流式编译的序号
-  updated_at: string;
-};
+  id: number
+  external_id: string // 对应前端 ReactFlow 节点的唯一 id
+  design_item_id: string // 关联 prompt_design_items 的 external_id (UUID)
+  parent_node_id: string | null // 嵌套父容器的 external_id (用于 Task Field 物理定位)
+  node_type: string // 节点业务类型 (system_role, task, output_format, 等)
+  title: string // 节点标题
+  content: string | null // 精华提示词正文
+  sort_order: number // 用于后端按顺序流式编译的序号
+  updated_at: string
+}
 
 // ==================== Prompt Design AI Chat ====================
 
 // 提示词 AI 对话会话数据库行
 export type PromptAiChatSessionRow = {
   // 自增主键
-  id: number;
+  id: number
   // 会话唯一标识 (UUID)
-  external_id: string;
+  external_id: string
   // 关联的提示词设计项 ID (关联 prompt_design_items 表)
-  design_item_id: string;
+  design_item_id: string
   // 会话标题
-  title: string;
+  title: string
   // 会话状态 (与 AiChatSessionStatus 保持一致: "idle" | "running" | "completed" | "failed")
-  status: AiChatSessionStatus;
+  status: AiChatSessionStatus
   // 创建时间
-  created_at: string;
+  created_at: string
   // 更新时间
-  updated_at: string;
+  updated_at: string
   // 最近消息时间
-  last_message_at: string;
-};
+  last_message_at: string
+}
 
 // 提示词 AI 对话消息数据库行
 export type PromptAiChatMessageRow = {
   // 自增主键
-  id: number;
+  id: number
   // 消息唯一标识 (UUID)
-  external_id: string;
+  external_id: string
   // 所属会话标识
-  session_id: string;
+  session_id: string
   // 消息角色 ("user" | "assistant")
-  role: AiChatMessageRole;
+  role: AiChatMessageRole
   // 消息正文
-  content: string;
+  content: string
   // 助手最终回答
-  answer: string | null;
+  answer: string | null
   // 顺序片段 JSON (例如图片、附件等多模态数据)
-  parts_json: string;
+  parts_json: string
   // 工具步骤 JSON (仅用于前端渲染的简要工具状态)
-  tool_steps_json: string;
+  tool_steps_json: string
   // 展示时间
-  time: string;
+  time: string
   // 模型
-  model?: string | null;
+  model?: string | null
   // 创建时间
-  created_at: string;
+  created_at: string
   // 更新时间
-  updated_at: string;
+  updated_at: string
   // 是否已被用户主动取消（0 = 否，1 = 是）
-  cancelled: number;
-};
+  cancelled: number
+}
 
 // 提示词 AI Agent 运行记录行 (记录每次大模型请求)
 export type PromptAiAgentRunRow = {
   // 自增主键
-  id: number;
+  id: number
   // 运行唯一标识 (UUID)
-  external_id: string;
+  external_id: string
   // 所属会话标识
-  session_id: string;
+  session_id: string
   // 关联的 AI 助手消息标识
-  assistant_message_id: string;
+  assistant_message_id: string
   // 提供商 (如 anthropic, openai)
-  provider: string | null;
+  provider: string | null
   // 模型名称
-  model: string | null;
+  model: string | null
   // 运行状态 ("running" | "completed" | "failed")
-  status: string;
+  status: string
   // 错误信息
-  error: string | null;
+  error: string | null
   // 开始时间
-  started_at: string;
+  started_at: string
   // 结束时间
-  finished_at: string | null;
-};
+  finished_at: string | null
+}
 
 // 提示词 AI 工具调用详情行 (存储工具的原始出入参和完整数据)
 export type PromptAiAgentToolCallRow = {
   // 自增主键
-  id: number;
+  id: number
   // 外部唯一标识 (UUID)
-  external_id: string;
+  external_id: string
   // 关联的运行 ID
-  run_id: string;
+  run_id: string
   // 关联的消息 ID
-  message_id: string;
+  message_id: string
   // AI SDK 自动生成的工具调用 ID
-  tool_call_id: string;
+  tool_call_id: string
   // 工具名称 (如 "read_document")
-  name: string;
+  name: string
   // 工具状态 ("running" | "done" | "failed")
-  status: string;
+  status: string
   // 入参 JSON
-  input_json: string;
+  input_json: string
   // 面向用户的执行观察摘要
-  observation: string;
+  observation: string
   // 原始返回数据 JSON (如完整文件内容)
-  data_json: string;
+  data_json: string
   // 错误信息
-  error: string | null;
+  error: string | null
   // 创建时间
-  created_at: string;
+  created_at: string
   // 更新时间
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 提示词 AI 上下文快照行 (例如用户 @ 了一个文件，记录这个文件的内容快照)
 export type PromptAiAgentContextSnapshotRow = {
   // 自增主键
-  id: number;
+  id: number
   // 关联的运行 ID
-  run_id: string;
+  run_id: string
   // 上下文唯一键
-  context_key: string;
+  context_key: string
   // 类型 ("file" | "design_data" 等)
-  kind: string;
+  kind: string
   // 标题/文件名
-  title: string;
+  title: string
   // 来源 ID / 路径
-  source_id: string | null;
+  source_id: string | null
   // 上下文具体内容
-  content: string;
+  content: string
   // Token 估算量
-  tokens: number | null;
+  tokens: number | null
   // 注入顺序
-  created_order: number;
+  created_order: number
   // 元数据 JSON
-  meta_json: string;
-};
+  meta_json: string
+}
 
 // AI 工具步骤类型。
 export type AiToolStep = {
   // 工具步骤唯一标识。
-  id: string;
+  id: string
   // 工具步骤标题。
-  title: string;
+  title: string
   // 工具步骤状态。
-  status: AiAgentToolCallStatus | "cancelled";
+  status: AiAgentToolCallStatus | "cancelled"
   // 工具名称。
-  tool: string;
+  tool: string
   // 工具输入参数。
-  input?: unknown;
+  input?: unknown
   // 面向用户展示的执行观察摘要。
-  observation: string;
+  observation: string
   // 工具返回的结构化数据。
-  data?: unknown;
+  data?: unknown
   // MCP 工具来源，普通工具不设置。
   mcp?: {
-    serverId: string;
-    serverName: string;
-    toolName: string;
-  };
-};
+    serverId: string
+    serverName: string
+    toolName: string
+  }
+}
 
 // AI 对话会话类型。
 export type AiChatSessionItem = {
   // 会话唯一标识。
-  id: string;
+  id: string
   // 会话标题。
-  title: string;
+  title: string
   // 会话时间。
-  time: string;
+  time: string
   // 会话状态。
-  status: AiChatSessionStatus;
+  status: AiChatSessionStatus
   // 会话消息列表。
-  messages: AiChatMessageItem[];
-};
+  messages: AiChatMessageItem[]
+}
 
 // AI 对话消息类型。
 export type AiChatMessageItem = {
   // 消息唯一标识。
-  id: string;
+  id: string
   // 消息发送者。
-  role: AiChatMessageRole;
+  role: AiChatMessageRole
   // 消息正文。
-  content: string;
+  content: string
   // 消息显示时间。
-  time: string;
+  time: string
   // 工具调用摘要。
-  toolSteps?: AiToolStep[];
+  toolSteps?: AiToolStep[]
   // 最终回答。
-  answer?: string;
+  answer?: string
   // 顺序片段。
-  parts?: AiChatMessagePart[];
+  parts?: AiChatMessagePart[]
   // 调用的模型。
-  model?: string;
+  model?: string
   // 是否已被用户主动取消。
-  cancelled?: boolean;
-};
+  cancelled?: boolean
+}
 
 // 单日数据类型。
 export type DayData = {
   // 当日待办列表。
-  todos: TodoItem[];
+  todos: TodoItem[]
   // 当日片段列表。
-  snippets: SnippetItem[];
+  snippets: SnippetItem[]
   // 当日日记。
-  journal: JournalItem | null;
-};
+  journal: JournalItem | null
+}
 
 // 单日聚合概览类型。
 export type MonthEntryOverview = {
   // 所属日期。
-  entryDate: string;
+  entryDate: string
   // 当日待办数量。
-  todoCount: number;
+  todoCount: number
   // 当日片段数量。
-  snippetCount: number;
+  snippetCount: number
   // 当日日记数量。
-  journalCount: number;
-};
+  journalCount: number
+}
 
 // 整月概览类型。
 export type MonthOverview = {
   // 所属月份。
-  month: string;
+  month: string
   // 当月有记录的日期概览。
-  entries: MonthEntryOverview[];
-};
+  entries: MonthEntryOverview[]
+}
 
 // 数据库分类行类型。
 export type NoteCategoryRow = {
   // 分类唯一标识。
-  id: number;
+  id: number
   // 分类名称。
-  name: string;
+  name: string
   // 排序序号。
-  sort_order: number;
-};
+  sort_order: number
+}
 
 // 页面使用的分类类型。
 export type NoteCategoryItem = {
   // 分类唯一标识。
-  id: number;
+  id: number
   // 分类名称。
-  name: string;
+  name: string
   // 排序序号。
-  sortOrder: number;
-};
+  sortOrder: number
+}
 
 // 数据库笔记行类型。
 export type NoteRow = {
   // 笔记唯一标识。
-  id: number;
+  id: number
   // 笔记标题。
-  title: string;
+  title: string
   // 笔记正文。
-  content: string;
+  content: string
   // JSON 字符串标签列表。
-  tags: string;
+  tags: string
   // 记录日期与时间。
-  time: string;
+  time: string
   // 分类 ID。
-  category_id: number | null;
+  category_id: number | null
   // 分类名称（JOIN 填充）。
-  category_name: string | null;
-};
+  category_name: string | null
+}
 
 // AI 对话会话数据库行。
 export type AiChatSessionRow = {
   // 会话唯一标识。
-  id: string;
+  id: string
   // 会话标题。
-  title: string;
+  title: string
   // 会话状态。
-  status: AiChatSessionStatus;
+  status: AiChatSessionStatus
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
+  updated_at: string
   // 最近消息时间。
-  last_message_at: string;
-};
+  last_message_at: string
+}
 
 // AI 对话消息数据库行。
 export type AiChatMessageRow = {
   // 消息唯一标识。
-  id: string;
+  id: string
   // 所属会话标识。
-  session_id: string;
+  session_id: string
   // 消息角色。
-  role: AiChatMessageRole;
+  role: AiChatMessageRole
   // 消息正文。
-  content: string;
+  content: string
   // 助手最终回答。
-  answer: string | null;
+  answer: string | null
   // 顺序片段 JSON。
-  parts_json: string;
+  parts_json: string
   // 工具步骤 JSON。
-  tool_steps_json: string;
+  tool_steps_json: string
   // 展示时间。
-  time: string;
+  time: string
   // 模型。
-  model?: string | null;
+  model?: string | null
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
+  updated_at: string
   // 是否已被用户主动取消（0 = 否，1 = 是）。
-  cancelled: number;
-};
+  cancelled: number
+}
 
 // 待办数据库行类型。
 export type TodoRow = {
   // 待办唯一标识。
-  id: number;
+  id: number
   // 待办所属日期。
-  entry_date: string;
+  entry_date: string
   // 待办文本。
-  text: string;
+  text: string
   // 待办优先级。
-  priority: TodoPriority;
+  priority: TodoPriority
   // 是否完成。
-  completed: number;
+  completed: number
   // 排序序号。
-  sort_order: number;
+  sort_order: number
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 片段数据库行类型。
 export type SnippetRow = {
   // 片段唯一标识。
-  id: number;
+  id: number
   // 片段所属日期。
-  entry_date: string;
+  entry_date: string
   // 片段标题。
-  title: string;
+  title: string
   // 片段正文。
-  content: string;
+  content: string
   // JSON 字符串标签列表。
-  tags: string;
+  tags: string
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 日记数据库行类型。
 export type JournalRow = {
   // 日记唯一标识。
-  id: number;
+  id: number
   // 日记所属日期。
-  entry_date: string;
+  entry_date: string
   // 日记正文。
-  content: string;
+  content: string
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 关联人物数据库行类型。
 export type AssociatedPersonRow = {
   // 人物业务标识。
-  id: string;
+  id: string
   // 头像地址。
-  avatar: string;
+  avatar: string
   // 姓名。
-  name: string;
+  name: string
   // 性别。
-  gender: string;
+  gender: string
   // 关系分类。
-  relationship: PersonRelationship;
+  relationship: PersonRelationship
   // 一句话状态。
-  status: string;
+  status: string
   // 生日。
-  birthday: string;
+  birthday: string
   // 联系方式。
-  contact: string;
+  contact: string
   // JSON 字符串标签列表。
-  tags: string;
+  tags: string
   // Markdown 详细档案。
-  details: string;
+  details: string
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 个人信息数据库行类型。
 export type PersonalProfileRow = {
   // 自增主键。
-  id: number;
+  id: number
   // 头像地址。
-  avatar: string;
+  avatar: string
   // 姓名。
-  name: string;
+  name: string
   // 性别。
-  gender: string;
+  gender: string
   // 一句话状态。
-  status: string;
+  status: string
   // 生日。
-  birthday: string;
+  birthday: string
   // 联系方式。
-  contact: string;
+  contact: string
   // JSON 字符串标签列表。
-  tags: string;
+  tags: string
   // Markdown 详细档案。
-  details: string;
+  details: string
   // 创建时间。
-  created_at: string;
+  created_at: string
   // 更新时间。
-  updated_at: string;
-};
+  updated_at: string
+}
 
 // 笔记 SQLite 表定义。
 export const notes = sqliteTable("notes", {
@@ -871,14 +865,14 @@ export const notes = sqliteTable("notes", {
   tags: text("tags").notNull(),
   time: timestamp("time").notNull(),
   categoryId: integer("category_id"),
-});
+})
 
 // 笔记分类 SQLite 表定义。
 export const noteCategories = sqliteTable("note_categories", {
   id: integer("id").primaryKey(),
   name: text("name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
-});
+})
 
 // 待办 SQLite 表定义。
 export const todos = sqliteTable("todos", {
@@ -890,7 +884,7 @@ export const todos = sqliteTable("todos", {
   sortOrder: integer("sort_order").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+})
 
 // 片段 SQLite 表定义。
 export const snippets = sqliteTable("snippets", {
@@ -901,7 +895,7 @@ export const snippets = sqliteTable("snippets", {
   tags: text("tags").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+})
 
 // 日记 SQLite 表定义。
 export const journals = sqliteTable("journals", {
@@ -910,160 +904,160 @@ export const journals = sqliteTable("journals", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+})
 
 // 关联人物 SQLite 表定义。
 // 周度总结数据库行类型。
 export type WeeklySummaryRow = {
   // 自增主键。
-  id: number;
+  id: number
   // 周起始日期，格式 'YYYY-MM-DD'（周一）。
-  week_start_date: string;
+  week_start_date: string
   // 总结类型：'summary' 周度总结 | 'interpersonal' 人际策展。
-  type: string;
+  type: string
   // 总结标题。
-  title: string;
+  title: string
   // 总结正文，Markdown 格式。
-  content: string;
+  content: string
   // 生成所用模型标识。
-  model_used: string | null;
+  model_used: string | null
   // 生成时间，格式 'YYYY-MM-DD HH:mm'。
-  generated_at: string;
+  generated_at: string
   // 是否为有意义内容（1=有，0=无），用于前端兜底展示。
-  is_meaningful: number;
-};
+  is_meaningful: number
+}
 
 // 页面使用的周度总结类型。
 export type WeeklySummaryItem = {
   // 自增主键。
-  id: number;
+  id: number
   // 周起始日期，格式 'YYYY-MM-DD'（周一）。
-  weekStartDate: string;
+  weekStartDate: string
   // 总结类型：'summary' | 'interpersonal'。
-  type: string;
+  type: string
   // 总结标题。
-  title: string;
+  title: string
   // 总结正文，Markdown 格式。
-  content: string;
+  content: string
   // 生成所用模型标识。
-  modelUsed: string | null;
+  modelUsed: string | null
   // 生成时间，格式 'YYYY-MM-DD HH:mm'。
-  generatedAt: string;
+  generatedAt: string
   // 是否为有意义内容（1=有，0=无），用于前端兜底展示。
-  isMeaningful: number;
-};
+  isMeaningful: number
+}
 
 // 周度总结保存输入类型。
 export type WeeklySummarySaveInput = {
   // 周起始日期，格式 'YYYY-MM-DD'（周一）。
-  weekStartDate: string;
+  weekStartDate: string
   // 总结类型：'summary' | 'interpersonal'，默认 'summary'。
-  type?: string;
+  type?: string
   // 总结标题。
-  title: string;
+  title: string
   // 总结正文，Markdown 格式。
-  content: string;
+  content: string
   // 生成所用模型标识。
-  modelUsed?: string | null;
+  modelUsed?: string | null
   // 生成时间，格式 'YYYY-MM-DD HH:mm'。
-  generatedAt: string;
+  generatedAt: string
   // 是否为有意义内容（1=有，0=无）。
-  isMeaningful?: number;
-};
+  isMeaningful?: number
+}
 
 // ==================== 主题策展 ====================
 
 /** 主题数据库行类型 */
 export type ThemeRow = {
-  id: number;
-  external_id: string;
-  name: string;
-  description: string;
-  color: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  ai_generated?: number;
-};
+  id: number
+  external_id: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  created_at: string
+  updated_at: string
+  ai_generated?: number
+}
 
 /** 主题页面使用类型 */
 export type ThemeItem = {
-  id: number;
-  externalId: string;
-  name: string;
-  description: string;
-  color: string | null;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  aiGenerated?: number;
+  id: number
+  externalId: string
+  name: string
+  description: string
+  color: string | null
+  status: string
+  createdAt: string
+  updatedAt: string
+  aiGenerated?: number
   /** 关联素材数量（JOIN 时填充） */
-  itemCount?: number;
-};
+  itemCount?: number
+}
 
 /** 主题创建输入 */
 export type ThemeCreateInput = {
-  name: string;
-  description?: string;
-  color?: string | null;
-  status?: string;
-  aiGenerated?: number;
-};
+  name: string
+  description?: string
+  color?: string | null
+  status?: string
+  aiGenerated?: number
+}
 
 /** 主题更新输入 */
 export type ThemeUpdateInput = {
-  name?: string;
-  description?: string;
-  color?: string | null;
-  status?: string;
-};
+  name?: string
+  description?: string
+  color?: string | null
+  status?: string
+}
 
 /** 主题素材关联数据库行类型 */
 export type ThemeItemRow = {
-  id: number;
-  external_id: string;
-  theme_external_id: string;
-  source_type: string;
-  source_id: string;
-  relevance_note: string;
-  ai_extracted: number;
-  created_at: string;
-};
+  id: number
+  external_id: string
+  theme_external_id: string
+  source_type: string
+  source_id: string
+  relevance_note: string
+  ai_extracted: number
+  created_at: string
+}
 
 /** 主题素材关联页面使用类型 */
 export type ThemeItemsItem = {
-  id: number;
-  externalId: string;
-  themeExternalId: string;
-  sourceType: string;
-  sourceId: string;
-  relevanceNote: string;
-  aiExtracted: number;
-  createdAt: string;
+  id: number
+  externalId: string
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote: string
+  aiExtracted: number
+  createdAt: string
   /** JOIN 来源信息（用于前端展示） */
-  sourceTitle?: string;
-  sourceContent?: string;
-  sourceEntryDate?: string;
-};
+  sourceTitle?: string
+  sourceContent?: string
+  sourceEntryDate?: string
+}
 
 /** 主题素材关联创建输入 */
 export type ThemeItemsCreateInput = {
-  themeExternalId: string;
-  sourceType: string;
-  sourceId: string;
-  relevanceNote?: string;
-  aiExtracted?: number;
-};
+  themeExternalId: string
+  sourceType: string
+  sourceId: string
+  relevanceNote?: string
+  aiExtracted?: number
+}
 
 /** 主题时间线节点 (跨周分布) */
 export type ThemeTimelineItem = {
   /** 自然周起始日期 */
-  weekStartDate: string;
+  weekStartDate: string
   /** 该周关联素材数 */
-  itemCount: number;
+  itemCount: number
   /** 是否在周度总结中被提及 */
-  mentionedInSummary: boolean;
-};
+  mentionedInSummary: boolean
+}
 
 export const themes = sqliteTable("themes", {
   id: integer("id").primaryKey(),
@@ -1074,7 +1068,7 @@ export const themes = sqliteTable("themes", {
   status: text("status").notNull().default("active"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
-});
+})
 
 export const themeItems = sqliteTable(
   "theme_items",
@@ -1095,7 +1089,7 @@ export const themeItems = sqliteTable(
       table.sourceId,
     ),
   }),
-);
+)
 
 export const associatedPeople = sqliteTable("associated_people", {
   id: integer("id").primaryKey(),
@@ -1111,7 +1105,7 @@ export const associatedPeople = sqliteTable("associated_people", {
   details: text("details").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+})
 
 // 个人信息 SQLite 表定义。
 export const personalProfiles = sqliteTable("personal_profiles", {
@@ -1126,7 +1120,7 @@ export const personalProfiles = sqliteTable("personal_profiles", {
   details: text("details").notNull(),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+})
 
 // ==================== 账单 ====================
 
@@ -1146,10 +1140,10 @@ export type BillCategory =
   | "礼金"
   | "报销"
   | "奖金"
-  | "退款";
+  | "退款"
 
 /** 收支类型 */
-export type BillType = "expense" | "income";
+export type BillType = "expense" | "income"
 
 /** 合法账单分类集合 */
 export const BILL_CATEGORIES: BillCategory[] = [
@@ -1168,57 +1162,57 @@ export const BILL_CATEGORIES: BillCategory[] = [
   "报销",
   "奖金",
   "退款",
-];
+]
 
 /** 账单数据库行 */
 export type BillRow = {
-  id: number;
-  amount: number;
-  category: string;
-  bill_type: string;
-  bill_date: string;
-  note: string;
-  tags: string;
-  created_at: string;
-  updated_at: string;
-};
+  id: number
+  amount: number
+  category: string
+  bill_type: string
+  bill_date: string
+  note: string
+  tags: string
+  created_at: string
+  updated_at: string
+}
 
 /** 账单页面项 */
 export type BillItem = {
-  id: number;
-  amount: number;
-  category: BillCategory;
-  billType: BillType;
-  billDate: string;
-  note: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-};
+  id: number
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
 
 /** 账单创建输入 */
 export type BillCreateInput = {
-  amount: number;
-  category: BillCategory;
-  billType: BillType;
-  billDate: string;
-  note: string;
-  tags: string[];
-};
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
 
 /** 账单更新输入 */
-export type BillUpdateInput = Partial<BillCreateInput>;
+export type BillUpdateInput = Partial<BillCreateInput>
 
 /** 账单列表筛选 */
 export type BillListFilters = {
-  billDate?: string;
-  category?: BillCategory;
-  billType?: BillType;
-};
+  billDate?: string
+  category?: BillCategory
+  billType?: BillType
+}
 
 /** 今日账单摘要 */
 export type BillTodaySummary = {
-  expenseTotal: number;
-  incomeTotal: number;
-  recentItems: BillItem[];
-};
+  expenseTotal: number
+  incomeTotal: number
+  recentItems: BillItem[]
+}

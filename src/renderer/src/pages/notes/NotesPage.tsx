@@ -1,15 +1,12 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { Clock, FileText, Tag as TagIcon, X } from "lucide-react";
-import { useToast } from "@/components/ui/Toast";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tag } from "@/components/ui/Tag";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { NoteMarkdownPanel } from "@/pages/notes/components/NoteMarkdownPanel";
-import {
-  NoteCategoryPanel,
-  type NoteCategory,
-} from "@/pages/notes/components/NoteCategoryPanel";
+import { Clock, FileText, Tag as TagIcon, X } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Tag } from "@/components/ui/Tag"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { type NoteCategory, NoteCategoryPanel } from "@/pages/notes/components/NoteCategoryPanel"
+import { NoteMarkdownPanel } from "@/pages/notes/components/NoteMarkdownPanel"
 
 /* ==========================================
  * TS 类型定义
@@ -18,33 +15,33 @@ import {
 // 自由笔记素材项类型。
 export interface NoteMaterialItem {
   // 笔记唯一标识。
-  id: number;
+  id: number
   // 笔记标题。
-  title: string;
+  title: string
   // 笔记正文。
-  content: string;
+  content: string
   // 关联标签列表。
-  tags: string[];
+  tags: string[]
   // 记录日期与时间。
-  time: string;
+  time: string
   // 分类 ID。
-  categoryId?: number;
+  categoryId?: number
   // 分类名称。
-  categoryName?: string;
+  categoryName?: string
 }
 
 // Markdown 编辑草稿类型。
 export interface NoteDraft {
   // 草稿标题。
-  title: string;
+  title: string
   // 草稿 Markdown 正文。
-  content: string;
+  content: string
   // 草稿标签列表。
-  tags: string[];
+  tags: string[]
   // 分类 ID。
-  categoryId?: number;
+  categoryId?: number
   // 草稿记录日期与时间。
-  time?: string;
+  time?: string
 }
 
 /**
@@ -55,18 +52,18 @@ const filterNotes = (
   activeCategoryId: number | null,
   activeTag: string | null,
 ): NoteMaterialItem[] => {
-  let filtered = notes;
+  let filtered = notes
 
   if (activeCategoryId !== null) {
-    filtered = filtered.filter((note) => note.categoryId === activeCategoryId);
+    filtered = filtered.filter((note) => note.categoryId === activeCategoryId)
   }
 
   if (activeTag) {
-    filtered = filtered.filter((note) => note.tags.includes(activeTag));
+    filtered = filtered.filter((note) => note.tags.includes(activeTag))
   }
 
-  return filtered;
-};
+  return filtered
+}
 
 /**
  * NotesPage 组件 - 展示自由笔记素材池。
@@ -74,137 +71,131 @@ const filterNotes = (
  */
 export const NotesPage = (): React.JSX.Element => {
   // 当前页面笔记列表。
-  const [notes, setNotes] = useState<NoteMaterialItem[]>([]);
+  const [notes, setNotes] = useState<NoteMaterialItem[]>([])
   // 分类列表。
-  const [categories, setCategories] = useState<NoteCategory[]>([]);
+  const [categories, setCategories] = useState<NoteCategory[]>([])
   // 当前激活的分类筛选。
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null)
   // 当前激活的标签过滤。
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeTag, setActiveTag] = useState<string | null>(null)
   // Markdown 编辑弹窗是否打开。
-  const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false)
   // 正在编辑的笔记。若为 null 则表示非编辑状态。
-  const [editingNote, setEditingNote] = useState<NoteMaterialItem | null>(null);
+  const [editingNote, setEditingNote] = useState<NoteMaterialItem | null>(null)
   // 笔记数据库是否正在读取。
-  const [isLoadingNotes, setIsLoadingNotes] = useState(true);
+  const [isLoadingNotes, setIsLoadingNotes] = useState(true)
   // 笔记数据库错误文案。
-  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesError, setNotesError] = useState<string | null>(null)
   // 全局消息提示。
-  const toast = useToast();
+  const toast = useToast()
 
   // 当前分类和标签过滤后的笔记列表。
-  const visibleNotes = filterNotes(notes, activeCategoryId, activeTag);
+  const visibleNotes = filterNotes(notes, activeCategoryId, activeTag)
 
   /**
    * 从 SQLite 读取笔记列表。
    */
   const loadNotes = async (): Promise<void> => {
-    setIsLoadingNotes(true);
-    setNotesError(null);
+    setIsLoadingNotes(true)
+    setNotesError(null)
 
     try {
-      const storedNotes = await window.api.notes.list();
-      setNotes(storedNotes);
+      const storedNotes = await window.api.notes.list()
+      setNotes(storedNotes)
     } catch {
-      setNotesError("无法读取本地笔记数据库");
+      setNotesError("无法读取本地笔记数据库")
     } finally {
-      setIsLoadingNotes(false);
+      setIsLoadingNotes(false)
     }
-  };
+  }
 
   /**
    * 从 SQLite 读取分类列表。
    */
   const loadCategories = async (): Promise<void> => {
     try {
-      const cats = await window.api.noteCategories.list();
-      setCategories(cats);
+      const cats = await window.api.noteCategories.list()
+      setCategories(cats)
     } catch {
       // 分类加载失败不阻塞页面
     }
-  };
+  }
 
   useEffect(() => {
-    void loadNotes();
-    void loadCategories();
-  }, []);
+    void loadNotes()
+    void loadCategories()
+  }, [])
 
   /**
    * 创建分类。
    */
   const handleCreateCategory = async (name: string): Promise<void> => {
     try {
-      const created = await window.api.noteCategories.create(name);
-      setCategories((prev) => [...prev, created]);
-      toast.success("分类已创建");
+      const created = await window.api.noteCategories.create(name)
+      setCategories((prev) => [...prev, created])
+      toast.success("分类已创建")
     } catch {
-      toast.error("创建分类失败");
+      toast.error("创建分类失败")
     }
-  };
+  }
 
   /**
    * 更新分类名称。
    */
-  const handleUpdateCategory = async (
-    id: number,
-    name: string,
-  ): Promise<void> => {
+  const handleUpdateCategory = async (id: number, name: string): Promise<void> => {
     try {
-      const updated = await window.api.noteCategories.update(id, name);
-      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
-      toast.success("分类已更新");
+      const updated = await window.api.noteCategories.update(id, name)
+      setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)))
+      toast.success("分类已更新")
     } catch {
-      toast.error("更新分类失败");
+      toast.error("更新分类失败")
     }
-  };
+  }
 
   /**
    * 删除分类。
    */
   const handleDeleteCategory = async (id: number): Promise<void> => {
     try {
-      await window.api.noteCategories.delete(id);
-      setCategories((prev) => prev.filter((c) => c.id !== id));
+      await window.api.noteCategories.delete(id)
+      setCategories((prev) => prev.filter((c) => c.id !== id))
       if (activeCategoryId === id) {
-        setActiveCategoryId(null);
+        setActiveCategoryId(null)
       }
-      toast.success("分类已删除");
+      toast.success("分类已删除")
     } catch {
-      toast.error("删除分类失败");
+      toast.error("删除分类失败")
     }
-  };
+  }
 
   /**
    * 编辑笔记，打开弹窗。
    */
   const handleEditNote = (note: NoteMaterialItem): void => {
-    setEditingNote(note);
-  };
+    setEditingNote(note)
+  }
 
   /**
    * 删除素材。
    */
   const handleDeleteNote = async (id: number): Promise<void> => {
-    setNotesError(null);
+    setNotesError(null)
 
     try {
-      await window.api.notes.delete(id);
-      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
-      toast.success("笔记已成功删除");
+      await window.api.notes.delete(id)
+      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id))
+      toast.success("笔记已成功删除")
     } catch {
-      setNotesError("删除笔记失败，请稍后重试");
-      toast.error("删除笔记失败，请稍后重试");
+      setNotesError("删除笔记失败，请稍后重试")
+      toast.error("删除笔记失败，请稍后重试")
     }
-  };
+  }
 
   /**
    * 更新素材池中的笔记。
    */
-  const handleUpdateNote = async (
-    id: number,
-    draft: NoteDraft,
-  ): Promise<void> => {
-    setNotesError(null);
+  const handleUpdateNote = async (id: number, draft: NoteDraft): Promise<void> => {
+    setNotesError(null)
 
     try {
       const updatedNote = await window.api.notes.update(id, {
@@ -212,24 +203,22 @@ export const NotesPage = (): React.JSX.Element => {
         content: draft.content.trim(),
         tags: draft.tags,
         categoryId: draft.categoryId,
-      });
+      })
 
-      setNotes((currentNotes) =>
-        currentNotes.map((note) => (note.id === id ? updatedNote : note)),
-      );
-      setEditingNote(null);
-      toast.success("笔记已更新");
+      setNotes((currentNotes) => currentNotes.map((note) => (note.id === id ? updatedNote : note)))
+      setEditingNote(null)
+      toast.success("笔记已更新")
     } catch {
-      setNotesError("更新笔记失败，请稍后重试");
-      toast.error("更新笔记失败，请稍后重试");
+      setNotesError("更新笔记失败，请稍后重试")
+      toast.error("更新笔记失败，请稍后重试")
     }
-  };
+  }
 
   /**
    * 保存 Markdown 笔记到当前页面素材池。
    */
   const handleSaveMarkdownNote = async (draft: NoteDraft): Promise<void> => {
-    setNotesError(null);
+    setNotesError(null)
 
     try {
       const newNote = await window.api.notes.create({
@@ -237,16 +226,16 @@ export const NotesPage = (): React.JSX.Element => {
         content: draft.content.trim(),
         tags: draft.tags,
         categoryId: draft.categoryId,
-      });
+      })
 
-      setNotes((currentNotes) => [newNote, ...currentNotes]);
-      setIsMarkdownModalOpen(false);
-      toast.success("新笔记保存成功");
+      setNotes((currentNotes) => [newNote, ...currentNotes])
+      setIsMarkdownModalOpen(false)
+      toast.success("新笔记保存成功")
     } catch {
-      setNotesError("保存笔记失败，请稍后重试");
-      toast.error("保存笔记失败，请稍后重试");
+      setNotesError("保存笔记失败，请稍后重试")
+      toast.error("保存笔记失败，请稍后重试")
     }
-  };
+  }
 
   return (
     <section
@@ -268,14 +257,14 @@ export const NotesPage = (): React.JSX.Element => {
           }
           categories={categories}
           onClose={() => {
-            setIsMarkdownModalOpen(false);
-            setEditingNote(null);
+            setIsMarkdownModalOpen(false)
+            setEditingNote(null)
           }}
           onSave={(draft) => {
             if (editingNote) {
-              void handleUpdateNote(editingNote.id, draft);
+              void handleUpdateNote(editingNote.id, draft)
             } else {
-              void handleSaveMarkdownNote(draft);
+              void handleSaveMarkdownNote(draft)
             }
           }}
         />
@@ -285,12 +274,8 @@ export const NotesPage = (): React.JSX.Element => {
           <div className="min-h-0 flex-1 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white/80">
-                  素材列表
-                </span>
-                <span className="text-[11px] text-white/30">
-                  ({notes.length})
-                </span>
+                <span className="text-sm font-bold text-white/80">素材列表</span>
+                <span className="text-[11px] text-white/30">({notes.length})</span>
                 {activeTag && (
                   <div className="flex items-center gap-1 rounded-[6px] border border-white/5 bg-white/5 px-2 py-0.5 text-xs text-white/60">
                     <TagIcon className="h-2.5 w-2.5" />
@@ -352,9 +337,7 @@ export const NotesPage = (): React.JSX.Element => {
               ) : visibleNotes.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                   <FileText className="h-7 w-7 text-white/30" />
-                  <h2 className="mt-3 text-sm font-bold text-white/80">
-                    暂无匹配笔记素材
-                  </h2>
+                  <h2 className="mt-3 text-sm font-bold text-white/80">暂无匹配笔记素材</h2>
                   <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
                     {activeTag
                       ? "当前标签下无素材，试着清除标签过滤或新建素材。"
@@ -375,13 +358,13 @@ export const NotesPage = (): React.JSX.Element => {
                           <span className="text-xs">
                             {note.time.includes("T")
                               ? (() => {
-                                  const d = new Date(note.time);
-                                  const y = d.getFullYear();
-                                  const m = String(d.getMonth() + 1).padStart(2, '0');
-                                  const dd = String(d.getDate()).padStart(2, '0');
-                                  const hh = String(d.getHours()).padStart(2, '0');
-                                  const min = String(d.getMinutes()).padStart(2, '0');
-                                  return `${y}-${m}-${dd} ${hh}:${min}`;
+                                  const d = new Date(note.time)
+                                  const y = d.getFullYear()
+                                  const m = String(d.getMonth() + 1).padStart(2, "0")
+                                  const dd = String(d.getDate()).padStart(2, "0")
+                                  const hh = String(d.getHours()).padStart(2, "0")
+                                  const min = String(d.getMinutes()).padStart(2, "0")
+                                  return `${y}-${m}-${dd} ${hh}:${min}`
                                 })()
                               : note.time}
                           </span>
@@ -450,5 +433,5 @@ export const NotesPage = (): React.JSX.Element => {
         </div>
       )}
     </section>
-  );
-};
+  )
+}

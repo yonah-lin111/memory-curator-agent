@@ -1,4 +1,4 @@
-import type { AgentTool, AgentToolResult } from '@/agent/types'
+import type { AgentTool, AgentToolResult } from "@/agent/types"
 
 // 当前时间工具入参。
 type TimeNowToolInput = {
@@ -53,7 +53,7 @@ type TimeNowToolResult = AgentToolResult & TimeNowToolData
 type DateOffsetToolResult = AgentToolResult & DateOffsetToolData
 
 // 默认语言区域。
-const DEFAULT_LOCALE = 'zh-CN'
+const DEFAULT_LOCALE = "zh-CN"
 
 // 一天的毫秒数。
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -62,28 +62,30 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * 判断值是否为普通对象。
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  Boolean(value) && typeof value === "object" && !Array.isArray(value)
 
 /**
  * 解析字符串参数。
  */
-const parseString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
+const parseString = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined
 
 /**
  * 解析数字参数。
  */
 const parseNumber = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined
+  typeof value === "number" && Number.isFinite(value) ? value : undefined
 
 /**
  * 获取运行时默认时区。
  */
-const getDefaultTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const getDefaultTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
 /**
  * 归一化时区。
  */
-const normalizeTimeZone = (timeZone: string | undefined): string => timeZone?.trim() || getDefaultTimeZone()
+const normalizeTimeZone = (timeZone: string | undefined): string =>
+  timeZone?.trim() || getDefaultTimeZone()
 
 /**
  * 归一化语言区域。
@@ -107,13 +109,13 @@ const assertValidDateTimeOptions = (locale: string, timeZone: string): void => {
 const formatLocalDateTime = (date: Date, locale: string, timeZone: string): string =>
   new Intl.DateTimeFormat(locale, {
     timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   }).format(date)
 
 /**
@@ -122,7 +124,7 @@ const formatLocalDateTime = (date: Date, locale: string, timeZone: string): stri
 const formatWeekday = (date: Date, locale: string, timeZone: string): string =>
   new Intl.DateTimeFormat(locale, {
     timeZone,
-    weekday: 'long'
+    weekday: "long",
   }).format(date)
 
 /**
@@ -131,9 +133,11 @@ const formatWeekday = (date: Date, locale: string, timeZone: string): string =>
 const formatOffsetName = (date: Date, locale: string, timeZone: string): string => {
   const formatter = new Intl.DateTimeFormat(locale, {
     timeZone,
-    timeZoneName: 'longOffset'
+    timeZoneName: "longOffset",
   })
-  const offsetName = formatter.formatToParts(date).find((part) => part.type === 'timeZoneName')?.value
+  const offsetName = formatter
+    .formatToParts(date)
+    .find((part) => part.type === "timeZoneName")?.value
 
   return offsetName ?? timeZone
 }
@@ -148,7 +152,7 @@ const buildTimeData = (date: Date, locale: string, timeZone: string): TimeNowToo
   weekday: formatWeekday(date, locale, timeZone),
   timeZone,
   offsetName: formatOffsetName(date, locale, timeZone),
-  locale
+  locale,
 })
 
 /**
@@ -161,7 +165,7 @@ const parseTimeNowInput = (input: unknown): TimeNowToolInput => {
 
   return {
     timeZone: parseString(input.timeZone),
-    locale: parseString(input.locale)
+    locale: parseString(input.locale),
   }
 }
 
@@ -177,7 +181,7 @@ const parseDateOffsetInput = (input: unknown): DateOffsetToolInput => {
     baseDate: parseString(input.baseDate),
     offsetDays: parseNumber(input.offsetDays),
     timeZone: parseString(input.timeZone),
-    locale: parseString(input.locale)
+    locale: parseString(input.locale),
   }
 }
 
@@ -202,32 +206,50 @@ const parseBaseDate = (baseDate: string | undefined, now: Date): Date => {
  * 创建当前时间查询工具。
  */
 export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_tool_time_now',
-  description: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
+  name: "common_tool_time_now",
+  description:
+    "Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.",
   prompt: {
-    summary: 'Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.',
-    intentKeywords: ['时间', '几点', '现在', '今天是', '今天几号', '几号', '日期', '时区', 'timestamp', 'time', 'date', 'now'],
-    whenToUse: [
-      'Use when the user asks for the current time, date, weekday, time zone, or timestamp.',
-      'Use for questions such as today\'s date, the current time, or the current Unix timestamp that require real-time information.'
+    summary:
+      "Get the current date, time, weekday, time zone, and Unix timestamp. Read-only; no network access.",
+    intentKeywords: [
+      "时间",
+      "几点",
+      "现在",
+      "今天是",
+      "今天几号",
+      "几号",
+      "日期",
+      "时区",
+      "timestamp",
+      "time",
+      "date",
+      "now",
     ],
-    whenNotToUse: ['Do not use when the user is only discussing time concepts, writing, or translating.'],
-    safety: ['Only read the local current time. Do not access the network or user files.'],
-    output: 'Return the requested time information directly, including the time zone when useful.',
-    examples: ['{}', '{"timeZone":"Asia/Shanghai","locale":"zh-CN"}']
+    whenToUse: [
+      "Use when the user asks for the current time, date, weekday, time zone, or timestamp.",
+      "Use for questions such as today's date, the current time, or the current Unix timestamp that require real-time information.",
+    ],
+    whenNotToUse: [
+      "Do not use when the user is only discussing time concepts, writing, or translating.",
+    ],
+    safety: ["Only read the local current time. Do not access the network or user files."],
+    output: "Return the requested time information directly, including the time zone when useful.",
+    examples: ["{}", '{"timeZone":"Asia/Shanghai","locale":"zh-CN"}'],
   },
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
       timeZone: {
-        type: 'string',
-        description: 'IANA time zone name, for example Asia/Shanghai or America/Los_Angeles. Defaults to the system time zone.'
+        type: "string",
+        description:
+          "IANA time zone name, for example Asia/Shanghai or America/Los_Angeles. Defaults to the system time zone.",
       },
       locale: {
-        type: 'string',
-        description: 'BCP 47 locale, for example zh-CN or en-US. Defaults to zh-CN.'
-      }
-    }
+        type: "string",
+        description: "BCP 47 locale, for example zh-CN or en-US. Defaults to zh-CN.",
+      },
+    },
   },
   execute: async (input): Promise<TimeNowToolResult> => {
     const parsed = parseTimeNowInput(input)
@@ -241,61 +263,69 @@ export const createTimeNowTool = (nowProvider: () => Date = () => new Date()): A
     return {
       observation: `Current time: ${data.local} (${data.weekday}, ${data.timeZone}, ${data.offsetName}).`,
       data,
-      ...data
+      ...data,
     }
-  }
+  },
 })
 
 /**
  * 创建日期偏移计算工具。
  */
 export const createDateOffsetTool = (nowProvider: () => Date = () => new Date()): AgentTool => ({
-  name: 'common_tool_date_offset',
-  description: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
+  name: "common_tool_date_offset",
+  description:
+    "Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.",
   prompt: {
-    summary: 'Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.',
+    summary:
+      "Calculate date offsets by day, such as yesterday, tomorrow, N days later, or N days earlier. Read-only; no network access.",
     intentKeywords: [
-      '昨天',
-      '明天',
-      '后天',
-      '前天',
-      '几天后',
-      '几天前',
-      '日期计算',
-      '倒推',
-      'deadline',
-      'date offset'
+      "昨天",
+      "明天",
+      "后天",
+      "前天",
+      "几天后",
+      "几天前",
+      "日期计算",
+      "倒推",
+      "deadline",
+      "date offset",
     ],
     whenToUse: [
-      'Use when the user asks for yesterday, tomorrow, the day after tomorrow, N days earlier, or N days later.',
-      'Use when the user needs a date offset from a given base date.'
+      "Use when the user asks for yesterday, tomorrow, the day after tomorrow, N days earlier, or N days later.",
+      "Use when the user needs a date offset from a given base date.",
     ],
-    whenNotToUse: ['Prefer common_tool_time_now when the user only asks for the current date or current time.'],
-    safety: ['Only perform local date calculations. Do not access the network or user files.'],
-    output: 'Return the calculated date, weekday, and time zone.',
-    examples: ['{"offsetDays":1}', '{"baseDate":"2026-05-30T10:00:00+08:00","offsetDays":-7,"timeZone":"Asia/Shanghai"}']
+    whenNotToUse: [
+      "Prefer common_tool_time_now when the user only asks for the current date or current time.",
+    ],
+    safety: ["Only perform local date calculations. Do not access the network or user files."],
+    output: "Return the calculated date, weekday, and time zone.",
+    examples: [
+      '{"offsetDays":1}',
+      '{"baseDate":"2026-05-30T10:00:00+08:00","offsetDays":-7,"timeZone":"Asia/Shanghai"}',
+    ],
   },
   parameters: {
-    type: 'object',
-    required: ['offsetDays'],
+    type: "object",
+    required: ["offsetDays"],
     properties: {
       baseDate: {
-        type: 'string',
-        description: 'Base date or time. Supports Date-parseable ISO strings. Defaults to the current time.'
+        type: "string",
+        description:
+          "Base date or time. Supports Date-parseable ISO strings. Defaults to the current time.",
       },
       offsetDays: {
-        type: 'number',
-        description: 'Day offset. Tomorrow is 1; yesterday is -1.'
+        type: "number",
+        description: "Day offset. Tomorrow is 1; yesterday is -1.",
       },
       timeZone: {
-        type: 'string',
-        description: 'IANA time zone name. Defaults to the system time zone.'
+        type: "string",
+        description: "IANA time zone name. Defaults to the system time zone.",
       },
       locale: {
-        type: 'string',
-        description: 'BCP 47 locale. Defaults to zh-CN.'
-      }
-    }
+        type: "string",
+        description: "BCP 47 locale. Defaults to zh-CN.",
+      },
+    },
   },
   execute: async (input): Promise<DateOffsetToolResult> => {
     const parsed = parseDateOffsetInput(input)
@@ -311,13 +341,13 @@ export const createDateOffsetTool = (nowProvider: () => Date = () => new Date())
     const data = {
       ...timeData,
       baseIso: baseDate.toISOString(),
-      offsetDays
+      offsetDays,
     }
 
     return {
       observation: `Date/time after offsetting ${offsetDays} days: ${data.local} (${data.weekday}, ${data.timeZone}, ${data.offsetName}).`,
       data,
-      ...data
+      ...data,
     }
-  }
+  },
 })

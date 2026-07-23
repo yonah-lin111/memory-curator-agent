@@ -1,1 +1,1 @@
-import { MiniMap } from '@xyflow/react';
+import { MiniMap } from "@xyflow/react"

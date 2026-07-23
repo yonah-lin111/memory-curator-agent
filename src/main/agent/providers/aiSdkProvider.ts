@@ -1,13 +1,7 @@
-import { jsonSchema, streamText, tool, type AssistantModelMessage, type ModelMessage } from 'ai'
-import { readFileSync } from 'node:fs'
-import { extname } from 'node:path'
-import {
-  resolveAiChatImagePath,
-  resolveAiChatTextFileName,
-  resolveAiChatTextFilePath,
-  resolveMarkdownImagePath,
-  resolvePeopleAvatarPath
-} from '@/protocols/localImages'
+import { readFileSync } from "node:fs"
+import { extname } from "node:path"
+import { type AssistantModelMessage, jsonSchema, type ModelMessage, streamText, tool } from "ai"
+import { prepareToolsForModel } from "@/agent/tools/toolRegistry"
 import type {
   AgentMessage,
   AgentTool,
@@ -15,17 +9,23 @@ import type {
   ModelStreamEvent,
   ModelTurnInput,
   NormalizedProviderConfig,
-  ProviderTransportType
-} from '@/agent/types'
-import { prepareToolsForModel } from '@/agent/tools/toolRegistry'
+  ProviderTransportType,
+} from "@/agent/types"
+import {
+  resolveAiChatImagePath,
+  resolveAiChatTextFileName,
+  resolveAiChatTextFilePath,
+  resolveMarkdownImagePath,
+  resolvePeopleAvatarPath,
+} from "@/protocols/localImages"
 
 const IMAGE_MIME_TYPES: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.bmp': 'image/bmp'
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".bmp": "image/bmp",
 }
 
 /**
@@ -34,11 +34,11 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
 const readImageAsBase64 = (url: string): { base64: string; mimeType: string } | null => {
   try {
     let filePath: string | null = null
-    if (url.startsWith('mc-img://chat/')) {
+    if (url.startsWith("mc-img://chat/")) {
       filePath = resolveAiChatImagePath(url)
-    } else if (url.startsWith('mc-img://md/')) {
+    } else if (url.startsWith("mc-img://md/")) {
       filePath = resolveMarkdownImagePath(url)
-    } else if (url.startsWith('mc-img://people/')) {
+    } else if (url.startsWith("mc-img://people/")) {
       filePath = resolvePeopleAvatarPath(url)
     }
 
@@ -47,11 +47,11 @@ const readImageAsBase64 = (url: string): { base64: string; mimeType: string } | 
     }
 
     const ext = extname(filePath).toLowerCase()
-    const mimeType = IMAGE_MIME_TYPES[ext] || 'image/png'
+    const mimeType = IMAGE_MIME_TYPES[ext] || "image/png"
     const buffer = readFileSync(filePath)
     return {
-      base64: buffer.toString('base64'),
-      mimeType
+      base64: buffer.toString("base64"),
+      mimeType,
     }
   } catch {
     return null
@@ -64,16 +64,16 @@ const readImageAsBase64 = (url: string): { base64: string; mimeType: string } | 
 const readTextFileContent = (url: string): { content: string; fileName: string } | null => {
   try {
     const filePath = resolveAiChatTextFilePath(url)
-    const fileName = resolveAiChatTextFileName(url) || 'file.txt'
+    const fileName = resolveAiChatTextFileName(url) || "file.txt"
 
     if (!filePath) {
       return null
     }
 
-    const content = readFileSync(filePath, 'utf-8')
+    const content = readFileSync(filePath, "utf-8")
     return {
       content,
-      fileName
+      fileName,
     }
   } catch {
     return null
@@ -107,25 +107,25 @@ export type AiSdkProviderRuntime = {
  */
 export const getProviderNpmPackage = (type: ProviderTransportType): string => {
   switch (type) {
-    case 'openai-compatible':
-      return '@ai-sdk/openai-compatible'
-    case 'openai':
-      return '@ai-sdk/openai'
-    case 'anthropic':
-      return '@ai-sdk/anthropic'
-    case 'google':
-      return '@ai-sdk/google'
+    case "openai-compatible":
+      return "@ai-sdk/openai-compatible"
+    case "openai":
+      return "@ai-sdk/openai"
+    case "anthropic":
+      return "@ai-sdk/anthropic"
+    case "google":
+      return "@ai-sdk/google"
     default:
-      return '@ai-sdk/openai-compatible'
+      return "@ai-sdk/openai-compatible"
   }
 }
 
 // 常见 AI SDK provider 工厂导出名。
 const PROVIDER_FACTORY_EXPORTS = [
-  'createOpenAICompatible',
-  'createOpenAI',
-  'createAnthropic',
-  'createGoogleGenerativeAI'
+  "createOpenAICompatible",
+  "createOpenAI",
+  "createAnthropic",
+  "createGoogleGenerativeAI",
 ]
 
 /**
@@ -138,7 +138,7 @@ const loadProviderPackage = async (packageName: string): Promise<AiSdkProviderMo
     throw new Error(
       `Provider dependency is not installed or cannot be loaded: ${packageName}. Install the npm package first. Original error: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
     )
   }
 }
@@ -148,23 +148,25 @@ const loadProviderPackage = async (packageName: string): Promise<AiSdkProviderMo
  */
 const resolveProviderFactory = (
   module: AiSdkProviderModule,
-  packageName: string
+  packageName: string,
 ): ((options: Record<string, unknown>) => AiSdkModelFactory) => {
   for (const exportName of PROVIDER_FACTORY_EXPORTS) {
     const candidate = module[exportName]
-    if (typeof candidate === 'function') {
+    if (typeof candidate === "function") {
       return candidate as (options: Record<string, unknown>) => AiSdkModelFactory
     }
   }
 
   const fallbackEntry = Object.entries(module).find(
-    ([exportName, value]) => exportName.startsWith('create') && typeof value === 'function'
+    ([exportName, value]) => exportName.startsWith("create") && typeof value === "function",
   )
   if (fallbackEntry) {
     return fallbackEntry[1] as (options: Record<string, unknown>) => AiSdkModelFactory
   }
 
-  throw new Error(`Provider dependency ${packageName} does not export a recognized create* factory function`)
+  throw new Error(
+    `Provider dependency ${packageName} does not export a recognized create* factory function`,
+  )
 }
 
 /**
@@ -182,86 +184,91 @@ const parseToolArguments = (argumentsText: string): unknown => {
  * 转换为 AI SDK 模型消息。
  */
 const toAiSdkMessage = (message: AgentMessage): ModelMessage => {
-  if (message.role === 'assistant' && (message.toolCalls?.length || message.parts?.length)) {
-    const content: Exclude<AssistantModelMessage['content'], string> = []
+  if (message.role === "assistant" && (message.toolCalls?.length || message.parts?.length)) {
+    const content: Exclude<AssistantModelMessage["content"], string> = []
 
     for (const part of message.parts ?? []) {
-      if (part.kind === 'text') {
-        content.push({ type: 'text', text: part.content })
-      } else if (part.kind === 'reasoning') {
-        content.push({ type: 'reasoning', text: part.content })
+      if (part.kind === "text") {
+        content.push({ type: "text", text: part.content })
+      } else if (part.kind === "reasoning") {
+        content.push({ type: "reasoning", text: part.content })
       }
     }
 
-    if (message.content && !message.parts?.some((part) => part.kind === 'text' && part.content === message.content)) {
-      content.push({ type: 'text', text: message.content })
+    if (
+      message.content &&
+      !message.parts?.some((part) => part.kind === "text" && part.content === message.content)
+    ) {
+      content.push({ type: "text", text: message.content })
     }
 
     for (const toolCall of message.toolCalls ?? []) {
       content.push({
-        type: 'tool-call',
+        type: "tool-call",
         toolCallId: toolCall.id,
         toolName: toolCall.name,
-        input: parseToolArguments(toolCall.argumentsText)
+        input: parseToolArguments(toolCall.argumentsText),
       })
     }
 
     return {
-      role: 'assistant',
-      content
+      role: "assistant",
+      content,
     }
   }
 
-  if (message.role === 'tool') {
+  if (message.role === "tool") {
     return {
-      role: 'tool',
+      role: "tool",
       content: [
         {
-          type: 'tool-result',
-          toolCallId: message.toolCallId ?? '',
-          toolName: message.name ?? '',
+          type: "tool-result",
+          toolCallId: message.toolCallId ?? "",
+          toolName: message.name ?? "",
           output: {
-            type: 'text',
-            value: message.content
-          }
-        }
-      ]
+            type: "text",
+            value: message.content,
+          },
+        },
+      ],
     }
   }
 
   if (message.parts && message.parts.length) {
-    const parts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType: string }> = []
+    const parts: Array<
+      { type: "text"; text: string } | { type: "image"; image: string; mimeType: string }
+    > = []
     for (const part of message.parts) {
-      if (part.kind === 'text') {
-        parts.push({ type: 'text', text: part.content })
-      } else if (part.kind === 'image') {
+      if (part.kind === "text") {
+        parts.push({ type: "text", text: part.content })
+      } else if (part.kind === "image") {
         const base64Data = readImageAsBase64(part.url)
         if (base64Data) {
           parts.push({
-            type: 'image',
+            type: "image",
             image: base64Data.base64,
-            mimeType: base64Data.mimeType
+            mimeType: base64Data.mimeType,
           })
         }
-      } else if (part.kind === 'text-file') {
+      } else if (part.kind === "text-file") {
         const fileData = readTextFileContent(part.url)
         if (fileData) {
           parts.push({
-            type: 'text',
-            text: `\n[Uploaded File: ${fileData.fileName}]\n\`\`\`\n${fileData.content}\n\`\`\`\n`
+            type: "text",
+            text: `\n[Uploaded File: ${fileData.fileName}]\n\`\`\`\n${fileData.content}\n\`\`\`\n`,
           })
         }
       }
     }
     return {
       role: message.role,
-      content: parts
+      content: parts,
     } as ModelMessage
   }
 
   return {
     role: message.role,
-    content: message.content
+    content: message.content,
   } as ModelMessage
 }
 
@@ -274,9 +281,9 @@ const toAiSdkTools = (tools: AgentTool[]): Record<string, unknown> =>
       agentTool.name,
       tool({
         description: agentTool.description,
-        inputSchema: jsonSchema(agentTool.parameters as never)
-      })
-    ])
+        inputSchema: jsonSchema(agentTool.parameters as never),
+      }),
+    ]),
   )
 
 /**
@@ -284,7 +291,7 @@ const toAiSdkTools = (tools: AgentTool[]): Record<string, unknown> =>
  */
 export const createAiSdkModelProvider = async (
   config: NormalizedProviderConfig,
-  runtime: AiSdkProviderRuntime = {}
+  runtime: AiSdkProviderRuntime = {},
 ): Promise<ModelProvider> => {
   const packageName = getProviderNpmPackage(config.type)
   const providerModule = await (runtime.loadPackage ?? loadProviderPackage)(packageName)
@@ -292,7 +299,7 @@ export const createAiSdkModelProvider = async (
   const provider = createProvider({
     name: config.name,
     apiKey: config.options.apiKey,
-    baseURL: config.options.baseURL
+    baseURL: config.options.baseURL,
   })
   const runStreamText = runtime.streamText ?? (streamText as unknown as AiSdkStreamText)
 
@@ -304,57 +311,57 @@ export const createAiSdkModelProvider = async (
         model: provider(input.model),
         messages: input.messages.map(toAiSdkMessage),
         tools: toAiSdkTools(input.tools),
-        abortSignal: input.signal
+        abortSignal: input.signal,
       })
 
       const eventStream = result.fullStream ?? result.stream
       if (!eventStream) {
-        throw new Error('AI SDK streamText did not return fullStream or stream')
+        throw new Error("AI SDK streamText did not return fullStream or stream")
       }
 
       for await (const part of eventStream) {
-        if (part.type === 'text-delta' && typeof part.text === 'string') {
+        if (part.type === "text-delta" && typeof part.text === "string") {
           yield {
-            type: 'text_delta',
-            delta: part.text
+            type: "text_delta",
+            delta: part.text,
           }
         }
 
         if (
-          part.type === 'reasoning-delta' &&
-          typeof part.id === 'string' &&
-          typeof part.text === 'string'
+          part.type === "reasoning-delta" &&
+          typeof part.id === "string" &&
+          typeof part.text === "string"
         ) {
           yield {
-            type: 'reasoning_delta',
+            type: "reasoning_delta",
             id: part.id,
-            delta: part.text
+            delta: part.text,
           }
         }
 
         if (
-          part.type === 'tool-call' &&
-          typeof part.toolCallId === 'string' &&
-          typeof part.toolName === 'string'
+          part.type === "tool-call" &&
+          typeof part.toolCallId === "string" &&
+          typeof part.toolName === "string"
         ) {
           yield {
-            type: 'tool_call_done',
+            type: "tool_call_done",
             id: part.toolCallId,
             name: part.toolName,
-            argumentsText: JSON.stringify(part.input ?? {})
+            argumentsText: JSON.stringify(part.input ?? {}),
           }
         }
 
-        if (part.type === 'error') {
+        if (part.type === "error") {
           throw part.error instanceof Error ? part.error : new Error(String(part.error))
         }
 
-        if (part.type === 'finish') {
+        if (part.type === "finish") {
           yield {
-            type: 'done'
+            type: "done",
           }
         }
       }
-    }
+    },
   }
 }

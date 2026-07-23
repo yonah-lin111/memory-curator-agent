@@ -3,7 +3,10 @@ import { getMatchScore } from "@/lib/promptDesignUtils"
 
 describe("getMatchScore fuzzy matching algorithm", () => {
   it("correctly matches CuratorHistoryList.tsx via camel abbreviation when query is chl", () => {
-    const curatorHistoryListScore = getMatchScore("src/renderer/src/features/curator/components/CuratorHistoryList.tsx", "chl")
+    const curatorHistoryListScore = getMatchScore(
+      "src/renderer/src/features/curator/components/CuratorHistoryList.tsx",
+      "chl",
+    )
     // Random accidental match in path like 'src/helper/layout/index.tsx' which has c, h, l sequentially in directory path
     const randomPathScore = getMatchScore("src/helper/layout/index.tsx", "chl")
 
@@ -14,7 +17,10 @@ describe("getMatchScore fuzzy matching algorithm", () => {
 
   it("prefers matching filename subsequence over directory matching", () => {
     // filename: CuratorHistoryList.tsx, matches camel abbreviation "chl"
-    const score1 = getMatchScore("src/renderer/src/features/curator/components/CuratorHistoryList.tsx", "chl")
+    const score1 = getMatchScore(
+      "src/renderer/src/features/curator/components/CuratorHistoryList.tsx",
+      "chl",
+    )
     // filename: list.tsx, match "chl" is on path "curator/helper/list.tsx" (path matches only)
     const score2 = getMatchScore("src/renderer/src/features/curator/helper/list.tsx", "chl")
 
@@ -22,7 +28,10 @@ describe("getMatchScore fuzzy matching algorithm", () => {
   })
 
   it("gives high score for camels/abbreviations", () => {
-    const score = getMatchScore("src/renderer/src/features/curator/components/CuratorHistoryList.tsx", "chl")
+    const score = getMatchScore(
+      "src/renderer/src/features/curator/components/CuratorHistoryList.tsx",
+      "chl",
+    )
     expect(score).toBeGreaterThanOrEqual(2500)
   })
 

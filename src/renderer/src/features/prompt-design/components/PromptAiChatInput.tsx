@@ -1,49 +1,42 @@
 import {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-  useMemo,
-} from "react";
-import {
+  Bot,
+  LoaderCircle,
+  MessageSquare,
   Paperclip,
   RotateCcw,
   SendHorizontal,
-  Bot,
-  MessageSquare,
-  LoaderCircle,
-} from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Select } from "@/components/ui/Select";
-import { useToast } from "@/components/ui/Toast";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { CommandPanel } from "@/components/ai-shared/CommandPanel";
-import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
+} from "lucide-react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { CommandPanel } from "@/components/ai-shared/CommandPanel"
+import { IconButton } from "@/components/ui/IconButton"
+import { Select } from "@/components/ui/Select"
+import { Tag } from "@/components/ui/Tag"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory"
+import type { CuratorSession } from "@/features/curator/types"
 import {
   PromptAiFileMentionPanel,
-  PromptAiSlashCommandPanel,
   type PromptAiInputCommand,
-} from "@/features/prompt-design/components/PromptAiInputPanels";
+  PromptAiSlashCommandPanel,
+} from "@/features/prompt-design/components/PromptAiInputPanels"
+import type {
+  PromptAiSendOptions,
+  PromptAiUndoResult,
+} from "@/features/prompt-design/components/usePromptAiChatController"
 import {
   FALLBACK_LINE_HEIGHT,
   INTERACTIVE_SELECTOR,
   TEXTAREA_MAX_ROWS,
   TEXTAREA_MIN_ROWS,
-} from "@/lib/ai-shared/constants";
-import { useFileMention } from "../hooks/useFileMention";
-import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils";
-import { useCuratorModels } from "@/lib/ai-shared/useModelSelection";
-import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection";
-import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory";
-import type { CuratorSession } from "@/features/curator/types";
-import type {
-  PromptAiSendOptions,
-  PromptAiUndoResult,
-} from "@/features/prompt-design/components/usePromptAiChatController";
-import { Tag } from "@/components/ui/Tag";
+} from "@/lib/ai-shared/constants"
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels"
+import { useCuratorModels } from "@/lib/ai-shared/useModelSelection"
+import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection"
+import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils"
+import { useFileMention } from "../hooks/useFileMention"
 
-const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g;
+const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g
 
 // Prompt AI 专用 MCP 命令。
 const MCP_COMMAND = {
@@ -52,15 +45,15 @@ const MCP_COMMAND = {
   aliases: [],
   description: "List available MCP servers and tools",
   addToContext: false,
-} as const;
+} as const
 
 /**
  * 判断当前斜杠输入是否匹配 Prompt AI 专用 MCP 命令。
  */
 const isMcpCommandMatch = (value: string): boolean => {
-  const normalizedValue = value.trim().toLowerCase();
-  return normalizedValue.startsWith("/") && "/mcp".startsWith(normalizedValue);
-};
+  const normalizedValue = value.trim().toLowerCase()
+  return normalizedValue.startsWith("/") && "/mcp".startsWith(normalizedValue)
+}
 
 export const PromptAiChatInput = ({
   onSend,
@@ -78,71 +71,60 @@ export const PromptAiChatInput = ({
   focusVersion,
   mcpStatus,
 }: {
-  onSend?: (
-    text: string,
-    selectedModel?: string,
-    options?: PromptAiSendOptions,
-  ) => void;
-  disabled?: boolean;
-  onNewChat?: () => void;
-  onUndo?: () => Promise<PromptAiUndoResult>;
-  onSessionChange?: (sessionId: string) => void;
-  onMcp?: () => Promise<void>;
-  onSuggestQuestions?: () => void;
-  chatSessions?: CuratorSession[];
+  onSend?: (text: string, selectedModel?: string, options?: PromptAiSendOptions) => void
+  disabled?: boolean
+  onNewChat?: () => void
+  onUndo?: () => Promise<PromptAiUndoResult>
+  onSessionChange?: (sessionId: string) => void
+  onMcp?: () => Promise<void>
+  onSuggestQuestions?: () => void
+  chatSessions?: CuratorSession[]
   references?: {
-    id: string;
-    startLine: number;
-    endLine: number;
-    content: string;
-  }[];
-  onReferenceRemove?: (id: string) => void;
-  onReferencesClear?: () => void;
+    id: string
+    startLine: number
+    endLine: number
+    content: string
+  }[]
+  onReferenceRemove?: (id: string) => void
+  onReferencesClear?: () => void
   onReferenceSelect?: (reference: {
-    id: string;
-    startLine: number;
-    endLine: number;
-    content: string;
-  }) => void;
-  focusVersion?: number;
+    id: string
+    startLine: number
+    endLine: number
+    content: string
+  }) => void
+  focusVersion?: number
   mcpStatus?: {
-    total: number;
-    connected: number;
-    failed: number;
-    names: string[];
-    failedNames: string[];
-    isLoading?: boolean;
-  };
+    total: number
+    connected: number
+    failed: number
+    names: string[]
+    failedNames: string[]
+    isLoading?: boolean
+  }
 }) => {
-  const toast = useToast();
-  const [inputText, setInputText] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const toast = useToast()
+  const [inputText, setInputText] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (!focusVersion) return;
-    requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [focusVersion]);
+    if (!focusVersion) return
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [focusVersion])
 
-  const {
-    selectedModel,
-    hasModelOptions,
-    selectOptions,
-    handleModelChange,
-    modelOptions,
-  } = useActiveCuratorModels();
+  const { selectedModel, hasModelOptions, selectOptions, handleModelChange, modelOptions } =
+    useActiveCuratorModels()
 
-  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false);
-  const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false)
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0)
 
   const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
     const commands = getMatchedCommands(inputText).filter((cmd) =>
       ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
-    );
-    const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(inputText)
-      ? [MCP_COMMAND]
-      : [];
-    return [...commands, ...customCommands];
-  }, [inputText]);
+    )
+    const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(inputText) ? [MCP_COMMAND] : []
+    return [...commands, ...customCommands]
+  }, [inputText])
 
   const {
     activeModelIndex,
@@ -157,9 +139,8 @@ export const PromptAiChatInput = ({
     modelOptions,
     textareaRef,
     () => {},
-    (selection) =>
-      handleModelChange(`${selection.provider}::${selection.model}`),
-  );
+    (selection) => handleModelChange(`${selection.provider}::${selection.model}`),
+  )
 
   const {
     activeSessionIndex,
@@ -175,32 +156,29 @@ export const PromptAiChatInput = ({
     textareaRef,
     () => {},
     (sessionId) => onSessionChange?.(sessionId),
-  );
+  )
 
   const adjustTextareaHeight = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    const textarea = textareaRef.current
+    if (!textarea) return
 
-    const computedStyle = window.getComputedStyle(textarea);
-    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight);
-    const lineHeight = Number.isNaN(parsedLineHeight)
-      ? FALLBACK_LINE_HEIGHT
-      : parsedLineHeight;
+    const computedStyle = window.getComputedStyle(textarea)
+    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight)
+    const lineHeight = Number.isNaN(parsedLineHeight) ? FALLBACK_LINE_HEIGHT : parsedLineHeight
     const verticalPadding =
       Number.parseFloat(computedStyle.paddingTop || "0") +
-      Number.parseFloat(computedStyle.paddingBottom || "0");
-    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding;
-    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding;
+      Number.parseFloat(computedStyle.paddingBottom || "0")
+    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding
+    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding
 
-    textarea.style.height = "auto";
+    textarea.style.height = "auto"
     const nextHeight =
       inputText.length === 0
         ? minHeight
-        : Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY =
-      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, [inputText]);
+        : Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
+    textarea.style.height = `${nextHeight}px`
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden"
+  }, [inputText])
 
   const {
     savePromptHistory,
@@ -208,12 +186,7 @@ export const PromptAiChatInput = ({
     canMovePromptHistory,
     resetHistoryCursor,
     updateDraftInput,
-  } = useCuratorHistory(
-    "prompt-design",
-    setInputText,
-    textareaRef,
-    adjustTextareaHeight,
-  );
+  } = useCuratorHistory("prompt-design", setInputText, textareaRef, adjustTextareaHeight)
 
   const {
     activeFileIndex,
@@ -227,175 +200,149 @@ export const PromptAiChatInput = ({
     handleKeyDown: handleFileMentionKeyDown,
     handleCompositionStart,
     handleCompositionEnd,
-  } = useFileMention(
-    inputText,
-    setInputText,
-    textareaRef,
-    adjustTextareaHeight,
-  );
+  } = useFileMention(inputText, setInputText, textareaRef, adjustTextareaHeight)
 
   const executeCommand = useCallback(
     async (commandId: string) => {
-      setIsCommandPanelOpen(false);
+      setIsCommandPanelOpen(false)
       if (commandId === "clear") {
         if (disabled) {
-          toast.warning("AI 正在生成，请稍后再试");
-          return;
+          toast.warning("AI 正在生成，请稍后再试")
+          return
         }
-        setInputText("");
-        onNewChat?.();
-        toast.success("已新建对话");
+        setInputText("")
+        onNewChat?.()
+        toast.success("已新建对话")
       } else if (commandId === "undo") {
         if (disabled) {
-          toast.warning("AI 正在生成，不能撤销消息");
-          return;
+          toast.warning("AI 正在生成，不能撤销消息")
+          return
         }
         if (onUndo) {
-          const res = await onUndo();
+          const res = await onUndo()
           if (res === false) {
-            toast.error("撤销对话失败");
+            toast.error("撤销对话失败")
           } else if (res.status === "empty") {
-            toast.warning("没有可撤销的对话");
+            toast.warning("没有可撤销的对话")
           } else if (res.status === "deleted_empty") {
-            setInputText(res.prompt ?? "");
-            resetHistoryCursor();
-            toast.success("已撤销上一轮并删除空对话");
+            setInputText(res.prompt ?? "")
+            resetHistoryCursor()
+            toast.success("已撤销上一轮并删除空对话")
           } else if (res.status === "undone") {
-            setInputText(res.prompt ?? "");
-            resetHistoryCursor();
-            toast.success("已撤销上一轮对话");
+            setInputText(res.prompt ?? "")
+            resetHistoryCursor()
+            toast.success("已撤销上一轮对话")
           }
         }
       } else if (commandId === "model") {
-        setInputText("/model ");
-        toast.info("请选择要切换的 AI 模型");
+        setInputText("/model ")
+        toast.info("请选择要切换的 AI 模型")
       } else if (commandId === "session") {
-        setInputText("/session ");
-        toast.info("请选择要切换的对话");
+        setInputText("/session ")
+        toast.info("请选择要切换的对话")
       } else if (commandId === "mcp") {
-        setInputText("");
-        await onMcp?.();
+        setInputText("")
+        await onMcp?.()
       } else if (commandId === "suggest") {
-        setInputText("");
-        onSuggestQuestions?.();
+        setInputText("")
+        onSuggestQuestions?.()
       }
-      requestAnimationFrame(() => textareaRef.current?.focus());
+      requestAnimationFrame(() => textareaRef.current?.focus())
     },
-    [
-      disabled,
-      onMcp,
-      onNewChat,
-      onSuggestQuestions,
-      onUndo,
-      resetHistoryCursor,
-      toast,
-    ],
-  );
+    [disabled, onMcp, onNewChat, onSuggestQuestions, onUndo, resetHistoryCursor, toast],
+  )
 
   const moveActiveCommand = useCallback(
     (direction: 1 | -1): void => {
       setActiveCommandIndex((currentIndex) => {
         if (matchedCommands.length === 0) {
-          return 0;
+          return 0
         }
-        return (
-          (currentIndex + direction + matchedCommands.length) %
-          matchedCommands.length
-        );
-      });
+        return (currentIndex + direction + matchedCommands.length) % matchedCommands.length
+      })
     },
     [matchedCommands.length],
-  );
+  )
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const nextValue = e.target.value;
-      setInputText(nextValue);
-      updateDraftInput(nextValue);
-      resetHistoryCursor();
+      const nextValue = e.target.value
+      setInputText(nextValue)
+      updateDraftInput(nextValue)
+      resetHistoryCursor()
 
       // Commands check
-      const isNextModelMode =
-        nextValue === "/model" || nextValue.startsWith("/model ");
+      const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ")
       const isNextSessionMode =
         nextValue === "/session" ||
         nextValue.startsWith("/session ") ||
         nextValue === "/resume" ||
-        nextValue.startsWith("/resume ");
+        nextValue.startsWith("/resume ")
 
       if (isNextModelMode || isNextSessionMode) {
-        setIsCommandPanelOpen(false);
-        closeFileMentionPanel();
-        return;
+        setIsCommandPanelOpen(false)
+        closeFileMentionPanel()
+        return
       }
 
       const commands = getMatchedCommands(nextValue).filter((cmd) =>
         ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
-      );
+      )
       const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(nextValue)
         ? [MCP_COMMAND]
-        : [];
-      const nextMatchedCommands = [...commands, ...customCommands];
+        : []
+      const nextMatchedCommands = [...commands, ...customCommands]
 
-      const shouldOpenCommandPanel =
-        isCommandInput(nextValue) && nextMatchedCommands.length > 0;
-      setIsCommandPanelOpen(shouldOpenCommandPanel);
-      setActiveCommandIndex(0);
+      const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0
+      setIsCommandPanelOpen(shouldOpenCommandPanel)
+      setActiveCommandIndex(0)
 
       if (shouldOpenCommandPanel) {
-        closeFileMentionPanel();
-        return;
+        closeFileMentionPanel()
+        return
       }
 
-      syncFileMentionPanel(nextValue, e.target.selectionStart);
+      syncFileMentionPanel(nextValue, e.target.selectionStart)
     },
-    [
-      closeFileMentionPanel,
-      resetHistoryCursor,
-      syncFileMentionPanel,
-      updateDraftInput,
-    ],
-  );
+    [closeFileMentionPanel, resetHistoryCursor, syncFileMentionPanel, updateDraftInput],
+  )
 
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (
-      target !== textareaRef.current &&
-      target.closest(INTERACTIVE_SELECTOR)
-    ) {
-      return;
+    const target = e.target as HTMLElement
+    if (target !== textareaRef.current && target.closest(INTERACTIVE_SELECTOR)) {
+      return
     }
-    textareaRef.current?.focus();
-  };
+    textareaRef.current?.focus()
+  }
 
   const handleSend = async (): Promise<void> => {
     if (disabled) {
-      toast.warning("请等待 AI 输出完成");
-      return;
+      toast.warning("请等待 AI 输出完成")
+      return
     }
     if (inputText.trim() === "/mcp") {
-      await executeCommand("mcp");
-      return;
+      await executeCommand("mcp")
+      return
     }
     if (inputText.trim() && onSend) {
       // 发送前清理无用的前缀
       const cleanedText = inputText
         .replace(FILE_MENTION_PATTERN, (_match, prefix, token) => {
-          return `${prefix}${token}`;
+          return `${prefix}${token}`
         })
-        .trim();
+        .trim()
 
-      onSend(cleanedText, selectedModel || undefined, { references });
-      savePromptHistory(inputText);
-      setInputText("");
-      resetHistoryCursor();
-      closeFileMentionPanel();
+      onSend(cleanedText, selectedModel || undefined, { references })
+      savePromptHistory(inputText)
+      setInputText("")
+      resetHistoryCursor()
+      closeFileMentionPanel()
     }
-  };
+  }
 
   useLayoutEffect(() => {
-    adjustTextareaHeight();
-  }, [adjustTextareaHeight, inputText]);
+    adjustTextareaHeight()
+  }, [adjustTextareaHeight, inputText])
 
   return (
     <div className="flex-shrink-0 p-3">
@@ -423,12 +370,8 @@ export const PromptAiChatInput = ({
           renderItem={(model) => (
             <div className="flex items-center gap-2 w-full">
               <Bot className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate text-sm font-medium">
-                {model.modelName}
-              </span>
-              <span className="text-xs text-white/30 ml-auto shrink-0">
-                {model.providerName}
-              </span>
+              <span className="truncate text-sm font-medium">{model.modelName}</span>
+              <span className="text-xs text-white/30 ml-auto shrink-0">{model.providerName}</span>
             </div>
           )}
           idPrefix="prompt-model-select"
@@ -445,9 +388,7 @@ export const PromptAiChatInput = ({
           renderItem={(session) => (
             <div className="flex items-center gap-2 w-full">
               <MessageSquare className="h-4 w-4 shrink-0 opacity-50" />
-              <span className="truncate text-sm font-medium flex-1 text-left">
-                {session.title}
-              </span>
+              <span className="truncate text-sm font-medium flex-1 text-left">{session.title}</span>
             </div>
           )}
           idPrefix="prompt-session-select"
@@ -489,85 +430,82 @@ export const PromptAiChatInput = ({
           onClick={handleTextareaCursorMove}
           onKeyUp={(e) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-              handleTextareaCursorMove();
+              handleTextareaCursorMove()
             }
           }}
           onKeyDown={(e) => {
             if (isSessionMode && matchedSessions.length > 0) {
               if (e.key === "ArrowDown") {
-                e.preventDefault();
-                moveActiveSession(1);
-                return;
+                e.preventDefault()
+                moveActiveSession(1)
+                return
               }
               if (e.key === "ArrowUp") {
-                e.preventDefault();
-                moveActiveSession(-1);
-                return;
+                e.preventDefault()
+                moveActiveSession(-1)
+                return
               }
               if (e.key === "Escape") {
-                e.preventDefault();
-                setInputText("");
-                return;
+                e.preventDefault()
+                setInputText("")
+                return
               }
               if (e.key === "Enter") {
-                if (e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                const activeSession =
-                  matchedSessions[activeSessionIndex] ?? matchedSessions[0];
-                if (activeSession) selectSession(activeSession);
-                return;
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0]
+                if (activeSession) selectSession(activeSession)
+                return
               }
             }
 
             if (isModelMode && matchedModels.length > 0) {
               if (e.key === "ArrowDown") {
-                e.preventDefault();
-                moveActiveModel(1);
-                return;
+                e.preventDefault()
+                moveActiveModel(1)
+                return
               }
               if (e.key === "ArrowUp") {
-                e.preventDefault();
-                moveActiveModel(-1);
-                return;
+                e.preventDefault()
+                moveActiveModel(-1)
+                return
               }
               if (e.key === "Escape") {
-                e.preventDefault();
-                setInputText("");
-                return;
+                e.preventDefault()
+                setInputText("")
+                return
               }
               if (e.key === "Enter") {
-                if (e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                const activeModel =
-                  matchedModels[activeModelIndex] ?? matchedModels[0];
-                if (activeModel) selectModel(activeModel);
-                return;
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0]
+                if (activeModel) selectModel(activeModel)
+                return
               }
             }
 
             if (isCommandPanelOpen) {
               if (e.key === "ArrowDown") {
-                e.preventDefault();
-                moveActiveCommand(1);
-                return;
+                e.preventDefault()
+                moveActiveCommand(1)
+                return
               }
               if (e.key === "ArrowUp") {
-                e.preventDefault();
-                moveActiveCommand(-1);
-                return;
+                e.preventDefault()
+                moveActiveCommand(-1)
+                return
               }
               if (e.key === "Escape") {
-                e.preventDefault();
-                setIsCommandPanelOpen(false);
-                return;
+                e.preventDefault()
+                setIsCommandPanelOpen(false)
+                return
               }
               if (e.key === "Enter") {
-                if (e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                const cmd =
-                  matchedCommands[activeCommandIndex] ?? matchedCommands[0];
-                if (cmd) executeCommand(cmd.id);
-                return;
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const cmd = matchedCommands[activeCommandIndex] ?? matchedCommands[0]
+                if (cmd) executeCommand(cmd.id)
+                return
               }
             }
 
@@ -577,9 +515,9 @@ export const PromptAiChatInput = ({
               e.key === "ArrowDown" &&
               canMovePromptHistory(1)
             ) {
-              e.preventDefault();
-              movePromptHistory(1);
-              return;
+              e.preventDefault()
+              movePromptHistory(1)
+              return
             }
 
             if (
@@ -588,24 +526,24 @@ export const PromptAiChatInput = ({
               e.key === "ArrowUp" &&
               canMovePromptHistory(-1)
             ) {
-              e.preventDefault();
-              movePromptHistory(-1);
-              return;
+              e.preventDefault()
+              movePromptHistory(-1)
+              return
             }
 
-            handleFileMentionKeyDown(e);
-            if (e.defaultPrevented) return;
+            handleFileMentionKeyDown(e)
+            if (e.defaultPrevented) return
 
             if (isFilePanelOpen) {
-              return;
+              return
             }
 
             if (e.key === "Enter" && !e.shiftKey) {
               if (e.nativeEvent.isComposing) {
-                return;
+                return
               }
-              e.preventDefault();
-              void handleSend();
+              e.preventDefault()
+              void handleSend()
             }
           }}
           onCompositionStart={handleCompositionStart}
@@ -629,10 +567,7 @@ export const PromptAiChatInput = ({
               className="!w-fit max-w-[220px]"
             />
 
-            <IconButton
-              aria-label="Add attachment"
-              className="text-white/30 hover:text-white/50"
-            >
+            <IconButton aria-label="Add attachment" className="text-white/30 hover:text-white/50">
               <Paperclip className="h-3.5 w-3.5" />
             </IconButton>
 
@@ -642,13 +577,9 @@ export const PromptAiChatInput = ({
                 contentClassName="!p-2 !whitespace-normal"
                 content={
                   <div className="flex min-w-[150px] flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold text-white/50">
-                      MCP servers
-                    </span>
+                    <span className="text-[11px] font-semibold text-white/50">MCP servers</span>
                     {mcpStatus.isLoading ? (
-                      <span className="text-xs text-white/40">
-                        Checking MCP servers...
-                      </span>
+                      <span className="text-xs text-white/40">Checking MCP servers...</span>
                     ) : mcpStatus.names.length > 0 ? (
                       mcpStatus.names.map((name, index) => (
                         <span
@@ -663,9 +594,7 @@ export const PromptAiChatInput = ({
                         </span>
                       ))
                     ) : (
-                      <span className="text-xs text-white/40">
-                        No MCP servers configured
-                      </span>
+                      <span className="text-xs text-white/40">No MCP servers configured</span>
                     )}
                   </div>
                 }
@@ -674,17 +603,13 @@ export const PromptAiChatInput = ({
                   className="flex items-center gap-1.5 px-1 text-xs"
                   aria-label="MCP connection status"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-3 w-3 items-center justify-center"
-                  >
+                  <span aria-hidden="true" className="flex h-3 w-3 items-center justify-center">
                     {mcpStatus.isLoading ? (
                       <LoaderCircle className="h-3 w-3 animate-spin text-amber-400" />
                     ) : (
                       <span
                         className={`block h-1.5 w-1.5 rounded-full ${
-                          mcpStatus.total > 0 &&
-                          mcpStatus.connected === mcpStatus.total
+                          mcpStatus.total > 0 && mcpStatus.connected === mcpStatus.total
                             ? "bg-emerald-400"
                             : mcpStatus.failed > 0 && mcpStatus.connected > 0
                               ? "bg-amber-400"
@@ -704,10 +629,10 @@ export const PromptAiChatInput = ({
               type="button"
               aria-label="Clear input"
               onClick={() => {
-                setInputText("");
-                resetHistoryCursor();
-                onReferencesClear?.();
-                toast.success("已清空输入内容");
+                setInputText("")
+                resetHistoryCursor()
+                onReferencesClear?.()
+                toast.success("已清空输入内容")
               }}
               disabled={!inputText && references.length === 0}
               className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
@@ -735,5 +660,5 @@ export const PromptAiChatInput = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,61 +1,51 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { Clipboard, FileText, RotateCcw, Trash2, Edit3 } from "lucide-react";
+import { Clipboard, Edit3, FileText, RotateCcw, Trash2 } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
 
 // AI 消息右键菜单组件属性类型。
 type CuratorMessageContextMenuProps = {
   // 菜单左上角横坐标。
-  x: number;
+  x: number
   // 菜单左上角纵坐标。
-  y: number;
+  y: number
   // 是否允许重新生成当前回答。
-  canRegenerate: boolean;
+  canRegenerate: boolean
   // 复制纯文本回调。
-  onCopyText: () => void;
+  onCopyText: () => void
   // 复制 Markdown 回调。
-  onCopyMarkdown: () => void;
+  onCopyMarkdown: () => void
   // 重新生成回答回调。
-  onRegenerate: () => void;
+  onRegenerate: () => void
   // 删除当前 QA 回调。
-  onDeleteQa: () => void;
+  onDeleteQa: () => void
   // 编辑当前消息回调 (仅用户消息可用)。
-  onEdit?: () => void;
-};
+  onEdit?: () => void
+}
 
 // 菜单宽度，用于把右键菜单限制在视口内。
-const MENU_WIDTH = 176;
+const MENU_WIDTH = 176
 
 // 基础菜单高度。
-const BASE_MENU_HEIGHT = 122;
+const BASE_MENU_HEIGHT = 122
 
 // 带重新生成项的菜单高度。
-const REGENERATE_MENU_HEIGHT = 162;
+const REGENERATE_MENU_HEIGHT = 162
 
 // 菜单与视口边缘的最小距离。
-const VIEWPORT_PADDING = 8;
+const VIEWPORT_PADDING = 8
 
 /**
  * 把菜单坐标钳制在当前视口内。
  */
-const getMenuPosition = (
-  x: number,
-  y: number,
-  height: number,
-): { left: number; top: number } => {
-  const maxLeft = Math.max(
-    VIEWPORT_PADDING,
-    window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING,
-  );
-  const maxTop = Math.max(
-    VIEWPORT_PADDING,
-    window.innerHeight - height - VIEWPORT_PADDING,
-  );
+const getMenuPosition = (x: number, y: number, height: number): { left: number; top: number } => {
+  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING)
+  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - height - VIEWPORT_PADDING)
 
   return {
     left: Math.min(Math.max(x, VIEWPORT_PADDING), maxLeft),
     top: Math.min(Math.max(y, VIEWPORT_PADDING), maxTop),
-  };
-};
+  }
+}
 
 /**
  * CuratorMessageContextMenu - 负责单条 AI 消息的右键操作菜单。
@@ -71,44 +61,42 @@ export const CuratorMessageContextMenu = ({
   onEdit,
 }: CuratorMessageContextMenuProps): React.JSX.Element => {
   // 是否已进入重新生成二次确认态。
-  const [isConfirmingRegenerate, setIsConfirmingRegenerate] =
-    useState<boolean>(false);
+  const [isConfirmingRegenerate, setIsConfirmingRegenerate] = useState<boolean>(false)
   // 是否已进入删除 QA 二次确认态。
-  const [isConfirmingDeleteQa, setIsConfirmingDeleteQa] =
-    useState<boolean>(false);
-  const menuHeight = (canRegenerate || onEdit) ? REGENERATE_MENU_HEIGHT : BASE_MENU_HEIGHT;
-  const position = getMenuPosition(x, y, menuHeight);
+  const [isConfirmingDeleteQa, setIsConfirmingDeleteQa] = useState<boolean>(false)
+  const menuHeight = canRegenerate || onEdit ? REGENERATE_MENU_HEIGHT : BASE_MENU_HEIGHT
+  const position = getMenuPosition(x, y, menuHeight)
 
   useEffect(() => {
-    setIsConfirmingRegenerate(false);
-    setIsConfirmingDeleteQa(false);
-  }, [x, y, canRegenerate]);
+    setIsConfirmingRegenerate(false)
+    setIsConfirmingDeleteQa(false)
+  }, [x, y, canRegenerate])
 
   /**
    * 第一次点击进入确认态，第二次点击才真正重新生成。
    */
   const handleRegenerateClick = (): void => {
     if (!isConfirmingRegenerate) {
-      setIsConfirmingRegenerate(true);
-      setIsConfirmingDeleteQa(false);
-      return;
+      setIsConfirmingRegenerate(true)
+      setIsConfirmingDeleteQa(false)
+      return
     }
 
-    onRegenerate();
-  };
+    onRegenerate()
+  }
 
   /**
    * 第一次点击进入确认态，第二次点击才真正删除 QA。
    */
   const handleDeleteQaClick = (): void => {
     if (!isConfirmingDeleteQa) {
-      setIsConfirmingDeleteQa(true);
-      setIsConfirmingRegenerate(false);
-      return;
+      setIsConfirmingDeleteQa(true)
+      setIsConfirmingRegenerate(false)
+      return
     }
 
-    onDeleteQa();
-  };
+    onDeleteQa()
+  }
 
   return (
     <div
@@ -162,9 +150,7 @@ export const CuratorMessageContextMenu = ({
           onClick={handleRegenerateClick}
         >
           <RotateCcw
-            className={`h-3.5 w-3.5 ${
-              isConfirmingRegenerate ? "text-black" : "text-sky-400/80"
-            }`}
+            className={`h-3.5 w-3.5 ${isConfirmingRegenerate ? "text-black" : "text-sky-400/80"}`}
           />
           <span>{isConfirmingRegenerate ? "确认重新生成" : "重新生成"}</span>
         </button>
@@ -180,12 +166,10 @@ export const CuratorMessageContextMenu = ({
         onClick={handleDeleteQaClick}
       >
         <Trash2
-          className={`h-3.5 w-3.5 ${
-            isConfirmingDeleteQa ? "text-white" : "text-rose-400/80"
-          }`}
+          className={`h-3.5 w-3.5 ${isConfirmingDeleteQa ? "text-white" : "text-rose-400/80"}`}
         />
         <span>{isConfirmingDeleteQa ? "确认删除QA" : "删除QA"}</span>
       </button>
     </div>
-  );
-};
+  )
+}

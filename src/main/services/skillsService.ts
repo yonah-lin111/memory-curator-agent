@@ -1,17 +1,19 @@
-import { existsSync } from 'node:fs'
-import { readdir, readFile, stat } from 'node:fs/promises'
-import { join } from 'node:path'
-import matter from 'gray-matter'
-import { getSkillsDir } from '@/paths'
-import { isAiChatAgentId } from '@/agent/core/agentHints'
-import { readAiSettingsConfig } from '@/services/configService'
+import { existsSync } from "node:fs"
+import { readdir, readFile, stat } from "node:fs/promises"
+import { join } from "node:path"
+import matter from "gray-matter"
+import { isAiChatAgentId } from "@/agent/core/agentHints"
+import { getSkillsDir } from "@/paths"
+import { readAiSettingsConfig } from "@/services/configService"
 
 // 项目内置 Skill 根目录；生产包由 electron-builder 复制到 Resources。
 const getBuiltinSkillsDir = (): string => {
   const packagedSkillsDir = process.resourcesPath
-    ? join(process.resourcesPath, 'resources', 'skills')
-    : ''
-  return existsSync(packagedSkillsDir) ? packagedSkillsDir : join(process.cwd(), 'resources', 'skills')
+    ? join(process.resourcesPath, "resources", "skills")
+    : ""
+  return existsSync(packagedSkillsDir)
+    ? packagedSkillsDir
+    : join(process.cwd(), "resources", "skills")
 }
 
 // AI Agent 技能数据模型。
@@ -46,7 +48,7 @@ let skillsCache: AiAgentSkill[] | null = null
  */
 const ensureSkillsDir = async (): Promise<string> => {
   const dir = getSkillsDir()
-  const { mkdirSync } = await import('node:fs')
+  const { mkdirSync } = await import("node:fs")
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
   }
@@ -85,16 +87,16 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
         continue
       }
 
-      const skillMdPath = join(entryPath, 'skill.md')
+      const skillMdPath = join(entryPath, "skill.md")
       try {
-        const fileContent = await readFile(skillMdPath, 'utf8')
+        const fileContent = await readFile(skillMdPath, "utf8")
         const { data, content } = matter(fileContent)
         const frontmatter = data as SkillFrontmatter
 
         // 目录名作为 id，frontmatter 中的 name/id 优先作为显示名。
         const id = entry
         const name = frontmatter.name || id
-        const description = frontmatter.description || ''
+        const description = frontmatter.description || ""
         const supportedAgents = Array.isArray(frontmatter.supportedAgents)
           ? frontmatter.supportedAgents.map(String)
           : undefined
@@ -105,7 +107,7 @@ export const loadSkills = async (forceRefresh = false): Promise<AiAgentSkill[]> 
           description,
           supportedAgents,
           content: content.trim(),
-          location: skillMdPath
+          location: skillMdPath,
         })
       } catch (error) {
         // 容错处理：不因为单个 Skill 文件语法错误崩溃。
@@ -144,11 +146,11 @@ export const getAvailableSkillsForAgent = async (agentId: string): Promise<AiAge
       return true
     }
     // public 关键字 → 所有 agent 可用
-    if (skill.supportedAgents.includes('public')) {
+    if (skill.supportedAgents.includes("public")) {
       return true
     }
     // curator 关键字 → 所有策展 agent 可用
-    if (skill.supportedAgents.includes('curator') && isAiChatAgentId(agentId)) {
+    if (skill.supportedAgents.includes("curator") && isAiChatAgentId(agentId)) {
       return true
     }
     // 精确匹配（含 'prompt-design' 等）

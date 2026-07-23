@@ -1,27 +1,27 @@
-import type React from "react";
-import { useEffect, useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Select, type SelectOption } from "@/components/ui/Select";
-import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
-import { Input } from "@/components/ui/Input";
-import { useToast } from "@/components/ui/Toast";
-import { useHeaderStore } from "@/lib/headerStore";
-import type { FormState, PersonalInfoPageMode } from "./personalInfoShared";
+import { Upload, X } from "lucide-react"
+import type React from "react"
+import { useEffect, useRef, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor"
+import { Select, type SelectOption } from "@/components/ui/Select"
+import { useToast } from "@/components/ui/Toast"
+import { useHeaderStore } from "@/lib/headerStore"
+import type { FormState, PersonalInfoPageMode } from "./personalInfoShared"
 
 type PersonalInfoFormProps = {
-  mode: Exclude<PersonalInfoPageMode, "view">;
-  formState: FormState;
-  setFormState: React.Dispatch<React.SetStateAction<FormState>>;
-  onCancel: () => void;
-  onSave: (override?: Partial<FormState>) => Promise<void>;
-};
+  mode: Exclude<PersonalInfoPageMode, "view">
+  formState: FormState
+  setFormState: React.Dispatch<React.SetStateAction<FormState>>
+  onCancel: () => void
+  onSave: (override?: Partial<FormState>) => Promise<void>
+}
 
 const GENDER_OPTIONS: SelectOption<string>[] = [
   { value: "女", label: "女 (Female)" },
   { value: "男", label: "男 (Male)" },
   { value: "保密", label: "保密 / 其他" },
-];
+]
 
 export const PersonalInfoForm = ({
   mode,
@@ -30,38 +30,37 @@ export const PersonalInfoForm = ({
   onCancel,
   onSave,
 }: PersonalInfoFormProps): React.JSX.Element => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const toast = useToast();
-  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } =
-    useHeaderStore();
+  const [isDragging, setIsDragging] = useState(false)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const toast = useToast()
+  const { setCustomTitle, setExtraActions, setHideChatButton, resetHeader } = useHeaderStore()
 
   const handleSaveWrapper = async () => {
-    let override: Partial<FormState> = {};
+    let override: Partial<FormState> = {}
     if (pendingAvatarFile && window.api?.files?.savePersonalAvatar) {
       try {
-        const buffer = await pendingAvatarFile.arrayBuffer();
+        const buffer = await pendingAvatarFile.arrayBuffer()
         const result = await window.api.files.savePersonalAvatar({
           name: pendingAvatarFile.name,
           mimeType: pendingAvatarFile.type,
           bytes: buffer,
-        });
+        })
         if (result.url) {
-          override.avatar = result.url;
-          toast.success("头像已保存");
+          override.avatar = result.url
+          toast.success("头像已保存")
         }
       } catch (err) {
-        console.error("保存头像物理文件失败", err);
-        toast.error("保存头像物理文件失败");
+        console.error("保存头像物理文件失败", err)
+        toast.error("保存头像物理文件失败")
       }
     }
-    await onSave(override);
-  };
+    await onSave(override)
+  }
 
   useEffect(() => {
-    setCustomTitle("编辑个人信息");
-    setHideChatButton(true);
+    setCustomTitle("编辑个人信息")
+    setHideChatButton(true)
 
     setExtraActions(
       <>
@@ -72,18 +71,13 @@ export const PersonalInfoForm = ({
           title="保存信息"
           aria-label="Save"
         />
-        <IconButton
-          preset="close"
-          onClick={onCancel}
-          title="取消编辑"
-          aria-label="Cancel"
-        />
+        <IconButton preset="close" onClick={onCancel} title="取消编辑" aria-label="Cancel" />
       </>,
-    );
+    )
 
     return () => {
-      resetHeader();
-    };
+      resetHeader()
+    }
   }, [
     mode,
     formState.name,
@@ -94,59 +88,57 @@ export const PersonalInfoForm = ({
     setHideChatButton,
     resetHeader,
     pendingAvatarFile,
-  ]);
+  ])
 
   const handleFileProcess = (file: File): void => {
     if (!file.type.startsWith("image/")) {
-      toast.error("仅支持图片文件格式");
-      return;
+      toast.error("仅支持图片文件格式")
+      return
     }
 
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setFormState((prev) => ({ ...prev, avatar: dataUrl }));
-      setPendingAvatarFile(file);
-    };
-    reader.readAsDataURL(file);
-  };
+      const dataUrl = event.target?.result as string
+      setFormState((prev) => ({ ...prev, avatar: dataUrl }))
+      setPendingAvatarFile(file)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const triggerFileSelect = (): void => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
-  const handleFileChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ): void => {
-    const file = event.target.files?.[0];
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0]
     if (file) {
-      void handleFileProcess(file);
+      void handleFileProcess(file)
     }
-  };
+  }
 
   const handleDragOver = (event: React.DragEvent): void => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
+    event.preventDefault()
+    setIsDragging(true)
+  }
 
   const handleDragLeave = (): void => {
-    setIsDragging(false);
-  };
+    setIsDragging(false)
+  }
 
   const handleDrop = (event: React.DragEvent): void => {
-    event.preventDefault();
-    setIsDragging(false);
-    const file = event.dataTransfer.files?.[0];
+    event.preventDefault()
+    setIsDragging(false)
+    const file = event.dataTransfer.files?.[0]
     if (file) {
-      void handleFileProcess(file);
+      void handleFileProcess(file)
     }
-  };
+  }
 
   const handleRemoveAvatar = (event: React.MouseEvent): void => {
-    event.stopPropagation();
-    setFormState((prev) => ({ ...prev, avatar: "" }));
-    setPendingAvatarFile(null);
-  };
+    event.stopPropagation()
+    setFormState((prev) => ({ ...prev, avatar: "" }))
+    setPendingAvatarFile(null)
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 animate-card-modal-in">
@@ -172,11 +164,7 @@ export const PersonalInfoForm = ({
               >
                 {formState.avatar ? (
                   <>
-                    <img
-                      src={formState.avatar}
-                      alt="预览"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={formState.avatar} alt="预览" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] text-white/90">
                       更换头像
                     </div>
@@ -184,9 +172,7 @@ export const PersonalInfoForm = ({
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center p-2">
                     <Upload className="h-4 w-4 text-white/30" />
-                    <span className="text-[9px] text-white/30 mt-1 leading-tight">
-                      点击/拖拽
-                    </span>
+                    <span className="text-[9px] text-white/30 mt-1 leading-tight">点击/拖拽</span>
                   </div>
                 )}
               </div>
@@ -213,10 +199,7 @@ export const PersonalInfoForm = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 flex-1 w-full">
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="form-name"
-                className="text-[11px] font-bold text-white/45"
-              >
+              <label htmlFor="form-name" className="text-[11px] font-bold text-white/45">
                 姓名 *
               </label>
               <Input
@@ -235,10 +218,7 @@ export const PersonalInfoForm = ({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="form-gender"
-                className="text-[11px] font-bold text-white/45"
-              >
+              <label htmlFor="form-gender" className="text-[11px] font-bold text-white/45">
                 性别
               </label>
               <Select
@@ -256,10 +236,7 @@ export const PersonalInfoForm = ({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="form-birthday"
-                className="text-[11px] font-bold text-white/45"
-              >
+              <label htmlFor="form-birthday" className="text-[11px] font-bold text-white/45">
                 生日 / 纪念日
               </label>
               <Input
@@ -276,12 +253,9 @@ export const PersonalInfoForm = ({
                 }
               />
             </div>
-            
+
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="form-contact"
-                className="text-[11px] font-bold text-white/45"
-              >
+              <label htmlFor="form-contact" className="text-[11px] font-bold text-white/45">
                 联系方式
               </label>
               <Input
@@ -303,10 +277,7 @@ export const PersonalInfoForm = ({
 
         <div className="grid grid-cols-1 gap-3.5">
           <div className="flex flex-col gap-1">
-            <label
-              htmlFor="form-status"
-              className="text-[11px] font-bold text-white/45"
-            >
+            <label htmlFor="form-status" className="text-[11px] font-bold text-white/45">
               一句话签名/状态
             </label>
             <Input
@@ -326,9 +297,7 @@ export const PersonalInfoForm = ({
         </div>
 
         <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4">
-          <span className="text-[11px] font-bold text-white/45">
-            特征标签 (输入并回车确定)
-          </span>
+          <span className="text-[11px] font-bold text-white/45">特征标签 (输入并回车确定)</span>
           <Input
             as="tags"
             tags={formState.tags}
@@ -340,22 +309,18 @@ export const PersonalInfoForm = ({
         </div>
 
         <div className="flex flex-col gap-1.5 border-t border-white/5 pt-4">
-          <span className="text-[11px] font-bold text-white/45">
-            详细档案 / 备注 (Markdown)
-          </span>
+          <span className="text-[11px] font-bold text-white/45">详细档案 / 备注 (Markdown)</span>
           <div className="p-1 rounded-[6px] border border-white/8 bg-black/15">
             <MarkdownEditor
               id="personal-info-editor"
               height={400}
               placeholder="写下关于自己的详细记录..."
               value={formState.details}
-              onChange={(value) =>
-                setFormState((prev) => ({ ...prev, details: value }))
-              }
+              onChange={(value) => setFormState((prev) => ({ ...prev, details: value }))}
             />
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

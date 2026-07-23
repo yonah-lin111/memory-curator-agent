@@ -1,5 +1,4 @@
-import type React from "react";
-import { redo, undo } from "@codemirror/commands";
+import { redo, undo } from "@codemirror/commands"
 import {
   Bold,
   Code,
@@ -11,53 +10,52 @@ import {
   List,
   ListOrdered,
   ListTodo,
-  SquareSplitHorizontal,
   Quote,
   Redo2,
+  SquareSplitHorizontal,
   Strikethrough,
   Table2,
   Undo2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
-import type { RefObject } from "react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Input } from "@/components/ui/Input";
-import type { MarkdownEditorHandle } from "@/components/ui/MarkdownEditor";
-import { Tooltip } from "@/components/ui/Tooltip";
+} from "lucide-react"
+import type React from "react"
+import type { RefObject } from "react"
+import { useMemo, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import type { MarkdownEditorHandle } from "@/components/ui/MarkdownEditor"
+import { Tooltip } from "@/components/ui/Tooltip"
 
 // 工具栏图标类型。
-type MarkdownToolbarIcon = React.ComponentType<{ className?: string }>;
+type MarkdownToolbarIcon = React.ComponentType<{ className?: string }>
 
 // 工具栏按钮命令类型。
-type MarkdownToolbarCommand = Parameters<
-  MarkdownEditorHandle["execCommand"]
->[0];
+type MarkdownToolbarCommand = Parameters<MarkdownEditorHandle["execCommand"]>[0]
 
 // 独立 Markdown 编辑器工具栏属性。
 interface MarkdownEditorToolbarProps {
   // Markdown 编辑器控制句柄。
-  editorRef: RefObject<MarkdownEditorHandle | null>;
+  editorRef: RefObject<MarkdownEditorHandle | null>
   // 编辑器当前显示模式。
-  mode: MarkdownPreviewMode;
+  mode: MarkdownPreviewMode
   // 编辑器显示模式变更回调。
-  onModeChange: (mode: MarkdownPreviewMode) => void;
+  onModeChange: (mode: MarkdownPreviewMode) => void
 }
 
 // Markdown 编辑器预览模式。
-type MarkdownPreviewMode = "edit" | "preview" | "split";
+type MarkdownPreviewMode = "edit" | "preview" | "split"
 
 // 表格网格尺寸。
 interface MarkdownTableSize {
-  columns: number;
-  rows: number;
+  columns: number
+  rows: number
 }
 
 // Markdown 编辑器快捷键配置。
 interface MarkdownShortcut {
   // 快捷键按键组合。
-  keys: string;
+  keys: string
   // 快捷键功能说明。
-  description: string;
+  description: string
 }
 
 // Markdown 编辑器可用快捷键。
@@ -89,37 +87,36 @@ const markdownShortcuts: MarkdownShortcut[] = [
   { keys: "Ctrl / Cmd + Shift + E", description: "切换双栏预览" },
   { keys: "Ctrl / Cmd + Shift + P", description: "切换仅预览" },
   { keys: "Ctrl / Cmd + Shift + O", description: "打开 AI 输入框" },
-];
+]
 
 // 生成带表头和默认数据行的 Markdown 表格。
 const createMarkdownTable = ({ columns, rows }: MarkdownTableSize): string => {
-  const createRow = (firstCell = ""): string =>
-    `| ${firstCell} |${"  |".repeat(columns - 1)}\n`;
-  const headerRow = createRow("Header");
-  const separatorRow = `|${" --- |".repeat(columns)}\n`;
-  const firstContentRow = createRow("Content");
-  const emptyContentRow = createRow();
-  return `${headerRow}${separatorRow}${firstContentRow}${emptyContentRow.repeat(rows - 1)}`;
-};
+  const createRow = (firstCell = ""): string => `| ${firstCell} |${"  |".repeat(columns - 1)}\n`
+  const headerRow = createRow("Header")
+  const separatorRow = `|${" --- |".repeat(columns)}\n`
+  const firstContentRow = createRow("Content")
+  const emptyContentRow = createRow()
+  return `${headerRow}${separatorRow}${firstContentRow}${emptyContentRow.repeat(rows - 1)}`
+}
 
 // 工具项配置。
 interface MarkdownToolbarActionProps {
   // 工具项图标。
-  icon: MarkdownToolbarIcon;
+  icon: MarkdownToolbarIcon
   // 工具项名称。
-  label: string;
+  label: string
   // 工具项点击回调。
-  onClick: () => void;
+  onClick: () => void
   // 是否将工具项推到工具栏最右侧。
-  alignRight?: boolean;
+  alignRight?: boolean
   // 是否使用选中状态样式。
-  highlighted?: boolean;
+  highlighted?: boolean
   // 自定义 Tooltip 内容。
-  tooltipContent?: React.ReactNode;
+  tooltipContent?: React.ReactNode
   // Tooltip 触发方式。
-  tooltipTrigger?: "hover" | "click" | "both";
+  tooltipTrigger?: "hover" | "click" | "both"
   // Tooltip 触发元素鼠标进入回调。
-  onMouseEnter?: () => void;
+  onMouseEnter?: () => void
 }
 
 // 工具栏按钮。
@@ -150,7 +147,7 @@ const MarkdownToolbarAction = ({
       <Icon className="h-3.5 w-3.5" />
     </IconButton>
   </Tooltip>
-);
+)
 
 /**
  * MarkdownEditorToolbar - 单行 Markdown 编辑工具栏。
@@ -160,63 +157,63 @@ export const MarkdownEditorToolbar = ({
   mode,
   onModeChange,
 }: MarkdownEditorToolbarProps): React.JSX.Element => {
-  const [tableSize, setTableSize] = useState<MarkdownTableSize | null>(null);
-  const [shortcutQuery, setShortcutQuery] = useState("");
-  const isMacOS = navigator.userAgent.includes("Macintosh");
+  const [tableSize, setTableSize] = useState<MarkdownTableSize | null>(null)
+  const [shortcutQuery, setShortcutQuery] = useState("")
+  const isMacOS = navigator.userAgent.includes("Macintosh")
 
   // 按快捷键或功能说明筛选，便于在完整列表中快速定位。
   const filteredShortcuts = useMemo(() => {
-    const query = shortcutQuery.trim().toLocaleLowerCase();
-    if (!query) return markdownShortcuts;
+    const query = shortcutQuery.trim().toLocaleLowerCase()
+    if (!query) return markdownShortcuts
 
     return markdownShortcuts.filter(({ keys, description }) =>
       `${keys} ${description}`.toLocaleLowerCase().includes(query),
-    );
-  }, [shortcutQuery]);
+    )
+  }, [shortcutQuery])
 
   /**
    * 将跨平台快捷键转换为当前系统对应的修饰键显示。
    */
   const getShortcutKeys = (keys: string): string =>
-    keys.replace("Ctrl / Cmd", isMacOS ? "Cmd" : "Ctrl");
+    keys.replace("Ctrl / Cmd", isMacOS ? "Cmd" : "Ctrl")
 
   /**
    * 设置编辑器预览模式，并同步工具栏按钮高亮状态。
    */
   const changePreviewMode = (mode: MarkdownPreviewMode): void => {
     if (mode === "preview") {
-      editorRef.current?.togglePreviewOnly(true);
+      editorRef.current?.togglePreviewOnly(true)
     } else {
-      editorRef.current?.togglePreviewOnly(false);
-      editorRef.current?.togglePreview(mode === "split");
+      editorRef.current?.togglePreviewOnly(false)
+      editorRef.current?.togglePreview(mode === "split")
     }
-    onModeChange(mode);
-  };
+    onModeChange(mode)
+  }
 
   /**
    * 执行 Markdown 命令并将焦点还给编辑器，保持当前选区可继续操作。
    */
   const execute = (command: MarkdownToolbarCommand): void => {
-    editorRef.current?.execCommand(command);
-    editorRef.current?.focus();
-  };
+    editorRef.current?.execCommand(command)
+    editorRef.current?.focus()
+  }
 
   /**
    * 将选择的表格插入当前编辑器选区，并把焦点还给编辑器。
    */
   const insertTable = (size: MarkdownTableSize): void => {
-    const view = editorRef.current?.getEditorView();
-    if (!view) return;
+    const view = editorRef.current?.getEditorView()
+    if (!view) return
 
-    const { from, to } = view.state.selection.main;
-    const markdown = createMarkdownTable(size);
+    const { from, to } = view.state.selection.main
+    const markdown = createMarkdownTable(size)
     view.dispatch({
       changes: { from, to, insert: markdown },
       selection: { anchor: from + markdown.length },
-    });
-    editorRef.current?.focus();
-    setTableSize(null);
-  };
+    })
+    editorRef.current?.focus()
+    setTableSize(null)
+  }
 
   // 根据鼠标悬停位置高亮表格网格区域。
   const tablePicker = (
@@ -227,10 +224,10 @@ export const MarkdownEditorToolbar = ({
       <div className="grid grid-cols-5 gap-1" role="grid">
         {Array.from({ length: 4 }, (_, rowIndex) =>
           Array.from({ length: 5 }, (_, columnIndex) => {
-            const columns = columnIndex + 1;
-            const rows = rowIndex + 1;
+            const columns = columnIndex + 1
+            const rows = rowIndex + 1
             const isHighlighted =
-              tableSize !== null && columns <= tableSize.columns && rows <= tableSize.rows;
+              tableSize !== null && columns <= tableSize.columns && rows <= tableSize.rows
 
             return (
               <button
@@ -246,28 +243,28 @@ export const MarkdownEditorToolbar = ({
                 onMouseEnter={() => setTableSize({ columns, rows })}
                 onClick={() => insertTable({ columns, rows })}
               />
-            );
+            )
           }),
         )}
       </div>
     </div>
-  );
+  )
 
   /**
    * 使用 CodeMirror 历史记录撤销最近一次编辑。
    */
   const undoEdit = (): void => {
-    const view = editorRef.current?.getEditorView();
-    if (view) undo(view);
-  };
+    const view = editorRef.current?.getEditorView()
+    if (view) undo(view)
+  }
 
   /**
    * 使用 CodeMirror 历史记录恢复最近一次撤销的编辑。
    */
   const redoEdit = (): void => {
-    const view = editorRef.current?.getEditorView();
-    if (view) redo(view);
-  };
+    const view = editorRef.current?.getEditorView()
+    if (view) redo(view)
+  }
 
   const shortcutList = (
     <div className="flex w-80 flex-col gap-2" aria-label="Markdown 编辑器快捷键">
@@ -297,7 +294,7 @@ export const MarkdownEditorToolbar = ({
         )}
       </div>
     </div>
-  );
+  )
 
   const actions: MarkdownToolbarActionProps[] = [
     { icon: Undo2, label: "撤回", onClick: undoEdit },
@@ -348,7 +345,7 @@ export const MarkdownEditorToolbar = ({
       onClick: () => changePreviewMode(mode === "preview" ? "edit" : "preview"),
       highlighted: mode === "preview",
     },
-  ];
+  ]
 
   return (
     <div className="relative z-20 flex h-8 flex-none items-center gap-0.5 overflow-x-auto px-1">
@@ -356,5 +353,5 @@ export const MarkdownEditorToolbar = ({
         <MarkdownToolbarAction key={action.label} {...action} />
       ))}
     </div>
-  );
-};
+  )
+}

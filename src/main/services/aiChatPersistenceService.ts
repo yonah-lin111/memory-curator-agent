@@ -1,4 +1,4 @@
-import type { AgentContextPayloadItem } from '@/agent/core/contextMessages'
+import type { AgentContextPayloadItem } from "@/agent/core/contextMessages"
 import type {
   AiAgentRunStatus,
   AiAgentToolCallStatus,
@@ -9,8 +9,8 @@ import type {
   AiChatSessionItem,
   AiChatSessionRow,
   AiChatSessionStatus,
-  AiToolStep
-} from '@/db/schema'
+  AiToolStep,
+} from "@/db/schema"
 
 // 数据库语句最小接口。
 export type DatabaseStatement = {
@@ -103,7 +103,7 @@ export type FinishRunInput = {
   // Agent run 唯一标识。
   id: string
   // Agent run 状态。
-  status: Exclude<AiAgentRunStatus, 'running'>
+  status: Exclude<AiAgentRunStatus, "running">
   // 错误信息。
   error?: string
   // 结束时间。
@@ -165,7 +165,7 @@ export type FailRunWithAssistantMessageInput = {
   // Agent run 失败写入输入。
   run: FinishRunInput & {
     // 失败状态。
-    status: 'failed'
+    status: "failed"
   }
   // 助手错误消息写入输入。
   assistantMessage: UpdateAssistantMessageInput
@@ -222,7 +222,7 @@ export type PersistedContextSnapshot = {
   // 上下文稳定去重键。
   contextKey: string
   // 上下文来源类型。
-  kind: AgentContextPayloadItem['kind']
+  kind: AgentContextPayloadItem["kind"]
   // 展示标题。
   title: string
   // 来源对象标识。
@@ -250,7 +250,11 @@ export type AiChatPersistenceService = {
   // 撤销指定会话最后一轮对话。
   undoLastTurn: (sessionId: string, timestamp: string) => AiChatSessionItem | null
   // 删除指定消息所属的一轮 QA。
-  deleteTurnByMessageId: (sessionId: string, messageId: string, timestamp: string) => AiChatSessionItem | null
+  deleteTurnByMessageId: (
+    sessionId: string,
+    messageId: string,
+    timestamp: string,
+  ) => AiChatSessionItem | null
   // 创建或更新 AI 会话。
   ensureSession: (input: EnsureSessionInput) => void
   // 写入 AI 消息。
@@ -328,7 +332,7 @@ type AiAgentContextSnapshotRow = {
   // 上下文稳定去重键。
   context_key: string
   // 上下文来源类型。
-  kind: AgentContextPayloadItem['kind']
+  kind: AgentContextPayloadItem["kind"]
   // 展示标题。
   title: string
   // 来源对象标识。
@@ -344,7 +348,7 @@ type AiAgentContextSnapshotRow = {
 }
 
 // 用于定位最后一轮对话的消息行。
-type AiChatTurnMessageRow = Pick<AiChatMessageRow, 'id' | 'role' | 'content' | 'created_at'> & {
+type AiChatTurnMessageRow = Pick<AiChatMessageRow, "id" | "role" | "content" | "created_at"> & {
   // SQLite 插入顺序，用于同分钟消息的稳定排序。
   row_order: number
 }
@@ -356,7 +360,7 @@ const safeStringify = (value: unknown): string => {
   try {
     return JSON.stringify(value ?? null)
   } catch {
-    return JSON.stringify({ error: '数据无法序列化' })
+    return JSON.stringify({ error: "数据无法序列化" })
   }
 }
 
@@ -379,7 +383,7 @@ const parseJson = (value: string): unknown => {
   try {
     return JSON.parse(value) as unknown
   } catch {
-    return { error: '数据解析失败' }
+    return { error: "数据解析失败" }
   }
 }
 
@@ -387,28 +391,23 @@ const parseJson = (value: string): unknown => {
  * 归一化历史会话状态，数据库内部只保留英文枚举。
  */
 const normalizeSessionStatus = (status: string): AiChatSessionStatus => {
-  if (
-    status === 'idle' ||
-    status === 'running' ||
-    status === 'completed' ||
-    status === 'failed'
-  ) {
+  if (status === "idle" || status === "running" || status === "completed" || status === "failed") {
     return status
   }
 
-  if (status === '运行中') {
-    return 'running'
+  if (status === "运行中") {
+    return "running"
   }
 
-  if (status === '运行完成' || status === '已完成') {
-    return 'completed'
+  if (status === "运行完成" || status === "已完成") {
+    return "completed"
   }
 
-  if (status === '运行失败' || status === '失败') {
-    return 'failed'
+  if (status === "运行失败" || status === "失败") {
+    return "failed"
   }
 
-  return 'idle'
+  return "idle"
 }
 
 /**
@@ -423,7 +422,7 @@ const mapMessageRow = (row: AiChatMessageRow): AiChatMessageItem => ({
   parts: parseArray<AiChatMessagePart>(row.parts_json),
   toolSteps: parseArray<AiToolStep>(row.tool_steps_json),
   model: row.model ?? undefined,
-  cancelled: row.cancelled === 1 ? true : undefined
+  cancelled: row.cancelled === 1 ? true : undefined,
 })
 
 /**
@@ -431,13 +430,13 @@ const mapMessageRow = (row: AiChatMessageRow): AiChatMessageItem => ({
  */
 const mapSessionRow = (
   row: AiChatSessionRow,
-  messages: AiChatMessageItem[] = []
+  messages: AiChatMessageItem[] = [],
 ): AiChatSessionItem => ({
   id: row.id,
   title: row.title,
   status: normalizeSessionStatus(row.status),
   time: row.updated_at.slice(0, 16) || row.updated_at,
-  messages
+  messages,
 })
 
 /**
@@ -452,7 +451,7 @@ const mapRunRow = (row: AiAgentRunRow): PersistedRun => ({
   status: row.status,
   error: row.error ?? undefined,
   startedAt: row.started_at,
-  finishedAt: row.finished_at ?? undefined
+  finishedAt: row.finished_at ?? undefined,
 })
 
 /**
@@ -468,7 +467,7 @@ const mapToolCallRow = (row: AiAgentToolCallRow): PersistedToolCall => ({
   input: parseJson(row.input_json),
   observation: row.observation,
   data: parseJson(row.data_json),
-  error: row.error ?? undefined
+  error: row.error ?? undefined,
 })
 
 /**
@@ -482,7 +481,7 @@ const mapContextSnapshotRow = (row: AiAgentContextSnapshotRow): PersistedContext
   content: row.content,
   tokens: row.tokens ?? undefined,
   createdOrder: row.created_order,
-  meta: parseJson(row.meta_json)
+  meta: parseJson(row.meta_json),
 })
 
 /**
@@ -498,7 +497,7 @@ const runTransaction = <T>(database: DatabaseConnection, operation: () => T): T 
  * 创建 AI 对话持久化服务。
  */
 export const createAiChatPersistenceService = (
-  database: DatabaseConnection
+  database: DatabaseConnection,
 ): AiChatPersistenceService => {
   const listSessions = (input: ListSessionsInput = {}): AiChatSessionItem[] => {
     const query = input.query?.trim()
@@ -514,8 +513,8 @@ export const createAiChatPersistenceService = (
               AND ai_chat_messages.content LIKE ?
           )
       `
-      : ''
-    const limitClause = limit ? 'LIMIT ? OFFSET ?' : ''
+      : ""
+    const limitClause = limit ? "LIMIT ? OFFSET ?" : ""
     const values: unknown[] = []
 
     if (query) {
@@ -536,7 +535,7 @@ export const createAiChatPersistenceService = (
             ${whereClause}
             ORDER BY updated_at DESC
             ${limitClause}
-          `
+          `,
         )
         .all(...values) as AiChatSessionRow[]
     ).map((row) => mapSessionRow(row))
@@ -549,7 +548,7 @@ export const createAiChatPersistenceService = (
           SELECT external_id AS id, title, status, created_at, updated_at, last_message_at
           FROM ai_chat_sessions
           WHERE external_id = ?
-        `
+        `,
       )
       .get(sessionId) as AiChatSessionRow | undefined
 
@@ -576,11 +575,14 @@ export const createAiChatPersistenceService = (
           LEFT JOIN ai_agent_runs r ON m.external_id = r.assistant_message_id
           WHERE m.session_id = ?
           ORDER BY m.created_at ASC, m.rowid ASC
-        `
+        `,
       )
       .all(sessionId) as AiChatMessageRow[]
 
-    return mapSessionRow(session, messages.map((row) => mapMessageRow(row)))
+    return mapSessionRow(
+      session,
+      messages.map((row) => mapMessageRow(row)),
+    )
   }
 
   const updateSessionTitle = (sessionId: string, title: string, timestamp: string): void => {
@@ -591,7 +593,7 @@ export const createAiChatPersistenceService = (
           SET title = ?,
               updated_at = ?
           WHERE external_id = ?
-        `
+        `,
       )
       .run(title, timestamp, sessionId)
   }
@@ -604,18 +606,18 @@ export const createAiChatPersistenceService = (
             SELECT external_id AS id
             FROM ai_agent_runs
             WHERE session_id = ?
-          `
+          `,
         )
         .all(sessionId) as { id: string }[]
 
       for (const run of runs) {
-        database.prepare('DELETE FROM ai_agent_context_snapshots WHERE run_id = ?').run(run.id)
-        database.prepare('DELETE FROM ai_agent_tool_calls WHERE run_id = ?').run(run.id)
+        database.prepare("DELETE FROM ai_agent_context_snapshots WHERE run_id = ?").run(run.id)
+        database.prepare("DELETE FROM ai_agent_tool_calls WHERE run_id = ?").run(run.id)
       }
 
-      database.prepare('DELETE FROM ai_agent_runs WHERE session_id = ?').run(sessionId)
-      database.prepare('DELETE FROM ai_chat_messages WHERE session_id = ?').run(sessionId)
-      database.prepare('DELETE FROM ai_chat_sessions WHERE external_id = ?').run(sessionId)
+      database.prepare("DELETE FROM ai_agent_runs WHERE session_id = ?").run(sessionId)
+      database.prepare("DELETE FROM ai_chat_messages WHERE session_id = ?").run(sessionId)
+      database.prepare("DELETE FROM ai_chat_sessions WHERE external_id = ?").run(sessionId)
     })
   }
 
@@ -630,7 +632,7 @@ export const createAiChatPersistenceService = (
           FROM ai_chat_messages
           WHERE session_id = ?
           ORDER BY created_at ASC, rowid ASC
-        `
+        `,
       )
       .all(sessionId) as AiChatTurnMessageRow[]
 
@@ -639,36 +641,36 @@ export const createAiChatPersistenceService = (
    */
   const deleteRunsByAssistantMessageIds = (
     sessionId: string,
-    assistantMessageIds: string[]
+    assistantMessageIds: string[],
   ): void => {
     if (assistantMessageIds.length === 0) {
       return
     }
 
-    const assistantPlaceholders = assistantMessageIds.map(() => '?').join(', ')
+    const assistantPlaceholders = assistantMessageIds.map(() => "?").join(", ")
     const runs = database
       .prepare(
         `
           SELECT external_id AS id
           FROM ai_agent_runs
           WHERE session_id = ? AND assistant_message_id IN (${assistantPlaceholders})
-        `
+        `,
       )
       .all(sessionId, ...assistantMessageIds) as { id: string }[]
 
     for (const run of runs) {
-      database.prepare('DELETE FROM ai_agent_context_snapshots WHERE run_id = ?').run(run.id)
-      database.prepare('DELETE FROM ai_agent_tool_calls WHERE run_id = ?').run(run.id)
+      database.prepare("DELETE FROM ai_agent_context_snapshots WHERE run_id = ?").run(run.id)
+      database.prepare("DELETE FROM ai_agent_tool_calls WHERE run_id = ?").run(run.id)
     }
 
     if (runs.length === 0) {
       return
     }
 
-    const runPlaceholders = runs.map(() => '?').join(', ')
-    database.prepare(`DELETE FROM ai_agent_runs WHERE external_id IN (${runPlaceholders})`).run(
-      ...runs.map((run) => run.id)
-    )
+    const runPlaceholders = runs.map(() => "?").join(", ")
+    database
+      .prepare(`DELETE FROM ai_agent_runs WHERE external_id IN (${runPlaceholders})`)
+      .run(...runs.map((run) => run.id))
   }
 
   /**
@@ -679,26 +681,26 @@ export const createAiChatPersistenceService = (
     messages: AiChatTurnMessageRow[],
     turnStartIndex: number,
     turnEndIndex: number,
-    timestamp: string
+    timestamp: string,
   ): void => {
     const removedMessages = messages.slice(turnStartIndex, turnEndIndex)
     const removedMessageIds = removedMessages.map((message) => message.id)
     const removedAssistantMessageIds = removedMessages
-      .filter((message) => message.role === 'assistant')
+      .filter((message) => message.role === "assistant")
       .map((message) => message.id)
 
     deleteRunsByAssistantMessageIds(sessionId, removedAssistantMessageIds)
 
     if (removedMessageIds.length > 0) {
-      const messagePlaceholders = removedMessageIds.map(() => '?').join(', ')
-      database.prepare(`DELETE FROM ai_chat_messages WHERE external_id IN (${messagePlaceholders})`).run(
-        ...removedMessageIds
-      )
+      const messagePlaceholders = removedMessageIds.map(() => "?").join(", ")
+      database
+        .prepare(`DELETE FROM ai_chat_messages WHERE external_id IN (${messagePlaceholders})`)
+        .run(...removedMessageIds)
     }
 
     const remainingMessages = [
       ...messages.slice(0, turnStartIndex),
-      ...messages.slice(turnEndIndex)
+      ...messages.slice(turnEndIndex),
     ]
     const latestRemainingMessage = remainingMessages[remainingMessages.length - 1]
     database
@@ -713,23 +715,21 @@ export const createAiChatPersistenceService = (
               updated_at = ?,
               last_message_at = ?
           WHERE external_id = ?
-        `
+        `,
       )
       .run(
         remainingMessages.length,
-        remainingMessages.length === 0 ? 'idle' : 'completed',
+        remainingMessages.length === 0 ? "idle" : "completed",
         timestamp,
         latestRemainingMessage?.created_at ?? timestamp,
-        sessionId
+        sessionId,
       )
   }
 
   const undoLastTurn = (sessionId: string, timestamp: string): AiChatSessionItem | null => {
     runTransaction(database, () => {
       const messages = listTurnMessages(sessionId)
-      const turnStartIndex = [...messages]
-        .reverse()
-        .findIndex((message) => message.role === 'user')
+      const turnStartIndex = [...messages].reverse().findIndex((message) => message.role === "user")
 
       if (turnStartIndex < 0) {
         return
@@ -745,7 +745,7 @@ export const createAiChatPersistenceService = (
   const deleteTurnByMessageId = (
     sessionId: string,
     messageId: string,
-    timestamp: string
+    timestamp: string,
   ): AiChatSessionItem | null => {
     runTransaction(database, () => {
       const messages = listTurnMessages(sessionId)
@@ -757,17 +757,17 @@ export const createAiChatPersistenceService = (
 
       let turnStartIndex = messageIndex
 
-      while (turnStartIndex > 0 && messages[turnStartIndex].role !== 'user') {
+      while (turnStartIndex > 0 && messages[turnStartIndex].role !== "user") {
         turnStartIndex -= 1
       }
 
-      if (messages[turnStartIndex]?.role !== 'user') {
+      if (messages[turnStartIndex]?.role !== "user") {
         return
       }
 
       let turnEndIndex = turnStartIndex + 1
 
-      while (turnEndIndex < messages.length && messages[turnEndIndex].role !== 'user') {
+      while (turnEndIndex < messages.length && messages[turnEndIndex].role !== "user") {
         turnEndIndex += 1
       }
 
@@ -790,7 +790,7 @@ export const createAiChatPersistenceService = (
             END,
             status = excluded.status,
             updated_at = excluded.updated_at
-        `
+        `,
       )
       .run(
         input.id,
@@ -798,7 +798,7 @@ export const createAiChatPersistenceService = (
         normalizeSessionStatus(input.status),
         input.timestamp,
         input.timestamp,
-        input.timestamp
+        input.timestamp,
       )
   }
 
@@ -820,7 +820,7 @@ export const createAiChatPersistenceService = (
             cancelled
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-        `
+        `,
       )
       .run(
         input.id,
@@ -832,7 +832,7 @@ export const createAiChatPersistenceService = (
         safeStringify(input.toolSteps ?? []),
         input.time,
         input.timestamp,
-        input.timestamp
+        input.timestamp,
       )
 
     database
@@ -841,7 +841,7 @@ export const createAiChatPersistenceService = (
           UPDATE ai_chat_sessions
           SET updated_at = ?, last_message_at = ?
           WHERE external_id = ?
-        `
+        `,
       )
       .run(input.timestamp, input.timestamp, input.sessionId)
   }
@@ -857,7 +857,7 @@ export const createAiChatPersistenceService = (
               tool_steps_json = ?,
               updated_at = ?
           WHERE external_id = ? AND role = 'assistant'
-        `
+        `,
       )
       .run(
         input.content,
@@ -865,7 +865,7 @@ export const createAiChatPersistenceService = (
         safeStringify(input.parts),
         safeStringify(input.toolSteps),
         input.timestamp,
-        input.messageId
+        input.messageId,
       )
   }
 
@@ -876,11 +876,9 @@ export const createAiChatPersistenceService = (
     if (messageIds.length === 0) {
       return
     }
-    const placeholders = messageIds.map(() => '?').join(', ')
+    const placeholders = messageIds.map(() => "?").join(", ")
     database
-      .prepare(
-        `UPDATE ai_chat_messages SET cancelled = 1 WHERE external_id IN (${placeholders})`
-      )
+      .prepare(`UPDATE ai_chat_messages SET cancelled = 1 WHERE external_id IN (${placeholders})`)
       .run(...messageIds)
   }
 
@@ -900,7 +898,7 @@ export const createAiChatPersistenceService = (
             finished_at
           )
           VALUES (?, ?, ?, ?, ?, 'running', NULL, ?, NULL)
-        `
+        `,
       )
       .run(
         input.id,
@@ -908,7 +906,7 @@ export const createAiChatPersistenceService = (
         input.assistantMessageId,
         input.provider ?? null,
         input.model ?? null,
-        input.timestamp
+        input.timestamp,
       )
 
     const insertContextSnapshot = database.prepare(
@@ -933,7 +931,7 @@ export const createAiChatPersistenceService = (
           tokens = excluded.tokens,
           created_order = excluded.created_order,
           meta_json = excluded.meta_json
-      `
+      `,
     )
 
     input.context.forEach((item, index) => {
@@ -946,7 +944,7 @@ export const createAiChatPersistenceService = (
         item.content,
         item.tokens ?? null,
         item.createdAt ?? index,
-        safeStringify(item.meta ?? {})
+        safeStringify(item.meta ?? {}),
       )
     })
   }
@@ -960,7 +958,7 @@ export const createAiChatPersistenceService = (
               error = ?,
               finished_at = ?
           WHERE external_id = ?
-        `
+        `,
       )
       .run(input.status, input.error ?? null, input.timestamp, input.id)
   }
@@ -989,7 +987,7 @@ export const createAiChatPersistenceService = (
           SELECT external_id AS id, session_id, assistant_message_id, provider, model, status, error, started_at, finished_at
           FROM ai_agent_runs
           WHERE external_id = ?
-        `
+        `,
       )
       .get(runId) as AiAgentRunRow | undefined
 
@@ -1024,7 +1022,7 @@ export const createAiChatPersistenceService = (
             data_json = excluded.data_json,
             error = excluded.error,
             updated_at = excluded.updated_at
-        `
+        `,
       )
       .run(
         input.id,
@@ -1038,7 +1036,7 @@ export const createAiChatPersistenceService = (
         safeStringify(input.data),
         input.error ?? null,
         input.timestamp,
-        input.timestamp
+        input.timestamp,
       )
   }
 
@@ -1051,7 +1049,7 @@ export const createAiChatPersistenceService = (
             FROM ai_agent_tool_calls
             WHERE run_id = ?
             ORDER BY created_at ASC
-          `
+          `,
         )
         .all(runId) as AiAgentToolCallRow[]
     ).map((row) => mapToolCallRow(row))
@@ -1065,7 +1063,7 @@ export const createAiChatPersistenceService = (
             FROM ai_agent_context_snapshots
             WHERE run_id = ?
             ORDER BY created_order ASC
-          `
+          `,
         )
         .all(runId) as AiAgentContextSnapshotRow[]
     ).map((row) => mapContextSnapshotRow(row))
@@ -1088,6 +1086,6 @@ export const createAiChatPersistenceService = (
     getRun,
     upsertToolCall,
     listToolCalls,
-    listContextSnapshots
+    listContextSnapshots,
   }
 }

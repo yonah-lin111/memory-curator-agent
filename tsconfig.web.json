@@ -11,9 +11,7 @@
     "composite": true,
     "moduleResolution": "bundler",
     "paths": {
-      "@/*": [
-        "./src/renderer/src/*"
-      ]
+      "@/*": ["./src/renderer/src/*"]
     },
     "jsx": "react-jsx"
   }

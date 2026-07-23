@@ -1,56 +1,44 @@
-import type React from "react";
-import { useEffect, useMemo, useState, useRef } from "react";
-import * as echarts from "echarts";
-import { useHeaderStore } from "@/lib/headerStore";
-import { useToast } from "@/components/ui/Toast";
-import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
-import {
-  createTodayEntryDate,
-  shiftEntryDate,
-  getMonday,
-} from "@/lib/dailyShared";
+import * as echarts from "echarts"
 import {
   Bookmark,
-  CheckCircle2,
-  Circle,
-  StickyNote,
   BookOpen,
   Calendar,
-  TrendingUp,
-  Sparkles,
-  Receipt,
+  CheckCircle2,
   CheckSquare,
-} from "lucide-react";
-import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel";
-import { MdPreview } from "md-editor-rt";
-import "md-editor-rt/lib/preview.css";
+  Circle,
+  Receipt,
+  Sparkles,
+  StickyNote,
+  TrendingUp,
+} from "lucide-react"
+import { MdPreview } from "md-editor-rt"
+import type React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator"
+import { useToast } from "@/components/ui/Toast"
+import { createTodayEntryDate, getMonday, shiftEntryDate } from "@/lib/dailyShared"
+import { useHeaderStore } from "@/lib/headerStore"
+import { WeeklySummaryPanel } from "@/pages/weekly-review/components/WeeklySummaryPanel"
+import "md-editor-rt/lib/preview.css"
 
 // 单日聚合并格式化后的数据接口
 interface DayDataAggregated {
   // 日期 (格式：YYYY-MM-DD)
-  entryDate: string;
+  entryDate: string
   // 星期名称 (如周一、周二)
-  weekdayName: string;
+  weekdayName: string
   // 当日待办列表
-  todos: any[];
+  todos: any[]
   // 当日片段列表
-  snippets: any[];
+  snippets: any[]
   // 当日日记数据
-  journal: any | null;
+  journal: any | null
   // 当日账单数据
-  bills: any[];
+  bills: any[]
 }
 
 // 星期在中文环境下的名称常量
-const WEEKDAYS_ZH = [
-  "周一",
-  "周二",
-  "周三",
-  "周四",
-  "周五",
-  "周六",
-  "周日",
-] as const;
+const WEEKDAYS_ZH = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] as const
 
 /**
  * WeeklyReviewPage - 周度策展仪表盘页面。
@@ -58,46 +46,44 @@ const WEEKDAYS_ZH = [
  */
 export const WeeklyReviewPage = (): React.JSX.Element => {
   // 引用 Toast 提示服务
-  const toast = useToast();
+  const toast = useToast()
   // 全局 Header Store 中的设置导航器方法
-  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator)
 
   // 当前周的选中基准日期，默认初始化为今天
-  const [entryDate, setEntryDate] = useState<string>(() =>
-    createTodayEntryDate(),
-  );
+  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate())
   // 包含周一至周日 7 天的聚合数据列表
-  const [weeklyData, setWeeklyData] = useState<DayDataAggregated[]>([]);
+  const [weeklyData, setWeeklyData] = useState<DayDataAggregated[]>([])
   // 数据加载 loading 状态
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   // 包含处于展开状态的日期列表 (支持多日同时展开、折叠)
-  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const [expandedDates, setExpandedDates] = useState<string[]>([])
 
   // 当周度数据加载完成时，默认展开第一天 (周一) 且当切换周时自适应重置
   useEffect(() => {
     if (weeklyData.length > 0) {
       const hasOverlap = expandedDates.some((date) =>
         weeklyData.some((day) => day.entryDate === date),
-      );
+      )
       if (!hasOverlap) {
-        setExpandedDates([weeklyData[0].entryDate]);
+        setExpandedDates([weeklyData[0].entryDate])
       }
     }
-  }, [weeklyData]);
+  }, [weeklyData])
 
   // 记忆标签环形图的 DOM 容器引用
-  const doughnutChartRef = useRef<HTMLDivElement | null>(null);
+  const doughnutChartRef = useRef<HTMLDivElement | null>(null)
   // 每日行动与片段趋势双轴图的 DOM 容器引用
-  const lineBarChartRef = useRef<HTMLDivElement | null>(null);
+  const lineBarChartRef = useRef<HTMLDivElement | null>(null)
   // 账单费用分类饼图的 DOM 容器引用
-  const billPieChartRef = useRef<HTMLDivElement | null>(null);
+  const billPieChartRef = useRef<HTMLDivElement | null>(null)
 
   // 环形图 ECharts 实例引用
-  const doughnutInstance = useRef<echarts.ECharts | null>(null);
+  const doughnutInstance = useRef<echarts.ECharts | null>(null)
   // 折线柱状图 ECharts 实例引用
-  const lineBarInstance = useRef<echarts.ECharts | null>(null);
+  const lineBarInstance = useRef<echarts.ECharts | null>(null)
   // 账单饼图 ECharts 实例引用
-  const billPieInstance = useRef<echarts.ECharts | null>(null);
+  const billPieInstance = useRef<echarts.ECharts | null>(null)
 
   /**
    * 将周度导航器 PageDateNavigator 挂载发布到全局 Header 栏
@@ -108,26 +94,24 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
         mode="week"
         entryDate={entryDate}
         onChange={(nextDate) => {
-          setEntryDate(nextDate);
+          setEntryDate(nextDate)
         }}
       />,
-    );
+    )
     return () => {
-      setDateNavigator(null);
-    };
-  }, [entryDate, setDateNavigator]);
+      setDateNavigator(null)
+    }
+  }, [entryDate, setDateNavigator])
 
   /**
    * 并发异步读取当前周（周一至周日）的 7 天 SQLite 数据库原始数据
    */
   useEffect(() => {
     const fetchWeekData = async (): Promise<void> => {
-      setIsLoading(true);
+      setIsLoading(true)
       try {
-        const mondayStr = getMonday(entryDate);
-        const datesArray = Array.from({ length: 7 }, (_, i) =>
-          shiftEntryDate(mondayStr, i),
-        );
+        const mondayStr = getMonday(entryDate)
+        const datesArray = Array.from({ length: 7 }, (_, i) => shiftEntryDate(mondayStr, i))
 
         // 并发执行 IPC 读取操作
         const results = await Promise.all(
@@ -136,13 +120,13 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               todos: [],
               snippets: [],
               journal: null,
-            };
-            if (window.api?.daily) {
-              data = await window.api.daily.listDay(d);
             }
-            let bills: any[] = [];
+            if (window.api?.daily) {
+              data = await window.api.daily.listDay(d)
+            }
+            let bills: any[] = []
             if (window.api?.bill) {
-              bills = await window.api.bill.list({ billDate: d });
+              bills = await window.api.bill.list({ billDate: d })
             }
             return {
               entryDate: d,
@@ -151,101 +135,97 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               snippets: data.snippets || [],
               journal: data.journal || null,
               bills,
-            };
+            }
           }),
-        );
-        setWeeklyData(results);
+        )
+        setWeeklyData(results)
       } catch (err) {
-        toast.error("加载周度数据失败");
+        toast.error("加载周度数据失败")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    void fetchWeekData();
-  }, [entryDate, toast]);
+    void fetchWeekData()
+  }, [entryDate, toast])
 
   /**
    * 汇总计算当前周的深度分析统计指标（待办、片段、高频标签等）
    */
   const stats = useMemo(() => {
     // 待办总数
-    let totalTodos = 0;
+    let totalTodos = 0
     // 已完成待办数
-    let completedTodos = 0;
+    let completedTodos = 0
     // 高优先级待办数
-    let highPriorityCount = 0;
+    let highPriorityCount = 0
     // 捕获的片段总数
-    let totalSnippets = 0;
+    let totalSnippets = 0
     // 写日记的总天数
-    let journalsCount = 0;
+    let journalsCount = 0
     // 账单总数
-    let totalBills = 0;
+    let totalBills = 0
     // 临时记录标签频次的 map 映射
-    const tagsMap: Record<string, number> = {};
+    const tagsMap: Record<string, number> = {}
 
     weeklyData.forEach((day) => {
-      totalTodos += day.todos.length;
-      completedTodos += day.todos.filter((t) => t.completed).length;
-      highPriorityCount += day.todos.filter(
-        (t) => t.priority === "high" || t.priority === 3,
-      ).length;
-      totalSnippets += day.snippets.length;
-      totalBills += day.bills.length;
+      totalTodos += day.todos.length
+      completedTodos += day.todos.filter((t) => t.completed).length
+      highPriorityCount += day.todos.filter((t) => t.priority === "high" || t.priority === 3).length
+      totalSnippets += day.snippets.length
+      totalBills += day.bills.length
       if (day.journal) {
-        journalsCount++;
+        journalsCount++
       }
 
       day.snippets.forEach((snip) => {
         if (snip.tags) {
           snip.tags.forEach((t: string) => {
-            tagsMap[t] = (tagsMap[t] || 0) + 1;
-          });
+            tagsMap[t] = (tagsMap[t] || 0) + 1
+          })
         }
-      });
-    });
+      })
+    })
 
     // 计算待办完成率百分比
-    const completionRate =
-      totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0;
+    const completionRate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0
     // 获取频次前 10 的高频周标签
     const topTags = Object.entries(tagsMap)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
+      .slice(0, 10)
 
     // 计算本周总收入与支出，以及收支分类数据
-    let totalExpense = 0;
-    let totalIncome = 0;
-    const expenseCategoryMap: Record<string, number> = {};
-    const incomeCategoryMap: Record<string, number> = {};
+    let totalExpense = 0
+    let totalIncome = 0
+    const expenseCategoryMap: Record<string, number> = {}
+    const incomeCategoryMap: Record<string, number> = {}
 
     weeklyData.forEach((day) => {
       day.bills.forEach((bill) => {
-        const cat = bill.category || "其他";
+        const cat = bill.category || "其他"
         if (bill.billType === "expense") {
-          totalExpense += bill.amount;
-          expenseCategoryMap[cat] =
-            (expenseCategoryMap[cat] || 0) + bill.amount;
+          totalExpense += bill.amount
+          expenseCategoryMap[cat] = (expenseCategoryMap[cat] || 0) + bill.amount
         } else if (bill.billType === "income") {
-          totalIncome += bill.amount;
-          incomeCategoryMap[cat] = (incomeCategoryMap[cat] || 0) + bill.amount;
+          totalIncome += bill.amount
+          incomeCategoryMap[cat] = (incomeCategoryMap[cat] || 0) + bill.amount
         }
-      });
-    });
+      })
+    })
 
     const expenseCategoryData = Object.entries(expenseCategoryMap)
       .map(([name, value]) => ({
         name,
         value: Number((value / 100).toFixed(2)),
       }))
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.value - a.value)
 
     const incomeCategoryData = Object.entries(incomeCategoryMap)
       .map(([name, value]) => ({
         name,
         value: Number((value / 100).toFixed(2)),
       }))
-      .sort((a, b) => b.value - a.value);
+      .sort((a, b) => b.value - a.value)
 
     return {
       totalTodos,
@@ -260,14 +240,14 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
       totalIncome,
       expenseCategoryData,
       incomeCategoryData,
-    };
-  }, [weeklyData]);
+    }
+  }, [weeklyData])
 
   /**
    * 初始化并刷新 ECharts 各维度指标图表的渲染副作用
    */
   useEffect(() => {
-    if (isLoading || weeklyData.length === 0) return;
+    if (isLoading || weeklyData.length === 0) return
 
     // 在测试环境下，跳过 ECharts 的初始化，避免 JSDOM canvas 报错导致单元测试崩溃
     const isTestEnv =
@@ -277,19 +257,19 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
         (Boolean((window as any).vi) ||
           Boolean((window as any).vitest) ||
           Boolean((window as any).__vitest_worker__) ||
-          (window as any).process?.env?.NODE_ENV === "test"));
-    if (isTestEnv) return;
+          (window as any).process?.env?.NODE_ENV === "test"))
+    if (isTestEnv) return
 
     // 1. 初始化或配置记忆标签环形图 (Doughnut)
     if (doughnutChartRef.current) {
       if (!doughnutInstance.current) {
-        doughnutInstance.current = echarts.init(doughnutChartRef.current);
+        doughnutInstance.current = echarts.init(doughnutChartRef.current)
       }
 
       const doughnutData = stats.topTags.slice(0, 5).map(([tag, count]) => ({
         name: `#${tag}`,
         value: count,
-      }));
+      }))
 
       doughnutInstance.current.setOption({
         backgroundColor: "transparent",
@@ -342,23 +322,23 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                   ],
           },
         ],
-      });
+      })
     }
 
     // 2. 初始化或配置每日行动与片段趋势双轴图 (Line + Bar)
     if (lineBarChartRef.current) {
       if (!lineBarInstance.current) {
-        lineBarInstance.current = echarts.init(lineBarChartRef.current);
+        lineBarInstance.current = echarts.init(lineBarChartRef.current)
       }
 
-      const days = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+      const days = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
       const todoCompletedSeries = weeklyData.map(
         (day) => day.todos.filter((t) => t.completed).length,
-      );
-      const todoTotalSeries = weeklyData.map((day) => day.todos.length);
-      const snippetSeries = weeklyData.map((day) => day.snippets.length);
+      )
+      const todoTotalSeries = weeklyData.map((day) => day.todos.length)
+      const snippetSeries = weeklyData.map((day) => day.snippets.length)
 
-      const journalSeries = weeklyData.map((day) => (day.journal ? 1 : 0));
+      const journalSeries = weeklyData.map((day) => (day.journal ? 1 : 0))
       const expenseSeries = weeklyData.map((day) =>
         Number(
           (
@@ -367,16 +347,15 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               .reduce((sum, b) => sum + b.amount, 0) / 100
           ).toFixed(2),
         ),
-      );
+      )
       const incomeSeries = weeklyData.map((day) =>
         Number(
           (
-            day.bills
-              .filter((b) => b.billType === "income")
-              .reduce((sum, b) => sum + b.amount, 0) / 100
+            day.bills.filter((b) => b.billType === "income").reduce((sum, b) => sum + b.amount, 0) /
+            100
           ).toFixed(2),
         ),
-      );
+      )
 
       lineBarInstance.current.setOption({
         backgroundColor: "transparent",
@@ -495,9 +474,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
               borderRadius: [3, 3, 0, 0],
             },
             barWidth: 16,
-            data: todoTotalSeries.map(
-              (tot, idx) => tot - todoCompletedSeries[idx],
-            ),
+            data: todoTotalSeries.map((tot, idx) => tot - todoCompletedSeries[idx]),
           },
           {
             name: "片段",
@@ -551,44 +528,44 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             data: incomeSeries,
           },
         ],
-      });
+      })
     }
 
     // 3. 初始化或配置账单双层嵌套环形图 (旭日图效果)
     if (billPieChartRef.current) {
       if (!billPieInstance.current) {
-        billPieInstance.current = echarts.init(billPieChartRef.current);
+        billPieInstance.current = echarts.init(billPieChartRef.current)
       }
 
-      const totalIncomeYuan = Number((stats.totalIncome / 100).toFixed(2));
-      const totalExpenseYuan = Number((stats.totalExpense / 100).toFixed(2));
+      const totalIncomeYuan = Number((stats.totalIncome / 100).toFixed(2))
+      const totalExpenseYuan = Number((stats.totalExpense / 100).toFixed(2))
 
       // 内圈数据：总收支
       const innerData: Array<{
-        name: string;
-        value: number;
-        itemStyle: { color: string };
-      }> = [];
+        name: string
+        value: number
+        itemStyle: { color: string }
+      }> = []
       if (totalIncomeYuan > 0) {
         innerData.push({
           name: "总收入",
           value: totalIncomeYuan,
           itemStyle: { color: "#4ade80" },
-        });
+        })
       }
       if (totalExpenseYuan > 0) {
         innerData.push({
           name: "总支出",
           value: totalExpenseYuan,
           itemStyle: { color: "#f87171" },
-        });
+        })
       }
       if (innerData.length === 0) {
         innerData.push({
           name: "无收支",
           value: 1,
           itemStyle: { color: "rgba(255,255,255,0.05)" },
-        });
+        })
       }
 
       // 外圈数据：收支细分
@@ -601,7 +578,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
           ...item,
           itemStyle: { color: "rgba(248, 113, 113, 0.7)" },
         })),
-      ];
+      ]
 
       billPieInstance.current.setOption({
         backgroundColor: "transparent",
@@ -672,35 +649,35 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                   ],
           },
         ],
-      });
+      })
     }
 
     // 处理视窗 Resize 动态重绘，避免图表拉伸错位
     const handleResize = (): void => {
-      doughnutInstance.current?.resize();
-      lineBarInstance.current?.resize();
-      billPieInstance.current?.resize();
-    };
-    window.addEventListener("resize", handleResize);
+      doughnutInstance.current?.resize()
+      lineBarInstance.current?.resize()
+      billPieInstance.current?.resize()
+    }
+    window.addEventListener("resize", handleResize)
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [isLoading, weeklyData, stats]);
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [isLoading, weeklyData, stats])
 
   /**
    * 卸载组件时进行 ECharts 实例的显式销毁，防止内存泄漏
    */
   useEffect(() => {
     return () => {
-      doughnutInstance.current?.dispose();
-      lineBarInstance.current?.dispose();
-      billPieInstance.current?.dispose();
-      doughnutInstance.current = null;
-      lineBarInstance.current = null;
-      billPieInstance.current = null;
-    };
-  }, []);
+      doughnutInstance.current?.dispose()
+      lineBarInstance.current?.dispose()
+      billPieInstance.current?.dispose()
+      doughnutInstance.current = null
+      lineBarInstance.current = null
+      billPieInstance.current = null
+    }
+  }, [])
 
   return (
     <section
@@ -715,16 +692,12 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold tracking-wide text-white/80">
-                  周数据透视
-                </span>
+                <span className="text-sm font-bold tracking-wide text-white/80">周数据透视</span>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
               <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">
-                  待办完成率
-                </span>
+                <span className="text-xs text-white/30 font-mono leading-none">待办完成率</span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-bold text-white/90 leading-none">
                     {stats.completionRate}%
@@ -735,48 +708,34 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                 </div>
               </div>
               <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">
-                  知识沉淀
-                </span>
+                <span className="text-xs text-white/30 font-mono leading-none">知识沉淀</span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-bold text-white/90 leading-none">
                     {stats.totalSnippets}
                   </span>
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    个片段捕获
-                  </span>
+                  <span className="text-xs text-white/30 font-mono leading-none">个片段捕获</span>
                 </div>
               </div>
               <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">
-                  日记连续性
-                </span>
+                <span className="text-xs text-white/30 font-mono leading-none">日记连续性</span>
                 <div className="flex items-baseline justify-between mt-1">
                   <span className="text-2xl font-bold text-white/90 leading-none">
                     {stats.journalsCount}/7
                   </span>
-                  <span className="text-xs text-white/30 font-mono leading-none">
-                    天写作记录
-                  </span>
+                  <span className="text-xs text-white/30 font-mono leading-none">天写作记录</span>
                 </div>
               </div>
               <div className="bg-black/40 p-4 rounded-[6px] border border-white/5 flex flex-col justify-between h-[90px]">
-                <span className="text-xs text-white/30 font-mono leading-none">
-                  收支总览
-                </span>
+                <span className="text-xs text-white/30 font-mono leading-none">收支总览</span>
                 <div className="flex flex-col gap-1 mt-1 justify-end h-full">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-white/30 font-mono leading-none">
-                      支
-                    </span>
+                    <span className="text-xs text-white/30 font-mono leading-none">支</span>
                     <span className="text-sm font-bold text-red-400/80 leading-none">
                       ¥{(stats.totalExpense / 100).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-white/30 font-mono leading-none">
-                      收
-                    </span>
+                    <span className="text-xs text-white/30 font-mono leading-none">收</span>
                     <span className="text-sm font-bold text-green-400/80 leading-none">
                       ¥{(stats.totalIncome / 100).toFixed(2)}
                     </span>
@@ -849,22 +808,20 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
             ) : (
               <div className="flex w-full gap-2 h-[500px]">
                 {weeklyData.map((day) => {
-                  const isActive = expandedDates[0] === day.entryDate;
+                  const isActive = expandedDates[0] === day.entryDate
 
-                  const completedTodos = day.todos.filter(
-                    (t: any) => t.completed,
-                  ).length;
-                  const totalTodos = day.todos.length;
-                  const snippetsCount = day.snippets.length;
-                  const billsCount = day.bills.length;
-                  const hasJournal = !!day.journal;
+                  const completedTodos = day.todos.filter((t: any) => t.completed).length
+                  const totalTodos = day.todos.length
+                  const snippetsCount = day.snippets.length
+                  const billsCount = day.bills.length
+                  const hasJournal = !!day.journal
 
                   return (
                     <div
                       key={day.entryDate}
                       onClick={() => {
                         if (!isActive) {
-                          setExpandedDates([day.entryDate]);
+                          setExpandedDates([day.entryDate])
                         }
                       }}
                       className={`relative flex flex-col rounded-[8px] border transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] overflow-hidden ${
@@ -876,9 +833,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                       {/* 未展开 */}
                       <div
                         className={`absolute inset-0 flex flex-col items-center py-4 transition-opacity duration-300 ${
-                          isActive
-                            ? "opacity-0 pointer-events-none"
-                            : "opacity-100"
+                          isActive ? "opacity-0 pointer-events-none" : "opacity-100"
                         }`}
                       >
                         <div className="flex flex-col items-center gap-1">
@@ -972,8 +927,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                             </div>
                           </div>
 
-                           {/* 内容流 */}
-                           <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] pr-2 pb-2">
+                          {/* 内容流 */}
+                          <div className="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar [scrollbar-gutter:stable] pr-2 pb-2">
                             {/* 日记 */}
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-1.5">
@@ -1081,9 +1036,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                                         <div
                                           className={`w-1.5 h-1.5 rounded-full ${bill.billType === "expense" ? "bg-[#f87171]" : "bg-[#4ade80]"}`}
                                         />
-                                        <span className="text-white/60">
-                                          {bill.category}
-                                        </span>
+                                        <span className="text-white/60">{bill.category}</span>
                                         {bill.note && (
                                           <span className="text-white/30 truncate max-w-[80px]">
                                             - {bill.note}
@@ -1093,10 +1046,8 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                                       <span
                                         className={`font-mono font-bold ${bill.billType === "expense" ? "text-red-400/80" : "text-green-400/80"}`}
                                       >
-                                        {bill.billType === "expense"
-                                          ? "-"
-                                          : "+"}
-                                        ¥{(bill.amount / 100).toFixed(2)}
+                                        {bill.billType === "expense" ? "-" : "+"}¥
+                                        {(bill.amount / 100).toFixed(2)}
                                       </span>
                                     </div>
                                   ))}
@@ -1107,7 +1058,7 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
                         </div>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -1127,5 +1078,5 @@ export const WeeklyReviewPage = (): React.JSX.Element => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

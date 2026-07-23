@@ -1,4 +1,4 @@
-import type { CuratorInputCommand } from "@/lib/ai-shared/types";
+import type { CuratorInputCommand } from "@/lib/ai-shared/types"
 
 // AI 输入框支持的斜杠命令。
 export const CURATOR_INPUT_COMMANDS: CuratorInputCommand[] = [
@@ -37,26 +37,26 @@ export const CURATOR_INPUT_COMMANDS: CuratorInputCommand[] = [
     description: "重新生成不重复的后续问题建议",
     addToContext: false,
   },
-];
+]
 
 // 输入框最小显示行数。
-export const TEXTAREA_MIN_ROWS = 2;
+export const TEXTAREA_MIN_ROWS = 2
 
 // 输入框最大显示行数。
-export const TEXTAREA_MAX_ROWS = 6;
+export const TEXTAREA_MAX_ROWS = 6
 
 // 测不到 CSS line-height 时的兜底行高。
-export const FALLBACK_LINE_HEIGHT = 21;
+export const FALLBACK_LINE_HEIGHT = 21
 
 // 本地兜底历史最大保留数量，与主进程服务保持一致。
-export const PROMPT_HISTORY_LIMIT = 100;
+export const PROMPT_HISTORY_LIMIT = 100
 
 // 容器点击时不抢焦点的交互元素。
 export const INTERACTIVE_SELECTOR =
-  "button, select, input, textarea, a, [role='button'], [role='listbox'], [role='option']";
+  "button, select, input, textarea, a, [role='button'], [role='listbox'], [role='option']"
 
 // 文本文件支持的最大数量。
-export const MAX_TEXT_FILES = 6;
+export const MAX_TEXT_FILES = 6
 
 // 文本文件 MIME 类型集合。
 export const SUPPORTED_TEXT_MIME_TYPES = new Set([
@@ -91,4 +91,4 @@ export const SUPPORTED_TEXT_MIME_TYPES = new Set([
   "application/typescript",
   "application/xml",
   "application/x-sh",
-]);
+])

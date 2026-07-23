@@ -10,11 +10,11 @@ import type {
   TodoCreateInput,
   TodoItem,
   TodoReorderInput,
-  TodoUpdateInput
-} from '@/db/schema'
-import { createTodosService } from '@/services/todosService'
-import { createSnippetsService } from '@/services/snippetsService'
-import { createJournalsService } from '@/services/journalsService'
+  TodoUpdateInput,
+} from "@/db/schema"
+import { createJournalsService } from "@/services/journalsService"
+import { createSnippetsService } from "@/services/snippetsService"
+import { createTodosService } from "@/services/todosService"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -63,7 +63,7 @@ export type DailyService = {
  */
 const validateEntryDate = (entryDate: string): void => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
-    throw new Error('工作台日期格式不正确')
+    throw new Error("工作台日期格式不正确")
   }
 }
 
@@ -72,7 +72,7 @@ const validateEntryDate = (entryDate: string): void => {
  */
 const validateEntryMonth = (month: string): void => {
   if (!/^\d{4}-\d{2}$/.test(month)) {
-    throw new Error('工作台月份格式不正确')
+    throw new Error("工作台月份格式不正确")
   }
 }
 
@@ -99,7 +99,7 @@ export const createDailyService = (database: DatabaseConnection): DailyService =
       return {
         todos: todosService.listByDate(entryDate),
         snippets: snippetsService.listByDate(entryDate),
-        journal: journalsService.get(entryDate)
+        journal: journalsService.get(entryDate),
       }
     },
     listMonthOverview: (month) => {
@@ -112,18 +112,18 @@ export const createDailyService = (database: DatabaseConnection): DailyService =
       // 统一写入聚合计数，避免三类记录合并逻辑重复。
       const applyCountRows = (
         rows: CountRow[],
-        field: 'todoCount' | 'snippetCount' | 'journalCount'
+        field: "todoCount" | "snippetCount" | "journalCount",
       ): void => {
         rows.forEach((row) => {
           const currentItem = overviewMap.get(row.entry_date) ?? {
             entryDate: row.entry_date,
             todoCount: 0,
             snippetCount: 0,
-            journalCount: 0
+            journalCount: 0,
           }
           overviewMap.set(row.entry_date, {
             ...currentItem,
-            [field]: row.item_count
+            [field]: row.item_count,
           })
         })
       }
@@ -131,31 +131,33 @@ export const createDailyService = (database: DatabaseConnection): DailyService =
       applyCountRows(
         database
           .prepare(
-            'SELECT entry_date, COUNT(*) AS item_count FROM todos WHERE entry_date LIKE ? GROUP BY entry_date'
+            "SELECT entry_date, COUNT(*) AS item_count FROM todos WHERE entry_date LIKE ? GROUP BY entry_date",
           )
           .all(monthPattern) as CountRow[],
-        'todoCount'
+        "todoCount",
       )
       applyCountRows(
         database
           .prepare(
-            'SELECT entry_date, COUNT(*) AS item_count FROM snippets WHERE entry_date LIKE ? GROUP BY entry_date'
+            "SELECT entry_date, COUNT(*) AS item_count FROM snippets WHERE entry_date LIKE ? GROUP BY entry_date",
           )
           .all(monthPattern) as CountRow[],
-        'snippetCount'
+        "snippetCount",
       )
       applyCountRows(
         database
           .prepare(
-            'SELECT entry_date, COUNT(*) AS item_count FROM journals WHERE entry_date LIKE ? GROUP BY entry_date'
+            "SELECT entry_date, COUNT(*) AS item_count FROM journals WHERE entry_date LIKE ? GROUP BY entry_date",
           )
           .all(monthPattern) as CountRow[],
-        'journalCount'
+        "journalCount",
       )
 
       return {
         month,
-        entries: [...overviewMap.values()].sort((left, right) => left.entryDate.localeCompare(right.entryDate))
+        entries: [...overviewMap.values()].sort((left, right) =>
+          left.entryDate.localeCompare(right.entryDate),
+        ),
       }
     },
     saveJournal: (input) => journalsService.save(input),
@@ -166,6 +168,6 @@ export const createDailyService = (database: DatabaseConnection): DailyService =
     reorderTodos: (input) => todosService.reorder(input),
     createSnippet: (input) => snippetsService.create(input),
     updateSnippet: (id, input) => snippetsService.update(id, input),
-    deleteSnippet: (id) => snippetsService.delete(id)
+    deleteSnippet: (id) => snippetsService.delete(id),
   }
 }

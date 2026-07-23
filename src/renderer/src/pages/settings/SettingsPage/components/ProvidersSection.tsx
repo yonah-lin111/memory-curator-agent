@@ -1,29 +1,36 @@
-import type React from "react";
-import { KeyRound, Trash2, SlidersHorizontal, X, Copy } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
-import { Tag } from "@/components/ui/Tag";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { PROVIDER_TYPE_OPTIONS } from "../constants";
-import { parseList } from "../utils";
-import type { AiSettingsConfig, AiSettingsProvider, AiSettingsModel, ProviderType } from "../types";
+import { Copy, KeyRound, SlidersHorizontal, Trash2, X } from "lucide-react"
+import type React from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { Select } from "@/components/ui/Select"
+import { Tag } from "@/components/ui/Tag"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { PROVIDER_TYPE_OPTIONS } from "../constants"
+import type { AiSettingsConfig, AiSettingsModel, AiSettingsProvider, ProviderType } from "../types"
+import { parseList } from "../utils"
 
 export interface ProvidersSectionProps {
-  settings: AiSettingsConfig;
-  selectedProviderKey: string;
-  setSelectedProviderKey: (key: string) => void;
-  expandedModelKeys: Record<string, boolean>;
-  toggleModelExpanded: (modelKey: string) => void;
-  addProvider: () => void;
-  updateProvider: (key: string, updater: (provider: AiSettingsProvider) => AiSettingsProvider) => void;
-  deleteProvider: (key: string) => void;
-  copyProvider: (key: string) => void;
-  toggleProviderEnabled: (key: string, enabled: boolean) => void;
-  addModel: (providerKey: string) => void;
-  copyModel: (providerKey: string, modelKey: string) => void;
-  updateModel: (providerKey: string, modelKey: string, updater: (model: AiSettingsModel) => AiSettingsModel) => void;
-  deleteModel: (providerKey: string, modelKey: string) => void;
+  settings: AiSettingsConfig
+  selectedProviderKey: string
+  setSelectedProviderKey: (key: string) => void
+  expandedModelKeys: Record<string, boolean>
+  toggleModelExpanded: (modelKey: string) => void
+  addProvider: () => void
+  updateProvider: (
+    key: string,
+    updater: (provider: AiSettingsProvider) => AiSettingsProvider,
+  ) => void
+  deleteProvider: (key: string) => void
+  copyProvider: (key: string) => void
+  toggleProviderEnabled: (key: string, enabled: boolean) => void
+  addModel: (providerKey: string) => void
+  copyModel: (providerKey: string, modelKey: string) => void
+  updateModel: (
+    providerKey: string,
+    modelKey: string,
+    updater: (model: AiSettingsModel) => AiSettingsModel,
+  ) => void
+  deleteModel: (providerKey: string, modelKey: string) => void
 }
 
 export const ProvidersSection = ({
@@ -42,11 +49,11 @@ export const ProvidersSection = ({
   updateModel,
   deleteModel,
 }: ProvidersSectionProps): React.JSX.Element => {
-  const providerEntries = Object.entries(settings.providers);
-  const selectedProvider = settings.providers[selectedProviderKey] ?? providerEntries[0]?.[1];
+  const providerEntries = Object.entries(settings.providers)
+  const selectedProvider = settings.providers[selectedProviderKey] ?? providerEntries[0]?.[1]
   const selectedProviderEntryKey = settings.providers[selectedProviderKey]
     ? selectedProviderKey
-    : (providerEntries[0]?.[0] ?? "");
+    : (providerEntries[0]?.[0] ?? "")
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -54,8 +61,8 @@ export const ProvidersSection = ({
       <section className="relative flex min-h-[48px] items-center rounded-[6px] border border-white/8 bg-[#212121] p-3 pr-12">
         <div className="flex flex-wrap items-center gap-1.5">
           {providerEntries.map(([providerKey, provider]) => {
-            const isActive = providerKey === selectedProviderEntryKey;
-            const isEnabled = settings.enabledProviders.includes(providerKey);
+            const isActive = providerKey === selectedProviderEntryKey
+            const isEnabled = settings.enabledProviders.includes(providerKey)
 
             return (
               <Tag
@@ -67,9 +74,7 @@ export const ProvidersSection = ({
               >
                 {provider.name || provider.id}
                 <span
-                  className={`ml-1.5 text-[10px] ${
-                    isActive ? "text-white/60" : "text-white/30"
-                  }`}
+                  className={`ml-1.5 text-[10px] ${isActive ? "text-white/60" : "text-white/30"}`}
                 >
                   ({Object.keys(provider.models).length} · {isEnabled ? "已启用" : "已禁用"})
                 </span>
@@ -78,8 +83,8 @@ export const ProvidersSection = ({
                     role="button"
                     aria-label="复制 Provider"
                     onClick={(e) => {
-                      e.stopPropagation();
-                      copyProvider(providerKey);
+                      e.stopPropagation()
+                      copyProvider(providerKey)
                     }}
                     className="opacity-60 hover:opacity-100 cursor-pointer text-current hover:text-white transition-all flex items-center justify-center p-0.5"
                   >
@@ -101,7 +106,7 @@ export const ProvidersSection = ({
                   </Tooltip>
                 </span>
               </Tag>
-            );
+            )
           })}
         </div>
 
@@ -241,7 +246,7 @@ export const ProvidersSection = ({
 
           <div className="mt-2 flex flex-col gap-2">
             {Object.entries(selectedProvider.models).map(([modelKey, model]) => {
-              const isExpanded = expandedModelKeys[modelKey] ?? false;
+              const isExpanded = expandedModelKeys[modelKey] ?? false
               return (
                 <div
                   key={modelKey}
@@ -395,7 +400,7 @@ export const ProvidersSection = ({
                     </div>
                   )}
                 </div>
-              );
+              )
             })}
           </div>
         </section>
@@ -405,5 +410,5 @@ export const ProvidersSection = ({
         </section>
       )}
     </div>
-  );
-};
+  )
+}

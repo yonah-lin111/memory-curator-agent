@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
 
-import type { ElectronAPI } from '@electron-toolkit/preload'
+import type { ElectronAPI } from "@electron-toolkit/preload"
 
 // 待办优先级类型。
-type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+type TodoPriority = "P0" | "P1" | "P2" | "P3"
 
 /** 主题项 */
 type ThemeItem = {
@@ -35,12 +35,25 @@ type ThemeUpdateInput = {
 }
 
 // 账单分类类型。
-type BillCategory = 
-  | '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
-  | '工资' | '兼职' | '理财' | '礼金' | '报销' | '奖金' | '退款'
+type BillCategory =
+  | "餐饮"
+  | "交通"
+  | "购物"
+  | "娱乐"
+  | "居住"
+  | "医疗"
+  | "教育"
+  | "其他"
+  | "工资"
+  | "兼职"
+  | "理财"
+  | "礼金"
+  | "报销"
+  | "奖金"
+  | "退款"
 
 // 收支类型。
-type BillType = 'expense' | 'income'
+type BillType = "expense" | "income"
 
 // 账单列表筛选。
 type BillListFilters = {
@@ -216,7 +229,7 @@ type SnippetUpdatePayload = {
 }
 
 // 人物关系类型。
-type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+type PersonRelationship = "女朋友" | "家人" | "朋友" | "同事" | "其他"
 
 // 个人信息保存载荷类型。
 type PersonalProfilePayload = {
@@ -261,12 +274,21 @@ type AssociatedPersonPayload = {
 }
 
 // 提示词历史作用域。
-type PromptHistoryScope = 'curator' | 'prompt-design'
+type PromptHistoryScope = "curator" | "prompt-design"
 
 // AI 对话 agent hint 类型。
 type CuratorAgentHint = {
   // Agent 唯一标识。
-  id: 'people' | 'personal' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
+  id:
+    | "people"
+    | "personal"
+    | "todo"
+    | "snippets"
+    | "journal"
+    | "notes"
+    | "today"
+    | "common"
+    | "bills"
   // 本轮 agent 优先级，数字越小越优先。
   priority: number
 }
@@ -294,7 +316,7 @@ type CuratorStartPayload = {
     // 上下文稳定去重键。
     key: string
     // 上下文来源类型。
-    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent' | 'skill'
+    kind: "message" | "memory" | "page" | "file" | "tool" | "agent" | "skill"
     // 展示标题。
     title: string
     // 来源对象标识。
@@ -335,7 +357,7 @@ type AiToolConfirmationAnswerPayload = {
   // 工具确认请求唯一标识。
   requestId: string
   // 用户确认动作。
-  action: 'confirm' | 'cancel'
+  action: "confirm" | "cancel"
 }
 
 // AI 模型选项。
@@ -433,7 +455,7 @@ type AiSettingsProvider = {
   // Provider 唯一标识。
   id: string
   // Provider 传输格式。
-  type: 'openai-compatible' | 'openai' | 'anthropic' | 'google'
+  type: "openai-compatible" | "openai" | "anthropic" | "google"
   // Provider 显示名。
   name: string
   // Provider 连接参数。
@@ -487,7 +509,7 @@ type AiSettingsConfig = {
 type CuratorEvent =
   | {
       // 事件类型。
-      type: 'run_started' | 'assistant_message_started' | 'turn_finished' | 'done'
+      type: "run_started" | "assistant_message_started" | "turn_finished" | "done"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -495,7 +517,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'text_delta'
+      type: "text_delta"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -505,7 +527,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_started'
+      type: "tool_started"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -519,7 +541,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_finished'
+      type: "tool_finished"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -535,7 +557,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_failed'
+      type: "tool_failed"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -551,7 +573,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'session_title_updated'
+      type: "session_title_updated"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -561,7 +583,7 @@ type CuratorEvent =
     }
   | {
       // 事件类型。
-      type: 'error'
+      type: "error"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -571,10 +593,10 @@ type CuratorEvent =
     }
 
 // AI 工具步骤状态类型。
-type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued' | 'cancelled'
+type AiToolStepStatus = "done" | "failed" | "running" | "queued" | "cancelled"
 
 // AI 对话会话状态类型。
-type CuratorSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
+type CuratorSessionStatus = "idle" | "running" | "completed" | "failed"
 
 // AI 工具步骤类型。
 type AiToolStep = {
@@ -599,14 +621,14 @@ type CuratorMessagePart =
   | {
       // MCP 服务及工具快照。
       id: string
-      kind: 'mcp-overview'
+      kind: "mcp-overview"
       servers: PromptAiMcpServer[]
     }
   | {
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text'
+      kind: "text"
       // Markdown 文本内容。
       content: string
     }
@@ -616,17 +638,17 @@ type CuratorMessagePart =
       // 上游 reasoning 事件标识，用于合并同一连续流式段。
       sourceId?: string
       // 片段类型。
-      kind: 'reasoning'
+      kind: "reasoning"
       // Markdown 思考内容。
       content: string
       // 思考片段状态。
-      status?: 'streaming' | 'done'
+      status?: "streaming" | "done"
     }
   | {
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'tool'
+      kind: "tool"
       // 对应工具步骤 ID。
       stepId: string
     }
@@ -634,7 +656,7 @@ type CuratorMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'image'
+      kind: "image"
       // 图片的本地协议地址。
       url: string
     }
@@ -642,7 +664,7 @@ type CuratorMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text-file'
+      kind: "text-file"
       // 文本文件的本地协议地址。
       url: string
       // 原始文件名。
@@ -654,9 +676,18 @@ type CuratorMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'agent'
+      kind: "agent"
       // Agent 唯一标识。
-      agentId: 'people' | 'personal' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
+      agentId:
+        | "people"
+        | "personal"
+        | "todo"
+        | "snippets"
+        | "journal"
+        | "notes"
+        | "today"
+        | "common"
+        | "bills"
     }
 
 // AI 对话消息类型。
@@ -664,7 +695,7 @@ type CuratorMessage = {
   // 消息唯一标识。
   id: string
   // 消息发送者。
-  role: 'user' | 'assistant' | 'system' | 'system_command'
+  role: "user" | "assistant" | "system" | "system_command"
   // 消息正文。
   content: string
   // 消息显示时间。
@@ -980,7 +1011,7 @@ type AppAPI = {
     // 获取启用的 AI 模型选项。
     getModelOptions: () => Promise<AiModelOptionsResponse>
     suggestQuestions: (
-      messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+      messages: Array<{ role: "user" | "assistant"; content: string }>,
       excludedQuestions?: string[],
     ) => Promise<string[]>
     // 读取指定输入区域的历史提示词列表。
@@ -1079,7 +1110,10 @@ type AppAPI = {
       update: (id: string, input: any) => Promise<void>
       delete: (id: string) => Promise<void>
     }
-    searchFiles: (directory: string, query: string) => Promise<{ path: string; isDirectory: boolean }[]>
+    searchFiles: (
+      directory: string,
+      query: string,
+    ) => Promise<{ path: string; isDirectory: boolean }[]>
   }
   promptAi?: {
     // 使用配置的标题模型为当前提示词设计生成简短标题。
@@ -1087,7 +1121,10 @@ type AppAPI = {
     // 检查当前提示词设计页的 MCP 服务连接状态。
     checkMcpStatus: (payload: { designItemId: string }) => Promise<PromptAiMcpStatusResult>
     // 读取当前可用 MCP 服务及其工具。
-    listMcpTools: (payload: { sessionId: string; designItemId: string }) => Promise<PromptAiMcpCommandResult>
+    listMcpTools: (payload: {
+      sessionId: string
+      designItemId: string
+    }) => Promise<PromptAiMcpCommandResult>
     listSessions: (designItemId: string) => Promise<PromptAiChatSession[]>
     getSession: (sessionId: string) => Promise<PromptAiChatSession | null>
     updateSessionTitle: (sessionId: string, title: string) => Promise<void>
@@ -1101,26 +1138,33 @@ type AppAPI = {
     respondEditorApply: (payload: PromptEditorApplyResponse) => Promise<void>
     onEditorApplyRequest: (listener: (request: PromptEditorApplyRequest) => void) => () => void
     submitAskAnswer: (payload: AiAskAnswerPayload) => Promise<void>
-    submitToolConfirmationAnswer: (payload: { requestId: string; action: "confirm" | "cancel" }) => Promise<void>
+    submitToolConfirmationAnswer: (payload: {
+      requestId: string
+      action: "confirm" | "cancel"
+    }) => Promise<void>
     onChatEvent: (listener: (event: PromptAiChatEvent) => void) => () => void
   }
   skills?: {
-    list: (forceRefresh?: boolean) => Promise<Array<{
-      id: string
-      name: string
-      description: string
-      supportedAgents?: string[]
-      content: string
-      location: string
-    }>>
-    getAvailableForAgent: (agentId: string) => Promise<Array<{
-      id: string
-      name: string
-      description: string
-      supportedAgents?: string[]
-      content: string
-      location: string
-    }>>
+    list: (forceRefresh?: boolean) => Promise<
+      Array<{
+        id: string
+        name: string
+        description: string
+        supportedAgents?: string[]
+        content: string
+        location: string
+      }>
+    >
+    getAvailableForAgent: (agentId: string) => Promise<
+      Array<{
+        id: string
+        name: string
+        description: string
+        supportedAgents?: string[]
+        content: string
+        location: string
+      }>
+    >
     clearCache: () => Promise<void>
   }
 }
@@ -1160,7 +1204,7 @@ type PromptEditorReadResponse = PromptEditorReadRequest & { content: string; ver
 type PromptEditorApplyRequest = PromptEditorReadRequest & {
   content: string
   baseVersion: number
-  operation: 'replace' | 'insert_lines' | 'replace_lines' | 'delete_lines'
+  operation: "replace" | "insert_lines" | "replace_lines" | "delete_lines"
 }
 type PromptEditorApplyResponse = PromptEditorReadRequest & { content: string; version: number }
 
@@ -1183,14 +1227,27 @@ type PromptAiChatSession = {
 }
 
 type PromptAiChatEvent =
-  | { type: 'run_started'; runId: string; sessionId: string; model?: string; currentDocumentTruncated?: boolean }
-  | { type: 'text_delta' | 'reasoning_delta'; runId: string; sessionId: string; delta: string }
-  | { type: 'tool_started'; runId: string; sessionId: string; toolStep: CuratorToolStep }
-  | { type: 'tool_finished'; runId: string; sessionId: string; toolStepId: string; observation?: string; data?: unknown }
-  | { type: 'tool_failed'; runId: string; sessionId: string; toolStepId: string; error?: string }
-  | { type: 'turn_finished' | 'done'; runId: string; sessionId: string }
-  | { type: 'session_title_updated'; runId: string; sessionId: string; title: string }
-  | { type: 'error'; runId: string; sessionId: string; message: string }
+  | {
+      type: "run_started"
+      runId: string
+      sessionId: string
+      model?: string
+      currentDocumentTruncated?: boolean
+    }
+  | { type: "text_delta" | "reasoning_delta"; runId: string; sessionId: string; delta: string }
+  | { type: "tool_started"; runId: string; sessionId: string; toolStep: CuratorToolStep }
+  | {
+      type: "tool_finished"
+      runId: string
+      sessionId: string
+      toolStepId: string
+      observation?: string
+      data?: unknown
+    }
+  | { type: "tool_failed"; runId: string; sessionId: string; toolStepId: string; error?: string }
+  | { type: "turn_finished" | "done"; runId: string; sessionId: string }
+  | { type: "session_title_updated"; runId: string; sessionId: string; title: string }
+  | { type: "error"; runId: string; sessionId: string; message: string }
 
 declare global {
   interface Window {

@@ -1,23 +1,23 @@
 /**
  * @vitest-environment jsdom
  */
-import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest"
+import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { describe, expect, it, vi } from "vitest"
 
 vi.mock("md-editor-rt", () => ({
   MdPreview: ({ modelValue }: { modelValue: string }) => (
     <div data-testid="md-preview">{modelValue}</div>
   ),
-}));
+}))
 
-import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock";
-import type { CuratorToolStep } from "@/features/curator/types";
+import { CuratorToolCallBlock } from "@/components/ai-shared/ToolCallBlock"
+import type { CuratorToolStep } from "@/features/curator/types"
 
 // Mock Lucide 图标以稳定断言工具语义图标。
 vi.mock("lucide-react", async (importOriginal) => {
-  const actual = await importOriginal<any>();
+  const actual = await importOriginal<any>()
   return {
     ...actual,
     Search: () => <span data-testid="icon-search" />,
@@ -36,8 +36,8 @@ vi.mock("lucide-react", async (importOriginal) => {
     ChartNoAxesCombined: () => <span data-testid="icon-chartnoaxescombined" />,
     Palette: () => <span data-testid="icon-palette" />,
     Wrench: () => <span data-testid="icon-wrench" />,
-  };
-});
+  }
+})
 
 describe("CuratorToolCallBlock", () => {
   it("ask answer 只展示固定描述并追加键值选择摘要", () => {
@@ -62,29 +62,19 @@ describe("CuratorToolCallBlock", () => {
           },
         ],
       },
-    };
+    }
 
-    render(<CuratorToolCallBlock steps={[step]} />);
+    render(<CuratorToolCallBlock steps={[step]} />)
 
-    expect(
-      screen.getByText("User has answered your clarification question."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("User has answered your clarification question.")).toBeInTheDocument()
     expect(
       screen.queryByText(/User has answered your clarification questions:/),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("请问您要添加的人物与您是什么关系？")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("家人")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("请提供该人物的姓名")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("王小美")
-    ).toBeInTheDocument();
-  });
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("请问您要添加的人物与您是什么关系？")).toBeInTheDocument()
+    expect(screen.getByText("家人")).toBeInTheDocument()
+    expect(screen.getByText("请提供该人物的姓名")).toBeInTheDocument()
+    expect(screen.getByText("王小美")).toBeInTheDocument()
+  })
 
   it("ask 被取消时展示取消状态", () => {
     const step: CuratorToolStep = {
@@ -96,16 +86,16 @@ describe("CuratorToolCallBlock", () => {
       data: {
         error: "Ask request was cancelled.",
       },
-    };
+    }
 
-    render(<CuratorToolCallBlock steps={[step]} />);
+    render(<CuratorToolCallBlock steps={[step]} />)
 
-    expect(screen.getByLabelText("Cancelled")).toBeInTheDocument();
-    expect(screen.getByText("Ask was cancelled.")).toBeInTheDocument();
-  });
+    expect(screen.getByLabelText("Cancelled")).toBeInTheDocument()
+    expect(screen.getByText("Ask was cancelled.")).toBeInTheDocument()
+  })
 
   it("工具确认请求提交 confirm 回答", async () => {
-    const onSubmitToolConfirmationAnswer = vi.fn(async () => undefined);
+    const onSubmitToolConfirmationAnswer = vi.fn(async () => undefined)
     const step: CuratorToolStep = {
       id: "call-add",
       title: "Tool result: people_tool_add",
@@ -137,23 +127,23 @@ describe("CuratorToolCallBlock", () => {
           },
         ],
       },
-    };
+    }
 
     render(
       <CuratorToolCallBlock
         steps={[step]}
         onSubmitToolConfirmationAnswer={onSubmitToolConfirmationAnswer}
       />,
-    );
+    )
 
-    await userEvent.click(screen.getAllByText("确认创建")[1]);
-    await userEvent.click(screen.getByText("Submit"));
+    await userEvent.click(screen.getAllByText("确认创建")[1])
+    await userEvent.click(screen.getByText("Submit"))
 
     expect(onSubmitToolConfirmationAnswer).toHaveBeenCalledWith({
       requestId: "confirm-1",
       action: "confirm",
-    });
-  });
+    })
+  })
 
   it("工具确认请求展示写入前说明", () => {
     const step: CuratorToolStep = {
@@ -189,25 +179,20 @@ describe("CuratorToolCallBlock", () => {
           },
         ],
       },
-    };
+    }
 
-    render(<CuratorToolCallBlock steps={[step]} onSubmitToolConfirmationAnswer={vi.fn()} />);
+    render(<CuratorToolCallBlock steps={[step]} onSubmitToolConfirmationAnswer={vi.fn()} />)
 
-    const summary = screen.getAllByTestId("tool-operation-summary")[1];
-    const header = screen.getAllByText("确认删除")[0];
+    const summary = screen.getAllByTestId("tool-operation-summary")[1]
+    const header = screen.getAllByText("确认删除")[0]
 
-    expect(screen.queryByText("AI 输出说明")).not.toBeInTheDocument();
-    expect(summary).toHaveTextContent("将删除人物档案：阿明（朋友）");
+    expect(screen.queryByText("AI 输出说明")).not.toBeInTheDocument()
+    expect(summary).toHaveTextContent("将删除人物档案：阿明（朋友）")
     expect(
-      screen.getByText(
-        "Tool confirmation required before executing people_tool_delete.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      summary.compareDocumentPosition(header) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
+      screen.getByText("Tool confirmation required before executing people_tool_delete."),
+    ).toBeInTheDocument()
+    expect(summary.compareDocumentPosition(header) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 
   it("根据不同的工具渲染预期图标", () => {
     const testCases = [
@@ -236,7 +221,7 @@ describe("CuratorToolCallBlock", () => {
       { tool: "bills_tool_summary", icon: "icon-chartnoaxescombined" },
       { tool: "theme_tool_query", icon: "icon-palette" },
       { tool: "unknown_custom_tool", icon: "icon-wrench" },
-    ];
+    ]
 
     testCases.forEach(({ tool, icon }) => {
       const step: CuratorToolStep = {
@@ -245,11 +230,11 @@ describe("CuratorToolCallBlock", () => {
         status: "done",
         tool,
         observation: "dummy observation",
-      };
+      }
 
-      const { container, unmount } = render(<CuratorToolCallBlock steps={[step]} />);
-      expect(container.querySelector(`[data-testid="${icon}"]`)).toBeInTheDocument();
-      unmount();
-    });
-  });
-});
+      const { container, unmount } = render(<CuratorToolCallBlock steps={[step]} />)
+      expect(container.querySelector(`[data-testid="${icon}"]`)).toBeInTheDocument()
+      unmount()
+    })
+  })
+})

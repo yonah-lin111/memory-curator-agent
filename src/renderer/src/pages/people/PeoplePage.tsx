@@ -1,26 +1,26 @@
-import type React from "react";
 import {
-  Heart,
-  User,
-  Search,
   Calendar,
-  Phone,
-  Clock,
-  Tag as TagIcon,
-  UserCheck,
   ChevronRight,
-  Sparkles,
+  Clock,
+  Heart,
   Info,
-} from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tag } from "@/components/ui/Tag";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Input } from "@/components/ui/Input";
-import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm";
-import { type RelationshipFilter } from "@/pages/people/components/peopleShared";
-import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles";
-import { MdPreview } from "md-editor-rt";
-import "md-editor-rt/lib/preview.css";
+  Phone,
+  Search,
+  Sparkles,
+  Tag as TagIcon,
+  User,
+  UserCheck,
+} from "lucide-react"
+import { MdPreview } from "md-editor-rt"
+import type React from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { Tag } from "@/components/ui/Tag"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { PeopleProfileForm } from "@/pages/people/components/PeopleProfileForm"
+import { type RelationshipFilter } from "@/pages/people/components/peopleShared"
+import { usePeopleProfiles } from "@/pages/people/components/usePeopleProfiles"
+import "md-editor-rt/lib/preview.css"
 
 /**
  * 根据标签文本内容生成一致的预设颜色
@@ -41,35 +41,15 @@ const getTagColor = (
   | "sky"
   | "orange" => {
   const colors: Array<
-    | "pink"
-    | "amber"
-    | "blue"
-    | "teal"
-    | "emerald"
-    | "rose"
-    | "purple"
-    | "indigo"
-    | "sky"
-    | "orange"
-  > = [
-    "pink",
-    "amber",
-    "blue",
-    "teal",
-    "emerald",
-    "rose",
-    "purple",
-    "indigo",
-    "sky",
-    "orange",
-  ];
-  let hash = 0;
+    "pink" | "amber" | "blue" | "teal" | "emerald" | "rose" | "purple" | "indigo" | "sky" | "orange"
+  > = ["pink", "amber", "blue", "teal", "emerald", "rose", "purple", "indigo", "sky", "orange"]
+  let hash = 0
   for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash)
   }
-  const index = Math.abs(hash) % colors.length;
-  return colors[index];
-};
+  const index = Math.abs(hash) % colors.length
+  return colors[index]
+}
 
 /**
  * 获取关系类型的预设颜色类型
@@ -81,17 +61,17 @@ const getRelationshipTagColor = (
 ): "pink" | "amber" | "blue" | "teal" | "default" => {
   switch (relationship) {
     case "女朋友":
-      return "pink";
+      return "pink"
     case "家人":
-      return "amber";
+      return "amber"
     case "朋友":
-      return "blue";
+      return "blue"
     case "同事":
-      return "teal";
+      return "teal"
     default:
-      return "default";
+      return "default"
   }
-};
+}
 
 /**
  * PeoplePage 组件 - 个人关系链与人际档案管理
@@ -117,13 +97,10 @@ export const PeoplePage = (): React.JSX.Element => {
     enterCreateMode,
     handleSaveForm,
     handleDeletePerson,
-  } = usePeopleProfiles();
+  } = usePeopleProfiles()
 
   return (
-    <section
-      aria-label="People Page"
-      className="flex h-full min-h-0 flex-col gap-3 text-white"
-    >
+    <section aria-label="People Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       {/* 顶层主网格：双栏布局 */}
       <div
         className={`grid min-h-0 flex-1 gap-3 ${mode === "view" ? "lg:grid-cols-[minmax(0,340px)_1fr]" : "grid-cols-1"}`}
@@ -137,15 +114,9 @@ export const PeoplePage = (): React.JSX.Element => {
             <div className="flex items-center justify-between border-b border-white/5 pb-2.5 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <UserCheck className="h-4 w-4 text-white/60" />
-                <span className="text-sm font-bold text-white/80">
-                  人物档案库
-                </span>
+                <span className="text-sm font-bold text-white/80">人物档案库</span>
               </div>
-              <IconButton
-                aria-label="Add person profile"
-                preset="add"
-                onClick={enterCreateMode}
-              />
+              <IconButton aria-label="Add person profile" preset="add" onClick={enterCreateMode} />
             </div>
 
             {/* 2. 搜索框 */}
@@ -162,32 +133,25 @@ export const PeoplePage = (): React.JSX.Element => {
             {/* 3. 关系分类滑块切片 */}
             <div className="flex-shrink-0">
               <div className="flex flex-wrap gap-1 bg-black/35 p-1 rounded-[6px] border border-white/5">
-                {(
-                  [
-                    "全部",
-                    "女朋友",
-                    "家人",
-                    "朋友",
-                    "同事",
-                    "其他",
-                  ] as RelationshipFilter[]
-                ).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    className={`flex-1 text-center py-1 text-[10px] font-semibold rounded-[4px] transition-all duration-150 ${
-                      relationFilter === filter
-                        ? "bg-white text-black"
-                        : "text-white/40 hover:bg-white/5 hover:text-white/70"
-                    }`}
-                    onClick={() => {
-                      setRelationFilter(filter);
-                      setSelectedTag(null); // 切换类型时清除标签筛选，防止复合筛选无数据
-                    }}
-                  >
-                    {filter}
-                  </button>
-                ))}
+                {(["全部", "女朋友", "家人", "朋友", "同事", "其他"] as RelationshipFilter[]).map(
+                  (filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      className={`flex-1 text-center py-1 text-[10px] font-semibold rounded-[4px] transition-all duration-150 ${
+                        relationFilter === filter
+                          ? "bg-white text-black"
+                          : "text-white/40 hover:bg-white/5 hover:text-white/70"
+                      }`}
+                      onClick={() => {
+                        setRelationFilter(filter)
+                        setSelectedTag(null) // 切换类型时清除标签筛选，防止复合筛选无数据
+                      }}
+                    >
+                      {filter}
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
@@ -225,9 +189,7 @@ export const PeoplePage = (): React.JSX.Element => {
               {filteredPeople.length === 0 ? (
                 <div className="flex min-h-[200px] flex-col items-center justify-center rounded-[6px] border border-dashed border-white/5 bg-black/10 p-5 text-center">
                   <User className="h-6 w-6 text-white/20" />
-                  <span className="mt-2 text-xs font-semibold text-white/60">
-                    暂无匹配的人物
-                  </span>
+                  <span className="mt-2 text-xs font-semibold text-white/60">暂无匹配的人物</span>
                   <span className="mt-1 text-[11px] text-white/30">
                     调整分类或点击右上角新增档案
                   </span>
@@ -235,20 +197,18 @@ export const PeoplePage = (): React.JSX.Element => {
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {filteredPeople.map((person) => {
-                    const isActive = person.id === selectedId;
-                    const hasCustomAvatar = Boolean(person.avatar);
+                    const isActive = person.id === selectedId
+                    const hasCustomAvatar = Boolean(person.avatar)
 
                     return (
                       <button
                         key={person.id}
                         type="button"
                         className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group ${
-                          isActive
-                            ? "bg-white/5 text-white"
-                            : "hover:bg-white/[0.02] text-white/70"
+                          isActive ? "bg-white/5 text-white" : "hover:bg-white/[0.02] text-white/70"
                         }`}
                         onClick={() => {
-                          setSelectedId(person.id);
+                          setSelectedId(person.id)
                         }}
                       >
                         {/* 头像 */}
@@ -260,8 +220,7 @@ export const PeoplePage = (): React.JSX.Element => {
                               className="w-9 h-9 object-cover rounded-[6px] border border-white/10"
                               onError={(e) => {
                                 // 头像资源路径失效时的降级占位图
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
+                                ;(e.target as HTMLImageElement).style.display = "none"
                               }}
                             />
                           ) : (
@@ -284,9 +243,7 @@ export const PeoplePage = (): React.JSX.Element => {
                             </span>
                             <Tag
                               size="default"
-                              color={getRelationshipTagColor(
-                                person.relationship,
-                              )}
+                              color={getRelationshipTagColor(person.relationship)}
                               className="font-bold leading-none scale-[0.9] origin-right"
                             >
                               {person.relationship}
@@ -300,7 +257,7 @@ export const PeoplePage = (): React.JSX.Element => {
                         {/* 箭头装饰 */}
                         <ChevronRight className="h-3 w-3 text-white/20 group-hover:text-white/55 flex-shrink-0" />
                       </button>
-                    );
+                    )
                   })}
                 </div>
               )}
@@ -346,14 +303,10 @@ export const PeoplePage = (): React.JSX.Element => {
                           <h2 className="text-base font-bold text-white leading-none">
                             {currentPerson.name}
                           </h2>
-                          <span className="text-xs text-white/30">
-                            ({currentPerson.gender})
-                          </span>
+                          <span className="text-xs text-white/30">({currentPerson.gender})</span>
                           <Tag
                             size="default"
-                            color={getRelationshipTagColor(
-                              currentPerson.relationship,
-                            )}
+                            color={getRelationshipTagColor(currentPerson.relationship)}
                             className="font-bold"
                           >
                             {currentPerson.relationship}
@@ -368,21 +321,12 @@ export const PeoplePage = (): React.JSX.Element => {
 
                     {/* 操作按钮组 */}
                     <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
-                      <IconButton
-                        preset="edit"
-                        onClick={enterEditMode}
-                        title="编辑档案"
-                      />
+                      <IconButton preset="edit" onClick={enterEditMode} title="编辑档案" />
 
                       <Tooltip
                         title="确认要删除该档案吗？"
                         description={`删除后，将永久擦除 ${currentPerson.name} 的所有特征标签、联系方式及详细备注，此操作无法撤销。`}
-                        onConfirm={() =>
-                          handleDeletePerson(
-                            currentPerson.id,
-                            currentPerson.name,
-                          )
-                        }
+                        onConfirm={() => handleDeletePerson(currentPerson.id, currentPerson.name)}
                         variant="danger"
                       >
                         <IconButton preset="delete" title="删除档案" />
@@ -401,11 +345,7 @@ export const PeoplePage = (): React.JSX.Element => {
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {currentPerson.tags.map((tag) => (
-                            <Tag
-                              key={tag}
-                              size="default"
-                              color={getTagColor(tag)}
-                            >
+                            <Tag key={tag} size="default" color={getTagColor(tag)}>
                               {tag}
                             </Tag>
                           ))}
@@ -484,9 +424,7 @@ export const PeoplePage = (): React.JSX.Element => {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-black/5">
                   <User className="h-10 w-10 text-white/20 animate-pulse" />
-                  <h3 className="mt-4 text-sm font-bold text-white/80">
-                    人际关系策展池
-                  </h3>
+                  <h3 className="mt-4 text-sm font-bold text-white/80">人际关系策展池</h3>
                   <p className="mt-1.5 max-w-[360px] text-xs leading-relaxed text-white/40">
                     这里存放你最重要的亲友、爱人或合作伙伴档案，你可以点击左上角的加号新增一名重要人物进行深度建档。
                   </p>
@@ -508,5 +446,5 @@ export const PeoplePage = (): React.JSX.Element => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

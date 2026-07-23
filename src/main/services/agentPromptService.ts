@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
-import { getCuratorAgentPromptPath, getPromptDesignAgentPromptPath } from "@/paths";
+import { existsSync, readFileSync } from "node:fs"
+import { getCuratorAgentPromptPath, getPromptDesignAgentPromptPath } from "@/paths"
 
-type AgentPromptId = "curator" | "prompt-design";
+type AgentPromptId = "curator" | "prompt-design"
 
 type PromptSectionName =
   | "role"
@@ -9,7 +9,7 @@ type PromptSectionName =
   | "constraints"
   | "policies"
   | "rules"
-  | "output-format";
+  | "output-format"
 
 const PROMPT_SECTION_NAMES: PromptSectionName[] = [
   "role",
@@ -18,7 +18,7 @@ const PROMPT_SECTION_NAMES: PromptSectionName[] = [
   "policies",
   "rules",
   "output-format",
-];
+]
 
 // 提示词设计 Agent 的代码内置基础提示词。
 const BUILT_IN_PROMPT_DESIGN_AGENT_PROMPT = `<system>
@@ -56,7 +56,7 @@ const BUILT_IN_PROMPT_DESIGN_AGENT_PROMPT = `<system>
   <output-format>
     聊天回复使用简体中文，保持简洁。修改成功时仅说明已完成的变更；不确定时说明缺失信息并提出关键问题。
   </output-format>
-</system>`;
+</system>`
 
 // 记忆策展 Agent 的代码内置基础提示词。
 const BUILT_IN_CURATOR_AGENT_PROMPT = `<system>
@@ -79,12 +79,15 @@ const BUILT_IN_CURATOR_AGENT_PROMPT = `<system>
   <output-format>
     输出可访问的图片时，直接使用 Markdown 图片语法 ![](...)；不得改写为链接、代码块或描述性占位文本。
   </output-format>
-</system>`;
+</system>`
 
-const AGENT_PROMPT_CONFIG: Record<AgentPromptId, {
-  path: () => string;
-  builtInPrompt: string;
-}> = {
+const AGENT_PROMPT_CONFIG: Record<
+  AgentPromptId,
+  {
+    path: () => string
+    builtInPrompt: string
+  }
+> = {
   curator: {
     path: getCuratorAgentPromptPath,
     builtInPrompt: BUILT_IN_CURATOR_AGENT_PROMPT,
@@ -93,34 +96,32 @@ const AGENT_PROMPT_CONFIG: Record<AgentPromptId, {
     path: getPromptDesignAgentPromptPath,
     builtInPrompt: BUILT_IN_PROMPT_DESIGN_AGENT_PROMPT,
   },
-};
+}
 
 /**
  * 删除空的成对标签和自闭合标签，避免空配置进入系统提示词。
  */
 const removeEmptyTags = (content: string): string => {
-  let normalized = content;
-  let previous = "";
+  let normalized = content
+  let previous = ""
 
   while (normalized !== previous) {
-    previous = normalized;
+    previous = normalized
     normalized = normalized
       .replace(/<([A-Za-z][\w-]*)(?:\s[^>]*)?>\s*<\/\1>/g, "")
-      .replace(/<[A-Za-z][\w-]*(?:\s[^>]*)?\s*\/\s*>/g, "");
+      .replace(/<[A-Za-z][\w-]*(?:\s[^>]*)?\s*\/\s*>/g, "")
   }
 
-  return normalized.trim();
-};
+  return normalized.trim()
+}
 
 /**
  * 提取指定 XML 标签的内容。用户文件只允许注入预定义的顶层标签。
  */
 const getTagContent = (content: string, tagName: string): string =>
   removeEmptyTags(
-    content.match(
-      new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)</${tagName}>`, "i"),
-    )?.[1] ?? "",
-  );
+    content.match(new RegExp(`<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)</${tagName}>`, "i"))?.[1] ?? "",
+  )
 
 /**
  * 将用户标签内容注入内置提示词的同名标签中。
@@ -130,53 +131,47 @@ const injectSection = (
   sectionName: PromptSectionName,
   customContent: string,
 ): string => {
-  if (!customContent) return prompt;
+  if (!customContent) return prompt
 
   const sectionPattern = new RegExp(
     `(<${sectionName}(?:\\s[^>]*)?>)([\\s\\S]*?)(</${sectionName}>)`,
     "i",
-  );
-  return prompt.replace(sectionPattern, `$1\n$2\n${customContent}\n$3`);
-};
+  )
+  return prompt.replace(sectionPattern, `$1\n$2\n${customContent}\n$3`)
+}
 
 /**
  * 解析用户 Markdown 中的系统提示词标签，并按标签逐项注入内置提示词。
  */
 const injectCustomPrompt = (content: string, builtInPrompt: string): string => {
-  const withoutComments = content.replace(/<!--[\s\S]*?-->/g, "");
+  const withoutComments = content.replace(/<!--[\s\S]*?-->/g, "")
   return PROMPT_SECTION_NAMES.reduce(
     (prompt, sectionName) =>
-      injectSection(
-        prompt,
-        sectionName,
-        getTagContent(withoutComments, sectionName),
-      ),
+      injectSection(prompt, sectionName, getTagContent(withoutComments, sectionName)),
     builtInPrompt,
-  );
-};
+  )
+}
 
 /**
  * 加载指定 Agent 的代码内置提示词，并将用户目录中的同名标签内容动态注入对应位置。
  */
 export const loadAgentPrompt = (agentId: AgentPromptId): string => {
-  const config = AGENT_PROMPT_CONFIG[agentId];
-  const filePath = config.path();
+  const config = AGENT_PROMPT_CONFIG[agentId]
+  const filePath = config.path()
   if (!existsSync(filePath)) {
-    return config.builtInPrompt;
+    return config.builtInPrompt
   }
 
-  const content = readFileSync(filePath, "utf8").trim();
-  return content
-    ? injectCustomPrompt(content, config.builtInPrompt)
-    : config.builtInPrompt;
-};
+  const content = readFileSync(filePath, "utf8").trim()
+  return content ? injectCustomPrompt(content, config.builtInPrompt) : config.builtInPrompt
+}
 
 /**
  * 加载记忆策展 Agent 的系统提示词。
  */
-export const loadCuratorAgentPrompt = (): string => loadAgentPrompt("curator");
+export const loadCuratorAgentPrompt = (): string => loadAgentPrompt("curator")
 
 /**
  * 加载提示词设计 Agent 的系统提示词。
  */
-export const loadPromptDesignAgentPrompt = (): string => loadAgentPrompt("prompt-design");
+export const loadPromptDesignAgentPrompt = (): string => loadAgentPrompt("prompt-design")

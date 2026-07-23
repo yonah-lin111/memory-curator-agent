@@ -1,30 +1,30 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { ZoomIn, ZoomOut } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
+import { ZoomIn, ZoomOut } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
 import {
   MAX_MARKDOWN_EDITOR_FONT_SIZE,
   MIN_MARKDOWN_EDITOR_FONT_SIZE,
-} from "@/lib/markdownEditorFontSize";
+} from "@/lib/markdownEditorFontSize"
 
 // Markdown 编辑器底栏属性。
 interface MarkdownEditorFooterProps {
   // 当前 Markdown 内容。
-  value: string;
+  value: string
   // 是否显示保存状态。
-  showSaveStatus: boolean;
+  showSaveStatus: boolean
   // 当前内容是否已保存。
-  isSaved: boolean;
+  isSaved: boolean
   // 当前待审的 AI 变更块数量。
-  aiChangeCount: number;
+  aiChangeCount: number
   // 接受全部 AI 变更。
-  onAcceptAllAiChanges?: () => void;
+  onAcceptAllAiChanges?: () => void
   // 拒绝全部 AI 变更。
-  onRejectAllAiChanges?: () => void;
+  onRejectAllAiChanges?: () => void
   // 当前编辑器字号。
-  fontSize: number;
+  fontSize: number
   // 编辑器字号变更回调。
-  onFontSizeChange: (fontSize: number) => void;
+  onFontSizeChange: (fontSize: number) => void
 }
 
 /**
@@ -40,12 +40,12 @@ export const MarkdownEditorFooter = ({
   fontSize,
   onFontSizeChange,
 }: MarkdownEditorFooterProps): React.JSX.Element => {
-  const characterCount = Array.from(value).length;
-  const [fontSizeInput, setFontSizeInput] = useState(String(fontSize));
+  const characterCount = Array.from(value).length
+  const [fontSizeInput, setFontSizeInput] = useState(String(fontSize))
 
   useEffect(() => {
-    setFontSizeInput(String(fontSize));
-  }, [fontSize]);
+    setFontSizeInput(String(fontSize))
+  }, [fontSize])
 
   /**
    * 将输入字号限制在编辑器支持的范围内。
@@ -54,23 +54,23 @@ export const MarkdownEditorFooter = ({
     const clampedFontSize = Math.min(
       MAX_MARKDOWN_EDITOR_FONT_SIZE,
       Math.max(MIN_MARKDOWN_EDITOR_FONT_SIZE, nextFontSize),
-    );
-    setFontSizeInput(String(clampedFontSize));
-    onFontSizeChange(clampedFontSize);
-  };
+    )
+    setFontSizeInput(String(clampedFontSize))
+    onFontSizeChange(clampedFontSize)
+  }
 
   /**
    * 提交手动输入的字号，并恢复无效输入。
    */
   const commitFontSizeInput = (): void => {
-    const nextFontSize = Number(fontSizeInput);
+    const nextFontSize = Number(fontSizeInput)
     if (fontSizeInput === "" || !Number.isInteger(nextFontSize)) {
-      setFontSizeInput(String(fontSize));
-      return;
+      setFontSizeInput(String(fontSize))
+      return
     }
 
-    updateFontSize(nextFontSize);
-  };
+    updateFontSize(nextFontSize)
+  }
 
   return (
     <div className="relative z-20 flex h-8 flex-none items-center gap-3 px-2 text-xs text-white/45">
@@ -116,10 +116,10 @@ export const MarkdownEditorFooter = ({
           inputMode="numeric"
           onBlur={commitFontSizeInput}
           onChange={(event) => {
-            if (/^\d*$/.test(event.target.value)) setFontSizeInput(event.target.value);
+            if (/^\d*$/.test(event.target.value)) setFontSizeInput(event.target.value)
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
+            if (event.key === "Enter") event.currentTarget.blur()
           }}
           pattern="\d*"
           type="text"
@@ -145,5 +145,5 @@ export const MarkdownEditorFooter = ({
         </span>
       )}
     </div>
-  );
-};
+  )
+}

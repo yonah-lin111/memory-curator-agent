@@ -1,43 +1,43 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { Edit3, Trash2 } from "lucide-react";
+import { Edit3, Trash2 } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 
 // 右键菜单组件属性类型。
 type CuratorHistoryContextMenuProps = {
   // 触发菜单的会话标题。
-  sessionTitle: string;
+  sessionTitle: string
   // 菜单左上角横坐标。
-  x: number;
+  x: number
   // 菜单左上角纵坐标。
-  y: number;
+  y: number
   // 触发编辑标题回调。
-  onEditTitle: () => void;
+  onEditTitle: () => void
   // 触发删除会话回调。
-  onDeleteChat: () => void;
-};
+  onDeleteChat: () => void
+}
 
 // 菜单宽度，用于把右键菜单限制在视口内。
-const MENU_WIDTH = 156;
+const MENU_WIDTH = 156
 
 // 菜单高度，用于把右键菜单限制在视口内。
-const MENU_HEIGHT = 82;
+const MENU_HEIGHT = 82
 
 // 菜单与视口边缘的最小距离。
-const VIEWPORT_PADDING = 8;
+const VIEWPORT_PADDING = 8
 
 /**
  * 把菜单坐标钳制在当前视口内。
  */
 const getMenuPosition = (x: number, y: number): { left: number; top: number } => {
-  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING);
-  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING);
+  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING)
+  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING)
 
   return {
     left: Math.min(Math.max(x, VIEWPORT_PADDING), maxLeft),
     top: Math.min(Math.max(y, VIEWPORT_PADDING), maxTop),
-  };
-};
+  }
+}
 
 /**
  * CuratorHistoryContextMenu - 负责单个 AI 历史项的右键操作菜单。
@@ -50,24 +50,24 @@ export const CuratorHistoryContextMenu = ({
   onDeleteChat,
 }: CuratorHistoryContextMenuProps): React.JSX.Element => {
   // 是否已进入删除二次确认态。
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
-  const position = getMenuPosition(x, y);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false)
+  const position = getMenuPosition(x, y)
 
   useEffect(() => {
-    setIsConfirmingDelete(false);
-  }, [sessionTitle]);
+    setIsConfirmingDelete(false)
+  }, [sessionTitle])
 
   /**
    * 第一次点击进入确认态，第二次点击才真正删除。
    */
   const handleDeleteClick = (): void => {
     if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
+      setIsConfirmingDelete(true)
+      return
     }
 
-    onDeleteChat();
-  };
+    onDeleteChat()
+  }
 
   const menuContent = (
     <div
@@ -100,14 +100,12 @@ export const CuratorHistoryContextMenu = ({
         onClick={handleDeleteClick}
       >
         <Trash2
-          className={`h-3.5 w-3.5 ${
-            isConfirmingDelete ? "text-white" : "text-rose-400/80"
-          }`}
+          className={`h-3.5 w-3.5 ${isConfirmingDelete ? "text-white" : "text-rose-400/80"}`}
         />
         <span>{isConfirmingDelete ? "确认删除" : "删除聊天"}</span>
       </button>
     </div>
-  );
+  )
 
-  return createPortal(menuContent, document.body);
-};
+  return createPortal(menuContent, document.body)
+}

@@ -1,26 +1,28 @@
 import { getDatabase } from "../db"
-import { createCompactUuid } from "../id"
 import {
-  PromptDesignProject,
-  PromptDesignProjectCreateInput,
-  PromptDesignProjectRow,
-  PromptDesignProjectUpdateInput,
   PromptDesign,
   PromptDesignCreateInput,
   PromptDesignModule,
   PromptDesignModuleCreateInput,
   PromptDesignModuleRow,
   PromptDesignModuleUpdateInput,
+  PromptDesignProject,
+  PromptDesignProjectCreateInput,
+  PromptDesignProjectRow,
+  PromptDesignProjectUpdateInput,
   PromptDesignRow,
   PromptDesignUpdateInput,
 } from "../db/schema"
+import { createCompactUuid } from "../id"
 
 export const promptDesignService = {
   // ==================== 项目 ====================
 
   listProjects: (): PromptDesignProject[] => {
     const db = getDatabase()
-    const rows = db.prepare("SELECT * FROM prompt_design_projects ORDER BY created_at DESC").all() as PromptDesignProjectRow[]
+    const rows = db
+      .prepare("SELECT * FROM prompt_design_projects ORDER BY created_at DESC")
+      .all() as PromptDesignProjectRow[]
     return rows.map((row) => ({
       id: row.external_id,
       name: row.name,
@@ -38,7 +40,7 @@ export const promptDesignService = {
     const type = input.type || "virtual"
 
     db.prepare(
-      "INSERT INTO prompt_design_projects (external_id, name, type, path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO prompt_design_projects (external_id, name, type, path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
     ).run(id, input.name, type, input.path || null, now, now)
 
     return {
@@ -54,36 +56,27 @@ export const promptDesignService = {
   renameProject: (id: string, name: string): void => {
     const db = getDatabase()
     const now = new Date().toISOString()
-    db.prepare("UPDATE prompt_design_projects SET name = ?, updated_at = ? WHERE external_id = ?").run(
-      name,
-      now,
-      id
-    )
+    db.prepare(
+      "UPDATE prompt_design_projects SET name = ?, updated_at = ? WHERE external_id = ?",
+    ).run(name, now, id)
   },
 
   updateProject: (id: string, input: PromptDesignProjectUpdateInput): void => {
     const db = getDatabase()
     const now = new Date().toISOString()
-    
+
     if (input.name !== undefined && input.path !== undefined) {
-      db.prepare("UPDATE prompt_design_projects SET name = ?, path = ?, updated_at = ? WHERE external_id = ?").run(
-        input.name,
-        input.path,
-        now,
-        id
-      )
+      db.prepare(
+        "UPDATE prompt_design_projects SET name = ?, path = ?, updated_at = ? WHERE external_id = ?",
+      ).run(input.name, input.path, now, id)
     } else if (input.name !== undefined) {
-      db.prepare("UPDATE prompt_design_projects SET name = ?, updated_at = ? WHERE external_id = ?").run(
-        input.name,
-        now,
-        id
-      )
+      db.prepare(
+        "UPDATE prompt_design_projects SET name = ?, updated_at = ? WHERE external_id = ?",
+      ).run(input.name, now, id)
     } else if (input.path !== undefined) {
-      db.prepare("UPDATE prompt_design_projects SET path = ?, updated_at = ? WHERE external_id = ?").run(
-        input.path,
-        now,
-        id
-      )
+      db.prepare(
+        "UPDATE prompt_design_projects SET path = ?, updated_at = ? WHERE external_id = ?",
+      ).run(input.path, now, id)
     }
   },
 
@@ -98,8 +91,14 @@ export const promptDesignService = {
   listModules: (projectId?: string): PromptDesignModule[] => {
     const db = getDatabase()
     const rows = projectId
-      ? db.prepare("SELECT * FROM prompt_design_modules WHERE project_id = ? ORDER BY created_at ASC").all(projectId) as PromptDesignModuleRow[]
-      : db.prepare("SELECT * FROM prompt_design_modules ORDER BY created_at ASC").all() as PromptDesignModuleRow[]
+      ? (db
+          .prepare(
+            "SELECT * FROM prompt_design_modules WHERE project_id = ? ORDER BY created_at ASC",
+          )
+          .all(projectId) as PromptDesignModuleRow[])
+      : (db
+          .prepare("SELECT * FROM prompt_design_modules ORDER BY created_at ASC")
+          .all() as PromptDesignModuleRow[])
 
     return rows.map((row) => ({
       id: row.external_id,
@@ -116,7 +115,7 @@ export const promptDesignService = {
     const now = new Date().toISOString()
 
     db.prepare(
-      "INSERT INTO prompt_design_modules (external_id, project_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO prompt_design_modules (external_id, project_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
     ).run(id, input.projectId, input.name, now, now)
 
     return { id, projectId: input.projectId, name: input.name, createdAt: now, updatedAt: now }
@@ -124,11 +123,9 @@ export const promptDesignService = {
 
   renameModule: (id: string, name: string): void => {
     const db = getDatabase()
-    db.prepare("UPDATE prompt_design_modules SET name = ?, updated_at = ? WHERE external_id = ?").run(
-      name,
-      new Date().toISOString(),
-      id
-    )
+    db.prepare(
+      "UPDATE prompt_design_modules SET name = ?, updated_at = ? WHERE external_id = ?",
+    ).run(name, new Date().toISOString(), id)
   },
 
   updateModule: (id: string, input: PromptDesignModuleUpdateInput): void => {
@@ -147,11 +144,19 @@ export const promptDesignService = {
   listDesigns: (projectId?: string): PromptDesign[] => {
     const db = getDatabase()
     let rows: PromptDesignRow[]
-    
+
     if (projectId) {
-      rows = db.prepare("SELECT * FROM prompt_design_items WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC, id ASC").all(projectId) as PromptDesignRow[]
+      rows = db
+        .prepare(
+          "SELECT * FROM prompt_design_items WHERE project_id = ? ORDER BY sort_order ASC, created_at ASC, id ASC",
+        )
+        .all(projectId) as PromptDesignRow[]
     } else {
-      rows = db.prepare("SELECT * FROM prompt_design_items ORDER BY sort_order ASC, created_at ASC, id ASC").all() as PromptDesignRow[]
+      rows = db
+        .prepare(
+          "SELECT * FROM prompt_design_items ORDER BY sort_order ASC, created_at ASC, id ASC",
+        )
+        .all() as PromptDesignRow[]
     }
 
     return rows.map((row) => ({
@@ -185,8 +190,18 @@ export const promptDesignService = {
           .get(input.projectId) as { sort_order: number })
 
     db.prepare(
-      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, status, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    ).run(id, input.projectId, input.moduleId || null, input.name, designDataStr, "todo", sortOrder.sort_order, now, now)
+      "INSERT INTO prompt_design_items (external_id, project_id, module_id, name, design_data, status, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(
+      id,
+      input.projectId,
+      input.moduleId || null,
+      input.name,
+      designDataStr,
+      "todo",
+      sortOrder.sort_order,
+      now,
+      now,
+    )
 
     return {
       id,
@@ -207,7 +222,7 @@ export const promptDesignService = {
     db.prepare("UPDATE prompt_design_items SET name = ?, updated_at = ? WHERE external_id = ?").run(
       name,
       now,
-      id
+      id,
     )
   },
 
@@ -215,7 +230,10 @@ export const promptDesignService = {
     const db = getDatabase()
     const now = new Date().toISOString()
 
-    if (input.status !== undefined && !["todo", "in_progress", "completed"].includes(input.status)) {
+    if (
+      input.status !== undefined &&
+      !["todo", "in_progress", "completed"].includes(input.status)
+    ) {
       throw new Error(`Invalid prompt design status: ${input.status}`)
     }
 
@@ -240,7 +258,9 @@ export const promptDesignService = {
 
       updates.push("updated_at = ?")
       values.push(now, id)
-      db.prepare(`UPDATE prompt_design_items SET ${updates.join(", ")} WHERE external_id = ?`).run(...values)
+      db.prepare(`UPDATE prompt_design_items SET ${updates.join(", ")} WHERE external_id = ?`).run(
+        ...values,
+      )
     })
 
     transaction()
@@ -272,12 +292,14 @@ export const promptDesignService = {
    */
   getProjectPathByDesignItemId: (designItemId: string): string | null => {
     const db = getDatabase()
-    const row = db.prepare(
-      `SELECT p.path
+    const row = db
+      .prepare(
+        `SELECT p.path
        FROM prompt_design_items di
        JOIN prompt_design_projects p ON p.external_id = di.project_id
-       WHERE di.external_id = ? AND p.type = 'filesystem' AND p.path IS NOT NULL AND p.path != ''`
-    ).get(designItemId) as { path: string } | undefined
+       WHERE di.external_id = ? AND p.type = 'filesystem' AND p.path IS NOT NULL AND p.path != ''`,
+      )
+      .get(designItemId) as { path: string } | undefined
 
     return row?.path ?? null
   },

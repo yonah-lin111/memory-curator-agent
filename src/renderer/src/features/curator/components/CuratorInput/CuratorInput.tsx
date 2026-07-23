@@ -1,13 +1,13 @@
-import type React from "react";
-import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { Select } from "@/components/ui/Select";
-import type { CuratorInputProps } from "@/features/curator/components/CuratorInput/types";
-import { useCuratorInput } from "@/features/curator/components/CuratorInput/hooks/useCuratorInput";
-import { AttachmentPreview } from "@/features/curator/components/CuratorInput/AttachmentPreview";
-import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle";
-import { MentionCommandPanels } from "@/features/curator/components/CuratorInput/components/MentionCommandPanels";
-import { TEXTAREA_MIN_ROWS } from "@/lib/ai-shared/constants";
+import { Paperclip, RotateCcw, SendHorizontal } from "lucide-react"
+import type React from "react"
+import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle"
+import { IconButton } from "@/components/ui/IconButton"
+import { Select } from "@/components/ui/Select"
+import { AttachmentPreview } from "@/features/curator/components/CuratorInput/AttachmentPreview"
+import { MentionCommandPanels } from "@/features/curator/components/CuratorInput/components/MentionCommandPanels"
+import { useCuratorInput } from "@/features/curator/components/CuratorInput/hooks/useCuratorInput"
+import type { CuratorInputProps } from "@/features/curator/components/CuratorInput/types"
+import { TEXTAREA_MIN_ROWS } from "@/lib/ai-shared/constants"
 
 /**
  * CuratorInput - AI 对话底部输入区域组件，包含模型切换、文本输入与辅助功能。
@@ -75,7 +75,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
     handleSessionScroll,
     handleModelChange,
     handleUploadFilesProxy,
-  } = useCuratorInput(props);
+  } = useCuratorInput(props)
 
   return (
     <div className="flex-shrink-0 p-3">
@@ -103,9 +103,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
         {isDragging && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center rounded-[6px] border-2 border-dashed border-white/20 bg-black/90 backdrop-blur-xs text-white/90 pointer-events-none">
             <Paperclip className="h-6 w-6 mb-2 animate-bounce" />
-            <span className="text-xs font-medium">
-              松手即可上传图片或文本文件
-            </span>
+            <span className="text-xs font-medium">松手即可上传图片或文本文件</span>
           </div>
         )}
 
@@ -142,9 +140,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
         <AttachmentPreview
           selectedImages={selectedImages}
           selectedTextFiles={selectedTextFiles}
-          onRemoveImage={(idx) =>
-            setSelectedImages((prev) => prev.filter((_, i) => i !== idx))
-          }
+          onRemoveImage={(idx) => setSelectedImages((prev) => prev.filter((_, i) => i !== idx))}
           onRemoveTextFile={(idx) =>
             setSelectedTextFiles((prev) => prev.filter((_, i) => i !== idx))
           }
@@ -210,9 +206,7 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
               onClick={handleClearInput}
               disabled={!inputText}
               className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
-                inputText
-                  ? "text-white/45 hover:text-white"
-                  : "text-white/10 cursor-not-allowed"
+                inputText ? "text-white/45 hover:text-white" : "text-white/10 cursor-not-allowed"
               }`}
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -234,5 +228,5 @@ export const CuratorInput = (props: CuratorInputProps): React.JSX.Element => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

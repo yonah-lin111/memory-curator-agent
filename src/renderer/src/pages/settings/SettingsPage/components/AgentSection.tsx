@@ -1,11 +1,11 @@
-import type React from "react";
-import { Input } from "@/components/ui/Input";
-import { Switch } from "@/components/ui/Switch";
-import type { AiSettingsConfig } from "../types";
+import type React from "react"
+import { Input } from "@/components/ui/Input"
+import { Switch } from "@/components/ui/Switch"
+import type { AiSettingsConfig } from "../types"
 
 export interface AgentSectionProps {
-  settings: AiSettingsConfig;
-  updateSettings: (updater: (current: AiSettingsConfig) => AiSettingsConfig) => void;
+  settings: AiSettingsConfig
+  updateSettings: (updater: (current: AiSettingsConfig) => AiSettingsConfig) => void
 }
 
 export const AgentSection = ({
@@ -18,7 +18,9 @@ export const AgentSection = ({
     <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-[6px] border border-white/10 bg-white/[0.03] px-3 py-3 transition-colors hover:border-white/15 hover:bg-white/[0.05]">
       <span className="min-w-0 pr-2">
         <span className="block text-sm font-medium text-white/85">显示 Agent 思考</span>
-        <span className="mt-1 block text-xs leading-4 text-white/35">在主智能体与提示词设计对话中显示模型思考内容</span>
+        <span className="mt-1 block text-xs leading-4 text-white/35">
+          在主智能体与提示词设计对话中显示模型思考内容
+        </span>
       </span>
       <Switch
         aria-label="显示 Agent 思考"
@@ -27,7 +29,7 @@ export const AgentSection = ({
           updateSettings((current) => ({
             ...current,
             showAgentThinking: checked,
-          }));
+          }))
         }}
       />
     </label>
@@ -113,9 +115,7 @@ export const AgentSection = ({
             }))
           }
         />
-        <span className="text-[10px] text-white/25">
-          0 或留空表示不限制，保留全部工具结果
-        </span>
+        <span className="text-[10px] text-white/25">0 或留空表示不限制，保留全部工具结果</span>
       </label>
       <label className="grid gap-1.5 text-xs text-white/45">
         Max tool turns
@@ -141,4 +141,4 @@ export const AgentSection = ({
       </label>
     </div>
   </section>
-);
+)

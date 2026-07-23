@@ -1,52 +1,51 @@
-import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore";
+import { usePromptDesignStore } from "@/features/prompt-design/store/promptDesignStore"
 
 // 命令解析出的创建参数。
 type PromptCreation = {
-  moduleName?: string;
-  designName?: string;
-};
+  moduleName?: string
+  designName?: string
+}
 
 // 侧边栏刷新事件名称。
-export const PROMPT_DESIGN_CREATED_EVENT = "prompt-design:created";
+export const PROMPT_DESIGN_CREATED_EVENT = "prompt-design:created"
 
 // 提示词设计标题变更后的侧边栏刷新事件名称。
-export const PROMPT_DESIGN_TITLE_UPDATED_EVENT = "prompt-design:title-updated";
+export const PROMPT_DESIGN_TITLE_UPDATED_EVENT = "prompt-design:title-updated"
 
 // 提示词设计标题生成状态事件名称。
-export const PROMPT_DESIGN_TITLE_GENERATING_EVENT = "prompt-design:title-generating";
+export const PROMPT_DESIGN_TITLE_GENERATING_EVENT = "prompt-design:title-generating"
 
 /**
  * 将创建候选项转换为可继续填写的命令模板。
  */
 export const getPromptCommandTemplate = (commandId: "module" | "design"): string =>
-  commandId === "module" ? "/new module[]" : "/new design[]";
+  commandId === "module" ? "/new module[]" : "/new design[]"
 
 /**
  * 将当前未完成的操作命令替换为选中的操作。
  */
 export const applyPromptAction = (value: string, action: "root"): string =>
-  `${value.replace(/-\S*\s*$/, "").trim()} -${action} `;
+  `${value.replace(/-\S*\s*$/, "").trim()} -${action} `
 
 /**
  * 判断输入是否是可执行的 /new 创建命令。
  */
 export const isPromptChangeCommand = (value: string): boolean => {
-  const isNewCommand = /^\/new(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-root)*\s*$/i.test(
-    value,
-  );
-  const hasCreationToken = /\b(?:module|design)\[[^\]]*\]/i.test(value);
-  return isNewCommand && hasCreationToken;
-};
+  const isNewCommand =
+    /^\/new(?:\s+module\[[^\]]*\])?(?:\s+design\[[^\]]*\])?(?:\s+-root)*\s*$/i.test(value)
+  const hasCreationToken = /\b(?:module|design)\[[^\]]*\]/i.test(value)
+  return isNewCommand && hasCreationToken
+}
 
 /**
  * 从 /new 创建命令中读取模块与设计名称。
  */
 const parsePromptCreation = (value: string): PromptCreation => {
-  const moduleName = value.match(/\bmodule\[([^\]]*)\]/i)?.[1]?.trim();
-  const designName = value.match(/\bdesign\[([^\]]*)\]/i)?.[1]?.trim();
+  const moduleName = value.match(/\bmodule\[([^\]]*)\]/i)?.[1]?.trim()
+  const designName = value.match(/\bdesign\[([^\]]*)\]/i)?.[1]?.trim()
 
-  return { moduleName, designName };
-};
+  return { moduleName, designName }
+}
 
 /**
  * 执行 /new 创建命令；创建设计时同时切换到该设计。
@@ -54,105 +53,109 @@ const parsePromptCreation = (value: string): PromptCreation => {
 export const executePromptChangeCommand = async (
   value: string,
 ): Promise<{ created: "module" | "design"; opened: boolean }> => {
-  const { moduleName, designName } = parsePromptCreation(value);
-  const hasModuleToken = /\bmodule\[[^\]]*\]/i.test(value);
-  const hasDesignToken = /\bdesign\[[^\]]*\]/i.test(value);
-  const resolvedModuleName = moduleName || (hasModuleToken ? "new module" : undefined);
-  const resolvedDesignName = designName || (hasDesignToken ? "new design" : undefined);
-  const store = usePromptDesignStore.getState();
-  const projectId = store.activeProjectId;
-  const shouldCreateAtRoot = value.trim().split(/\s+/).includes("-root");
-  const shouldOpenDesign = Boolean(resolvedDesignName);
+  const { moduleName, designName } = parsePromptCreation(value)
+  const hasModuleToken = /\bmodule\[[^\]]*\]/i.test(value)
+  const hasDesignToken = /\bdesign\[[^\]]*\]/i.test(value)
+  const resolvedModuleName = moduleName || (hasModuleToken ? "new module" : undefined)
+  const resolvedDesignName = designName || (hasDesignToken ? "new design" : undefined)
+  const store = usePromptDesignStore.getState()
+  const projectId = store.activeProjectId
+  const shouldCreateAtRoot = value.trim().split(/\s+/).includes("-root")
+  const shouldOpenDesign = Boolean(resolvedDesignName)
 
   if (!projectId) {
-    throw new Error("请先在侧边栏选择项目");
+    throw new Error("请先在侧边栏选择项目")
   }
   if (!resolvedModuleName && !resolvedDesignName) {
-    throw new Error("请至少填写模块或设计名称");
+    throw new Error("请至少填写模块或设计名称")
   }
 
-  let moduleId = shouldCreateAtRoot ? undefined : store.activeModuleId ?? undefined;
+  let moduleId = shouldCreateAtRoot ? undefined : (store.activeModuleId ?? undefined)
   if (resolvedModuleName) {
     const module = await (window.api as any).promptDesign.modules.create({
       projectId,
       name: resolvedModuleName,
-    });
+    })
     if (!shouldCreateAtRoot) {
-      moduleId = module.id;
+      moduleId = module.id
     }
   }
 
   if (resolvedModuleName && !resolvedDesignName) {
     if (shouldOpenDesign && !shouldCreateAtRoot) {
-      store.setActiveModuleId(moduleId ?? null);
+      store.setActiveModuleId(moduleId ?? null)
     }
-    window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
-    return { created: "module", opened: false };
+    window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT))
+    return { created: "module", opened: false }
   }
 
   const design = await (window.api as any).promptDesign.designs.create({
     projectId,
     moduleId,
     name: resolvedDesignName,
-  });
-  const sessions = await (window.api as any).promptAi.listSessions(design.id);
+  })
+  const sessions = await (window.api as any).promptAi.listSessions(design.id)
   if (!sessions?.length) {
-    await (window.api as any).promptAi.createSession(design.id);
+    await (window.api as any).promptAi.createSession(design.id)
   }
 
   if (shouldOpenDesign) {
-    store.setActiveProjectId(projectId);
-    store.setActiveModuleId(moduleId ?? null);
+    store.setActiveProjectId(projectId)
+    store.setActiveModuleId(moduleId ?? null)
     if (store.setActiveDesignIdSafe) {
-      await store.setActiveDesignIdSafe(design.id);
+      await store.setActiveDesignIdSafe(design.id)
     } else {
-      store.setActiveDesignId(design.id);
+      store.setActiveDesignId(design.id)
     }
-    store.setItemName(design.name);
+    store.setItemName(design.name)
   }
-  window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT));
-  return { created: "design", opened: shouldOpenDesign };
-};
+  window.dispatchEvent(new Event(PROMPT_DESIGN_CREATED_EVENT))
+  return { created: "design", opened: shouldOpenDesign }
+}
 
 /**
  * 根据当前设计的提示词正文生成并更新标题。
  */
 export const executePromptTitleCommand = async (): Promise<string> => {
-  const store = usePromptDesignStore.getState();
-  const designId = store.activeDesignId;
+  const store = usePromptDesignStore.getState()
+  const designId = store.activeDesignId
   if (!designId) {
-    throw new Error("请先选择提示词设计");
+    throw new Error("请先选择提示词设计")
   }
 
-  const designs = await window.api.promptDesign?.designs.list();
-  const design = designs?.find((item) => item.id === designId);
-  const content = typeof design?.designData === "string" ? design.designData.trim() : "";
+  const designs = await window.api.promptDesign?.designs.list()
+  const design = designs?.find((item) => item.id === designId)
+  const content = typeof design?.designData === "string" ? design.designData.trim() : ""
   if (!content) {
-    throw new Error("提示词内容为空，无法生成标题");
+    throw new Error("提示词内容为空，无法生成标题")
   }
 
-  const generateTitle = window.api.promptAi?.generateDesignTitle;
+  const generateTitle = window.api.promptAi?.generateDesignTitle
   if (typeof generateTitle !== "function") {
-    throw new Error("标题生成服务已更新，请重启应用后重试");
+    throw new Error("标题生成服务已更新，请重启应用后重试")
   }
 
-  window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
-    detail: { designId, isGenerating: true },
-  }));
+  window.dispatchEvent(
+    new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+      detail: { designId, isGenerating: true },
+    }),
+  )
   try {
-    const title = (await generateTitle(content)).trim().slice(0, 12);
+    const title = (await generateTitle(content)).trim().slice(0, 12)
     if (!title) {
-      throw new Error("未生成有效标题");
+      throw new Error("未生成有效标题")
     }
-    await window.api.promptDesign?.designs.rename(designId, title);
+    await window.api.promptDesign?.designs.rename(designId, title)
     if (usePromptDesignStore.getState().activeDesignId === designId) {
-      usePromptDesignStore.getState().setItemName(title);
+      usePromptDesignStore.getState().setItemName(title)
     }
-    window.dispatchEvent(new Event(PROMPT_DESIGN_TITLE_UPDATED_EVENT));
-    return title;
+    window.dispatchEvent(new Event(PROMPT_DESIGN_TITLE_UPDATED_EVENT))
+    return title
   } finally {
-    window.dispatchEvent(new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
-      detail: { designId, isGenerating: false },
-    }));
+    window.dispatchEvent(
+      new CustomEvent(PROMPT_DESIGN_TITLE_GENERATING_EVENT, {
+        detail: { designId, isGenerating: false },
+      }),
+    )
   }
-};
+}

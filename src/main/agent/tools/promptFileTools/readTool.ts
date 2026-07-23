@@ -1,8 +1,8 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import readline from 'node:readline'
-import type { AgentTool, AgentToolResult } from '@/agent/types'
-import { assertInsideProject } from './pathGuard'
+import fs from "node:fs"
+import path from "node:path"
+import readline from "node:readline"
+import type { AgentTool, AgentToolResult } from "@/agent/types"
+import { assertInsideProject } from "./pathGuard"
 
 // 默认最大读取行数。
 const DEFAULT_LIMIT = 2000
@@ -15,13 +15,49 @@ const NON_PRINTABLE_THRESHOLD = 0.3
 
 // 二进制文件扩展名黑名单。
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
-  '.mp3', '.mp4', '.avi', '.mov', '.wav', '.flac', '.ogg',
-  '.zip', '.tar', '.gz', '.bz2', '.7z', '.rar',
-  '.exe', '.dll', '.so', '.dylib', '.bin',
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.woff', '.woff2', '.ttf', '.otf', '.eot',
-  '.pyc', '.pyo', '.class', '.o', '.obj',
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".bmp",
+  ".ico",
+  ".webp",
+  ".svg",
+  ".mp3",
+  ".mp4",
+  ".avi",
+  ".mov",
+  ".wav",
+  ".flac",
+  ".ogg",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".bz2",
+  ".7z",
+  ".rar",
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".bin",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+  ".eot",
+  ".pyc",
+  ".pyo",
+  ".class",
+  ".o",
+  ".obj",
 ])
 
 /**
@@ -33,7 +69,7 @@ const isBinaryFile = async (filePath: string): Promise<boolean> => {
   if (BINARY_EXTENSIONS.has(ext)) return true
 
   try {
-    const fd = await fs.promises.open(filePath, 'r')
+    const fd = await fs.promises.open(filePath, "r")
     const buffer = Buffer.alloc(4096)
     const { bytesRead } = await fd.read(buffer, 0, 4096, 0)
     await fd.close()
@@ -64,11 +100,9 @@ const isBinaryFile = async (filePath: string): Promise<boolean> => {
  */
 const readDirectory = async (dirPath: string): Promise<string> => {
   const entries = await fs.promises.readdir(dirPath, { withFileTypes: true })
-  const names = entries
-    .map((e) => e.name + (e.isDirectory() ? '/' : ''))
-    .sort()
+  const names = entries.map((e) => e.name + (e.isDirectory() ? "/" : "")).sort()
 
-  return names.join('\n')
+  return names.join("\n")
 }
 
 /**
@@ -80,7 +114,7 @@ const readFileContent = async (
   offset: number,
   limit: number,
 ): Promise<string> => {
-  const stream = fs.createReadStream(filePath, { encoding: 'utf-8' })
+  const stream = fs.createReadStream(filePath, { encoding: "utf-8" })
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
 
   const lines: string[] = []
@@ -100,14 +134,15 @@ const readFileContent = async (
     }
 
     // 单行截断
-    const line = rawLine.length > MAX_LINE_CHARS
-      ? rawLine.slice(0, MAX_LINE_CHARS) + '... (truncated)'
-      : rawLine
+    const line =
+      rawLine.length > MAX_LINE_CHARS
+        ? rawLine.slice(0, MAX_LINE_CHARS) + "... (truncated)"
+        : rawLine
 
     const formatted = `${lineNo}\t${line}`
 
     // 总输出大小检查
-    totalBytes += Buffer.byteLength(formatted, 'utf-8') + 1
+    totalBytes += Buffer.byteLength(formatted, "utf-8") + 1
     if (totalBytes > MAX_OUTPUT_BYTES) {
       truncated = true
       break
@@ -120,7 +155,7 @@ const readFileContent = async (
     lines.push(`... (truncated at line ${lineNo}, use offset/limit to read more)`)
   }
 
-  return lines.join('\n')
+  return lines.join("\n")
 }
 
 /**
@@ -128,45 +163,50 @@ const readFileContent = async (
  * 限定在 projectRoot 目录内访问。
  */
 export const createReadTool = (projectRoot: string): AgentTool => ({
-  name: 'prompt_file_read',
-  description: 'Read files or list directory contents within the project root. Only paths inside the project root are allowed. If the exact file path is unknown, please use prompt_glob to find it first.',
+  name: "prompt_file_read",
+  description:
+    "Read files or list directory contents within the project root. Only paths inside the project root are allowed. If the exact file path is unknown, please use prompt_glob to find it first.",
   prompt: {
-    summary: 'Read files or list directory contents within the project root.',
+    summary: "Read files or list directory contents within the project root.",
     whenToUse: [
-      'Use when you need to read the contents of a specific file in the project.',
-      'Use when you need to list the entries of a specific directory in the project.',
-      'Always verify file or directory path. If unsure, use prompt_glob to search for the path first.'
+      "Use when you need to read the contents of a specific file in the project.",
+      "Use when you need to list the entries of a specific directory in the project.",
+      "Always verify file or directory path. If unsure, use prompt_glob to search for the path first.",
     ],
     whenNotToUse: [
-      'Do not use when you do not know the exact file path. Use prompt_glob first.',
-      'Do not use to write or modify files.'
+      "Do not use when you do not know the exact file path. Use prompt_glob first.",
+      "Do not use to write or modify files.",
     ],
     safety: [
-      'Only paths within the projectRoot can be accessed. Access to outside paths will be denied.',
-      'Binary files cannot be read and will return a binary file message.'
+      "Only paths within the projectRoot can be accessed. Access to outside paths will be denied.",
+      "Binary files cannot be read and will return a binary file message.",
     ],
-    output: 'Returns file content with line numbers, or directory entries.'
+    output: "Returns file content with line numbers, or directory entries.",
   },
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
       filePath: {
-        type: 'string',
-        description: 'Absolute or relative path to the file or directory to read.'
+        type: "string",
+        description: "Absolute or relative path to the file or directory to read.",
       },
       offset: {
-        type: 'number',
-        description: 'Starting line number (1-indexed). Default: 1.'
+        type: "number",
+        description: "Starting line number (1-indexed). Default: 1.",
       },
       limit: {
-        type: 'number',
-        description: 'Maximum number of lines to read. Default: 2000.'
-      }
+        type: "number",
+        description: "Maximum number of lines to read. Default: 2000.",
+      },
     },
-    required: ['filePath']
+    required: ["filePath"],
   },
   execute: async (input: unknown): Promise<AgentToolResult> => {
-    const { filePath, offset = 1, limit = DEFAULT_LIMIT } = input as {
+    const {
+      filePath,
+      offset = 1,
+      limit = DEFAULT_LIMIT,
+    } = input as {
       filePath: string
       offset?: number
       limit?: number
@@ -177,26 +217,26 @@ export const createReadTool = (projectRoot: string): AgentTool => ({
     try {
       stat = await fs.promises.stat(resolved)
     } catch (err: any) {
-      if (err.code === 'ENOENT') {
+      if (err.code === "ENOENT") {
         return {
           observation: `Error: The specified path does not exist.\n- Requested Path: "${filePath}"\n- Resolved Path: "${resolved}"\n- Project Root: "${projectRoot}"\n\nSuggestion: Please use "prompt_glob" to search for the correct file or verify the path.`,
           data: {
-            error: 'ENOENT',
+            error: "ENOENT",
             requestedPath: filePath,
             resolvedPath: resolved,
             projectRoot,
-            suggestion: 'Use prompt_glob tool to find files.'
-          }
+            suggestion: "Use prompt_glob tool to find files.",
+          },
         }
       }
       throw err
     }
 
     // 二进制文件拒绝读取
-    if (stat.isFile() && await isBinaryFile(resolved)) {
+    if (stat.isFile() && (await isBinaryFile(resolved))) {
       return {
         observation: `Binary file detected: ${filePath}. Content not displayed.`,
-        data: { type: 'binary', path: resolved }
+        data: { type: "binary", path: resolved },
       }
     }
 
@@ -205,7 +245,7 @@ export const createReadTool = (projectRoot: string): AgentTool => ({
       const content = await readDirectory(resolved)
       return {
         observation: `<path>${resolved}</path>\n<type>directory</type>\n<content>\n${content}\n</content>`,
-        data: { type: 'directory', path: resolved, entries: content.split('\n').length }
+        data: { type: "directory", path: resolved, entries: content.split("\n").length },
       }
     }
 
@@ -213,7 +253,7 @@ export const createReadTool = (projectRoot: string): AgentTool => ({
     const content = await readFileContent(resolved, offset, limit)
     return {
       observation: `<path>${resolved}</path>\n<type>file</type>\n<content>\n${content}\n</content>`,
-      data: { type: 'file', path: resolved }
+      data: { type: "file", path: resolved },
     }
-  }
+  },
 })

@@ -1,29 +1,29 @@
-import type { PeopleService } from '@/services/peopleService';
-import type { ToolConfirmationConfig } from '@/agent/tools/toolConfirmation';
-import type { PeopleWriteTool } from '../types';
+import type { ToolConfirmationConfig } from "@/agent/tools/toolConfirmation"
+import type { PeopleService } from "@/services/peopleService"
+import type { PeopleWriteTool } from "../types"
 import {
   isRecord,
   parseString,
-  renderPeopleMutationTarget,
-  renderPeopleMutationSummary,
   renderPeopleMutationCompletion,
-} from '../utils';
+  renderPeopleMutationSummary,
+  renderPeopleMutationTarget,
+} from "../utils"
 
 /**
  * 解析 People 删除入参。
  */
 const parseDeleteInput = (input: unknown): { id: string } => {
   if (!isRecord(input)) {
-    throw new Error("People delete input must be an object");
+    throw new Error("People delete input must be an object")
   }
 
-  const id = parseString(input.id)?.trim();
+  const id = parseString(input.id)?.trim()
   if (!id) {
-    throw new Error("People delete requires id");
+    throw new Error("People delete requires id")
   }
 
-  return { id };
-};
+  return { id }
+}
 
 // People 删除确认配置。
 const PEOPLE_DELETE_CONFIRMATION: ToolConfirmationConfig = {
@@ -37,7 +37,7 @@ const PEOPLE_DELETE_CONFIRMATION: ToolConfirmationConfig = {
     renderMessage: (input, result) =>
       renderPeopleMutationCompletion("delete", input, result as { data: unknown }),
   },
-};
+}
 
 /**
  * 创建 People 删除工具。
@@ -46,18 +46,11 @@ export const createPeopleDeleteTool = (
   peopleService: Pick<PeopleService, "delete">,
 ): PeopleWriteTool => ({
   name: "people_tool_delete",
-  description:
-    "Delete an existing people profile from the local People table by id.",
+  description: "Delete an existing people profile from the local People table by id.",
   confirmation: PEOPLE_DELETE_CONFIRMATION,
   prompt: {
     summary: "Delete an existing profile from the local People table by id.",
-    intentKeywords: [
-      "删除",
-      "移除",
-      "删掉",
-      "delete person",
-      "remove person",
-    ],
+    intentKeywords: ["删除", "移除", "删掉", "delete person", "remove person"],
     whenToUse: [
       "Use when the user explicitly asks to delete a people profile.",
       "Use after people_tool_query when the user identifies a person by name or relationship instead of id, then delete the resolved profile id.",
@@ -74,8 +67,11 @@ export const createPeopleDeleteTool = (
       "Require the exact profile id.",
       "Ask the user for clarification before deleting when multiple profiles may match.",
     ],
-    output: "Include confirmationSummary in the tool arguments with key deletion target facts; return a concise deletion confirmation.",
-    examples: ['{"confirmationSummary":"将删除人物档案：**阿明**（朋友）。\\n- 这是本次查询确认到的目标人物","id":"person-1"}'],
+    output:
+      "Include confirmationSummary in the tool arguments with key deletion target facts; return a concise deletion confirmation.",
+    examples: [
+      '{"confirmationSummary":"将删除人物档案：**阿明**（朋友）。\\n- 这是本次查询确认到的目标人物","id":"person-1"}',
+    ],
   },
   parameters: {
     type: "object",
@@ -88,14 +84,14 @@ export const createPeopleDeleteTool = (
     },
   },
   execute: async (input) => {
-    const parsed = parseDeleteInput(input);
-    peopleService.delete(parsed.id);
+    const parsed = parseDeleteInput(input)
+    peopleService.delete(parsed.id)
 
     return {
       observation: `Deleted people profile: ${parsed.id}.`,
       data: {
         id: parsed.id,
       },
-    };
+    }
   },
-});
+})

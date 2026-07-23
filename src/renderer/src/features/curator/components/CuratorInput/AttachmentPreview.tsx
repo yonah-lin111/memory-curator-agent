@@ -1,19 +1,19 @@
-import type React from "react";
-import { X } from "lucide-react";
-import { Image } from "@/components/ui/Image";
-import { TextFile } from "@/components/ui/TextFile";
-import type { SelectedTextFile } from "@/features/curator/components/CuratorInput/types";
+import { X } from "lucide-react"
+import type React from "react"
+import { Image } from "@/components/ui/Image"
+import { TextFile } from "@/components/ui/TextFile"
+import type { SelectedTextFile } from "@/features/curator/components/CuratorInput/types"
 
 // 附件预览子组件属性类型。
 export interface AttachmentPreviewProps {
   // 已选图片 URL 列表。
-  selectedImages: string[];
+  selectedImages: string[]
   // 已选文本文件列表。
-  selectedTextFiles: SelectedTextFile[];
+  selectedTextFiles: SelectedTextFile[]
   // 移除图片回调。
-  onRemoveImage: (index: number) => void;
+  onRemoveImage: (index: number) => void
   // 移除文本文件回调。
-  onRemoveTextFile: (index: number) => void;
+  onRemoveTextFile: (index: number) => void
 }
 
 /**
@@ -26,7 +26,7 @@ export const AttachmentPreview = ({
   onRemoveTextFile,
 }: AttachmentPreviewProps): React.JSX.Element | null => {
   if (selectedImages.length === 0 && selectedTextFiles.length === 0) {
-    return null;
+    return null
   }
 
   return (
@@ -82,5 +82,5 @@ export const AttachmentPreview = ({
         </div>
       )}
     </>
-  );
-};
+  )
+}

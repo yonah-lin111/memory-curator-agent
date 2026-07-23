@@ -1,29 +1,26 @@
-import type React from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { IconButton } from "@/components/ui/IconButton";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { DatePickerButton } from "@/components/ui/DatePickerButton";
-import { shiftEntryDate } from "@/lib/dailyShared";
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import type React from "react"
+import { DatePicker } from "@/components/ui/DatePicker"
+import { DatePickerButton } from "@/components/ui/DatePickerButton"
+import { IconButton } from "@/components/ui/IconButton"
+import { shiftEntryDate } from "@/lib/dailyShared"
 
 // 页面顶部日期与周导航器属性。
 interface PageDateNavigatorProps {
   // 当前页面日期（格式 YYYY-MM-DD）。
-  entryDate: string;
+  entryDate: string
   // 导航与选择模式：按日或按周，默认为 "date"。
-  mode?: "date" | "week";
+  mode?: "date" | "week"
   // 当前可见月份（格式 YYYY-MM）。
-  visibleMonth?: string;
+  visibleMonth?: string
   // 按日期聚合的记录数量映射。
-  entryCountMap?: Record<string, number>;
+  entryCountMap?: Record<string, number>
   // 月份数据是否正在加载。
-  isMonthOverviewLoading?: boolean;
+  isMonthOverviewLoading?: boolean
   // 日期或基准周一变化回调。
-  onChange: (nextDate: string) => void;
+  onChange: (nextDate: string) => void
   // 可见月份变化回调。
-  onVisibleMonthChange?: (nextMonth: string) => void;
+  onVisibleMonthChange?: (nextMonth: string) => void
 }
 
 /**
@@ -39,19 +36,16 @@ export const PageDateNavigator = ({
   onVisibleMonthChange,
 }: PageDateNavigatorProps): React.JSX.Element => {
   // 步长：周模式为 7，日模式为 1。
-  const step = mode === "week" ? 7 : 1;
-  const previousDate = shiftEntryDate(entryDate, -step);
-  const nextDate = shiftEntryDate(entryDate, step);
+  const step = mode === "week" ? 7 : 1
+  const previousDate = shiftEntryDate(entryDate, -step)
+  const nextDate = shiftEntryDate(entryDate, step)
 
-  const prevLabel = mode === "week" ? "Previous Week" : `View previous day ${previousDate}`;
-  const nextLabel = mode === "week" ? "Next Week" : `View next day ${nextDate}`;
+  const prevLabel = mode === "week" ? "Previous Week" : `View previous day ${previousDate}`
+  const nextLabel = mode === "week" ? "Next Week" : `View next day ${nextDate}`
 
   return (
     <div className="flex items-center gap-1">
-      <IconButton
-        aria-label={prevLabel}
-        onClick={() => onChange(previousDate)}
-      >
+      <IconButton aria-label={prevLabel} onClick={() => onChange(previousDate)}>
         <ChevronLeft className="h-3.5 w-3.5" />
       </IconButton>
 
@@ -70,12 +64,9 @@ export const PageDateNavigator = ({
         />
       </DatePicker>
 
-      <IconButton
-        aria-label={nextLabel}
-        onClick={() => onChange(nextDate)}
-      >
+      <IconButton aria-label={nextLabel} onClick={() => onChange(nextDate)}>
         <ChevronRight className="h-3.5 w-3.5" />
       </IconButton>
     </div>
-  );
-};
+  )
+}

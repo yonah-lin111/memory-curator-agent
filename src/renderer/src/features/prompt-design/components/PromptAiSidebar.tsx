@@ -1,36 +1,39 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
-import { ChevronRight, ChevronLeft, History, Trash2, Bot, X } from "lucide-react";
-import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Input } from "@/components/ui/Input";
-import { LoadingOverlay } from "@/components/ui/LoadingOverlay";
-import { usePromptAiChatController } from "./usePromptAiChatController";
-import { usePromptDesignStore } from "../store/promptDesignStore";
-import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels";
-import { resolveCuratorSelectedModelOption, estimateCuratorContextTokens } from "@/lib/ai-shared/contextBuilder";
-import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle";
-import { useToast } from "@/components/ui/Toast";
-import type { PromptDesignReference } from "@/features/prompt-design/types";
+import { Bot, ChevronLeft, ChevronRight, History, Trash2, X } from "lucide-react"
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { ContextUsageCircle } from "@/components/ai-shared/ContextUsageCircle"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { LoadingOverlay } from "@/components/ui/LoadingOverlay"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import type { PromptDesignReference } from "@/features/prompt-design/types"
+import {
+  estimateCuratorContextTokens,
+  resolveCuratorSelectedModelOption,
+} from "@/lib/ai-shared/contextBuilder"
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels"
+import { usePromptDesignStore } from "../store/promptDesignStore"
+import { PromptAiChatWorkspace } from "./PromptAiChatWorkspace"
+import { usePromptAiChatController } from "./usePromptAiChatController"
 
 // 会话切换 loading 最短展示时长（ms），避免闪烁。
-const MIN_SWITCH_LOADING_MS = 500;
+const MIN_SWITCH_LOADING_MS = 500
 
 type PromptAiSidebarProps = {
-  isOpen?: boolean;
-  isTransitionEnabled?: boolean;
-  onClose?: () => void;
-  controller: ReturnType<typeof usePromptAiChatController>;
-  onReferenceSelect?: (reference: PromptDesignReference) => void;
-  chatInputFocusVersion?: number;
+  isOpen?: boolean
+  isTransitionEnabled?: boolean
+  onClose?: () => void
+  controller: ReturnType<typeof usePromptAiChatController>
+  onReferenceSelect?: (reference: PromptDesignReference) => void
+  chatInputFocusVersion?: number
   mcpStatus?: {
-    total: number;
-    connected: number;
-    failed: number;
-    names: string[];
-    failedNames: string[];
-  };
-};
+    total: number
+    connected: number
+    failed: number
+    names: string[]
+    failedNames: string[]
+  }
+}
 
 export const PromptAiSidebar = ({
   isOpen = true,
@@ -41,215 +44,226 @@ export const PromptAiSidebar = ({
   onReferenceSelect,
   chatInputFocusVersion,
 }: PromptAiSidebarProps): React.JSX.Element => {
-  const toast = useToast();
-  const [sidebarWidth, setSidebarWidth] = useState<number>(30); // vw
-  const [isDragging, setIsDragging] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const isDraggingRef = useRef(isDragging);
+  const toast = useToast()
+  const [sidebarWidth, setSidebarWidth] = useState<number>(30) // vw
+  const [isDragging, setIsDragging] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const isDraggingRef = useRef(isDragging)
 
-  const activeDesignId = usePromptDesignStore((state) => state.activeDesignId);
-  const { selectedModel, modelOptions } = useActiveCuratorModels();
+  const activeDesignId = usePromptDesignStore((state) => state.activeDesignId)
+  const { selectedModel, modelOptions } = useActiveCuratorModels()
 
   const contextTokens = useMemo(() => {
-    return controller.messages.reduce((sum, msg) => {
-      let tokens = estimateCuratorContextTokens(msg.content);
-      if (msg.reasoning) {
-        tokens += estimateCuratorContextTokens(msg.reasoning);
-      }
-      if (msg.toolSteps) {
-        tokens += msg.toolSteps.reduce((tSum, step) => tSum + estimateCuratorContextTokens(step.observation), 0);
-      }
-      return sum + tokens;
-    }, 0) + estimateCuratorContextTokens(controller.contextDocument) + controller.contextReferences.reduce(
-      (sum, reference) => sum + estimateCuratorContextTokens(reference.content),
-      0,
-    );
-  }, [controller.contextDocument, controller.contextReferences, controller.messages]);
+    return (
+      controller.messages.reduce((sum, msg) => {
+        let tokens = estimateCuratorContextTokens(msg.content)
+        if (msg.reasoning) {
+          tokens += estimateCuratorContextTokens(msg.reasoning)
+        }
+        if (msg.toolSteps) {
+          tokens += msg.toolSteps.reduce(
+            (tSum, step) => tSum + estimateCuratorContextTokens(step.observation),
+            0,
+          )
+        }
+        return sum + tokens
+      }, 0) +
+      estimateCuratorContextTokens(controller.contextDocument) +
+      controller.contextReferences.reduce(
+        (sum, reference) => sum + estimateCuratorContextTokens(reference.content),
+        0,
+      )
+    )
+  }, [controller.contextDocument, controller.contextReferences, controller.messages])
 
   const contextLimit = useMemo(() => {
-    if (!selectedModel) return undefined;
-    const [provider, model] = selectedModel.split("::");
-    const modelOption = resolveCuratorSelectedModelOption(modelOptions, { provider, model });
-    return modelOption?.limit?.context;
-  }, [selectedModel, modelOptions]);
+    if (!selectedModel) return undefined
+    const [provider, model] = selectedModel.split("::")
+    const modelOption = resolveCuratorSelectedModelOption(modelOptions, { provider, model })
+    return modelOption?.limit?.context
+  }, [selectedModel, modelOptions])
 
-  const contextUsagePercent = contextLimit ? Math.round((contextTokens / contextLimit) * 100) : null;
+  const contextUsagePercent = contextLimit ? Math.round((contextTokens / contextLimit) * 100) : null
 
   // 会话切换 loading 状态
-  const [isSwitching, setIsSwitching] = useState(false);
-  const isSwitchingRef = useRef(false);
-  const loadingStartTimeRef = useRef(0);
-  const switchCounterRef = useRef(0);
+  const [isSwitching, setIsSwitching] = useState(false)
+  const isSwitchingRef = useRef(false)
+  const loadingStartTimeRef = useRef(0)
+  const switchCounterRef = useRef(0)
 
-  const [editingTitle, setEditingTitle] = useState<{ id: string; title: string } | null>(null);
+  const [editingTitle, setEditingTitle] = useState<{ id: string; title: string } | null>(null)
 
-  const activeSession = controller.sessions.find(s => s.id === controller.activeSessionId);
+  const activeSession = controller.sessions.find((s) => s.id === controller.activeSessionId)
 
   // workspace 的引用，用于调用滚动方法
-  const workspaceRef = useRef<{ scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void }>(null);
+  const workspaceRef = useRef<{
+    scrollLatestUserToTop: (behavior: ScrollBehavior, onComplete?: () => void) => void
+  }>(null)
 
   /**
    * 结束会话切换 loading，确保最少展示 MIN_SWITCH_LOADING_MS。
    */
   const finishSessionSwitchScroll = (): void => {
-    if (!isSwitchingRef.current) return;
-    const counter = switchCounterRef.current;
-    const elapsed = Date.now() - loadingStartTimeRef.current;
-    const remaining = Math.max(0, MIN_SWITCH_LOADING_MS - elapsed);
+    if (!isSwitchingRef.current) return
+    const counter = switchCounterRef.current
+    const elapsed = Date.now() - loadingStartTimeRef.current
+    const remaining = Math.max(0, MIN_SWITCH_LOADING_MS - elapsed)
 
     setTimeout(() => {
       if (switchCounterRef.current === counter) {
-        setIsSwitching(false);
-        isSwitchingRef.current = false;
+        setIsSwitching(false)
+        isSwitchingRef.current = false
       }
-    }, remaining);
-  };
+    }, remaining)
+  }
 
   /**
    * 执行会话切换，loading 由 useLayoutEffect 监听 activeSessionId 统一驱动。
    */
   const handleSessionSwitch = (sid: string): void => {
-    controller.handleSessionChange(sid);
-    const target = controller.sessions.find(s => s.id === sid);
+    controller.handleSessionChange(sid)
+    const target = controller.sessions.find((s) => s.id === sid)
     if (target) {
-      toast.success(`已切换对话: ${target.title}`);
+      toast.success(`已切换对话: ${target.title}`)
     } else {
-      toast.success("已切换对话");
+      toast.success("已切换对话")
     }
-  };
+  }
 
   /**
    * 执行新建对话，loading 由 useLayoutEffect 监听 activeSessionId 统一驱动。
    */
   const handleNewChatWithLoading = (): void => {
-    controller.handleNewChat();
-    toast.success("已新建对话");
-  };
+    controller.handleNewChat()
+    toast.success("已新建对话")
+  }
 
   // 会话切换时统一驱动 loading（useLayoutEffect 确保在浏览器绘制前完成）。
   useLayoutEffect(() => {
-    const activeId = controller.activeSessionId;
+    const activeId = controller.activeSessionId
 
     // 如果还没有初始化完成或者无有效会话时跳过 loading
     if (!activeId || !controller.sessionInitialized) {
       if (!controller.sessionInitialized) {
-        setIsSwitching(true);
-        isSwitchingRef.current = true;
+        setIsSwitching(true)
+        isSwitchingRef.current = true
       }
-      return;
+      return
     }
 
     // 当会话为空（例如切换到新建对话）时，无需展示 loading 动画
     if (controller.messages.length === 0) {
-      setIsSwitching(false);
-      isSwitchingRef.current = false;
-      return;
+      setIsSwitching(false)
+      isSwitchingRef.current = false
+      return
     }
 
-    setIsSwitching(true);
-    isSwitchingRef.current = true;
-    loadingStartTimeRef.current = Date.now();
-    switchCounterRef.current += 1;
+    setIsSwitching(true)
+    isSwitchingRef.current = true
+    loadingStartTimeRef.current = Date.now()
+    switchCounterRef.current += 1
 
     // 如果 workspace 存在滚动方法，则调用滚动到底部或指定的最新用户提问处
     if (workspaceRef.current?.scrollLatestUserToTop && controller.messages.length > 0) {
       workspaceRef.current.scrollLatestUserToTop("auto", () => {
-        finishSessionSwitchScroll();
-      });
+        finishSessionSwitchScroll()
+      })
     } else {
-      finishSessionSwitchScroll();
+      finishSessionSwitchScroll()
     }
-  }, [controller.activeSessionId]); // 依赖 activeSessionId 发生变化
+  }, [controller.activeSessionId]) // 依赖 activeSessionId 发生变化
 
   // 当会话中的消息数量在初始加载后变得有效时，或者依赖项就绪时
   // 此处我们需要在消息重新渲染到 DOM 后立即执行滚动
   useLayoutEffect(() => {
-    if (isSwitchingRef.current && workspaceRef.current?.scrollLatestUserToTop && controller.messages.length > 0) {
+    if (
+      isSwitchingRef.current &&
+      workspaceRef.current?.scrollLatestUserToTop &&
+      controller.messages.length > 0
+    ) {
       workspaceRef.current.scrollLatestUserToTop("auto", () => {
-        finishSessionSwitchScroll();
-      });
+        finishSessionSwitchScroll()
+      })
     }
-  }, [controller.messages.length]);
+  }, [controller.messages.length])
 
   // 修复第一次打开侧边栏时，由于 width 从 0 到 30vw 动画（300ms），导致文本重排，
   // 此时 scrollLatestUserToTop 获取的 offsetTop 不准确，导致滚动不到指定位置的问题。
   useEffect(() => {
-    let timer: number;
+    let timer: number
     if (isOpen && workspaceRef.current && controller.messages.length > 0) {
       timer = window.setTimeout(() => {
-        workspaceRef.current?.scrollLatestUserToTop("auto");
-      }, 350);
+        workspaceRef.current?.scrollLatestUserToTop("auto")
+      }, 350)
     }
-    return () => clearTimeout(timer);
-  }, [isOpen, controller.activeSessionId, controller.messages.length]);
-
+    return () => clearTimeout(timer)
+  }, [isOpen, controller.activeSessionId, controller.messages.length])
 
   const handleStartEditTitle = (session: any) => {
-    setEditingTitle({ id: session.id, title: session.title });
-  };
+    setEditingTitle({ id: session.id, title: session.title })
+  }
 
   const handleCommitEditTitle = async (session: any) => {
-    if (!editingTitle) return;
-    const nextTitle = editingTitle.title.trim();
+    if (!editingTitle) return
+    const nextTitle = editingTitle.title.trim()
     if (!nextTitle || nextTitle === session.title) {
-      setEditingTitle(null);
-      return;
+      setEditingTitle(null)
+      return
     }
-    const isUpdated = await controller.handleRenameChat(session.id, nextTitle);
+    const isUpdated = await controller.handleRenameChat(session.id, nextTitle)
     if (isUpdated) {
-      setEditingTitle(null);
-      toast.success("已重命名对话");
+      setEditingTitle(null)
+      toast.success("已重命名对话")
     } else {
-      toast.error("重命名对话失败");
+      toast.error("重命名对话失败")
     }
-  };
+  }
 
   useEffect(() => {
-    isDraggingRef.current = isDragging;
-  }, [isDragging]);
+    isDraggingRef.current = isDragging
+  }, [isDragging])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      const newWidthVw =
-        ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
-      const clampedWidth = Math.min(Math.max(newWidthVw, 30), 45);
-      setSidebarWidth(clampedWidth);
+      if (!isDraggingRef.current) return
+      const newWidthVw = ((window.innerWidth - e.clientX) / window.innerWidth) * 100
+      const clampedWidth = Math.min(Math.max(newWidthVw, 30), 45)
+      setSidebarWidth(clampedWidth)
       if (clampedWidth > 30) {
-        setIsExpanded(true);
+        setIsExpanded(true)
       } else {
-        setIsExpanded(false);
+        setIsExpanded(false)
       }
-    };
+    }
 
     const handleMouseUp = () => {
-      setIsDragging(false);
-    };
+      setIsDragging(false)
+    }
 
     if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "col-resize";
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+      document.body.style.userSelect = "none"
+      document.body.style.cursor = "col-resize"
     }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    };
-  }, [isDragging]);
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+      document.body.style.userSelect = ""
+      document.body.style.cursor = ""
+    }
+  }, [isDragging])
 
   const toggleExpand = () => {
     if (isExpanded) {
-      setSidebarWidth(30);
-      setIsExpanded(false);
+      setSidebarWidth(30)
+      setIsExpanded(false)
     } else {
-      setSidebarWidth(45); // Max width defined in clamp
-      setIsExpanded(true);
+      setSidebarWidth(45) // Max width defined in clamp
+      setIsExpanded(true)
     }
-  };
+  }
 
   return (
     <div
@@ -259,9 +273,7 @@ export const PromptAiSidebar = ({
         marginLeft: isOpen ? "0.75rem" : "0px", // 对应 gap-3 的间距
       }}
       className={`relative flex-shrink-0 flex flex-col min-h-0 bg-[#212121] rounded-[6px] border border-white/5 text-xs text-white/55 custom-scrollbar [scrollbar-gutter:stable] select-none ${
-        isTransitionEnabled && !isDragging
-          ? "transition-all duration-300 ease-in-out"
-          : ""
+        isTransitionEnabled && !isDragging ? "transition-all duration-300 ease-in-out" : ""
       } overflow-hidden ${!isOpen ? "pointer-events-none" : ""}`}
       aria-label="Prompt AI Sidebar"
     >
@@ -269,8 +281,8 @@ export const PromptAiSidebar = ({
         <div
           className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize hover:bg-white/20 active:bg-white/40 transition-colors z-50"
           onMouseDown={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
+            e.preventDefault()
+            setIsDragging(true)
           }}
         />
       )}
@@ -288,10 +300,7 @@ export const PromptAiSidebar = ({
         <>
           {isOpen && (
             <div className="flex items-center p-2 shrink-0 h-9 border-b border-white/5 gap-2 animate-fade-in">
-              <Tooltip
-                content={isExpanded ? "恢复默认宽度" : "展开最大宽度"}
-                placement="bottom"
-              >
+              <Tooltip content={isExpanded ? "恢复默认宽度" : "展开最大宽度"} placement="bottom">
                 <IconButton onClick={toggleExpand}>
                   {isExpanded ? (
                     <ChevronRight className="h-4 w-4" />
@@ -300,7 +309,7 @@ export const PromptAiSidebar = ({
                   )}
                 </IconButton>
               </Tooltip>
-              
+
               <div className="flex items-center flex-1 min-w-0 gap-1.5">
                 {activeSession && (
                   <Tooltip
@@ -325,14 +334,20 @@ export const PromptAiSidebar = ({
                               autoFocus
                               type="text"
                               value={editingTitle?.title ?? activeSession.title}
-                              onChange={(e) => setEditingTitle(prev => prev ? { ...prev, title: e.target.value } : { id: activeSession.id, title: e.target.value })}
+                              onChange={(e) =>
+                                setEditingTitle((prev) =>
+                                  prev
+                                    ? { ...prev, title: e.target.value }
+                                    : { id: activeSession.id, title: e.target.value },
+                                )
+                              }
                               placeholder="请输入对话名称"
                               size="xs"
                               className="!h-[28px]"
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleCommitEditTitle(activeSession);
+                                if (e.key === "Enter") {
+                                  e.preventDefault()
+                                  handleCommitEditTitle(activeSession)
                                 }
                               }}
                             />
@@ -340,7 +355,7 @@ export const PromptAiSidebar = ({
                         </div>
                       }
                     >
-                      <span 
+                      <span
                         className="block truncate text-xs font-bold cursor-pointer hover:text-white/80 transition-colors"
                         onClick={() => handleStartEditTitle(activeSession)}
                       >
@@ -363,42 +378,44 @@ export const PromptAiSidebar = ({
                     trigger="click"
                     contentClassName="p-1 min-w-[200px]"
                     content={
-                    <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {controller.sessions.length > 0 ? (
-                        controller.sessions.map((item) => {
-                          const isActive = item.id === controller.activeSessionId;
-                          return (
-                            <div
-                              key={item.id}
-                              className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 cursor-pointer ${
-                                isActive
-                                  ? "bg-white/10 text-white font-semibold"
-                                  : "hover:bg-white/[0.02] text-white/70 group"
-                              }`}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => {
-                                if (!isActive) {
-                                  handleSessionSwitch(item.id);
-                                }
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-2 w-full">
-                                <div className="min-w-0 flex-1">
-                                  <span className={`block truncate text-xs font-bold leading-none ${isActive ? "text-white" : "group-hover:text-white"}`}>
-                                    {item.title}
-                                  </span>
+                      <div className="flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {controller.sessions.length > 0 ? (
+                          controller.sessions.map((item) => {
+                            const isActive = item.id === controller.activeSessionId
+                            return (
+                              <div
+                                key={item.id}
+                                className={`relative flex flex-col gap-1 rounded-[6px] px-2.5 py-2 text-left transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 cursor-pointer ${
+                                  isActive
+                                    ? "bg-white/10 text-white font-semibold"
+                                    : "hover:bg-white/[0.02] text-white/70 group"
+                                }`}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  if (!isActive) {
+                                    handleSessionSwitch(item.id)
+                                  }
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-2 w-full">
+                                  <div className="min-w-0 flex-1">
+                                    <span
+                                      className={`block truncate text-xs font-bold leading-none ${isActive ? "text-white" : "group-hover:text-white"}`}
+                                    >
+                                      {item.title}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="px-3 py-4 text-center text-xs text-white/35">
-                          无对话历史
-                        </div>
-                      )}
-                    </div>
+                            )
+                          })
+                        ) : (
+                          <div className="px-3 py-4 text-center text-xs text-white/35">
+                            无对话历史
+                          </div>
+                        )}
+                      </div>
                     }
                   >
                     <IconButton>
@@ -412,11 +429,11 @@ export const PromptAiSidebar = ({
                       title="确定删除此对话吗？"
                       placement="bottom"
                       onConfirm={async () => {
-                        const isDeleted = await controller.handleDeleteChat(activeSession.id);
+                        const isDeleted = await controller.handleDeleteChat(activeSession.id)
                         if (isDeleted) {
-                          toast.success("已删除对话");
+                          toast.success("已删除对话")
                         } else {
-                          toast.error("删除对话失败");
+                          toast.error("删除对话失败")
                         }
                       }}
                       variant="primary"
@@ -466,5 +483,5 @@ export const PromptAiSidebar = ({
         </>
       )}
     </div>
-  );
-};
+  )
+}

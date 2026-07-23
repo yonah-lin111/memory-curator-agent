@@ -1,27 +1,27 @@
-import Database from 'better-sqlite3'
-import { mkdirSync } from 'node:fs'
-import { getDatabaseDir, getDatabasePath } from '@/paths'
+import { mkdirSync } from "node:fs"
+import Database from "better-sqlite3"
+import { getDatabaseDir, getDatabasePath } from "@/paths"
 
 // 数据库迁移依赖的最小连接接口。
-type MigrationDatabase = Pick<Database.Database, 'exec' | 'prepare'>
+type MigrationDatabase = Pick<Database.Database, "exec" | "prepare">
 
 // 可迁移表名。
 type MigratableTableName =
-  | 'notes'
-  | 'todos'
-  | 'snippets'
-  | 'journals'
-  | 'associated_people'
-  | 'personal_profiles'
-  | 'ai_chat_sessions'
-  | 'ai_chat_messages'
-  | 'ai_agent_runs'
-  | 'ai_agent_tool_calls'
-  | 'note_categories'
-  | 'prompt_design_projects'
-  | 'prompt_design_items'
-  | 'prompt_ai_chat_sessions'
-  | 'prompt_ai_chat_messages'
+  | "notes"
+  | "todos"
+  | "snippets"
+  | "journals"
+  | "associated_people"
+  | "personal_profiles"
+  | "ai_chat_sessions"
+  | "ai_chat_messages"
+  | "ai_agent_runs"
+  | "ai_agent_tool_calls"
+  | "note_categories"
+  | "prompt_design_projects"
+  | "prompt_design_items"
+  | "prompt_ai_chat_sessions"
+  | "prompt_ai_chat_messages"
 
 // 重建表配置。
 type RebuildTableConfig = {
@@ -55,7 +55,7 @@ const tableExists = (database: MigrationDatabase, tableName: string): boolean =>
   Boolean(
     database
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
-      .get(tableName)
+      .get(tableName),
   )
 
 /**
@@ -64,7 +64,7 @@ const tableExists = (database: MigrationDatabase, tableName: string): boolean =>
 const getColumnType = (
   database: MigrationDatabase,
   tableName: string,
-  columnName: string
+  columnName: string,
 ): string | null => {
   const column = database
     .prepare(`SELECT type FROM pragma_table_info('${tableName}') WHERE name = ?`)
@@ -79,14 +79,14 @@ const getColumnType = (
 const columnExists = (
   database: MigrationDatabase,
   tableName: string,
-  columnName: string
+  columnName: string,
 ): boolean => getColumnType(database, tableName, columnName) !== null
 
 /**
  * 判断表是否已经使用整数主键。
  */
 const usesIntegerPrimaryKey = (database: MigrationDatabase, tableName: string): boolean =>
-  getColumnType(database, tableName, 'id') === 'INTEGER'
+  getColumnType(database, tableName, "id") === "INTEGER"
 
 /**
  * 判断字段是否存在单列唯一索引。
@@ -94,20 +94,21 @@ const usesIntegerPrimaryKey = (database: MigrationDatabase, tableName: string): 
 const columnHasUniqueIndex = (
   database: MigrationDatabase,
   tableName: string,
-  columnName: string
+  columnName: string,
 ): boolean => {
-  const indexes = database
-    .prepare(`PRAGMA index_list('${tableName}')`)
-    .all() as Array<{ name?: string; unique?: number }>
+  const indexes = database.prepare(`PRAGMA index_list('${tableName}')`).all() as Array<{
+    name?: string
+    unique?: number
+  }>
 
   return indexes.some((index) => {
     if (!index.name || index.unique !== 1) {
       return false
     }
 
-    const indexColumns = database
-      .prepare(`PRAGMA index_info('${index.name}')`)
-      .all() as Array<{ name?: string }>
+    const indexColumns = database.prepare(`PRAGMA index_info('${index.name}')`).all() as Array<{
+      name?: string
+    }>
 
     return indexColumns.length === 1 && indexColumns[0]?.name === columnName
   })
@@ -122,12 +123,16 @@ const shouldRebuildTable = (
   timestampColumns: string[] = [],
   requiredColumns: string[] = [],
   requiredUniqueColumns: string[] = [],
-  forbiddenColumns: string[] = []
+  forbiddenColumns: string[] = [],
 ): boolean =>
   !usesIntegerPrimaryKey(database, tableName) ||
-  timestampColumns.some((columnName) => getColumnType(database, tableName, columnName) !== 'TIMESTAMP') ||
+  timestampColumns.some(
+    (columnName) => getColumnType(database, tableName, columnName) !== "TIMESTAMP",
+  ) ||
   requiredColumns.some((columnName) => !columnExists(database, tableName, columnName)) ||
-  requiredUniqueColumns.some((columnName) => !columnHasUniqueIndex(database, tableName, columnName)) ||
+  requiredUniqueColumns.some(
+    (columnName) => !columnHasUniqueIndex(database, tableName, columnName),
+  ) ||
   forbiddenColumns.some((columnName) => columnExists(database, tableName, columnName))
 
 /**
@@ -136,20 +141,20 @@ const shouldRebuildTable = (
 const resolveSelectColumns = (
   database: MigrationDatabase,
   tableName: string,
-  selectColumns: string[]
+  selectColumns: string[],
 ): string[] =>
   selectColumns.map((columnName) => {
     if (columnExists(database, tableName, columnName)) {
       return columnName
     }
 
-    if (columnName === 'external_id' && columnExists(database, tableName, 'id')) {
-      return 'id'
+    if (columnName === "external_id" && columnExists(database, tableName, "id")) {
+      return "id"
     }
 
     // 缺失的列用 NULL 填充（兼容新增字段迁移）。
-    if (columnName === 'category_id') {
-      return 'NULL AS category_id'
+    if (columnName === "category_id") {
+      return "NULL AS category_id"
     }
 
     throw new Error(`无法迁移缺失字段: ${tableName}.${columnName}`)
@@ -170,7 +175,7 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
       config.timestampColumns,
       config.requiredColumns,
       config.requiredUniqueColumns,
-      config.forbiddenColumns
+      config.forbiddenColumns,
     )
   ) {
     return
@@ -178,26 +183,26 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
 
   const legacyTableName = `${config.tableName}_legacy_schema`
   const insertColumns = usesIntegerPrimaryKey(database, config.tableName)
-    ? ['id', ...config.insertColumns]
+    ? ["id", ...config.insertColumns]
     : config.insertColumns
   const selectColumns = usesIntegerPrimaryKey(database, config.tableName)
-    ? ['id', ...resolveSelectColumns(database, config.tableName, config.selectColumns)]
+    ? ["id", ...resolveSelectColumns(database, config.tableName, config.selectColumns)]
     : resolveSelectColumns(database, config.tableName, config.selectColumns)
 
-  database.exec('PRAGMA legacy_alter_table = ON;');
+  database.exec("PRAGMA legacy_alter_table = ON;")
   database.exec(`
     ALTER TABLE ${config.tableName} RENAME TO ${legacyTableName};
     CREATE TABLE ${config.tableName} (
       id INTEGER PRIMARY KEY,
       ${config.columnsSql}
     );
-    INSERT INTO ${config.tableName} (${insertColumns.join(', ')})
-    SELECT ${selectColumns.join(', ')}
+    INSERT INTO ${config.tableName} (${insertColumns.join(", ")})
+    SELECT ${selectColumns.join(", ")}
     FROM ${legacyTableName}
     ORDER BY ${config.orderByClause};
     DROP TABLE ${legacyTableName};
   `)
-  database.exec('PRAGMA legacy_alter_table = OFF;');
+  database.exec("PRAGMA legacy_alter_table = OFF;")
 }
 
 /**
@@ -205,7 +210,7 @@ const rebuildTable = (database: MigrationDatabase, config: RebuildTableConfig): 
  */
 const rebuildLegacyTables = (database: MigrationDatabase): void => {
   rebuildTable(database, {
-    tableName: 'notes',
+    tableName: "notes",
     columnsSql: `
       title TEXT NOT NULL,
       content TEXT NOT NULL,
@@ -213,15 +218,15 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       time TIMESTAMP NOT NULL,
       category_id INTEGER
     `.trim(),
-    insertColumns: ['title', 'content', 'tags', 'time', 'category_id'],
-    selectColumns: ['title', 'content', 'tags', 'time', 'category_id'],
-    orderByClause: 'time ASC, id ASC',
-    timestampColumns: ['time'],
-    requiredColumns: ['category_id'],
-    forbiddenColumns: ['source']
+    insertColumns: ["title", "content", "tags", "time", "category_id"],
+    selectColumns: ["title", "content", "tags", "time", "category_id"],
+    orderByClause: "time ASC, id ASC",
+    timestampColumns: ["time"],
+    requiredColumns: ["category_id"],
+    forbiddenColumns: ["source"],
   })
   rebuildTable(database, {
-    tableName: 'todos',
+    tableName: "todos",
     columnsSql: `
       entry_date TEXT NOT NULL,
       text TEXT NOT NULL,
@@ -231,13 +236,29 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL
     `.trim(),
-    insertColumns: ['entry_date', 'text', 'priority', 'completed', 'sort_order', 'created_at', 'updated_at'],
-    selectColumns: ['entry_date', 'text', 'priority', 'completed', 'sort_order', 'created_at', 'updated_at'],
-    orderByClause: 'entry_date ASC, sort_order ASC, created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at']
+    insertColumns: [
+      "entry_date",
+      "text",
+      "priority",
+      "completed",
+      "sort_order",
+      "created_at",
+      "updated_at",
+    ],
+    selectColumns: [
+      "entry_date",
+      "text",
+      "priority",
+      "completed",
+      "sort_order",
+      "created_at",
+      "updated_at",
+    ],
+    orderByClause: "entry_date ASC, sort_order ASC, created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
   })
   rebuildTable(database, {
-    tableName: 'snippets',
+    tableName: "snippets",
     columnsSql: `
       entry_date TEXT NOT NULL,
       title TEXT NOT NULL,
@@ -246,26 +267,26 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL
     `.trim(),
-    insertColumns: ['entry_date', 'title', 'content', 'tags', 'created_at', 'updated_at'],
-    selectColumns: ['entry_date', 'title', 'content', 'tags', 'created_at', 'updated_at'],
-    orderByClause: 'entry_date ASC, created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at']
+    insertColumns: ["entry_date", "title", "content", "tags", "created_at", "updated_at"],
+    selectColumns: ["entry_date", "title", "content", "tags", "created_at", "updated_at"],
+    orderByClause: "entry_date ASC, created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
   })
   rebuildTable(database, {
-    tableName: 'journals',
+    tableName: "journals",
     columnsSql: `
       entry_date TEXT NOT NULL UNIQUE,
       content TEXT NOT NULL,
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL
     `.trim(),
-    insertColumns: ['entry_date', 'content', 'created_at', 'updated_at'],
-    selectColumns: ['entry_date', 'content', 'created_at', 'updated_at'],
-    orderByClause: 'entry_date ASC',
-    timestampColumns: ['created_at', 'updated_at']
+    insertColumns: ["entry_date", "content", "created_at", "updated_at"],
+    selectColumns: ["entry_date", "content", "created_at", "updated_at"],
+    orderByClause: "entry_date ASC",
+    timestampColumns: ["created_at", "updated_at"],
   })
   rebuildTable(database, {
-    tableName: 'associated_people',
+    tableName: "associated_people",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       avatar TEXT NOT NULL,
@@ -281,39 +302,39 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       updated_at TIMESTAMP NOT NULL
     `.trim(),
     insertColumns: [
-      'external_id',
-      'avatar',
-      'name',
-      'gender',
-      'relationship',
-      'status',
-      'birthday',
-      'contact',
-      'tags',
-      'details',
-      'created_at',
-      'updated_at'
+      "external_id",
+      "avatar",
+      "name",
+      "gender",
+      "relationship",
+      "status",
+      "birthday",
+      "contact",
+      "tags",
+      "details",
+      "created_at",
+      "updated_at",
     ],
     selectColumns: [
-      'external_id',
-      'avatar',
-      'name',
-      'gender',
-      'relationship',
-      'status',
-      'birthday',
-      'contact',
-      'tags',
-      'details',
-      'created_at',
-      'updated_at'
+      "external_id",
+      "avatar",
+      "name",
+      "gender",
+      "relationship",
+      "status",
+      "birthday",
+      "contact",
+      "tags",
+      "details",
+      "created_at",
+      "updated_at",
     ],
-    orderByClause: 'updated_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    orderByClause: "updated_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'personal_profiles',
+    tableName: "personal_profiles",
     columnsSql: `
       avatar TEXT NOT NULL,
       name TEXT NOT NULL,
@@ -327,34 +348,34 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       updated_at TIMESTAMP NOT NULL
     `.trim(),
     insertColumns: [
-      'avatar',
-      'name',
-      'gender',
-      'status',
-      'birthday',
-      'contact',
-      'tags',
-      'details',
-      'created_at',
-      'updated_at'
+      "avatar",
+      "name",
+      "gender",
+      "status",
+      "birthday",
+      "contact",
+      "tags",
+      "details",
+      "created_at",
+      "updated_at",
     ],
     selectColumns: [
-      'avatar',
-      'name',
-      'gender',
-      'status',
-      'birthday',
-      'contact',
-      'tags',
-      'details',
-      'created_at',
-      'updated_at'
+      "avatar",
+      "name",
+      "gender",
+      "status",
+      "birthday",
+      "contact",
+      "tags",
+      "details",
+      "created_at",
+      "updated_at",
     ],
-    orderByClause: 'updated_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at']
+    orderByClause: "updated_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
   })
   rebuildTable(database, {
-    tableName: 'ai_chat_sessions',
+    tableName: "ai_chat_sessions",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       title TEXT NOT NULL,
@@ -363,14 +384,28 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       updated_at TIMESTAMP NOT NULL,
       last_message_at TIMESTAMP NOT NULL
     `.trim(),
-    insertColumns: ['external_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
-    selectColumns: ['external_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
-    orderByClause: 'updated_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at', 'last_message_at'],
-    requiredColumns: ['external_id']
+    insertColumns: [
+      "external_id",
+      "title",
+      "status",
+      "created_at",
+      "updated_at",
+      "last_message_at",
+    ],
+    selectColumns: [
+      "external_id",
+      "title",
+      "status",
+      "created_at",
+      "updated_at",
+      "last_message_at",
+    ],
+    orderByClause: "updated_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at", "last_message_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'ai_chat_messages',
+    tableName: "ai_chat_messages",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       session_id TEXT NOT NULL,
@@ -385,37 +420,37 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       cancelled INTEGER NOT NULL DEFAULT 0
     `.trim(),
     insertColumns: [
-      'external_id',
-      'session_id',
-      'role',
-      'content',
-      'answer',
-      'parts_json',
-      'tool_steps_json',
-      'time',
-      'created_at',
-      'updated_at',
-      'cancelled'
+      "external_id",
+      "session_id",
+      "role",
+      "content",
+      "answer",
+      "parts_json",
+      "tool_steps_json",
+      "time",
+      "created_at",
+      "updated_at",
+      "cancelled",
     ],
     selectColumns: [
-      'external_id',
-      'session_id',
-      'role',
-      'content',
-      'answer',
-      'parts_json',
-      'tool_steps_json',
-      'time',
-      'created_at',
-      'updated_at',
-      'cancelled'
+      "external_id",
+      "session_id",
+      "role",
+      "content",
+      "answer",
+      "parts_json",
+      "tool_steps_json",
+      "time",
+      "created_at",
+      "updated_at",
+      "cancelled",
     ],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['time', 'created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["time", "created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'ai_agent_runs',
+    tableName: "ai_agent_runs",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       session_id TEXT NOT NULL,
@@ -428,34 +463,34 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       finished_at TIMESTAMP
     `.trim(),
     insertColumns: [
-      'external_id',
-      'session_id',
-      'assistant_message_id',
-      'provider',
-      'model',
-      'status',
-      'error',
-      'started_at',
-      'finished_at'
+      "external_id",
+      "session_id",
+      "assistant_message_id",
+      "provider",
+      "model",
+      "status",
+      "error",
+      "started_at",
+      "finished_at",
     ],
     selectColumns: [
-      'external_id',
-      'session_id',
-      'assistant_message_id',
-      'provider',
-      'model',
-      'status',
-      'error',
-      'started_at',
-      'finished_at'
+      "external_id",
+      "session_id",
+      "assistant_message_id",
+      "provider",
+      "model",
+      "status",
+      "error",
+      "started_at",
+      "finished_at",
     ],
-    orderByClause: 'started_at ASC, id ASC',
-    timestampColumns: ['started_at', 'finished_at'],
-    requiredColumns: ['external_id'],
-    requiredUniqueColumns: ['assistant_message_id']
+    orderByClause: "started_at ASC, id ASC",
+    timestampColumns: ["started_at", "finished_at"],
+    requiredColumns: ["external_id"],
+    requiredUniqueColumns: ["assistant_message_id"],
   })
   rebuildTable(database, {
-    tableName: 'prompt_design_projects',
+    tableName: "prompt_design_projects",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
@@ -464,14 +499,14 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       created_at TIMESTAMP NOT NULL,
       updated_at TIMESTAMP NOT NULL
     `.trim(),
-    insertColumns: ['external_id', 'name', 'type', 'path', 'created_at', 'updated_at'],
-    selectColumns: ['external_id', 'name', 'type', 'path', 'created_at', 'updated_at'],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    insertColumns: ["external_id", "name", "type", "path", "created_at", "updated_at"],
+    selectColumns: ["external_id", "name", "type", "path", "created_at", "updated_at"],
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'prompt_design_items',
+    tableName: "prompt_design_items",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       project_id TEXT NOT NULL,
@@ -481,14 +516,14 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       updated_at TIMESTAMP NOT NULL,
       FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     `.trim(),
-    insertColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
-    selectColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    insertColumns: ["external_id", "project_id", "name", "design_data", "created_at", "updated_at"],
+    selectColumns: ["external_id", "project_id", "name", "design_data", "created_at", "updated_at"],
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'prompt_ai_chat_sessions',
+    tableName: "prompt_ai_chat_sessions",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       design_item_id TEXT NOT NULL,
@@ -499,14 +534,30 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       last_message_at TIMESTAMP NOT NULL,
       FOREIGN KEY (design_item_id) REFERENCES prompt_design_items(external_id) ON DELETE CASCADE
     `.trim(),
-    insertColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
-    selectColumns: ['external_id', 'design_item_id', 'title', 'status', 'created_at', 'updated_at', 'last_message_at'],
-    orderByClause: 'updated_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at', 'last_message_at'],
-    requiredColumns: ['external_id']
+    insertColumns: [
+      "external_id",
+      "design_item_id",
+      "title",
+      "status",
+      "created_at",
+      "updated_at",
+      "last_message_at",
+    ],
+    selectColumns: [
+      "external_id",
+      "design_item_id",
+      "title",
+      "status",
+      "created_at",
+      "updated_at",
+      "last_message_at",
+    ],
+    orderByClause: "updated_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at", "last_message_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'prompt_ai_chat_messages',
+    tableName: "prompt_ai_chat_messages",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       session_id TEXT NOT NULL,
@@ -522,14 +573,40 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       cancelled INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (session_id) REFERENCES prompt_ai_chat_sessions(external_id) ON DELETE CASCADE
     `.trim(),
-    insertColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],
-    selectColumns: ['external_id', 'session_id', 'role', 'content', 'answer', 'parts_json', 'tool_steps_json', 'time', 'model', 'created_at', 'updated_at', 'cancelled'],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['time', 'created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    insertColumns: [
+      "external_id",
+      "session_id",
+      "role",
+      "content",
+      "answer",
+      "parts_json",
+      "tool_steps_json",
+      "time",
+      "model",
+      "created_at",
+      "updated_at",
+      "cancelled",
+    ],
+    selectColumns: [
+      "external_id",
+      "session_id",
+      "role",
+      "content",
+      "answer",
+      "parts_json",
+      "tool_steps_json",
+      "time",
+      "model",
+      "created_at",
+      "updated_at",
+      "cancelled",
+    ],
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["time", "created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'ai_agent_tool_calls',
+    tableName: "ai_agent_tool_calls",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       run_id TEXT NOT NULL,
@@ -546,39 +623,39 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       UNIQUE(run_id, tool_call_id)
     `.trim(),
     insertColumns: [
-      'external_id',
-      'run_id',
-      'message_id',
-      'tool_call_id',
-      'name',
-      'status',
-      'input_json',
-      'observation',
-      'data_json',
-      'error',
-      'created_at',
-      'updated_at'
+      "external_id",
+      "run_id",
+      "message_id",
+      "tool_call_id",
+      "name",
+      "status",
+      "input_json",
+      "observation",
+      "data_json",
+      "error",
+      "created_at",
+      "updated_at",
     ],
     selectColumns: [
-      'external_id',
-      'run_id',
-      'message_id',
-      'tool_call_id',
-      'name',
-      'status',
-      'input_json',
-      'observation',
-      'data_json',
-      'error',
-      'created_at',
-      'updated_at'
+      "external_id",
+      "run_id",
+      "message_id",
+      "tool_call_id",
+      "name",
+      "status",
+      "input_json",
+      "observation",
+      "data_json",
+      "error",
+      "created_at",
+      "updated_at",
     ],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
   rebuildTable(database, {
-    tableName: 'prompt_design_items',
+    tableName: "prompt_design_items",
     columnsSql: `
       external_id TEXT NOT NULL UNIQUE,
       project_id TEXT NOT NULL,
@@ -588,11 +665,11 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
       updated_at TIMESTAMP NOT NULL,
       FOREIGN KEY (project_id) REFERENCES prompt_design_projects(external_id) ON DELETE CASCADE
     `.trim(),
-    insertColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
-    selectColumns: ['external_id', 'project_id', 'name', 'design_data', 'created_at', 'updated_at'],
-    orderByClause: 'created_at ASC, id ASC',
-    timestampColumns: ['created_at', 'updated_at'],
-    requiredColumns: ['external_id']
+    insertColumns: ["external_id", "project_id", "name", "design_data", "created_at", "updated_at"],
+    selectColumns: ["external_id", "project_id", "name", "design_data", "created_at", "updated_at"],
+    orderByClause: "created_at ASC, id ASC",
+    timestampColumns: ["created_at", "updated_at"],
+    requiredColumns: ["external_id"],
   })
 }
 
@@ -600,26 +677,35 @@ const rebuildLegacyTables = (database: MigrationDatabase): void => {
  * 迁移旧版表名与字段结构。
  */
 export const migrateLegacySchema = (database: MigrationDatabase): void => {
-  if (tableExists(database, 'workspace_todos') && !tableExists(database, 'todos')) {
-    database.exec('ALTER TABLE workspace_todos RENAME TO todos;')
+  if (tableExists(database, "workspace_todos") && !tableExists(database, "todos")) {
+    database.exec("ALTER TABLE workspace_todos RENAME TO todos;")
   }
 
-  if (tableExists(database, 'workspace_snippets') && !tableExists(database, 'snippets')) {
-    database.exec('ALTER TABLE workspace_snippets RENAME TO snippets;')
+  if (tableExists(database, "workspace_snippets") && !tableExists(database, "snippets")) {
+    database.exec("ALTER TABLE workspace_snippets RENAME TO snippets;")
   }
 
   // 为已存在的 ai_chat_messages 表补加 cancelled 列。
-  if (tableExists(database, 'ai_chat_messages') && !columnExists(database, 'ai_chat_messages', 'cancelled')) {
-    database.exec('ALTER TABLE ai_chat_messages ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0;')
+  if (
+    tableExists(database, "ai_chat_messages") &&
+    !columnExists(database, "ai_chat_messages", "cancelled")
+  ) {
+    database.exec("ALTER TABLE ai_chat_messages ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0;")
   }
 
   // 为已存在的 prompt_ai_chat_messages 表补加 model 列。
-  if (tableExists(database, 'prompt_ai_chat_messages') && !columnExists(database, 'prompt_ai_chat_messages', 'model')) {
-    database.exec('ALTER TABLE prompt_ai_chat_messages ADD COLUMN model TEXT;')
+  if (
+    tableExists(database, "prompt_ai_chat_messages") &&
+    !columnExists(database, "prompt_ai_chat_messages", "model")
+  ) {
+    database.exec("ALTER TABLE prompt_ai_chat_messages ADD COLUMN model TEXT;")
   }
 
   // 为已存在的 weekly_summaries 表补加 type 列并迁移旧 curator 后缀数据。
-  if (tableExists(database, 'weekly_summaries') && !columnExists(database, 'weekly_summaries', 'type')) {
+  if (
+    tableExists(database, "weekly_summaries") &&
+    !columnExists(database, "weekly_summaries", "type")
+  ) {
     database.exec(`
       CREATE TABLE weekly_summaries_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -651,10 +737,15 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
 
   // 检查已存在的 weekly_summaries 表是否具备 UNIQUE(week_start_date, type) 联合唯一约束。
   // 若只具备旧的单列唯一约束或没有联合唯一约束，必须重建表以防止 ON CONFLICT 报错。
-  if (tableExists(database, 'weekly_summaries')) {
-    const row = database.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='weekly_summaries'").get() as { sql: string } | undefined
-    const sql = row?.sql || ''
-    if (!sql.includes('UNIQUE(week_start_date, type)') && !sql.includes('UNIQUE (week_start_date, type)')) {
+  if (tableExists(database, "weekly_summaries")) {
+    const row = database
+      .prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='weekly_summaries'")
+      .get() as { sql: string } | undefined
+    const sql = row?.sql || ""
+    if (
+      !sql.includes("UNIQUE(week_start_date, type)") &&
+      !sql.includes("UNIQUE (week_start_date, type)")
+    ) {
       database.exec(`
         CREATE TABLE weekly_summaries_new (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -678,23 +769,34 @@ export const migrateLegacySchema = (database: MigrationDatabase): void => {
   }
 
   // 清洗可能已存在的历史数据，将 'curator' 统一更新为 'interpersonal'。
-  if (tableExists(database, 'weekly_summaries') && columnExists(database, 'weekly_summaries', 'type')) {
+  if (
+    tableExists(database, "weekly_summaries") &&
+    columnExists(database, "weekly_summaries", "type")
+  ) {
     database.exec("UPDATE weekly_summaries SET type = 'interpersonal' WHERE type = 'curator';")
   }
 
   // 为已存在的 weekly_summaries 表补加 is_meaningful 列（默认 1 = 有意义）。
-  if (tableExists(database, 'weekly_summaries') && !columnExists(database, 'weekly_summaries', 'is_meaningful')) {
-    database.exec('ALTER TABLE weekly_summaries ADD COLUMN is_meaningful INTEGER NOT NULL DEFAULT 1;')
+  if (
+    tableExists(database, "weekly_summaries") &&
+    !columnExists(database, "weekly_summaries", "is_meaningful")
+  ) {
+    database.exec(
+      "ALTER TABLE weekly_summaries ADD COLUMN is_meaningful INTEGER NOT NULL DEFAULT 1;",
+    )
   }
 
   // 为已存在的 themes 表补加 AI 生成来源标记。
-  if (tableExists(database, 'themes') && !columnExists(database, 'themes', 'ai_generated')) {
-    database.exec('ALTER TABLE themes ADD COLUMN ai_generated INTEGER NOT NULL DEFAULT 0;')
+  if (tableExists(database, "themes") && !columnExists(database, "themes", "ai_generated")) {
+    database.exec("ALTER TABLE themes ADD COLUMN ai_generated INTEGER NOT NULL DEFAULT 0;")
   }
 
   // 若 theme_items 表中存在已废弃的 source_quote 字段，则进行清理删除。
-  if (tableExists(database, 'theme_items') && columnExists(database, 'theme_items', 'source_quote')) {
-    database.exec('ALTER TABLE theme_items DROP COLUMN source_quote;')
+  if (
+    tableExists(database, "theme_items") &&
+    columnExists(database, "theme_items", "source_quote")
+  ) {
+    database.exec("ALTER TABLE theme_items DROP COLUMN source_quote;")
   }
 
   database.exec(`
@@ -1247,19 +1349,19 @@ export const initDatabase = (): Database.Database => {
   createBillsTable(sqlite)
 
   // 提示词设计数据库结构版本。
-  const currentVersion = sqlite.pragma('user_version', { simple: true }) as number
+  const currentVersion = sqlite.pragma("user_version", { simple: true }) as number
   if (currentVersion < 1) {
     const tablesToDrop = [
-      'prompt_ai_agent_context_snapshots',
-      'prompt_ai_agent_tool_calls',
-      'prompt_ai_agent_runs',
-      'prompt_ai_chat_messages',
-      'prompt_ai_chat_sessions',
-      'prompt_active_nodes', // 历史残留
-      'prompt_design_items',
-      'prompt_design_projects'
+      "prompt_ai_agent_context_snapshots",
+      "prompt_ai_agent_tool_calls",
+      "prompt_ai_agent_runs",
+      "prompt_ai_chat_messages",
+      "prompt_ai_chat_sessions",
+      "prompt_active_nodes", // 历史残留
+      "prompt_design_items",
+      "prompt_design_projects",
     ]
-    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    sqlite.exec("PRAGMA foreign_keys = OFF;")
     for (const table of tablesToDrop) {
       try {
         sqlite.exec(`DROP TABLE IF EXISTS ${table};`)
@@ -1267,12 +1369,12 @@ export const initDatabase = (): Database.Database => {
         console.warn(`Failed to drop table ${table} during migration:`, e)
       }
     }
-    sqlite.pragma('user_version = 1')
+    sqlite.pragma("user_version = 1")
   }
 
   if (currentVersion < 2) {
     // 升级模块层级时按产品要求清空提示词设计及其关联 AI 数据，保留项目配置。
-    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    sqlite.exec("PRAGMA foreign_keys = OFF;")
     sqlite.exec(`
       DROP TABLE IF EXISTS prompt_ai_agent_context_snapshots;
       DROP TABLE IF EXISTS prompt_ai_agent_tool_calls;
@@ -1283,12 +1385,12 @@ export const initDatabase = (): Database.Database => {
       DROP TABLE IF EXISTS prompt_design_modules;
       DROP TABLE IF EXISTS prompt_active_nodes;
     `)
-    sqlite.pragma('user_version = 2')
+    sqlite.pragma("user_version = 2")
   }
 
   if (currentVersion === 2) {
     // 允许提示词设计直接归属项目，不要求关联模块，并保留既有设计与 AI 会话。
-    sqlite.exec('PRAGMA foreign_keys = OFF;')
+    sqlite.exec("PRAGMA foreign_keys = OFF;")
     sqlite.exec(`
       CREATE TABLE prompt_design_items_new (
         id INTEGER PRIMARY KEY,
@@ -1310,7 +1412,7 @@ export const initDatabase = (): Database.Database => {
       DROP TABLE prompt_design_items;
       ALTER TABLE prompt_design_items_new RENAME TO prompt_design_items;
     `)
-    sqlite.pragma('user_version = 3')
+    sqlite.pragma("user_version = 3")
   }
 
   createPromptDesignTables(sqlite)
@@ -1322,7 +1424,7 @@ export const initDatabase = (): Database.Database => {
       .all() as Array<{ name: string }>
 
     if (!promptDesignColumns.some((column) => column.name === "status")) {
-      sqlite.exec('PRAGMA foreign_keys = OFF;')
+      sqlite.exec("PRAGMA foreign_keys = OFF;")
       sqlite.exec(`
         CREATE TABLE prompt_design_items_new (
           id INTEGER PRIMARY KEY,
@@ -1353,7 +1455,7 @@ export const initDatabase = (): Database.Database => {
       `)
     }
 
-    sqlite.pragma('user_version = 4')
+    sqlite.pragma("user_version = 4")
   }
 
   if (currentVersion < 5) {
@@ -1367,9 +1469,7 @@ export const initDatabase = (): Database.Database => {
       )
 
       const rows = sqlite
-        .prepare(
-          "SELECT external_id FROM prompt_design_items ORDER BY created_at ASC, id ASC",
-        )
+        .prepare("SELECT external_id FROM prompt_design_items ORDER BY created_at ASC, id ASC")
         .all() as Array<{ external_id: string }>
       const updateSortOrder = sqlite.prepare(
         "UPDATE prompt_design_items SET sort_order = ? WHERE external_id = ?",
@@ -1380,11 +1480,11 @@ export const initDatabase = (): Database.Database => {
       })()
     }
 
-    sqlite.pragma('user_version = 5')
+    sqlite.pragma("user_version = 5")
   }
 
   // 启用 SQLite 外键约束，以支持级联删除
-  sqlite.exec('PRAGMA foreign_keys = ON;')
+  sqlite.exec("PRAGMA foreign_keys = ON;")
 
   return sqlite
 }

@@ -1,4 +1,4 @@
-import { Node, Edge } from "@xyflow/react";
+import { Edge, Node } from "@xyflow/react"
 
 /** 提示词卡片类型 */
 export type PromptCardType =
@@ -27,21 +27,21 @@ export type PromptCardType =
   | "task_notes"
   | "output_format"
   | "validation"
-  | "input_data";
+  | "input_data"
 
 export interface PromptNodeData {
-  title: string;
-  description?: string;
-  nodeType: PromptCardType;
-  icon?: string;
-  inputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>;
-  outputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>;
-  content?: string;
-  variables?: string[];
-  taskId?: string;
-  isCollapsed?: boolean;
-  expandedHeight?: number;
-  [key: string]: any; // 兼容并满足 ReactFlow 的 Record<string, unknown> 数据格式
+  title: string
+  description?: string
+  nodeType: PromptCardType
+  icon?: string
+  inputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>
+  outputs?: Array<{ id: string; name: string; type: string; handlePosition?: "left" | "right" }>
+  content?: string
+  variables?: string[]
+  taskId?: string
+  isCollapsed?: boolean
+  expandedHeight?: number
+  [key: string]: any // 兼容并满足 ReactFlow 的 Record<string, unknown> 数据格式
 }
 
 export const cardTypeMeta: Record<PromptCardType, { label: string }> = {
@@ -71,7 +71,7 @@ export const cardTypeMeta: Record<PromptCardType, { label: string }> = {
   output_format: { label: "输出格式 (Output Format)" },
   validation: { label: "全局校验 (Validation)" },
   input_data: { label: "输入数据 (Input Data)" },
-};
+}
 
 /**
  * 将 React Flow 的节点和连线关系，编译转换为结构化的 Markdown / XML 提示词
@@ -79,245 +79,266 @@ export const cardTypeMeta: Record<PromptCardType, { label: string }> = {
 export const generateStructuredPrompt = (
   nodes: Node[],
   edges: Edge[],
-  exportFormat: "markdown" | "xml" = "markdown"
+  exportFormat: "markdown" | "xml" = "markdown",
 ): string => {
   if (nodes.length === 0) {
-    return "";
+    return ""
   }
 
-  const dataMap = new Map(nodes.map((n) => [n.id, n.data as unknown as unknown as PromptNodeData]));
+  const dataMap = new Map(nodes.map((n) => [n.id, n.data as unknown as unknown as PromptNodeData]))
 
   // 1. 映射所有入边连接 targetNodeId -> Record<targetHandleId, string[]>
-  const incomingConnections: Record<string, Record<string, string[]>> = {};
+  const incomingConnections: Record<string, Record<string, string[]>> = {}
   for (const e of edges) {
     if (!incomingConnections[e.target]) {
-      incomingConnections[e.target] = {};
+      incomingConnections[e.target] = {}
     }
     if (!incomingConnections[e.target][e.targetHandle || ""]) {
-      incomingConnections[e.target][e.targetHandle || ""] = [];
+      incomingConnections[e.target][e.targetHandle || ""] = []
     }
-    incomingConnections[e.target][e.targetHandle || ""].push(e.source);
+    incomingConnections[e.target][e.targetHandle || ""].push(e.source)
   }
 
   // 2. 辅助函数：获取连接到某句柄的单个节点内容
   const getSingleNodeValue = (targetId: string, handleId: string): string => {
-    const sources = incomingConnections[targetId]?.[handleId] || [];
-    if (sources.length === 0) return "";
-    return dataMap.get(sources[0])?.content || "";
-  };
+    const sources = incomingConnections[targetId]?.[handleId] || []
+    if (sources.length === 0) return ""
+    return dataMap.get(sources[0])?.content || ""
+  }
 
   // 3. 辅助函数：通用包装区块
   const wrapBlock = (type: PromptCardType, content: string, indent = "", mdLevel = 2): string => {
-    const trimmed = content.trim();
-    if (!trimmed) return "";
+    const trimmed = content.trim()
+    if (!trimmed) return ""
     if (exportFormat === "markdown") {
-      const title = cardTypeMeta[type]?.label || type;
-      const prefix = "#".repeat(mdLevel);
-      return `${prefix} ${title}\n\n${trimmed}`;
+      const title = cardTypeMeta[type]?.label || type
+      const prefix = "#".repeat(mdLevel)
+      return `${prefix} ${title}\n\n${trimmed}`
     } else {
       // XML 模式
-      let tag = type as string;
+      let tag = type as string
       if (tag.startsWith("task_")) {
-        tag = tag.replace("task_", "");
+        tag = tag.replace("task_", "")
       }
       if (trimmed.includes("\n")) {
-        return `${indent}<${tag}>\n\n${trimmed.split("\n").map(l => `${indent}    ${l}`).join("\n")}\n\n${indent}</${tag}>`;
+        return `${indent}<${tag}>\n\n${trimmed
+          .split("\n")
+          .map((l) => `${indent}    ${l}`)
+          .join("\n")}\n\n${indent}</${tag}>`
       }
-      return `${indent}<${tag}>${trimmed}</${tag}>`;
+      return `${indent}<${tag}>${trimmed}</${tag}>`
     }
-  };
+  }
 
   // 寻找根节点 compiler_c (c 最终导出)
-  const rootNodes = nodes.filter(n => (n.data as unknown as PromptNodeData).nodeType === "compiler_c");
-  const rootNode = rootNodes[0];
+  const rootNodes = nodes.filter(
+    (n) => (n.data as unknown as PromptNodeData).nodeType === "compiler_c",
+  )
+  const rootNode = rootNodes[0]
 
   // 定义提取的数据临时变量
-  let systemRoleXML = "";
-  let objectiveXML = "";
-  let contextXML = "";
-  let assumptionsXML = "";
-  let constraintsXML = "";
-  let definitionsXML = "";
-  let variablesXML = "";
-  let resourcesXML = "";
-  let taskListXML = "";
-  let outputFormatXML = "";
-  let validationXML = "";
-  let inputDataXML = "";
+  let systemRoleXML = ""
+  let objectiveXML = ""
+  let contextXML = ""
+  let assumptionsXML = ""
+  let constraintsXML = ""
+  let definitionsXML = ""
+  let variablesXML = ""
+  let resourcesXML = ""
+  let taskListXML = ""
+  let outputFormatXML = ""
+  let validationXML = ""
+  let inputDataXML = ""
 
-  const variablesSet = new Set<string>();
+  const variablesSet = new Set<string>()
   for (const n of nodes) {
     if ((n.data as unknown as PromptNodeData).variables) {
-      (n.data as unknown as PromptNodeData).variables!.forEach(v => variablesSet.add(v));
+      ;(n.data as unknown as PromptNodeData).variables!.forEach((v) => variablesSet.add(v))
     }
   }
 
   if (rootNode) {
-    const rootId = rootNode.id;
-    const rootConns = incomingConnections[rootId] || {};
+    const rootId = rootNode.id
+    const rootConns = incomingConnections[rootId] || {}
 
     // ── c 后置全局 ──
-    outputFormatXML = getSingleNodeValue(rootId, "in-format");
-    validationXML   = getSingleNodeValue(rootId, "in-validation");
-    inputDataXML     = getSingleNodeValue(rootId, "in-input_data");
+    outputFormatXML = getSingleNodeValue(rootId, "in-format")
+    validationXML = getSingleNodeValue(rootId, "in-validation")
+    inputDataXML = getSingleNodeValue(rootId, "in-input_data")
 
     // ── b 任务列表 ──
-    const taskSources = rootConns["in-tasks"] || [];
-    const taskNodesOnCanvas = nodes.filter(n => (n.data as unknown as PromptNodeData).nodeType === "task" && taskSources.includes(n.id));
+    const taskSources = rootConns["in-tasks"] || []
+    const taskNodesOnCanvas = nodes.filter(
+      (n) =>
+        (n.data as unknown as PromptNodeData).nodeType === "task" && taskSources.includes(n.id),
+    )
 
     // 按 TaskID 排序以保持逻辑结构
     const sortedTaskNodes = [...taskNodesOnCanvas].sort((a, b) => {
-      const dataA = a.data as unknown as PromptNodeData;
-      const dataB = b.data as unknown as PromptNodeData;
-      const idA = dataA.taskId || "";
-      const idB = dataB.taskId || "";
-      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
-    });
+      const dataA = a.data as unknown as PromptNodeData
+      const dataB = b.data as unknown as PromptNodeData
+      const idA = dataA.taskId || ""
+      const idB = dataB.taskId || ""
+      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" })
+    })
 
-    const taskBlocks: string[] = [];
-    let firstGlobalAssemblerId = "";
+    const taskBlocks: string[] = []
+    let firstGlobalAssemblerId = ""
 
     for (const task of sortedTaskNodes) {
-      const tId = task.id;
+      const tId = task.id
 
       // 解析 Task 各自子属性卡片
       const getConnectedFieldValue = (handleId: string) => {
-        return getSingleNodeValue(tId, handleId);
-      };
+        return getSingleNodeValue(tId, handleId)
+      }
 
-      const titleContent        = getConnectedFieldValue("in-title");
-      const goalContent         = getConnectedFieldValue("in-goal");
-      const instructionsContent = getConnectedFieldValue("in-instructions");
-      const rulesContent        = getConnectedFieldValue("in-rules");
-      const priorityContent     = getConnectedFieldValue("in-priority");
-      const dependsOnContent    = getConnectedFieldValue("in-depends_on");
-      const variablesContent    = getConnectedFieldValue("in-variables");
-      const resourcesContent    = getConnectedFieldValue("in-resources");
-      const exampleContent      = getConnectedFieldValue("in-example");
-      const outputContent       = getConnectedFieldValue("in-output");
-      const taskValContent      = getConnectedFieldValue("in-validation");
-      const notesContent        = getConnectedFieldValue("in-notes");
+      const titleContent = getConnectedFieldValue("in-title")
+      const goalContent = getConnectedFieldValue("in-goal")
+      const instructionsContent = getConnectedFieldValue("in-instructions")
+      const rulesContent = getConnectedFieldValue("in-rules")
+      const priorityContent = getConnectedFieldValue("in-priority")
+      const dependsOnContent = getConnectedFieldValue("in-depends_on")
+      const variablesContent = getConnectedFieldValue("in-variables")
+      const resourcesContent = getConnectedFieldValue("in-resources")
+      const exampleContent = getConnectedFieldValue("in-example")
+      const outputContent = getConnectedFieldValue("in-output")
+      const taskValContent = getConnectedFieldValue("in-validation")
+      const notesContent = getConnectedFieldValue("in-notes")
 
-      const taskInner: string[] = [];
-      if (titleContent)        taskInner.push(wrapBlock("task_title", titleContent, "        ", 3));
-      if (goalContent)         taskInner.push(wrapBlock("task_goal", goalContent, "        ", 3));
-      if (instructionsContent) taskInner.push(wrapBlock("task_instructions", instructionsContent, "        ", 3));
-      if (rulesContent)        taskInner.push(wrapBlock("task_rules", rulesContent, "        ", 3));
-      if (priorityContent)     taskInner.push(wrapBlock("task_priority", priorityContent, "        ", 3));
-      if (dependsOnContent)    taskInner.push(wrapBlock("task_depends_on", dependsOnContent, "        ", 3));
-      if (variablesContent)    taskInner.push(wrapBlock("task_variables", variablesContent, "        ", 3));
-      if (resourcesContent)    taskInner.push(wrapBlock("task_resources", resourcesContent, "        ", 3));
-      if (exampleContent)      taskInner.push(wrapBlock("task_example", exampleContent, "        ", 3));
-      if (outputContent)       taskInner.push(wrapBlock("task_output", outputContent, "        ", 3));
-      if (taskValContent)      taskInner.push(wrapBlock("task_validation", taskValContent, "        ", 3));
-      if (notesContent)        taskInner.push(wrapBlock("task_notes", notesContent, "        ", 3));
+      const taskInner: string[] = []
+      if (titleContent) taskInner.push(wrapBlock("task_title", titleContent, "        ", 3))
+      if (goalContent) taskInner.push(wrapBlock("task_goal", goalContent, "        ", 3))
+      if (instructionsContent)
+        taskInner.push(wrapBlock("task_instructions", instructionsContent, "        ", 3))
+      if (rulesContent) taskInner.push(wrapBlock("task_rules", rulesContent, "        ", 3))
+      if (priorityContent)
+        taskInner.push(wrapBlock("task_priority", priorityContent, "        ", 3))
+      if (dependsOnContent)
+        taskInner.push(wrapBlock("task_depends_on", dependsOnContent, "        ", 3))
+      if (variablesContent)
+        taskInner.push(wrapBlock("task_variables", variablesContent, "        ", 3))
+      if (resourcesContent)
+        taskInner.push(wrapBlock("task_resources", resourcesContent, "        ", 3))
+      if (exampleContent) taskInner.push(wrapBlock("task_example", exampleContent, "        ", 3))
+      if (outputContent) taskInner.push(wrapBlock("task_output", outputContent, "        ", 3))
+      if (taskValContent)
+        taskInner.push(wrapBlock("task_validation", taskValContent, "        ", 3))
+      if (notesContent) taskInner.push(wrapBlock("task_notes", notesContent, "        ", 3))
 
-      const taskId = (task.data as unknown as PromptNodeData).taskId || "1";
+      const taskId = (task.data as unknown as PromptNodeData).taskId || "1"
       if (exportFormat === "markdown") {
-        const taskMD = `## 任务 ${taskId}\n\n${taskInner.filter(Boolean).join("\n\n")}`;
-        taskBlocks.push(taskMD);
+        const taskMD = `## 任务 ${taskId}\n\n${taskInner.filter(Boolean).join("\n\n")}`
+        taskBlocks.push(taskMD)
       } else {
-        const taskXML = `        <task id="${taskId}">\n${taskInner.filter(Boolean).join("\n\n")}\n        </task>`;
-        taskBlocks.push(taskXML);
+        const taskXML = `        <task id="${taskId}">\n${taskInner.filter(Boolean).join("\n\n")}\n        </task>`
+        taskBlocks.push(taskXML)
       }
     }
 
     if (taskBlocks.length > 0) {
       if (exportFormat === "markdown") {
-        taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`;
+        taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`
       } else {
-        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`
       }
     }
 
     // ── a 前置全局 (从组装卡片中解析) ──
-    const globalId = firstGlobalAssemblerId || nodes.find(n => (n.data as unknown as PromptNodeData).nodeType === "assemble_a")?.id;
+    const globalId =
+      firstGlobalAssemblerId ||
+      nodes.find((n) => (n.data as unknown as PromptNodeData).nodeType === "assemble_a")?.id
     if (globalId) {
-      systemRoleXML  = getSingleNodeValue(globalId, "in-system_role");
-      objectiveXML   = getSingleNodeValue(globalId, "in-objective");
-      contextXML     = getSingleNodeValue(globalId, "in-context");
-      assumptionsXML = getSingleNodeValue(globalId, "in-assumptions");
-      constraintsXML = getSingleNodeValue(globalId, "in-constraints");
-      definitionsXML = getSingleNodeValue(globalId, "in-definitions");
-      variablesXML   = getSingleNodeValue(globalId, "in-variables");
-      resourcesXML   = getSingleNodeValue(globalId, "in-resources");
+      systemRoleXML = getSingleNodeValue(globalId, "in-system_role")
+      objectiveXML = getSingleNodeValue(globalId, "in-objective")
+      contextXML = getSingleNodeValue(globalId, "in-context")
+      assumptionsXML = getSingleNodeValue(globalId, "in-assumptions")
+      constraintsXML = getSingleNodeValue(globalId, "in-constraints")
+      definitionsXML = getSingleNodeValue(globalId, "in-definitions")
+      variablesXML = getSingleNodeValue(globalId, "in-variables")
+      resourcesXML = getSingleNodeValue(globalId, "in-resources")
     }
   } else {
     // 退化模式：若无 C 卡片连线，则按全局搜索形式提取数据
     const findNodesContentByType = (type: PromptCardType): string => {
       return nodes
-        .filter(n => (n.data as unknown as PromptNodeData).nodeType === type)
-        .map(n => (n.data as unknown as PromptNodeData).content || "")
+        .filter((n) => (n.data as unknown as PromptNodeData).nodeType === type)
+        .map((n) => (n.data as unknown as PromptNodeData).content || "")
         .filter(Boolean)
-        .join("\n\n");
-    };
+        .join("\n\n")
+    }
 
-    systemRoleXML = findNodesContentByType("system_role");
-    objectiveXML = findNodesContentByType("objective");
-    contextXML = findNodesContentByType("context");
-    assumptionsXML = findNodesContentByType("assumptions");
-    constraintsXML = findNodesContentByType("constraints");
-    definitionsXML = findNodesContentByType("definitions");
-    variablesXML = findNodesContentByType("variables");
-    resourcesXML = findNodesContentByType("resources");
-    outputFormatXML = findNodesContentByType("output_format");
-    validationXML = findNodesContentByType("validation");
-    inputDataXML = findNodesContentByType("input_data");
+    systemRoleXML = findNodesContentByType("system_role")
+    objectiveXML = findNodesContentByType("objective")
+    contextXML = findNodesContentByType("context")
+    assumptionsXML = findNodesContentByType("assumptions")
+    constraintsXML = findNodesContentByType("constraints")
+    definitionsXML = findNodesContentByType("definitions")
+    variablesXML = findNodesContentByType("variables")
+    resourcesXML = findNodesContentByType("resources")
+    outputFormatXML = findNodesContentByType("output_format")
+    validationXML = findNodesContentByType("validation")
+    inputDataXML = findNodesContentByType("input_data")
 
     // 单独找所有任务
-    const taskNodes = nodes.filter(n => (n.data as unknown as PromptNodeData).nodeType === "task");
-    const taskBlocks: string[] = [];
+    const taskNodes = nodes.filter((n) => (n.data as unknown as PromptNodeData).nodeType === "task")
+    const taskBlocks: string[] = []
     for (const t of taskNodes) {
-      const taskId = (t.data as unknown as PromptNodeData).taskId || "1";
-      const content = (t.data as unknown as PromptNodeData).content || "";
+      const taskId = (t.data as unknown as PromptNodeData).taskId || "1"
+      const content = (t.data as unknown as PromptNodeData).content || ""
       if (content) {
         if (exportFormat === "markdown") {
-          taskBlocks.push(`## 任务 ${taskId}\n\n${content}`);
+          taskBlocks.push(`## 任务 ${taskId}\n\n${content}`)
         } else {
-          taskBlocks.push(`        <task id="${taskId}">\n            ${content.split("\n").join("\n            ")}\n        </task>`);
+          taskBlocks.push(
+            `        <task id="${taskId}">\n            ${content.split("\n").join("\n            ")}\n        </task>`,
+          )
         }
       }
     }
 
     if (taskBlocks.length > 0) {
       if (exportFormat === "markdown") {
-        taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`;
+        taskListXML = `# 任务列表\n\n${taskBlocks.join("\n\n")}`
       } else {
-        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`;
+        taskListXML = `    <tasks>\n${taskBlocks.join("\n\n")}\n    </tasks>`
       }
     }
   }
 
   // ── 4. 合成完整的代码 ──
-  const globalTags: string[] = [];
-  if (systemRoleXML)  globalTags.push(wrapBlock("system_role", systemRoleXML, "    "));
-  if (objectiveXML)   globalTags.push(wrapBlock("objective", objectiveXML, "    "));
-  if (contextXML)     globalTags.push(wrapBlock("context", contextXML, "    "));
-  if (assumptionsXML) globalTags.push(wrapBlock("assumptions", assumptionsXML, "    "));
-  if (constraintsXML) globalTags.push(wrapBlock("constraints", constraintsXML, "    "));
-  if (definitionsXML) globalTags.push(wrapBlock("definitions", definitionsXML, "    "));
+  const globalTags: string[] = []
+  if (systemRoleXML) globalTags.push(wrapBlock("system_role", systemRoleXML, "    "))
+  if (objectiveXML) globalTags.push(wrapBlock("objective", objectiveXML, "    "))
+  if (contextXML) globalTags.push(wrapBlock("context", contextXML, "    "))
+  if (assumptionsXML) globalTags.push(wrapBlock("assumptions", assumptionsXML, "    "))
+  if (constraintsXML) globalTags.push(wrapBlock("constraints", constraintsXML, "    "))
+  if (definitionsXML) globalTags.push(wrapBlock("definitions", definitionsXML, "    "))
 
   // 变量处理
   if (variablesSet.size > 0 || variablesXML) {
-    let varInner = variablesXML;
+    let varInner = variablesXML
     if (!varInner && variablesSet.size > 0) {
-      varInner = Array.from(variablesSet).map(v => `${v} = [请输入 ${v} 的实际定义]`).join("\n");
+      varInner = Array.from(variablesSet)
+        .map((v) => `${v} = [请输入 ${v} 的实际定义]`)
+        .join("\n")
     }
-    if (varInner) globalTags.push(wrapBlock("variables", varInner, "    "));
+    if (varInner) globalTags.push(wrapBlock("variables", varInner, "    "))
   }
 
-  if (resourcesXML)   globalTags.push(wrapBlock("resources", resourcesXML, "    "));
-  if (taskListXML)    globalTags.push(taskListXML);
-  if (outputFormatXML)globalTags.push(wrapBlock("output_format", outputFormatXML, "    "));
-  if (validationXML)  globalTags.push(wrapBlock("validation", validationXML, "    "));
-  if (inputDataXML)   globalTags.push(wrapBlock("input_data", inputDataXML, "    "));
+  if (resourcesXML) globalTags.push(wrapBlock("resources", resourcesXML, "    "))
+  if (taskListXML) globalTags.push(taskListXML)
+  if (outputFormatXML) globalTags.push(wrapBlock("output_format", outputFormatXML, "    "))
+  if (validationXML) globalTags.push(wrapBlock("validation", validationXML, "    "))
+  if (inputDataXML) globalTags.push(wrapBlock("input_data", inputDataXML, "    "))
 
-  const md = exportFormat === "markdown"
-    ? globalTags.filter(Boolean).join("\n\n") + "\n"
-    : `<prompt>\n\n${globalTags.filter(Boolean).join("\n\n")}\n\n</prompt>\n`;
+  const md =
+    exportFormat === "markdown"
+      ? globalTags.filter(Boolean).join("\n\n") + "\n"
+      : `<prompt>\n\n${globalTags.filter(Boolean).join("\n\n")}\n\n</prompt>\n`
 
-  return md;
-};
+  return md
+}
 
 export const DEFAULT_TEMPLATE = {
   nodes: [
@@ -329,7 +350,8 @@ export const DEFAULT_TEMPLATE = {
         title: "系统角色 (System Role)",
         description: "定义 AI 前端架构专家的人设",
         nodeType: "system_role",
-        content: "你是一个资深的前端 React 架构师。请使用 TypeScript 和 Tailwind CSS 设计并生成高质量的、符合企业级规范的 React 组件。",
+        content:
+          "你是一个资深的前端 React 架构师。请使用 TypeScript 和 Tailwind CSS 设计并生成高质量的、符合企业级规范的 React 组件。",
         outputs: [{ id: "out-role", name: "Output", type: "text" }],
       } as unknown as PromptNodeData,
     },
@@ -522,7 +544,12 @@ export const DEFAULT_TEMPLATE = {
         inputs: [
           { id: "in-tasks", name: "任务列表 (Tasks)", type: "task" },
           { id: "in-format", name: "输出格式 (Format)", type: "text", handlePosition: "right" },
-          { id: "in-validation", name: "全局校验 (Validation)", type: "text", handlePosition: "right" },
+          {
+            id: "in-validation",
+            name: "全局校验 (Validation)",
+            type: "text",
+            handlePosition: "right",
+          },
         ],
       } as unknown as PromptNodeData,
     },
@@ -552,23 +579,167 @@ export const DEFAULT_TEMPLATE = {
     },
   ],
   edges: [
-    { id: "e-a-role", source: "a-role", target: "a-assembler", sourceHandle: "out-role", targetHandle: "in-system_role", style: { stroke: "#22d3ee", strokeWidth: 2 }, animated: true },
-    { id: "e-a-obj", source: "a-obj", target: "a-assembler", sourceHandle: "out-obj", targetHandle: "in-objective", style: { stroke: "#a78bfa", strokeWidth: 2 }, animated: true },
-    { id: "e-a-const", source: "a-const", target: "a-assembler", sourceHandle: "out-const", targetHandle: "in-constraints", style: { stroke: "#ef4444", strokeWidth: 2 }, animated: true },
-    { id: "e-assemble-b1", source: "a-assembler", target: "b1-container", sourceHandle: "out-global", targetHandle: "in-global", style: { stroke: "#fb923c", strokeWidth: 2 }, animated: true },
-    { id: "e-assemble-b2", source: "a-assembler", target: "b2-container", sourceHandle: "out-global", targetHandle: "in-global", style: { stroke: "#fb923c", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-title", source: "b1-title", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-title", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-goal", source: "b1-goal", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-goal", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-instructions", source: "b1-instructions", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-instructions", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-rules", source: "b1-rules", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-rules", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-output", source: "b1-output", target: "b1-container", sourceHandle: "out-val", targetHandle: "in-output", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b2-title", source: "b2-title", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-title", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b2-goal", source: "b2-goal", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-goal", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b2-depends", source: "b2-depends", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-depends_on", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b2-instructions", source: "b2-instructions", target: "b2-container", sourceHandle: "out-val", targetHandle: "in-instructions", style: { stroke: "#9ca3af", strokeWidth: 2 }, animated: true },
-    { id: "e-b1-final", source: "b1-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks", style: { stroke: "#e879f9", strokeWidth: 2 }, animated: true },
-    { id: "e-b2-final", source: "b2-container", target: "c-compiler", sourceHandle: "out-task", targetHandle: "in-tasks", style: { stroke: "#e879f9", strokeWidth: 2 }, animated: true },
-    { id: "e-c-format", source: "c-format", target: "c-compiler", sourceHandle: "out-format", targetHandle: "in-format", style: { stroke: "#818cf8", strokeWidth: 2 }, animated: true },
-    { id: "e-c-validation", source: "c-validation", target: "c-compiler", sourceHandle: "out-validation", targetHandle: "in-validation", style: { stroke: "#34d399", strokeWidth: 2 }, animated: true },
+    {
+      id: "e-a-role",
+      source: "a-role",
+      target: "a-assembler",
+      sourceHandle: "out-role",
+      targetHandle: "in-system_role",
+      style: { stroke: "#22d3ee", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-a-obj",
+      source: "a-obj",
+      target: "a-assembler",
+      sourceHandle: "out-obj",
+      targetHandle: "in-objective",
+      style: { stroke: "#a78bfa", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-a-const",
+      source: "a-const",
+      target: "a-assembler",
+      sourceHandle: "out-const",
+      targetHandle: "in-constraints",
+      style: { stroke: "#ef4444", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-assemble-b1",
+      source: "a-assembler",
+      target: "b1-container",
+      sourceHandle: "out-global",
+      targetHandle: "in-global",
+      style: { stroke: "#fb923c", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-assemble-b2",
+      source: "a-assembler",
+      target: "b2-container",
+      sourceHandle: "out-global",
+      targetHandle: "in-global",
+      style: { stroke: "#fb923c", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-title",
+      source: "b1-title",
+      target: "b1-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-title",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-goal",
+      source: "b1-goal",
+      target: "b1-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-goal",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-instructions",
+      source: "b1-instructions",
+      target: "b1-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-instructions",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-rules",
+      source: "b1-rules",
+      target: "b1-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-rules",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-output",
+      source: "b1-output",
+      target: "b1-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-output",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b2-title",
+      source: "b2-title",
+      target: "b2-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-title",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b2-goal",
+      source: "b2-goal",
+      target: "b2-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-goal",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b2-depends",
+      source: "b2-depends",
+      target: "b2-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-depends_on",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b2-instructions",
+      source: "b2-instructions",
+      target: "b2-container",
+      sourceHandle: "out-val",
+      targetHandle: "in-instructions",
+      style: { stroke: "#9ca3af", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b1-final",
+      source: "b1-container",
+      target: "c-compiler",
+      sourceHandle: "out-task",
+      targetHandle: "in-tasks",
+      style: { stroke: "#e879f9", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-b2-final",
+      source: "b2-container",
+      target: "c-compiler",
+      sourceHandle: "out-task",
+      targetHandle: "in-tasks",
+      style: { stroke: "#e879f9", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-c-format",
+      source: "c-format",
+      target: "c-compiler",
+      sourceHandle: "out-format",
+      targetHandle: "in-format",
+      style: { stroke: "#818cf8", strokeWidth: 2 },
+      animated: true,
+    },
+    {
+      id: "e-c-validation",
+      source: "c-validation",
+      target: "c-compiler",
+      sourceHandle: "out-validation",
+      targetHandle: "in-validation",
+      style: { stroke: "#34d399", strokeWidth: 2 },
+      animated: true,
+    },
   ],
-};
+}

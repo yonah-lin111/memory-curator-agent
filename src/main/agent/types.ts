@@ -1,13 +1,25 @@
-import { AssociatedPersonItem, JournalItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart, BillItem, BillCategory, BillType } from '@/db/schema'
-import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
+import type { AskAnswerData, AskRequestData } from "@/agent/tools/askTool"
 import type {
   ToolConfirmationAnswerData,
   ToolConfirmationConfig,
-  ToolConfirmationRequestData
-} from '@/agent/tools/toolConfirmation'
+  ToolConfirmationRequestData,
+} from "@/agent/tools/toolConfirmation"
+import {
+  AiChatMessagePart,
+  AssociatedPersonItem,
+  BillCategory,
+  BillItem,
+  BillType,
+  JournalItem,
+  NoteMaterialItem,
+  PersonRelationship,
+  SnippetItem,
+  TodoItem,
+  TodoPriority,
+} from "@/db/schema"
 
 // 模型 provider 传输格式类型。
-export type ProviderTransportType = 'openai-compatible' | 'openai' | 'anthropic' | 'google'
+export type ProviderTransportType = "openai-compatible" | "openai" | "anthropic" | "google"
 
 // 模型能力限制。
 export type ModelLimit = {
@@ -136,7 +148,7 @@ export type NormalizedAiConfig = {
 }
 
 // Agent 消息角色。
-export type AgentMessageRole = 'system' | 'user' | 'assistant' | 'tool'
+export type AgentMessageRole = "system" | "user" | "assistant" | "tool"
 
 // Agent 内部消息。
 export type AgentMessage = {
@@ -235,7 +247,7 @@ export type ModelTurnInput = {
 // 模型文本增量事件。
 export type ModelTextDeltaEvent = {
   // 事件类型。
-  type: 'text_delta'
+  type: "text_delta"
   // 文本增量。
   delta: string
 }
@@ -243,7 +255,7 @@ export type ModelTextDeltaEvent = {
 // 模型思考增量事件。
 export type ModelReasoningDeltaEvent = {
   // 事件类型。
-  type: 'reasoning_delta'
+  type: "reasoning_delta"
   // 思考片段唯一标识。
   id: string
   // 思考文本增量。
@@ -253,7 +265,7 @@ export type ModelReasoningDeltaEvent = {
 // 模型工具调用完成事件。
 export type ModelToolCallDoneEvent = {
   // 事件类型。
-  type: 'tool_call_done'
+  type: "tool_call_done"
   // 工具调用 ID。
   id: string
   // 工具名称。
@@ -265,7 +277,7 @@ export type ModelToolCallDoneEvent = {
 // 模型单轮完成事件。
 export type ModelDoneEvent = {
   // 事件类型。
-  type: 'done'
+  type: "done"
 }
 
 // 模型流式事件。
@@ -308,7 +320,9 @@ export type ReactAgentRunInput = {
   /**
    * 等待用户确认工具写操作。
    */
-  toolConfirmationProvider?: (request: ToolConfirmationRequestData) => Promise<ToolConfirmationAnswerData>
+  toolConfirmationProvider?: (
+    request: ToolConfirmationRequestData,
+  ) => Promise<ToolConfirmationAnswerData>
   // Compaction 模型 provider（可选，不配置则不启用 compaction）。
   compactionProvider?: ModelProvider
   // Compaction 模型名（可选）。
@@ -321,21 +335,21 @@ export type ReactAgentRunInput = {
 export type AgentStreamEvent =
   | {
       // 事件类型。
-      type: 'run_started'
+      type: "run_started"
     }
   | {
       // 事件类型。
-      type: 'assistant_message_started'
+      type: "assistant_message_started"
     }
   | {
       // 事件类型。
-      type: 'text_delta'
+      type: "text_delta"
       // 文本增量。
       delta: string
     }
   | {
       // 事件类型。
-      type: 'reasoning_delta'
+      type: "reasoning_delta"
       // 思考片段唯一标识。
       id: string
       // 思考文本增量。
@@ -343,7 +357,7 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_started'
+      type: "tool_started"
       // 工具步骤 ID。
       id: string
       // 工具名称。
@@ -355,7 +369,7 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_finished'
+      type: "tool_finished"
       // 工具步骤 ID。
       id: string
       // 工具名称。
@@ -369,7 +383,7 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_failed'
+      type: "tool_failed"
       // 工具步骤 ID。
       id: string
       // 工具名称。
@@ -383,15 +397,15 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
-      type: 'turn_finished'
+      type: "turn_finished"
     }
   | {
       // 事件类型。
-      type: 'done'
+      type: "done"
     }
   | {
       // 事件类型。
-      type: 'error'
+      type: "error"
       // 错误信息。
       message: string
     }
@@ -437,7 +451,16 @@ export type PeopleQueryToolInput = {
 // People 查询工具返回项。
 export type PeopleQueryToolItem = Pick<
   AssociatedPersonItem,
-  'id' | 'name' | 'gender' | 'relationship' | 'status' | 'birthday' | 'contact' | 'tags' | 'details' | 'updatedAt'
+  | "id"
+  | "name"
+  | "gender"
+  | "relationship"
+  | "status"
+  | "birthday"
+  | "contact"
+  | "tags"
+  | "details"
+  | "updatedAt"
 >
 
 // People 查询工具返回结果。
@@ -467,7 +490,7 @@ export type TodoQueryToolInput = {
 // Todo 查询工具返回项。
 export type TodoQueryToolItem = Pick<
   TodoItem,
-  'id' | 'entryDate' | 'text' | 'priority' | 'completed' | 'sortOrder' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "text" | "priority" | "completed" | "sortOrder" | "createdAt" | "updatedAt"
 >
 
 // Todo 查询工具返回结果。
@@ -509,7 +532,7 @@ export type SnippetQueryToolInput = {
 // Snippet 查询工具返回项。
 export type SnippetQueryToolItem = Pick<
   SnippetItem,
-  'id' | 'entryDate' | 'title' | 'content' | 'tags' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "title" | "content" | "tags" | "createdAt" | "updatedAt"
 >
 
 // Snippet 查询工具返回结果。
@@ -537,7 +560,7 @@ export type NoteQueryToolInput = {
 // Note 查询工具返回项。
 export type NoteQueryToolItem = Pick<
   NoteMaterialItem,
-  'id' | 'title' | 'content' | 'tags' | 'time' | 'categoryId' | 'categoryName'
+  "id" | "title" | "content" | "tags" | "time" | "categoryId" | "categoryName"
 >
 
 // Note 查询工具返回结果。
@@ -585,7 +608,7 @@ export type JournalQueryToolInput = {
 // Journal 查询工具返回项。
 export type JournalQueryToolItem = Pick<
   JournalItem,
-  'id' | 'entryDate' | 'content' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "content" | "createdAt" | "updatedAt"
 >
 
 // Journal 查询工具返回结果。
@@ -613,7 +636,15 @@ export type BillQueryToolInput = {
 // Bill 查询工具返回项。
 export type BillQueryToolItem = Pick<
   BillItem,
-  'id' | 'amount' | 'category' | 'billType' | 'billDate' | 'note' | 'tags' | 'createdAt' | 'updatedAt'
+  | "id"
+  | "amount"
+  | "category"
+  | "billType"
+  | "billDate"
+  | "note"
+  | "tags"
+  | "createdAt"
+  | "updatedAt"
 >
 
 // Bill 查询工具返回结果。
