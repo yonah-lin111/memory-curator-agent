@@ -71,12 +71,6 @@ export const PromptSidebarList = ({
   const [newProjectPath, setNewProjectPath] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
-  const [createdDesign, setCreatedDesign] = useState<{
-    id: string;
-    projectId: string;
-    moduleId?: string;
-    projectName: string;
-  } | null>(null);
   /** 路径编辑状态 */
   const [editingPathId, setEditingPathId] = useState<string | null>(null);
   const [editingPath, setEditingPath] = useState<string>("");
@@ -309,14 +303,46 @@ export const PromptSidebarList = ({
     }));
   };
 
+  /**
+   * 初始化新建设计的 AI 会话并切换至该设计。
+   */
+  const selectCreatedDesign = async (
+    design: {
+      id: string;
+      name: string;
+      projectId: string;
+      moduleId?: string;
+      projectName: string;
+    },
+  ): Promise<void> => {
+    try {
+      const sessions = await (window.api as any).promptAi.listSessions(design.id);
+      if (!sessions || sessions.length === 0) {
+        await (window.api as any).promptAi.createSession(design.id);
+      }
+    } catch (error) {
+      console.error("Failed to check or create session:", error);
+    }
+
+    setActiveProjectId(design.projectId);
+    setActiveModuleId(design.moduleId ?? null);
+    const store = usePromptDesignStore.getState();
+    const hasOpened = store.setActiveDesignIdSafe
+      ? await store.setActiveDesignIdSafe(design.id)
+      : (setActiveDesignId(design.id), true);
+
+    if (hasOpened) {
+      setProjectName(design.projectName);
+      setItemName(design.name);
+      onDesignSelected?.();
+    }
+  };
+
   const handleRenameCommit = async () => {
     if (!editingId || !editingName.trim()) {
       setEditingId(null);
       return;
     }
-
-    const createdDesignToOpen =
-      createdDesign?.id === editingId ? createdDesign : null;
 
     try {
       if (projects.some((project) => project.id === editingId)) {
@@ -336,23 +362,8 @@ export const PromptSidebarList = ({
         );
       }
       await fetchData();
-      if (createdDesignToOpen) {
-        setActiveProjectId(createdDesignToOpen.projectId);
-        setActiveModuleId(createdDesignToOpen.moduleId ?? null);
-        const store = usePromptDesignStore.getState();
-        let hasOpened = true;
-        if (store.setActiveDesignIdSafe) {
-          hasOpened = await store.setActiveDesignIdSafe(createdDesignToOpen.id);
-        } else {
-          setActiveDesignId(createdDesignToOpen.id);
-        }
-
-        if (hasOpened) {
-          setProjectName(createdDesignToOpen.projectName);
-          setItemName(editingName.trim());
-          onDesignSelected?.();
-        }
-        setCreatedDesign(null);
+      if (activeDesignId === editingId) {
+        setItemName(editingName.trim());
       }
       setTruncatedIds((previous) => {
         if (!previous.has(editingId)) return previous;
@@ -1041,10 +1052,11 @@ export const PromptSidebarList = ({
               if (created?.id) {
                 setEditingId(created.id);
                 setEditingName(created.name || "new design");
-                setCreatedDesign({
+                await selectCreatedDesign({
                   id: created.id,
                   projectId: contextMenu.id,
                   projectName: contextMenu.title,
+                  name: created.name || "new design",
                 });
               }
             } catch (error) {
@@ -1070,7 +1082,7 @@ export const PromptSidebarList = ({
               if (created?.id) {
                 setEditingId(created.id);
                 setEditingName(created.name || "new design");
-                setCreatedDesign({
+                await selectCreatedDesign({
                   id: created.id,
                   projectId: contextMenu.projectId ?? "",
                   moduleId: contextMenu.id,
@@ -1078,6 +1090,7 @@ export const PromptSidebarList = ({
                     projects.find(
                       (project) => project.id === contextMenu.projectId,
                     )?.name ?? "",
+                  name: created.name || "new design",
                 });
               }
             } catch (error) {

@@ -47,10 +47,22 @@ type MatchedLine = {
 
 // Markdown 编辑器中的斜杠命令候选项。
 type MarkdownSlashCommand = {
-  id: "new" | "title" | "module" | "design" | "root";
+  id:
+    | "new"
+    | "title"
+    | "template"
+    | "module"
+    | "design"
+    | "root"
+    | "requirement"
+    | "bug"
+    | "refactor";
   name: string;
   description: string;
 };
+
+// 提示词模板的可选类型。
+type PromptTemplateType = "requirement" | "bug" | "refactor";
 
 // 命令面板在视口中的位置。
 type MarkdownSlashCommandPosition = {
@@ -81,9 +93,16 @@ const TITLE_COMMAND: MarkdownSlashCommand = {
   description: "根据提示词生成简短标题",
 };
 
+const PROMPT_TEMPLATE_COMMAND: MarkdownSlashCommand = {
+  id: "template",
+  name: "/template {type}",
+  description: "插入提示词模板",
+};
+
 const MARKDOWN_TOP_LEVEL_COMMANDS: MarkdownSlashCommand[] = [
   NEW_DESIGN_COMMAND,
   TITLE_COMMAND,
+  PROMPT_TEMPLATE_COMMAND,
 ];
 
 const NEW_DESIGN_CREATE_OPTIONS: MarkdownSlashCommand[] = [
@@ -103,11 +122,41 @@ const NEW_DESIGN_ACTIONS: MarkdownSlashCommand[] = [
   { id: "root", name: "-root", description: "在项目根目录创建" },
 ];
 
+const PROMPT_TEMPLATE_OPTIONS: MarkdownSlashCommand[] = [
+  { id: "requirement", name: "Requirement", description: "插入需求提示词模板" },
+  { id: "bug", name: "Bug Fix", description: "插入 Bug 修复提示词模板" },
+  { id: "refactor", name: "Refactor", description: "插入功能重构提示词模板" },
+];
+
+const PROMPT_TEMPLATES: Record<
+  PromptTemplateType,
+  { content: string; cursorOffset: number }
+> = {
+  requirement: {
+    content: "# 添加需求\n\n- 描述：\n- 要求：\n  - \n- 注意：\n  - ",
+    cursorOffset: "# 添加需求\n\n- 描述：".length,
+  },
+  bug: {
+    content: "# 修复 Bug\n\n- 描述：\n- 复现：-> ->\n- 要求：\n  - \n- 期望：",
+    cursorOffset: "# 修复 Bug\n\n- 描述：".length,
+  },
+  refactor: {
+    content: "# 重构功能\n\n- 目标：\n- 要求：\n  - \n- 注意：\n  - ",
+    cursorOffset: "# 重构功能\n\n- 目标：".length,
+  },
+};
+
 /**
  * 判断当前命令行是否为待执行的标题生成命令。
  */
 const isPromptTitleCommand = (value: string): boolean =>
   /^\/title\s+$/i.test(value);
+
+/**
+ * 判断命令项是否为提示词模板类型。
+ */
+const isPromptTemplateType = (id: string): id is PromptTemplateType =>
+  id === "requirement" || id === "bug" || id === "refactor";
 
 /**
  * 取得光标所在行的斜杠命令文本及其文档范围。
@@ -134,6 +183,16 @@ const getMarkdownSlashCommandOptions = (
     return lastToken.startsWith("-") ? NEW_DESIGN_ACTIONS : [];
   }
   if (/^\/new\s*$/i.test(value)) return NEW_DESIGN_CREATE_OPTIONS;
+  if (/^\/template\s*$/i.test(value)) return PROMPT_TEMPLATE_OPTIONS;
+  if (/^\/template\s+/i.test(value)) {
+    const typeQuery = value
+      .trim()
+      .replace(/^\/template\s+/i, "")
+      .toLowerCase();
+    return PROMPT_TEMPLATE_OPTIONS.filter((command) =>
+      isFuzzyCommandMatch(typeQuery, command.id),
+    );
+  }
   const commandQuery = value.trim().toLowerCase().replace(/^\//, "");
   const topLevelCommands = MARKDOWN_TOP_LEVEL_COMMANDS.filter((command) =>
     isFuzzyCommandMatch(commandQuery, command.id),
@@ -930,6 +989,18 @@ export const PromptDesignWorkspace = ({
                           },
                           selection: { anchor: cursor },
                         });
+                      } else if (command.id === "template") {
+                        const insert = "/template ";
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert,
+                          },
+                          selection: {
+                            anchor: commandLine.from + insert.length,
+                          },
+                        });
                       } else if (command.id === "title") {
                         const insert = "/title ";
                         editorView.dispatch({
@@ -940,6 +1011,18 @@ export const PromptDesignWorkspace = ({
                           },
                           selection: {
                             anchor: commandLine.from + insert.length,
+                          },
+                        });
+                      } else if (isPromptTemplateType(command.id)) {
+                        const template = PROMPT_TEMPLATES[command.id];
+                        editorView.dispatch({
+                          changes: {
+                            from: commandLine.from,
+                            to: commandLine.to,
+                            insert: template.content,
+                          },
+                          selection: {
+                            anchor: commandLine.from + template.cursorOffset,
                           },
                         });
                       } else if (
@@ -957,7 +1040,7 @@ export const PromptDesignWorkspace = ({
                             anchor: commandLine.from + insert.length,
                           },
                         });
-                      } else {
+                      } else if (command.id === "root") {
                         const insert = applyPromptAction(
                           commandLine.value,
                           command.id,
@@ -1188,6 +1271,18 @@ export const PromptDesignWorkspace = ({
                     });
                     return;
                   }
+                  if (command.id === "template") {
+                    const insert = "/template ";
+                    view.dispatch({
+                      changes: {
+                        from: commandLine.from,
+                        to: commandLine.to,
+                        insert,
+                      },
+                      selection: { anchor: commandLine.from + insert.length },
+                    });
+                    return;
+                  }
                   if (command.id === "title") {
                     const insert = "/title ";
                     view.dispatch({
@@ -1197,6 +1292,20 @@ export const PromptDesignWorkspace = ({
                         insert,
                       },
                       selection: { anchor: commandLine.from + insert.length },
+                    });
+                    return;
+                  }
+                  if (isPromptTemplateType(command.id)) {
+                    const template = PROMPT_TEMPLATES[command.id];
+                    view.dispatch({
+                      changes: {
+                        from: commandLine.from,
+                        to: commandLine.to,
+                        insert: template.content,
+                      },
+                      selection: {
+                        anchor: commandLine.from + template.cursorOffset,
+                      },
                     });
                     return;
                   }
