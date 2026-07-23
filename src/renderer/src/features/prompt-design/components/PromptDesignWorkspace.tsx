@@ -159,6 +159,28 @@ const isPromptTemplateType = (id: string): id is PromptTemplateType =>
   id === "requirement" || id === "bug" || id === "refactor";
 
 /**
+ * 根据紧凑命令查询匹配所有可独立触发的二级候选。
+ */
+const getFuzzySecondaryCommandOptions = (
+  query: string,
+): MarkdownSlashCommand[] => {
+  const compactQuery = query.replace(/[^a-z]/g, "");
+  if (!compactQuery) return [];
+
+  const designOptions = NEW_DESIGN_CREATE_OPTIONS.filter(
+    (command) =>
+      isFuzzyCommandMatch(compactQuery, command.id) ||
+      isFuzzyCommandMatch(compactQuery, `new${command.id}`),
+  );
+  const templateOptions = PROMPT_TEMPLATE_OPTIONS.filter(
+    (command) =>
+      isFuzzyCommandMatch(compactQuery, command.id) ||
+      isFuzzyCommandMatch(compactQuery, `template${command.id}`),
+  );
+  return [...designOptions, ...templateOptions];
+};
+
+/**
  * 取得光标所在行的斜杠命令文本及其文档范围。
  */
 const getSlashCommandLine = (
@@ -198,6 +220,9 @@ const getMarkdownSlashCommandOptions = (
     isFuzzyCommandMatch(commandQuery, command.id),
   );
   if (topLevelCommands.length > 0) return topLevelCommands;
+
+  const fuzzySecondaryOptions = getFuzzySecondaryCommandOptions(commandQuery);
+  if (fuzzySecondaryOptions.length > 0) return fuzzySecondaryOptions;
   if (!/^\/new(?:\s|$)/i.test(value)) return [];
 
   const lastToken = value.split(/\s+/).at(-1) ?? "";
