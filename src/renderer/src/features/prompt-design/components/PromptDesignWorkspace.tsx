@@ -56,13 +56,18 @@ type MarkdownSlashCommand = {
     | "root"
     | "requirement"
     | "bug"
-    | "refactor";
+    | "refactor"
+    | "modify-code";
   name: string;
   description: string;
 };
 
 // 提示词模板的可选类型。
-type PromptTemplateType = "requirement" | "bug" | "refactor";
+type PromptTemplateType =
+  | "requirement"
+  | "bug"
+  | "refactor"
+  | "modify-code";
 
 // 命令面板在视口中的位置。
 type MarkdownSlashCommandPosition = {
@@ -126,6 +131,7 @@ const PROMPT_TEMPLATE_OPTIONS: MarkdownSlashCommand[] = [
   { id: "requirement", name: "Requirement", description: "插入需求提示词模板" },
   { id: "bug", name: "Bug Fix", description: "插入 Bug 修复提示词模板" },
   { id: "refactor", name: "Refactor", description: "插入功能重构提示词模板" },
+  { id: "modify-code", name: "Modify Code", description: "插入代码修改提示词模板" },
 ];
 
 const PROMPT_TEMPLATES: Record<
@@ -144,6 +150,10 @@ const PROMPT_TEMPLATES: Record<
     content: "# 重构功能\n\n- 目标：\n- 要求：\n  - \n- 注意：\n  - ",
     cursorOffset: "# 重构功能\n\n- 目标：".length,
   },
+  "modify-code": {
+    content: "# 修改代码\n\n- 要求：\n  -\n- 注意：\n  - \n- 期望：",
+    cursorOffset: "# 修改代码\n\n- 要求：\n  -".length,
+  },
 };
 
 /**
@@ -156,7 +166,10 @@ const isPromptTitleCommand = (value: string): boolean =>
  * 判断命令项是否为提示词模板类型。
  */
 const isPromptTemplateType = (id: string): id is PromptTemplateType =>
-  id === "requirement" || id === "bug" || id === "refactor";
+  id === "requirement" ||
+  id === "bug" ||
+  id === "refactor" ||
+  id === "modify-code";
 
 /**
  * 根据紧凑命令查询匹配所有可独立触发的二级候选。
@@ -424,6 +437,7 @@ export const PromptDesignWorkspace = ({
   const [activeMarkdownCommandIndex, setActiveMarkdownCommandIndex] =
     useState(0);
   const activeMarkdownCommandIndexRef = useRef(0);
+  const markdownCommandValueRef = useRef<string | null>(null);
   activeMarkdownCommandIndexRef.current = activeMarkdownCommandIndex;
   // 用于通知侧栏聊天输入框主动获取焦点。
   const [chatInputFocusVersion, setChatInputFocusVersion] = useState(0);
@@ -925,9 +939,18 @@ export const PromptDesignWorkspace = ({
       : [];
     const coords = view.coordsAtPos(view.state.selection.main.head);
     if (!commandLine || commands.length === 0 || !coords) {
+      markdownCommandValueRef.current = null;
+      activeMarkdownCommandIndexRef.current = 0;
+      setActiveMarkdownCommandIndex(0);
       setMarkdownCommandLine(null);
       setMarkdownCommandPosition(null);
       return;
+    }
+
+    if (markdownCommandValueRef.current !== commandLine.value) {
+      markdownCommandValueRef.current = commandLine.value;
+      activeMarkdownCommandIndexRef.current = 0;
+      setActiveMarkdownCommandIndex(0);
     }
 
     const panelWidth = 360;
@@ -993,6 +1016,9 @@ export const PromptDesignWorkspace = ({
                   }
                   if (event.key === "Escape") {
                     event.preventDefault();
+                    markdownCommandValueRef.current = null;
+                    activeMarkdownCommandIndexRef.current = 0;
+                    setActiveMarkdownCommandIndex(0);
                     setMarkdownCommandLine(null);
                     setMarkdownCommandPosition(null);
                     return true;
