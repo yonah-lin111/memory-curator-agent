@@ -609,7 +609,7 @@ export const CuratorToolCallBlock = ({
                   aria-label={group.tool}
                   className="relative z-10 flex items-center justify-center"
                 >
-                  <StatusIcon className="h-[15px] w-[15px] text-white/50" />
+                  <StatusIcon className="h-[15px] w-[15px] text-amber-300" />
                 </div>
                 {groupIndex < groupedSteps.length - 1 ? (
                   <div className="absolute top-[7.5px] bottom-[-24px] w-[2px] bg-white/5" />
@@ -621,7 +621,7 @@ export const CuratorToolCallBlock = ({
               {/* 步骤详细内容 */}
               <div className="flex-1 min-w-0 flex flex-col gap-0.5 ">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold text-white/85 font-mono">
+                  <span className="text-xs font-bold text-amber-300 font-mono">
                     {group.tool}
                   </span>
                 </div>
