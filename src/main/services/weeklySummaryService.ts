@@ -1,4 +1,4 @@
-import type { WeeklySummaryItem, WeeklySummaryRow, WeeklySummarySaveInput } from '@/db/schema'
+import type { WeeklySummaryItem, WeeklySummaryRow, WeeklySummarySaveInput } from "@/db/schema"
 
 // 数据库语句接口。
 type DatabaseStatement = {
@@ -7,12 +7,12 @@ type DatabaseStatement = {
   run: (...values: unknown[]) => { lastInsertRowid?: number | bigint } | unknown
 }
 
-// Weekly summary service 依赖的最小数据库接口。
+// 周报服务依赖的最小数据库接口。
 export type DatabaseConnection = {
   prepare: (sql: string) => DatabaseStatement
 }
 
-// Weekly summary service 方法集合。
+// 周报服务方法集合。
 export type WeeklySummaryService = {
   // 按周起始日期查询总结，不存在返回 null，可选按 type 过滤。
   getByWeekStart: (weekStartDate: string, type?: string) => WeeklySummaryItem | null
@@ -45,9 +45,7 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
       ? "SELECT * FROM weekly_summaries WHERE week_start_date = ? AND type = ?"
       : "SELECT * FROM weekly_summaries WHERE week_start_date = ?"
     const params = type ? [weekStartDate, type] : [weekStartDate]
-    const row = database
-      .prepare(sql)
-      .get(...params) as WeeklySummaryRow | undefined
+    const row = database.prepare(sql).get(...params) as WeeklySummaryRow | undefined
 
     return row ? rowToItem(row) : null
   },
@@ -64,7 +62,7 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
            content = excluded.content,
            model_used = excluded.model_used,
            generated_at = excluded.generated_at,
-           is_meaningful = excluded.is_meaningful`
+           is_meaningful = excluded.is_meaningful`,
       )
       .run(
         input.weekStartDate,
@@ -73,7 +71,7 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
         input.content,
         input.modelUsed ?? null,
         input.generatedAt,
-        isMeaningful
+        isMeaningful,
       )
 
     const row = database
@@ -89,5 +87,5 @@ export const createWeeklySummaryService = (database: DatabaseConnection): Weekly
       : "DELETE FROM weekly_summaries WHERE week_start_date = ?"
     const params = type ? [weekStartDate, type] : [weekStartDate]
     database.prepare(sql).run(...params)
-  }
+  },
 })

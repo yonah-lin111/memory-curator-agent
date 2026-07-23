@@ -1,6 +1,13 @@
-import type React from "react";
-import { useState } from "react";
-import { BILL_TYPES, EXPENSE_CATEGORIES, INCOME_CATEGORIES, parseAmountToCents, type BillCategory, type BillType } from "./billShared";
+import type React from "react"
+import { useState } from "react"
+import {
+  BILL_TYPES,
+  type BillCategory,
+  type BillType,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  parseAmountToCents,
+} from "./billShared"
 
 /** 账单草稿 */
 export type BillDraft = {
@@ -33,7 +40,7 @@ type BillEntryModalProps = {
 /** 生成今日日期 YYYY-MM-DD */
 const getToday = (): string => {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
 }
 
 /** 格式化金额显示 */
@@ -42,7 +49,11 @@ const formatCents = (cents: number): string => (cents / 100).toFixed(2)
 /**
  * BillEntryModal - 账单录入/编辑弹窗。
  */
-export const BillEntryModal = ({ bill, onClose, onSave }: BillEntryModalProps): React.JSX.Element => {
+export const BillEntryModal = ({
+  bill,
+  onClose,
+  onSave,
+}: BillEntryModalProps): React.JSX.Element => {
   const [amount, setAmount] = useState(bill ? formatCents(bill.amount) : "")
   const [billType, setBillType] = useState<BillType>(bill?.billType ?? "expense")
   const [category, setCategory] = useState<BillCategory>(bill?.category ?? "餐饮")
@@ -64,7 +75,14 @@ export const BillEntryModal = ({ bill, onClose, onSave }: BillEntryModalProps): 
     }
 
     setIsSaving(true)
-    const success = await onSave({ amount: String(parsedAmount), category, billType, billDate, note, tags })
+    const success = await onSave({
+      amount: String(parsedAmount),
+      category,
+      billType,
+      billDate,
+      note,
+      tags,
+    })
     setIsSaving(false)
 
     if (success) onClose()
@@ -82,14 +100,15 @@ export const BillEntryModal = ({ bill, onClose, onSave }: BillEntryModalProps): 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-md rounded-[6px] border border-white/10 bg-[#212121] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-sm font-bold text-white mb-4">
-          {bill ? "编辑账单" : "添加账单"}
-        </h2>
+        <h2 className="text-sm font-bold text-white mb-4">{bill ? "编辑账单" : "添加账单"}</h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error && <p className="text-xs text-red-400">{error}</p>}

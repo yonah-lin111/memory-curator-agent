@@ -1,84 +1,87 @@
-import { describe, expect, it } from 'vitest'
-import { createModelProvider } from '@/agent/providers/providerFactory'
-import type { NormalizedProviderConfig } from '@/agent/types'
+import { describe, expect, it } from "vitest"
+import { createModelProvider } from "@/agent/providers/providerFactory"
+import type { NormalizedProviderConfig } from "@/agent/types"
 
-describe('providerFactory', () => {
-  it('按配置类型创建 OpenAI compatible provider', async () => {
+describe("providerFactory", () => {
+  it("按配置类型创建 OpenAI compatible provider", async () => {
     const providerConfig: NormalizedProviderConfig = {
-      id: 'bailian',
-      type: 'openai-compatible',
-      name: 'Bailian',
+      id: "bailian",
+      type: "openai-compatible",
+      name: "Bailian",
       options: {
-        apiKey: 'test-key',
-        baseURL: 'https://example.com/v1'
+        apiKey: "test-key",
+        baseURL: "https://example.com/v1",
       },
-      models: {}
+      models: {},
     }
 
     const provider = await createModelProvider(providerConfig, {
       loadPackage: async () => ({
-        createOpenAICompatible: () => () => ({})
+        createOpenAICompatible: () => () => ({}),
       }),
       streamText: () => ({
         stream: (async function* () {
           yield {
-            type: 'finish'
+            type: "finish",
           }
-        })()
-      })
+        })(),
+      }),
     })
 
-    expect(provider.id).toBe('bailian')
-    expect(provider.type).toBe('openai-compatible')
+    expect(provider.id).toBe("bailian")
+    expect(provider.type).toBe("openai-compatible")
   })
 
-  it('支持 Google、OpenAI、Claude/Anthropic 的传输格式配置', async () => {
-    const providerTypes: NormalizedProviderConfig['type'][] = ['google', 'openai', 'anthropic']
+  it("支持 Google、OpenAI、Claude/Anthropic 的传输格式配置", async () => {
+    const providerTypes: NormalizedProviderConfig["type"][] = ["google", "openai", "anthropic"]
 
     const providers = providerTypes.map((type) =>
-      createModelProvider({
-        id: type,
-        type,
-        name: type,
-        options: {
-          apiKey: 'test-key',
-          baseURL: 'https://example.com'
+      createModelProvider(
+        {
+          id: type,
+          type,
+          name: type,
+          options: {
+            apiKey: "test-key",
+            baseURL: "https://example.com",
+          },
+          models: {},
         },
-        models: {}
-      }, {
-        loadPackage: async (packageName) => {
-          if (packageName === '@ai-sdk/google') {
-            return {
-              createGoogleGenerativeAI: () => () => ({})
+        {
+          loadPackage: async (packageName) => {
+            if (packageName === "@ai-sdk/google") {
+              return {
+                createGoogleGenerativeAI: () => () => ({}),
+              }
             }
-          }
 
-          if (packageName === '@ai-sdk/anthropic') {
-            return {
-              createAnthropic: () => () => ({})
+            if (packageName === "@ai-sdk/anthropic") {
+              return {
+                createAnthropic: () => () => ({}),
+              }
             }
-          }
 
-          return {
-            createOpenAI: () => () => ({})
-          }
+            return {
+              createOpenAI: () => () => ({}),
+            }
+          },
+          streamText: () => ({
+            stream: (async function* () {
+              yield {
+                type: "finish",
+              }
+            })(),
+          }),
         },
-        streamText: () => ({
-          stream: (async function* () {
-            yield {
-              type: 'finish'
-            }
-          })()
-        })
-      })
+      ),
     )
 
     await expect(Promise.all(providers)).resolves.toEqual(
       providerTypes.map((type) =>
         expect.objectContaining({
-          type
-        })
-      )
+          type,
+        }),
+      ),
     )
   })
 })

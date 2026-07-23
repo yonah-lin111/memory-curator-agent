@@ -1,13 +1,13 @@
-import type React from "react";
+import type React from "react"
 
 // LoadingOverlayProps - LoadingOverlay 组件属性接口。
 interface LoadingOverlayProps {
   // 当前是否处于 loading 状态。
-  isLoading: boolean;
+  isLoading: boolean
   // loading 时显示的提示文本，默认为 "Processing..."。
-  text?: string;
+  text?: string
   // 容器的圆角大小，默认为 "rounded-[6px]"。
-  rounded?: string;
+  rounded?: string
 }
 
 /**
@@ -27,22 +27,45 @@ export const LoadingOverlay = ({
           : "opacity-0 pointer-events-none transition-opacity duration-300 ease-out"
       }`}
     >
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes custom-loading-dots {
           0%, 100% { transform: translateY(0); opacity: 0.35; }
           50% { transform: translateY(-4px); opacity: 0.95; }
         }
-      `}} />
+      `,
+        }}
+      />
       <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-1.5 h-6">
-          <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'custom-loading-dots 1.2s ease-in-out infinite', animationDelay: '0ms' }} />
-          <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'custom-loading-dots 1.2s ease-in-out infinite', animationDelay: '200ms' }} />
-          <span className="w-1 bg-white rounded-full" style={{ height: '6px', animation: 'custom-loading-dots 1.2s ease-in-out infinite', animationDelay: '400ms' }} />
+          <span
+            className="w-1 bg-white rounded-full"
+            style={{
+              height: "6px",
+              animation: "custom-loading-dots 1.2s ease-in-out infinite",
+              animationDelay: "0ms",
+            }}
+          />
+          <span
+            className="w-1 bg-white rounded-full"
+            style={{
+              height: "6px",
+              animation: "custom-loading-dots 1.2s ease-in-out infinite",
+              animationDelay: "200ms",
+            }}
+          />
+          <span
+            className="w-1 bg-white rounded-full"
+            style={{
+              height: "6px",
+              animation: "custom-loading-dots 1.2s ease-in-out infinite",
+              animationDelay: "400ms",
+            }}
+          />
         </div>
-        <div className="text-xs text-white/40 font-medium tracking-wide">
-          {text}
-        </div>
+        <div className="text-xs text-white/40 font-medium tracking-wide">{text}</div>
       </div>
     </div>
-  );
-};
+  )
+}

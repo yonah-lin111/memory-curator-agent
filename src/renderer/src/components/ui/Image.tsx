@@ -1,16 +1,16 @@
-import type React from "react";
-import { useState, useEffect } from "react";
-import { X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { RotateCw, X, ZoomIn, ZoomOut } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
 
 export interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   // 图片地址。
-  src: string;
+  src: string
   // 图片描述占位。
-  alt?: string;
+  alt?: string
   // 是否支持点击全屏预览。
-  preview?: boolean;
+  preview?: boolean
   // 预设纵横比，支持 "square" (1:1) | "video" (16:9) | "auto" | 自定义数字比例。
-  aspectRatio?: "square" | "video" | "auto" | number;
+  aspectRatio?: "square" | "video" | "auto" | number
 }
 
 /**
@@ -25,104 +25,104 @@ export const Image = ({
   onClick,
   ...props
 }: ImageProps): React.JSX.Element => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [showLightbox, setShowLightbox] = useState(false);
-  const [scale, setScale] = useState(1);
-  const [rotate, setRotate] = useState(0);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [showLightbox, setShowLightbox] = useState(false)
+  const [scale, setScale] = useState(1)
+  const [rotate, setRotate] = useState(0)
   // 拖拽时的位移坐标。
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 })
   // 是否正在拖拽。
-  const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false)
   // 拖拽起始点指针坐标。
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
   /**
    * 根据传入的 aspectRatio 属性计算外层包裹容器的 CSS 纵横比样式。
    */
   const getAspectRatioStyle = (): React.CSSProperties => {
     if (!aspectRatio || aspectRatio === "auto") {
-      return {};
+      return {}
     }
     if (aspectRatio === "square") {
-      return { aspectRatio: 1 };
+      return { aspectRatio: 1 }
     }
     if (aspectRatio === "video") {
-      return { aspectRatio: 16 / 9 };
+      return { aspectRatio: 16 / 9 }
     }
-    return { aspectRatio };
-  };
+    return { aspectRatio }
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && showLightbox) {
-        setShowLightbox(false);
+        setShowLightbox(false)
       }
-    };
-    window.addEventListener("keydown", handleKeyDown);
+    }
+    window.addEventListener("keydown", handleKeyDown)
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showLightbox]);
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [showLightbox])
 
   // 重置放大、旋转和偏移参数。
   useEffect(() => {
     if (!showLightbox) {
-      setScale(1);
-      setRotate(0);
-      setPosition({ x: 0, y: 0 });
-      setIsDragging(false);
+      setScale(1)
+      setRotate(0)
+      setPosition({ x: 0, y: 0 })
+      setIsDragging(false)
     }
-  }, [showLightbox]);
+  }, [showLightbox])
 
   const handleZoomIn = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale((s) => Math.min(s + 0.25, 3));
-  };
+    e.stopPropagation()
+    setScale((s) => Math.min(s + 0.25, 3))
+  }
 
   const handleZoomOut = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setScale((s) => Math.max(s - 0.25, 0.5));
-  };
+    e.stopPropagation()
+    setScale((s) => Math.max(s - 0.25, 0.5))
+  }
 
   const handleRotate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRotate((r) => (r + 90) % 360);
-  };
+    e.stopPropagation()
+    setRotate((r) => (r + 90) % 360)
+  }
 
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (onClick) {
-      onClick(e);
+      onClick(e)
     }
     if (!error && preview) {
-      setShowLightbox(true);
+      setShowLightbox(true)
     }
-  };
+  }
 
   /**
    * 处理图片拖拽开始事件（Pointer Down）。
    * 记录起始指针坐标，并捕获指针以确保事件连续性。
    */
   const handlePointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
-    e.preventDefault(); // 阻止浏览器默认拖拽行为，避免产生幽灵图
-    setIsDragging(true);
+    e.preventDefault() // 阻止浏览器默认拖拽行为，避免产生幽灵图
+    setIsDragging(true)
     setDragStart({
       x: e.clientX - position.x,
       y: e.clientY - position.y,
-    });
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
+    })
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
 
   /**
    * 处理图片拖拽移动事件（Pointer Move）。
    * 根据当前指针位置计算图片偏移量。
    */
   const handlePointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
-    if (!isDragging) return;
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-    setPosition({ x: newX, y: newY });
-  };
+    if (!isDragging) return
+    const newX = e.clientX - dragStart.x
+    const newY = e.clientY - dragStart.y
+    setPosition({ x: newX, y: newY })
+  }
 
   /**
    * 处理图片拖拽结束事件（Pointer Up）。
@@ -130,23 +130,23 @@ export const Image = ({
    */
   const handlePointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
     if (isDragging) {
-      setIsDragging(false);
-      e.currentTarget.releasePointerCapture(e.pointerId);
+      setIsDragging(false)
+      e.currentTarget.releasePointerCapture(e.pointerId)
     }
-  };
+  }
 
   /**
    * 处理鼠标滚轮缩放事件（Wheel）。
    * 向上滚动放大图片，向下滚动缩小图片，限制范围在 0.5 到 3 之间。
    */
   const handleWheel = (e: React.WheelEvent) => {
-    e.stopPropagation();
-    const zoomFactor = 0.1;
+    e.stopPropagation()
+    const zoomFactor = 0.1
     setScale((s) => {
-      const nextScale = e.deltaY < 0 ? s + zoomFactor : s - zoomFactor;
-      return Math.max(0.5, Math.min(nextScale, 3));
-    });
-  };
+      const nextScale = e.deltaY < 0 ? s + zoomFactor : s - zoomFactor
+      return Math.max(0.5, Math.min(nextScale, 3))
+    })
+  }
 
   return (
     <>
@@ -165,15 +165,13 @@ export const Image = ({
           alt={alt}
           onLoad={() => setLoading(false)}
           onError={() => {
-            setLoading(false);
-            setError(true);
+            setLoading(false)
+            setError(true)
           }}
           onClick={handleImageClick}
           className={`h-full w-full object-cover transition-all duration-300 ${
             loading ? "opacity-0" : "opacity-100"
-          } ${error ? "hidden" : ""} ${
-            preview && !error ? "cursor-zoom-in hover:scale-105" : ""
-          }`}
+          } ${error ? "hidden" : ""} ${preview && !error ? "cursor-zoom-in hover:scale-105" : ""}`}
           {...props}
         />
         {error && (
@@ -231,7 +229,7 @@ export const Image = ({
             </button>
           </div>
 
-           <div
+          <div
             className="max-h-[85vh] max-w-[85vw] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
             onWheel={handleWheel}
@@ -259,5 +257,5 @@ export const Image = ({
         </div>
       )}
     </>
-  );
-};
+  )
+}

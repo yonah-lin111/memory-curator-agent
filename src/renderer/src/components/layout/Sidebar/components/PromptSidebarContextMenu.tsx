@@ -1,39 +1,52 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { Edit3, Trash2, Plus } from "lucide-react";
+import { Check, Edit3, Plus, Trash2 } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
+import {
+  PROMPT_DESIGN_STATUS_OPTIONS,
+  type PromptDesignStatus,
+} from "@/features/prompt-design/lib/promptDesignStatus"
 
-type ContextMenuType = "project" | "prompt";
+type ContextMenuType = "project" | "module" | "prompt"
 
 type PromptSidebarContextMenuProps = {
-  type: ContextMenuType;
-  title: string;
-  x: number;
-  y: number;
-  onAddDesign?: () => void;
-  onRename: () => void;
-  onDelete: () => void;
-};
+  type: ContextMenuType
+  title: string
+  x: number
+  y: number
+  onAddModule?: () => void
+  onAddProjectDesign?: () => void
+  onAddDesign?: () => void
+  onEditProject?: () => void
+  onRename?: () => void
+  status?: PromptDesignStatus
+  onStatusChange?: (status: PromptDesignStatus) => void
+  onDelete: () => void
+}
 
 // 菜单宽度，用于把右键菜单限制在视口内。
-const MENU_WIDTH = 156;
+const MENU_WIDTH = 156
 
 // 菜单与视口边缘的最小距离。
-const VIEWPORT_PADDING = 8;
+const VIEWPORT_PADDING = 8
 
 /**
  * 把菜单坐标钳制在当前视口内。
  */
-const getMenuPosition = (x: number, y: number, type: ContextMenuType): { left: number; top: number } => {
-  const MENU_HEIGHT = type === "project" ? 118 : 82;
-  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING);
-  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING);
+const getMenuPosition = (
+  x: number,
+  y: number,
+  type: ContextMenuType,
+): { left: number; top: number } => {
+  const MENU_HEIGHT = type === "project" ? 158 : type === "module" ? 120 : 196
+  const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING)
+  const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - MENU_HEIGHT - VIEWPORT_PADDING)
 
   return {
     left: Math.min(Math.max(x, VIEWPORT_PADDING), maxLeft),
     top: Math.min(Math.max(y, VIEWPORT_PADDING), maxTop),
-  };
-};
+  }
+}
 
 /**
  * PromptSidebarContextMenu - 负责项目和提示词设计项的右键操作菜单。
@@ -43,29 +56,34 @@ export const PromptSidebarContextMenu = ({
   title,
   x,
   y,
+  onAddModule,
+  onAddProjectDesign,
   onAddDesign,
+  onEditProject,
   onRename,
+  status,
+  onStatusChange,
   onDelete,
 }: PromptSidebarContextMenuProps): React.JSX.Element => {
   // 是否已进入删除二次确认态。
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false);
-  const position = getMenuPosition(x, y, type);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState<boolean>(false)
+  const position = getMenuPosition(x, y, type)
 
   useEffect(() => {
-    setIsConfirmingDelete(false);
-  }, [title]);
+    setIsConfirmingDelete(false)
+  }, [title])
 
   /**
    * 第一次点击进入确认态，第二次点击才真正删除。
    */
   const handleDeleteClick = (): void => {
     if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
+      setIsConfirmingDelete(true)
+      return
     }
 
-    onDelete();
-  };
+    onDelete()
+  }
 
   const menuContent = (
     <div
@@ -78,7 +96,51 @@ export const PromptSidebarContextMenu = ({
         top: position.top,
       }}
     >
-      {type === "project" && (
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onEditProject}
+        >
+          <Edit3 className="h-3.5 w-3.5 text-white/45" />
+          <span>编辑项目</span>
+        </button>
+      ) : (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onRename}
+        >
+          <Edit3 className="h-3.5 w-3.5 text-white/45" />
+          <span>重命名</span>
+        </button>
+      )}
+
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onAddModule}
+        >
+          <Plus className="h-3.5 w-3.5 text-white/45" />
+          <span>新增模块</span>
+        </button>
+      ) : null}
+
+      {type === "project" ? (
+        <button
+          className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+          role="menuitem"
+          type="button"
+          onClick={onAddProjectDesign}
+        >
+          <Plus className="h-3.5 w-3.5 text-white/45" />
+          <span>新增设计</span>
+        </button>
+      ) : type === "module" ? (
         <button
           className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
           role="menuitem"
@@ -88,16 +150,32 @@ export const PromptSidebarContextMenu = ({
           <Plus className="h-3.5 w-3.5 text-white/45" />
           <span>新增设计</span>
         </button>
-      )}
-      <button
-        className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
-        role="menuitem"
-        type="button"
-        onClick={onRename}
-      >
-        <Edit3 className="h-3.5 w-3.5 text-white/45" />
-        <span>重命名</span>
-      </button>
+      ) : null}
+      {type === "prompt" && status && onStatusChange ? (
+        <>
+          <div className="my-1 border-t border-white/8" />
+          {PROMPT_DESIGN_STATUS_OPTIONS.map((option) => {
+            const StatusIcon = option.icon
+            const isSelected = option.value === status
+
+            return (
+              <button
+                key={option.value}
+                className="flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs text-white/75 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/45"
+                role="menuitemradio"
+                aria-checked={isSelected}
+                type="button"
+                onClick={() => onStatusChange(option.value)}
+              >
+                <StatusIcon className={`h-3.5 w-3.5 ${option.className}`} />
+                <span className="flex-1">{option.label}</span>
+                {isSelected ? <Check className="h-3.5 w-3.5 text-white/70" /> : null}
+              </button>
+            )
+          })}
+          <div className="my-1 border-t border-white/8" />
+        </>
+      ) : null}
       <button
         className={`flex w-full items-center gap-2 rounded-[4px] px-2 py-2 text-left text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-400/45 ${
           isConfirmingDelete
@@ -109,14 +187,20 @@ export const PromptSidebarContextMenu = ({
         onClick={handleDeleteClick}
       >
         <Trash2
-          className={`h-3.5 w-3.5 ${
-            isConfirmingDelete ? "text-white" : "text-rose-400/80"
-          }`}
+          className={`h-3.5 w-3.5 ${isConfirmingDelete ? "text-white" : "text-rose-400/80"}`}
         />
-        <span>{isConfirmingDelete ? "确认删除" : (type === "project" ? "删除项目" : "删除设计")}</span>
+        <span>
+          {isConfirmingDelete
+            ? "确认删除"
+            : type === "project"
+              ? "删除项目"
+              : type === "module"
+                ? "删除模块"
+                : "删除设计"}
+        </span>
       </button>
     </div>
-  );
+  )
 
-  return createPortal(menuContent, document.body);
-};
+  return createPortal(menuContent, document.body)
+}

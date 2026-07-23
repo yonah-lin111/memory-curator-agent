@@ -1,0 +1,664 @@
+import {
+  Bot,
+  LoaderCircle,
+  MessageSquare,
+  Paperclip,
+  RotateCcw,
+  SendHorizontal,
+} from "lucide-react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { CommandPanel } from "@/components/ai-shared/CommandPanel"
+import { IconButton } from "@/components/ui/IconButton"
+import { Select } from "@/components/ui/Select"
+import { Tag } from "@/components/ui/Tag"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { useCuratorHistory } from "@/features/curator/components/CuratorInput/hooks/useCuratorHistory"
+import type { CuratorSession } from "@/features/curator/types"
+import {
+  PromptAiFileMentionPanel,
+  type PromptAiInputCommand,
+  PromptAiSlashCommandPanel,
+} from "@/features/prompt-design/components/PromptAiInputPanels"
+import type {
+  PromptAiSendOptions,
+  PromptAiUndoResult,
+} from "@/features/prompt-design/components/usePromptAiChatController"
+import {
+  FALLBACK_LINE_HEIGHT,
+  INTERACTIVE_SELECTOR,
+  TEXTAREA_MAX_ROWS,
+  TEXTAREA_MIN_ROWS,
+} from "@/lib/ai-shared/constants"
+import { useActiveCuratorModels } from "@/lib/ai-shared/useActiveModels"
+import { useCuratorModels } from "@/lib/ai-shared/useModelSelection"
+import { useCuratorSessions } from "@/lib/ai-shared/useSessionSelection"
+import { getMatchedCommands, isCommandInput } from "@/lib/ai-shared/utils"
+import { useFileMention } from "../hooks/useFileMention"
+
+const FILE_MENTION_PATTERN = /(^|\s)(@[^\s]+)(?=$|\s)/g
+
+// Prompt AI 专用 MCP 命令。
+const MCP_COMMAND = {
+  id: "mcp",
+  name: "/mcp",
+  aliases: [],
+  description: "List available MCP servers and tools",
+  addToContext: false,
+} as const
+
+/**
+ * 判断当前斜杠输入是否匹配 Prompt AI 专用 MCP 命令。
+ */
+const isMcpCommandMatch = (value: string): boolean => {
+  const normalizedValue = value.trim().toLowerCase()
+  return normalizedValue.startsWith("/") && "/mcp".startsWith(normalizedValue)
+}
+
+export const PromptAiChatInput = ({
+  onSend,
+  disabled,
+  onNewChat,
+  onUndo,
+  onSessionChange,
+  onMcp,
+  onSuggestQuestions,
+  chatSessions,
+  references = [],
+  onReferenceRemove,
+  onReferencesClear,
+  onReferenceSelect,
+  focusVersion,
+  mcpStatus,
+}: {
+  onSend?: (text: string, selectedModel?: string, options?: PromptAiSendOptions) => void
+  disabled?: boolean
+  onNewChat?: () => void
+  onUndo?: () => Promise<PromptAiUndoResult>
+  onSessionChange?: (sessionId: string) => void
+  onMcp?: () => Promise<void>
+  onSuggestQuestions?: () => void
+  chatSessions?: CuratorSession[]
+  references?: {
+    id: string
+    startLine: number
+    endLine: number
+    content: string
+  }[]
+  onReferenceRemove?: (id: string) => void
+  onReferencesClear?: () => void
+  onReferenceSelect?: (reference: {
+    id: string
+    startLine: number
+    endLine: number
+    content: string
+  }) => void
+  focusVersion?: number
+  mcpStatus?: {
+    total: number
+    connected: number
+    failed: number
+    names: string[]
+    failedNames: string[]
+    isLoading?: boolean
+  }
+}) => {
+  const toast = useToast()
+  const [inputText, setInputText] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!focusVersion) return
+    requestAnimationFrame(() => textareaRef.current?.focus())
+  }, [focusVersion])
+
+  const { selectedModel, hasModelOptions, selectOptions, handleModelChange, modelOptions } =
+    useActiveCuratorModels()
+
+  const [isCommandPanelOpen, setIsCommandPanelOpen] = useState(false)
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0)
+
+  const matchedCommands = useMemo<PromptAiInputCommand[]>(() => {
+    const commands = getMatchedCommands(inputText).filter((cmd) =>
+      ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
+    )
+    const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(inputText) ? [MCP_COMMAND] : []
+    return [...commands, ...customCommands]
+  }, [inputText])
+
+  const {
+    activeModelIndex,
+    matchedModels,
+    isModelMode,
+    setActiveModelIndex,
+    selectModel,
+    moveActiveModel,
+  } = useCuratorModels(
+    inputText,
+    setInputText,
+    modelOptions,
+    textareaRef,
+    () => {},
+    (selection) => handleModelChange(`${selection.provider}::${selection.model}`),
+  )
+
+  const {
+    activeSessionIndex,
+    matchedSessions,
+    isSessionMode,
+    setActiveSessionIndex,
+    selectSession,
+    moveActiveSession,
+  } = useCuratorSessions(
+    inputText,
+    setInputText,
+    chatSessions || [],
+    textareaRef,
+    () => {},
+    (sessionId) => onSessionChange?.(sessionId),
+  )
+
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const computedStyle = window.getComputedStyle(textarea)
+    const parsedLineHeight = Number.parseFloat(computedStyle.lineHeight)
+    const lineHeight = Number.isNaN(parsedLineHeight) ? FALLBACK_LINE_HEIGHT : parsedLineHeight
+    const verticalPadding =
+      Number.parseFloat(computedStyle.paddingTop || "0") +
+      Number.parseFloat(computedStyle.paddingBottom || "0")
+    const minHeight = lineHeight * TEXTAREA_MIN_ROWS + verticalPadding
+    const maxHeight = lineHeight * TEXTAREA_MAX_ROWS + verticalPadding
+
+    textarea.style.height = "auto"
+    const nextHeight =
+      inputText.length === 0
+        ? minHeight
+        : Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)
+    textarea.style.height = `${nextHeight}px`
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden"
+  }, [inputText])
+
+  const {
+    savePromptHistory,
+    movePromptHistory,
+    canMovePromptHistory,
+    resetHistoryCursor,
+    updateDraftInput,
+  } = useCuratorHistory("prompt-design", setInputText, textareaRef, adjustTextareaHeight)
+
+  const {
+    activeFileIndex,
+    matchedFiles,
+    isFilePanelOpen,
+    setActiveFileIndex,
+    syncFileMentionPanel,
+    closeFileMentionPanel,
+    selectFileMention,
+    handleTextareaCursorMove,
+    handleKeyDown: handleFileMentionKeyDown,
+    handleCompositionStart,
+    handleCompositionEnd,
+  } = useFileMention(inputText, setInputText, textareaRef, adjustTextareaHeight)
+
+  const executeCommand = useCallback(
+    async (commandId: string) => {
+      setIsCommandPanelOpen(false)
+      if (commandId === "clear") {
+        if (disabled) {
+          toast.warning("AI 正在生成，请稍后再试")
+          return
+        }
+        setInputText("")
+        onNewChat?.()
+        toast.success("已新建对话")
+      } else if (commandId === "undo") {
+        if (disabled) {
+          toast.warning("AI 正在生成，不能撤销消息")
+          return
+        }
+        if (onUndo) {
+          const res = await onUndo()
+          if (res === false) {
+            toast.error("撤销对话失败")
+          } else if (res.status === "empty") {
+            toast.warning("没有可撤销的对话")
+          } else if (res.status === "deleted_empty") {
+            setInputText(res.prompt ?? "")
+            resetHistoryCursor()
+            toast.success("已撤销上一轮并删除空对话")
+          } else if (res.status === "undone") {
+            setInputText(res.prompt ?? "")
+            resetHistoryCursor()
+            toast.success("已撤销上一轮对话")
+          }
+        }
+      } else if (commandId === "model") {
+        setInputText("/model ")
+        toast.info("请选择要切换的 AI 模型")
+      } else if (commandId === "session") {
+        setInputText("/session ")
+        toast.info("请选择要切换的对话")
+      } else if (commandId === "mcp") {
+        setInputText("")
+        await onMcp?.()
+      } else if (commandId === "suggest") {
+        setInputText("")
+        onSuggestQuestions?.()
+      }
+      requestAnimationFrame(() => textareaRef.current?.focus())
+    },
+    [disabled, onMcp, onNewChat, onSuggestQuestions, onUndo, resetHistoryCursor, toast],
+  )
+
+  const moveActiveCommand = useCallback(
+    (direction: 1 | -1): void => {
+      setActiveCommandIndex((currentIndex) => {
+        if (matchedCommands.length === 0) {
+          return 0
+        }
+        return (currentIndex + direction + matchedCommands.length) % matchedCommands.length
+      })
+    },
+    [matchedCommands.length],
+  )
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const nextValue = e.target.value
+      setInputText(nextValue)
+      updateDraftInput(nextValue)
+      resetHistoryCursor()
+
+      // Commands check
+      const isNextModelMode = nextValue === "/model" || nextValue.startsWith("/model ")
+      const isNextSessionMode =
+        nextValue === "/session" ||
+        nextValue.startsWith("/session ") ||
+        nextValue === "/resume" ||
+        nextValue.startsWith("/resume ")
+
+      if (isNextModelMode || isNextSessionMode) {
+        setIsCommandPanelOpen(false)
+        closeFileMentionPanel()
+        return
+      }
+
+      const commands = getMatchedCommands(nextValue).filter((cmd) =>
+        ["clear", "undo", "model", "session", "suggest"].includes(cmd.id),
+      )
+      const customCommands: PromptAiInputCommand[] = isMcpCommandMatch(nextValue)
+        ? [MCP_COMMAND]
+        : []
+      const nextMatchedCommands = [...commands, ...customCommands]
+
+      const shouldOpenCommandPanel = isCommandInput(nextValue) && nextMatchedCommands.length > 0
+      setIsCommandPanelOpen(shouldOpenCommandPanel)
+      setActiveCommandIndex(0)
+
+      if (shouldOpenCommandPanel) {
+        closeFileMentionPanel()
+        return
+      }
+
+      syncFileMentionPanel(nextValue, e.target.selectionStart)
+    },
+    [closeFileMentionPanel, resetHistoryCursor, syncFileMentionPanel, updateDraftInput],
+  )
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (target !== textareaRef.current && target.closest(INTERACTIVE_SELECTOR)) {
+      return
+    }
+    textareaRef.current?.focus()
+  }
+
+  const handleSend = async (): Promise<void> => {
+    if (disabled) {
+      toast.warning("请等待 AI 输出完成")
+      return
+    }
+    if (inputText.trim() === "/mcp") {
+      await executeCommand("mcp")
+      return
+    }
+    if (inputText.trim() && onSend) {
+      // 发送前清理无用的前缀
+      const cleanedText = inputText
+        .replace(FILE_MENTION_PATTERN, (_match, prefix, token) => {
+          return `${prefix}${token}`
+        })
+        .trim()
+
+      onSend(cleanedText, selectedModel || undefined, { references })
+      savePromptHistory(inputText)
+      setInputText("")
+      resetHistoryCursor()
+      closeFileMentionPanel()
+    }
+  }
+
+  useLayoutEffect(() => {
+    adjustTextareaHeight()
+  }, [adjustTextareaHeight, inputText])
+
+  return (
+    <div className="flex-shrink-0 p-3">
+      <div
+        className="relative rounded-[6px] border border-white/5 bg-white/[0.01] p-2 flex flex-col gap-2 max-w-[860px] mx-auto w-full cursor-text"
+        onClick={handleContainerClick}
+      >
+        <PromptAiSlashCommandPanel
+          isOpen={isCommandPanelOpen}
+          commands={matchedCommands}
+          activeIndex={activeCommandIndex}
+          onActiveIndexChange={setActiveCommandIndex}
+          onCommandSelect={(command) => executeCommand(command.id)}
+          idPrefix="prompt-slash-command"
+          keyboardOnly
+        />
+
+        <CommandPanel
+          isOpen={isModelMode}
+          ariaLabel="Model Selection"
+          items={matchedModels}
+          activeIndex={activeModelIndex}
+          onActiveIndexChange={setActiveModelIndex}
+          onItemSelect={selectModel}
+          renderItem={(model) => (
+            <div className="flex items-center gap-2 w-full">
+              <Bot className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate text-sm font-medium">{model.modelName}</span>
+              <span className="text-xs text-white/30 ml-auto shrink-0">{model.providerName}</span>
+            </div>
+          )}
+          idPrefix="prompt-model-select"
+          keyboardOnly
+        />
+
+        <CommandPanel
+          isOpen={isSessionMode}
+          ariaLabel="Session Selection"
+          items={matchedSessions}
+          activeIndex={activeSessionIndex}
+          onActiveIndexChange={setActiveSessionIndex}
+          onItemSelect={selectSession}
+          renderItem={(session) => (
+            <div className="flex items-center gap-2 w-full">
+              <MessageSquare className="h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate text-sm font-medium flex-1 text-left">{session.title}</span>
+            </div>
+          )}
+          idPrefix="prompt-session-select"
+          keyboardOnly
+        />
+
+        <PromptAiFileMentionPanel
+          isOpen={isFilePanelOpen}
+          paths={matchedFiles}
+          activeIndex={activeFileIndex}
+          onActiveIndexChange={setActiveFileIndex}
+          onPathSelect={selectFileMention}
+          idPrefix="prompt-file-mention"
+          keyboardOnly
+        />
+
+        {/* 引用标签 */}
+        {references.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-1">
+            {references.map((reference) => (
+              <Tag
+                key={reference.id}
+                size="small"
+                onClick={() => onReferenceSelect?.(reference)}
+                onClose={() => onReferenceRemove?.(reference.id)}
+              >
+                第{reference.startLine}–{reference.endLine}行
+              </Tag>
+            ))}
+          </div>
+        )}
+
+        {/* 输入框 */}
+        <textarea
+          ref={textareaRef}
+          rows={TEXTAREA_MIN_ROWS}
+          value={inputText}
+          onChange={handleInputChange}
+          onClick={handleTextareaCursorMove}
+          onKeyUp={(e) => {
+            if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+              handleTextareaCursorMove()
+            }
+          }}
+          onKeyDown={(e) => {
+            if (isSessionMode && matchedSessions.length > 0) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                moveActiveSession(1)
+                return
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault()
+                moveActiveSession(-1)
+                return
+              }
+              if (e.key === "Escape") {
+                e.preventDefault()
+                setInputText("")
+                return
+              }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const activeSession = matchedSessions[activeSessionIndex] ?? matchedSessions[0]
+                if (activeSession) selectSession(activeSession)
+                return
+              }
+            }
+
+            if (isModelMode && matchedModels.length > 0) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                moveActiveModel(1)
+                return
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault()
+                moveActiveModel(-1)
+                return
+              }
+              if (e.key === "Escape") {
+                e.preventDefault()
+                setInputText("")
+                return
+              }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const activeModel = matchedModels[activeModelIndex] ?? matchedModels[0]
+                if (activeModel) selectModel(activeModel)
+                return
+              }
+            }
+
+            if (isCommandPanelOpen) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                moveActiveCommand(1)
+                return
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault()
+                moveActiveCommand(-1)
+                return
+              }
+              if (e.key === "Escape") {
+                e.preventDefault()
+                setIsCommandPanelOpen(false)
+                return
+              }
+              if (e.key === "Enter") {
+                if (e.nativeEvent.isComposing) return
+                e.preventDefault()
+                const cmd = matchedCommands[activeCommandIndex] ?? matchedCommands[0]
+                if (cmd) executeCommand(cmd.id)
+                return
+              }
+            }
+
+            if (
+              !isFilePanelOpen &&
+              !isCommandPanelOpen &&
+              e.key === "ArrowDown" &&
+              canMovePromptHistory(1)
+            ) {
+              e.preventDefault()
+              movePromptHistory(1)
+              return
+            }
+
+            if (
+              !isFilePanelOpen &&
+              !isCommandPanelOpen &&
+              e.key === "ArrowUp" &&
+              canMovePromptHistory(-1)
+            ) {
+              e.preventDefault()
+              movePromptHistory(-1)
+              return
+            }
+
+            handleFileMentionKeyDown(e)
+            if (e.defaultPrevented) return
+
+            if (isFilePanelOpen) {
+              return
+            }
+
+            if (e.key === "Enter" && !e.shiftKey) {
+              if (e.nativeEvent.isComposing) {
+                return
+              }
+              e.preventDefault()
+              void handleSend()
+            }
+          }}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
+          placeholder="输入您的问题..."
+          aria-label="Prompt AI Chat Input Area"
+          className="w-full bg-transparent text-sm text-white placeholder:text-white/20 outline-none resize-none leading-relaxed px-1 transition-[height] duration-200 ease-out"
+        />
+
+        {/* 工具栏与发送按钮 */}
+        <div className="flex items-center justify-between mt-1 cursor-default">
+          {/* 左侧附加操作 */}
+          <div className="flex min-w-0 items-center gap-2">
+            <Select
+              value={selectedModel}
+              onChange={handleModelChange}
+              options={selectOptions}
+              position="up"
+              bgClass="bg-[#303030]"
+              disabled={!hasModelOptions}
+              className="!w-fit max-w-[220px]"
+            />
+
+            <IconButton aria-label="Add attachment" className="text-white/30 hover:text-white/50">
+              <Paperclip className="h-3.5 w-3.5" />
+            </IconButton>
+
+            {mcpStatus && (
+              <Tooltip
+                placement="top"
+                contentClassName="!p-2 !whitespace-normal"
+                content={
+                  <div className="flex min-w-[150px] flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-white/50">MCP servers</span>
+                    {mcpStatus.isLoading ? (
+                      <span className="text-xs text-white/40">Checking MCP servers...</span>
+                    ) : mcpStatus.names.length > 0 ? (
+                      mcpStatus.names.map((name, index) => (
+                        <span
+                          key={`${name}-${index}`}
+                          className={`truncate text-xs ${
+                            mcpStatus.failedNames.includes(name)
+                              ? "text-red-400"
+                              : "text-emerald-400"
+                          }`}
+                        >
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-white/40">No MCP servers configured</span>
+                    )}
+                  </div>
+                }
+              >
+                <div
+                  className="flex items-center gap-1.5 px-1 text-xs"
+                  aria-label="MCP connection status"
+                >
+                  <span aria-hidden="true" className="flex h-3 w-3 items-center justify-center">
+                    {mcpStatus.isLoading ? (
+                      <LoaderCircle className="h-3 w-3 animate-spin text-amber-400" />
+                    ) : (
+                      <span
+                        className={`block h-1.5 w-1.5 rounded-full ${
+                          mcpStatus.total > 0 && mcpStatus.connected === mcpStatus.total
+                            ? "bg-emerald-400"
+                            : mcpStatus.failed > 0 && mcpStatus.connected > 0
+                              ? "bg-amber-400"
+                              : "bg-red-400"
+                        }`}
+                      />
+                    )}
+                  </span>
+                </div>
+              </Tooltip>
+            )}
+          </div>
+
+          {/* 右侧发送与清空按钮 */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="Clear input"
+              onClick={() => {
+                setInputText("")
+                resetHistoryCursor()
+                onReferencesClear?.()
+                toast.success("已清空输入内容")
+              }}
+              disabled={!inputText && references.length === 0}
+              className={`h-6 w-6 rounded-full flex items-center justify-center bg-transparent transition-colors ${
+                inputText || references.length > 0
+                  ? "text-white/45 hover:text-white"
+                  : "text-white/10 cursor-not-allowed"
+              }`}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+            <IconButton
+              aria-label="Send message"
+              disabled={!inputText.trim()}
+              highlighted={Boolean(inputText.trim())}
+              onClick={handleSend}
+              className={`rounded-full flex items-center justify-center transition-all ${
+                inputText.trim()
+                  ? "bg-white text-black hover:bg-white/90"
+                  : "bg-white/10 text-white/30 cursor-not-allowed"
+              }`}
+            >
+              <SendHorizontal className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -1,8 +1,13 @@
-import { net, protocol } from 'electron'
-import { access, mkdir, rename } from 'node:fs/promises'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
-import { getAiChatTextDir, getAiChatTextTrashDir, getMarkdownImageDir, getMarkdownImageTrashDir } from '@/paths'
+import { access, mkdir, rename } from "node:fs/promises"
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
+import { net, protocol } from "electron"
+import {
+  getAiChatTextDir,
+  getAiChatTextTrashDir,
+  getMarkdownImageDir,
+  getMarkdownImageTrashDir,
+} from "@/paths"
 import {
   MARKDOWN_IMAGE_PROTOCOL,
   resolveAiChatImagePath,
@@ -10,8 +15,9 @@ import {
   resolveAiChatTextFilePath,
   resolveMarkdownImageFileName,
   resolveMarkdownImagePath,
-  resolvePeopleAvatarPath
-} from '@/protocols/localImages'
+  resolvePeopleAvatarPath,
+  resolvePersonalAvatarPath,
+} from "@/protocols/localImages"
 
 /**
  * 判断文件是否存在。
@@ -87,9 +93,9 @@ export const registerImageProtocolSchemes = (): void => {
       privileges: {
         standard: true,
         secure: true,
-        supportFetchAPI: true
-      }
-    }
+        supportFetchAPI: true,
+      },
+    },
   ])
 }
 
@@ -106,6 +112,9 @@ export const registerImageProtocolHandler = (): void => {
       filePath = resolvePeopleAvatarPath(request.url)
     }
     if (!filePath) {
+      filePath = resolvePersonalAvatarPath(request.url)
+    }
+    if (!filePath) {
       filePath = resolveAiChatImagePath(request.url)
     }
     if (!filePath) {
@@ -113,7 +122,7 @@ export const registerImageProtocolHandler = (): void => {
     }
 
     if (!filePath) {
-      return new Response('', { status: 404 })
+      return new Response("", { status: 404 })
     }
 
     return net.fetch(pathToFileURL(filePath).href)

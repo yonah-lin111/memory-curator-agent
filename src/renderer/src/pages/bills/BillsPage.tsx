@@ -1,90 +1,85 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { RotateCcw } from "lucide-react";
-import { useToast } from "@/components/ui/Toast";
+import { RotateCcw } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { AmountInput } from "@/components/ui/AmountInput"
+import { DatePicker } from "@/components/ui/DatePicker"
+import { DatePickerButton } from "@/components/ui/DatePickerButton"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { Tag } from "@/components/ui/Tag"
+import { useToast } from "@/components/ui/Toast"
+import { Tooltip } from "@/components/ui/Tooltip"
+import { getMonday } from "@/lib/dailyShared"
 import {
   BILL_TYPES,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  formatAmount,
-  parseAmountToCents,
   type BillCategory,
   type BillType,
-} from "./components/billShared";
-import { Tag } from "@/components/ui/Tag";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Input } from "@/components/ui/Input";
-import { IconButton } from "@/components/ui/IconButton";
-import { DatePicker } from "@/components/ui/DatePicker";
-import { DatePickerButton } from "@/components/ui/DatePickerButton";
-import { getMonday } from "@/lib/dailyShared";
+  EXPENSE_CATEGORIES,
+  formatAmount,
+  INCOME_CATEGORIES,
+  parseAmountToCents,
+} from "./components/billShared"
 
 /** 本地账单项类型 */
 type BillItem = {
-  id: number;
-  amount: number;
-  category: BillCategory;
-  billType: BillType;
-  billDate: string;
-  note: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
-};
+  id: number
+  amount: number
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
 
 /** 默认月度统计 */
 type MonthStats = {
-  expenseTotal: number;
-  incomeTotal: number;
-};
+  expenseTotal: number
+  incomeTotal: number
+}
 
 /** 账单草稿 */
 type BillDraft = {
-  amount: string;
-  category: BillCategory;
-  billType: BillType;
-  billDate: string;
-  note: string;
-  tags: string[];
-};
+  amount: string
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
 
 /**
  * BillsPage - 账单列表主页面。
  * 调整为双栏网格布局，右侧分类与标签快速查询，列表项完全支持 Tooltip 原地添加与编辑修改。
  */
 export const BillsPage = (): React.JSX.Element => {
-  const hasBillApi = Boolean(window.api?.bill);
-  const toast = useToast();
+  const hasBillApi = Boolean(window.api?.bill)
+  const toast = useToast()
 
-  const [bills, setBills] = useState<BillItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [bills, setBills] = useState<BillItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // 筛选器状态
-  const [typeFilter, setTypeFilter] = useState<BillType | "all">("all");
-  const [categoryFilter, setCategoryFilter] = useState<BillCategory | "all">(
-    "all",
-  );
-  const [categoryGroup, setCategoryGroup] = useState<"expense" | "income">(
-    "expense",
-  );
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-  const [timeFilterMode, setTimeFilterMode] = useState<
-    "all" | "date" | "week" | "month"
-  >("all");
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<BillType | "all">("all")
+  const [categoryFilter, setCategoryFilter] = useState<BillCategory | "all">("all")
+  const [categoryGroup, setCategoryGroup] = useState<"expense" | "income">("expense")
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [timeFilterMode, setTimeFilterMode] = useState<"all" | "date" | "week" | "month">("all")
+  const [selectedTime, setSelectedTime] = useState<string>("")
 
   // 当全局类型筛选变化时，同步分类的 Tab
   useEffect(() => {
     if (typeFilter === "expense" || typeFilter === "income") {
-      setCategoryGroup(typeFilter);
+      setCategoryGroup(typeFilter)
     }
-  }, [typeFilter]);
+  }, [typeFilter])
 
   // 当切换大分类时，重置子分类选择以避免无匹配数据
   useEffect(() => {
-    setCategoryFilter("all");
-  }, [categoryGroup]);
+    setCategoryFilter("all")
+  }, [categoryGroup])
 
   // 新增记录的气泡草稿状态
   const [draft, setDraft] = useState<BillDraft>({
@@ -94,7 +89,7 @@ export const BillsPage = (): React.JSX.Element => {
     billDate: new Date().toISOString().slice(0, 10),
     note: "",
     tags: [],
-  });
+  })
 
   // 当前正在编辑的账单草稿状态
   const [editDraft, setEditDraft] = useState<BillDraft>({
@@ -104,83 +99,82 @@ export const BillsPage = (): React.JSX.Element => {
     billDate: new Date().toISOString().slice(0, 10),
     note: "",
     tags: [],
-  });
+  })
 
   // 重置所有筛选条件
   const handleResetFilters = (): void => {
-    setTypeFilter("all");
-    setCategoryFilter("all");
-    setCategoryGroup("expense");
-    setActiveTag(null);
-    setTimeFilterMode("all");
-    setSelectedTime("");
-  };
+    setTypeFilter("all")
+    setCategoryFilter("all")
+    setCategoryGroup("expense")
+    setActiveTag(null)
+    setTimeFilterMode("all")
+    setSelectedTime("")
+  }
 
   const loadBills = async (): Promise<void> => {
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true)
+    setError(null)
     try {
       if (!hasBillApi) {
-        setBills([]);
-        return;
+        setBills([])
+        return
       }
-      const filters: { billType?: BillType; category?: BillCategory } = {};
-      if (typeFilter !== "all") filters.billType = typeFilter;
-      if (categoryFilter !== "all") filters.category = categoryFilter;
-      const result = await window.api.bill!.list(filters);
-      setBills(result);
+      const filters: { billType?: BillType; category?: BillCategory } = {}
+      if (typeFilter !== "all") filters.billType = typeFilter
+      if (categoryFilter !== "all") filters.category = categoryFilter
+      const result = await window.api.bill!.list(filters)
+      setBills(result)
     } catch {
-      setError("读取账单失败");
+      setError("读取账单失败")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
-    void loadBills();
-  }, [typeFilter, categoryFilter]);
+    void loadBills()
+  }, [typeFilter, categoryFilter])
 
   // 切换分类或类型过滤时清空标签过滤，避免空过滤死胡同
   useEffect(() => {
-    setActiveTag(null);
-  }, [typeFilter, categoryFilter]);
+    setActiveTag(null)
+  }, [typeFilter, categoryFilter])
 
   // 提取当前筛选条件下的所有唯一标签
-  const allTags = Array.from(new Set(bills.flatMap((b) => b.tags || [])));
+  const allTags = Array.from(new Set(bills.flatMap((b) => b.tags || [])))
 
   // 客户端二次筛选标签及时间，获取最终在页面展示的账单列表
   const visibleBills = bills.filter((bill) => {
     // 标签过滤
     if (activeTag && !bill.tags.includes(activeTag)) {
-      return false;
+      return false
     }
 
     // 时间区间/日期过滤
     if (timeFilterMode === "date" && selectedTime) {
-      return bill.billDate === selectedTime;
+      return bill.billDate === selectedTime
     }
     if (timeFilterMode === "week" && selectedTime) {
-      return getMonday(bill.billDate) === getMonday(selectedTime);
+      return getMonday(bill.billDate) === getMonday(selectedTime)
     }
     if (timeFilterMode === "month" && selectedTime) {
-      return bill.billDate.startsWith(selectedTime);
+      return bill.billDate.startsWith(selectedTime)
     }
 
-    return true;
-  });
+    return true
+  })
 
   // 根据当前可视列表统计数据
   const monthStats: MonthStats = visibleBills.reduce(
     (acc, b) => ({
-      expenseTotal:
-        acc.expenseTotal + (b.billType === "expense" ? b.amount : 0),
+      expenseTotal: acc.expenseTotal + (b.billType === "expense" ? b.amount : 0),
       incomeTotal: acc.incomeTotal + (b.billType === "income" ? b.amount : 0),
     }),
     { expenseTotal: 0, incomeTotal: 0 },
-  );
+  )
 
   const handleCreate = async (billDraft: BillDraft): Promise<boolean> => {
-    if (!hasBillApi) return false;
+    if (!hasBillApi) return false
     try {
       await window.api.bill!.create({
         amount: Number(billDraft.amount),
@@ -189,20 +183,17 @@ export const BillsPage = (): React.JSX.Element => {
         billDate: billDraft.billDate,
         note: billDraft.note,
         tags: billDraft.tags,
-      });
-      await loadBills();
-      return true;
+      })
+      await loadBills()
+      return true
     } catch {
-      toast.error("创建账单失败");
-      return false;
+      toast.error("创建账单失败")
+      return false
     }
-  };
+  }
 
-  const handleUpdate = async (
-    id: number,
-    billDraft: BillDraft,
-  ): Promise<boolean> => {
-    if (!hasBillApi) return false;
+  const handleUpdate = async (id: number, billDraft: BillDraft): Promise<boolean> => {
+    if (!hasBillApi) return false
     try {
       await window.api.bill!.update(id, {
         amount: Number(billDraft.amount),
@@ -211,30 +202,30 @@ export const BillsPage = (): React.JSX.Element => {
         billDate: billDraft.billDate,
         note: billDraft.note,
         tags: billDraft.tags,
-      });
-      await loadBills();
-      return true;
+      })
+      await loadBills()
+      return true
     } catch {
-      toast.error("更新账单失败");
-      return false;
+      toast.error("更新账单失败")
+      return false
     }
-  };
+  }
 
   const handleDelete = async (id: number): Promise<void> => {
-    if (!hasBillApi) return;
+    if (!hasBillApi) return
     try {
-      await window.api.bill!.delete(id);
-      await loadBills();
+      await window.api.bill!.delete(id)
+      await loadBills()
     } catch {
-      toast.error("删除账单失败");
+      toast.error("删除账单失败")
     }
-  };
+  }
 
   const handleAddConfirm = async (): Promise<void> => {
-    const parsedAmount = parseAmountToCents(draft.amount);
+    const parsedAmount = parseAmountToCents(draft.amount)
     if (parsedAmount <= 0) {
-      toast.error("请输入有效金额");
-      return;
+      toast.error("请输入有效金额")
+      return
     }
 
     const success = await handleCreate({
@@ -244,7 +235,7 @@ export const BillsPage = (): React.JSX.Element => {
       billDate: draft.billDate,
       note: draft.note,
       tags: draft.tags,
-    });
+    })
 
     if (success) {
       setDraft({
@@ -254,9 +245,9 @@ export const BillsPage = (): React.JSX.Element => {
         billDate: new Date().toISOString().slice(0, 10),
         note: "",
         tags: [],
-      });
+      })
     }
-  };
+  }
 
   const handleAddCancel = (): void => {
     setDraft({
@@ -266,8 +257,8 @@ export const BillsPage = (): React.JSX.Element => {
       billDate: new Date().toISOString().slice(0, 10),
       note: "",
       tags: [],
-    });
-  };
+    })
+  }
 
   const handleStartEdit = (item: BillItem): void => {
     setEditDraft({
@@ -277,14 +268,14 @@ export const BillsPage = (): React.JSX.Element => {
       billDate: item.billDate,
       note: item.note,
       tags: item.tags || [],
-    });
-  };
+    })
+  }
 
   const handleEditConfirm = async (id: number): Promise<void> => {
-    const parsedAmount = parseAmountToCents(editDraft.amount);
+    const parsedAmount = parseAmountToCents(editDraft.amount)
     if (parsedAmount <= 0) {
-      toast.error("请输入有效金额");
-      return;
+      toast.error("请输入有效金额")
+      return
     }
 
     await handleUpdate(id, {
@@ -294,8 +285,8 @@ export const BillsPage = (): React.JSX.Element => {
       billDate: editDraft.billDate,
       note: editDraft.note,
       tags: editDraft.tags,
-    });
-  };
+    })
+  }
 
   const renderAddForm = (): React.JSX.Element => {
     return (
@@ -328,33 +319,18 @@ export const BillsPage = (): React.JSX.Element => {
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={draft.amount}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={draft.amount}
+          onChange={(val) => setDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 日期选择 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">日期</span>
           <DatePicker
             value={draft.billDate}
-            onChange={(date) =>
-              setDraft((prev) => ({ ...prev, billDate: date }))
-            }
+            onChange={(date) => setDraft((prev) => ({ ...prev, billDate: date }))}
           >
             <DatePickerButton value={draft.billDate} className="w-full" />
           </DatePicker>
@@ -366,9 +342,7 @@ export const BillsPage = (): React.JSX.Element => {
           <Input
             type="text"
             value={draft.note}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, note: e.target.value }))
-            }
+            onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
             size="xs"
             className="!h-[28px]"
@@ -379,10 +353,7 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(draft.billType === "expense"
-              ? EXPENSE_CATEGORIES
-              : INCOME_CATEGORIES
-            ).map((cat) => (
+            {(draft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -412,8 +383,8 @@ export const BillsPage = (): React.JSX.Element => {
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const renderEditForm = (): React.JSX.Element => {
     return (
@@ -446,33 +417,18 @@ export const BillsPage = (): React.JSX.Element => {
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={editDraft.amount}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={editDraft.amount}
+          onChange={(val) => setEditDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 日期选择 */}
         <div className="flex flex-col gap-1 text-left">
           <span className="text-[11px] font-semibold text-white/40">日期</span>
           <DatePicker
             value={editDraft.billDate}
-            onChange={(date) =>
-              setEditDraft((prev) => ({ ...prev, billDate: date }))
-            }
+            onChange={(date) => setEditDraft((prev) => ({ ...prev, billDate: date }))}
           >
             <DatePickerButton value={editDraft.billDate} className="w-full" />
           </DatePicker>
@@ -484,9 +440,7 @@ export const BillsPage = (): React.JSX.Element => {
           <Input
             type="text"
             value={editDraft.note}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, note: e.target.value }))
-            }
+            onChange={(e) => setEditDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
             size="xs"
             className="!h-[28px]"
@@ -497,25 +451,22 @@ export const BillsPage = (): React.JSX.Element => {
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(editDraft.billType === "expense"
-              ? EXPENSE_CATEGORIES
-              : INCOME_CATEGORIES
-            ).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() =>
-                  setEditDraft((prev) => ({ ...prev, category: cat }))
-                }
-                className={`rounded-[4px] border py-1 text-[10px] font-medium transition-colors text-center truncate ${
-                  editDraft.category === cat
-                    ? "border-white/20 bg-white text-black"
-                    : "border-white/5 bg-[#212121] text-white/60 hover:bg-white/5"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {(editDraft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map(
+              (cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setEditDraft((prev) => ({ ...prev, category: cat }))}
+                  className={`rounded-[4px] border py-1 text-[10px] font-medium transition-colors text-center truncate ${
+                    editDraft.category === cat
+                      ? "border-white/20 bg-white text-black"
+                      : "border-white/5 bg-[#212121] text-white/60 hover:bg-white/5"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ),
+            )}
           </div>
         </div>
 
@@ -532,8 +483,8 @@ export const BillsPage = (): React.JSX.Element => {
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-3 text-white">
@@ -544,12 +495,8 @@ export const BillsPage = (): React.JSX.Element => {
             <div className="flex items-center gap-3 flex-wrap">
               {/* 账单列表标题与数量 */}
               <div className="flex items-center gap-2 mr-1">
-                <span className="text-sm font-bold text-white/80">
-                  账单列表
-                </span>
-                <span className="text-[11px] text-white/30">
-                  ({visibleBills.length})
-                </span>
+                <span className="text-sm font-bold text-white/80">账单列表</span>
+                <span className="text-[11px] text-white/30">({visibleBills.length})</span>
               </div>
             </div>
 
@@ -565,23 +512,32 @@ export const BillsPage = (): React.JSX.Element => {
             </Tooltip>
           </div>
 
-          {error && (
-            <p className="text-xs text-red-400 flex-shrink-0">{error}</p>
-          )}
+          {error && <p className="text-xs text-red-400 flex-shrink-0">{error}</p>}
 
           <div className="flex-1 overflow-y-scroll custom-scrollbar pr-0.5 flex flex-col gap-2">
             {isLoading ? (
-              <p className="text-xs text-white/30 py-8 text-center">
-                加载中...
-              </p>
+              <p className="text-xs text-white/30 py-8 text-center">加载中...</p>
             ) : visibleBills.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <div className="h-7 w-7 text-white/30 flex items-center justify-center mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-receipt"
+                  >
+                    <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+                    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+                    <path d="M12 17.5v-11" />
+                  </svg>
                 </div>
-                <h2 className="text-sm font-bold text-white/80">
-                  暂无匹配账单记录
-                </h2>
+                <h2 className="text-sm font-bold text-white/80">暂无匹配账单记录</h2>
                 <p className="mt-1 max-w-[320px] text-xs leading-relaxed text-white/40">
                   没有找到符合当前筛选条件的账单，可尝试调整过滤条件或点击右上角加号录入新账单。
                 </p>
@@ -595,23 +551,17 @@ export const BillsPage = (): React.JSX.Element => {
                   >
                     <div className="flex items-center gap-3 text-left min-w-0 flex-1">
                       <div className="w-[100px] flex-shrink-0">
-                        <span className="text-xs text-white/30 font-mono">
-                          {bill.billDate}
-                        </span>
+                        <span className="text-xs text-white/30 font-mono">{bill.billDate}</span>
                       </div>
                       <div className="w-[50px] flex-shrink-0">
-                        <span className="text-xs text-white/70 font-medium">
-                          {bill.category}
-                        </span>
+                        <span className="text-xs text-white/70 font-medium">{bill.category}</span>
                       </div>
-                      
+
                       <div className="flex items-center flex-1 min-w-0 gap-8">
                         <span className="text-xs text-white/50 truncate max-w-[150px]">
-                          {bill.note || (
-                            <span className="italic text-white/20">无备注</span>
-                          )}
+                          {bill.note || <span className="italic text-white/20">无备注</span>}
                         </span>
-                        
+
                         {bill.tags.length > 0 && (
                           <div className="flex items-center gap-1.5 flex-1 min-w-0">
                             {bill.tags.map((tag) => (
@@ -631,13 +581,10 @@ export const BillsPage = (): React.JSX.Element => {
                     <div className="ml-auto flex items-center flex-shrink-0">
                       <span
                         className={`text-sm font-mono font-bold ${
-                          bill.billType === "expense"
-                            ? "text-red-400"
-                            : "text-green-400"
+                          bill.billType === "expense" ? "text-red-400" : "text-green-400"
                         }`}
                       >
-                        {bill.billType === "expense" ? "-" : "+"}¥
-                        {formatAmount(bill.amount)}
+                        {bill.billType === "expense" ? "-" : "+"}¥{formatAmount(bill.amount)}
                       </span>
 
                       <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
@@ -695,10 +642,7 @@ export const BillsPage = (): React.JSX.Element => {
               <span
                 className={`text-sm font-mono font-bold ${monthStats.incomeTotal - monthStats.expenseTotal >= 0 ? "text-green-400" : "text-red-400"}`}
               >
-                {monthStats.incomeTotal - monthStats.expenseTotal >= 0
-                  ? "+"
-                  : ""}
-                ¥
+                {monthStats.incomeTotal - monthStats.expenseTotal >= 0 ? "+" : ""}¥
                 {formatAmount(monthStats.incomeTotal - monthStats.expenseTotal)}
               </span>
             </div>
@@ -764,13 +708,13 @@ export const BillsPage = (): React.JSX.Element => {
                   key={mode.value}
                   type="button"
                   onClick={() => {
-                    setTimeFilterMode(mode.value as any);
+                    setTimeFilterMode(mode.value as any)
                     if (mode.value === "all") {
-                      setSelectedTime("");
+                      setSelectedTime("")
                     } else if (mode.value === "month") {
-                      setSelectedTime(new Date().toISOString().slice(0, 7));
+                      setSelectedTime(new Date().toISOString().slice(0, 7))
                     } else {
-                      setSelectedTime(new Date().toISOString().slice(0, 10));
+                      setSelectedTime(new Date().toISOString().slice(0, 10))
                     }
                   }}
                   className={`flex-1 rounded-[4px] py-0.5 text-xs font-medium transition-colors ${
@@ -787,9 +731,7 @@ export const BillsPage = (): React.JSX.Element => {
             <div className="mt-1">
               <DatePicker
                 mode={
-                  timeFilterMode === "all"
-                    ? "date"
-                    : (timeFilterMode as "date" | "week" | "month")
+                  timeFilterMode === "all" ? "date" : (timeFilterMode as "date" | "week" | "month")
                 }
                 value={selectedTime}
                 onChange={(date) => setSelectedTime(date)}
@@ -825,9 +767,7 @@ export const BillsPage = (): React.JSX.Element => {
                 <button
                   key={type.value}
                   type="button"
-                  onClick={() =>
-                    setCategoryGroup(type.value as "expense" | "income")
-                  }
+                  onClick={() => setCategoryGroup(type.value as "expense" | "income")}
                   className={`flex-1 rounded-[4px] py-0.5 text-[11px] font-medium transition-colors ${
                     categoryGroup === type.value
                       ? "bg-[#303030] text-white"
@@ -847,10 +787,7 @@ export const BillsPage = (): React.JSX.Element => {
               >
                 全部分类
               </Tag>
-              {(categoryGroup === "expense"
-                ? EXPENSE_CATEGORIES
-                : INCOME_CATEGORIES
-              ).map((cat) => (
+              {(categoryGroup === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
                 <Tag
                   key={cat}
                   highlighted={categoryFilter === cat}
@@ -870,9 +807,7 @@ export const BillsPage = (): React.JSX.Element => {
             </div>
             <div className="flex flex-wrap gap-1.5 overflow-y-scroll custom-scrollbar max-h-[300px] pr-0.5">
               {allTags.length === 0 ? (
-                <span className="text-xs text-white/30 py-4 text-center w-full">
-                  暂无标签
-                </span>
+                <span className="text-xs text-white/30 py-4 text-center w-full">暂无标签</span>
               ) : (
                 allTags.map((tag) => (
                   <Tag
@@ -891,5 +826,5 @@ export const BillsPage = (): React.JSX.Element => {
         </aside>
       </div>
     </section>
-  );
-};
+  )
+}

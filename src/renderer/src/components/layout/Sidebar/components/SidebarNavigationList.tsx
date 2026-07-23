@@ -1,9 +1,9 @@
-import type React from "react";
 import {
   BookOpen,
-  Brain,
   CalendarDays,
   CheckSquare,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Home,
   Layers,
@@ -12,32 +12,37 @@ import {
   Receipt,
   Settings,
   StickyNote,
+  User,
   Users,
-} from "lucide-react";
-import { Tooltip } from "@/components/ui/Tooltip";
-import type { SidebarPageId } from "../Sidebar";
+} from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { IconButton } from "@/components/ui/IconButton"
+import { Tooltip } from "@/components/ui/Tooltip"
+import type { PersonalProfile } from "@/pages/personal-info/components/personalInfoShared"
+import type { SidebarPageId } from "../Sidebar"
 
 // 主导航项类型，描述左侧应用级入口。
 type NavigationItem = {
   // 导航项唯一标识。
-  id: SidebarPageId;
+  id: SidebarPageId
   // 导航项显示名称。
-  label: string;
+  label: string
   // 导航项辅助说明。
-  description: string;
+  description: string
   // 导航项图标组件。
-  icon: React.ComponentType<{ className?: string }>;
-};
+  icon: React.ComponentType<{ className?: string }>
+}
 
 // 导航分组类型，描述产品使用节奏下的入口集合。
 type NavigationGroup = {
   // 分组唯一标识。
-  id: string;
+  id: string
   // 分组显示名称。
-  label: string;
+  label: string
   // 分组下的导航项。
-  items: NavigationItem[];
-};
+  items: NavigationItem[]
+}
 
 // 左侧主导航分组静态数据。
 const NAVIGATION_GROUPS: NavigationGroup[] = [
@@ -141,27 +146,62 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
         : []),
     ],
   },
-];
+]
 
 // SidebarNavigationList 组件属性类型。
 type SidebarNavigationListProps = {
   // 是否折叠。
-  isCollapsed: boolean;
+  isCollapsed: boolean
+  // 折叠状态改变回调。
+  onCollapsedChange: (collapsed: boolean) => void
   // 当前激活的页面标识。
-  activePage: SidebarPageId;
+  activePage: SidebarPageId
   // 页面切换回调函数。
-  onPageChange: (pageId: SidebarPageId) => void;
-};
+  onPageChange: (pageId: SidebarPageId) => void
+}
 
 /**
  * SidebarNavigationList - 负责左侧主导航与应用内静态页面切换的纯列表渲染组件。
  */
 export const SidebarNavigationList = ({
   isCollapsed,
+  onCollapsedChange,
   activePage,
   onPageChange,
 }: SidebarNavigationListProps): React.JSX.Element => {
-  const shouldUseCollapsedLayout = isCollapsed;
+  const shouldUseCollapsedLayout = isCollapsed
+  const [profile, setProfile] = useState<PersonalProfile | null>(null)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (window.api?.profile) {
+          const data = await window.api.profile.get()
+          setProfile(data as unknown as PersonalProfile)
+        } else {
+          const localData = localStorage.getItem("mc_personal_info")
+          if (localData) setProfile(JSON.parse(localData))
+        }
+      } catch (err) {
+        console.error("Failed to load profile for sidebar", err)
+      }
+    }
+    fetchProfile()
+
+    // 监听自定义的个人信息更新事件
+    const handleProfileUpdate = () => {
+      void fetchProfile()
+    }
+
+    window.addEventListener("mc:personal-info-updated", handleProfileUpdate)
+    // 监听本地存储变化以在其他地方更新个人信息后能同步 ( fallback 用 )
+    window.addEventListener("storage", fetchProfile)
+
+    return () => {
+      window.removeEventListener("mc:personal-info-updated", handleProfileUpdate)
+      window.removeEventListener("storage", fetchProfile)
+    }
+  }, [])
 
   return (
     <div className="w-full h-full flex flex-col justify-between">
@@ -170,22 +210,50 @@ export const SidebarNavigationList = ({
           shouldUseCollapsedLayout ? "" : "lg:w-[190px] lg:flex-shrink-0"
         }`}
       >
-        {/* 产品标识头 */}
+        {/* 用户头像与信息（替换了原来的产品标识头） */}
         <div
-          className={`flex items-center gap-3 px-1 ${
-            shouldUseCollapsedLayout ? "justify-center" : ""
+          className={`flex px-1 ${
+            shouldUseCollapsedLayout
+              ? "flex-col items-center gap-2"
+              : "items-center justify-between gap-3"
           }`}
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-white text-black">
-            <Brain className="h-5 w-5" />
-          </div>
-          {!shouldUseCollapsedLayout && (
-            <div className="flex flex-col">
-              <h2 className="text-xs font-semibold tracking-wider text-white whitespace-nowrap">
-                MEMORY CURATOR
-              </h2>
-            </div>
-          )}
+          <Tooltip
+            content={profile?.name || "My Profile"}
+            placement="right"
+            className={shouldUseCollapsedLayout ? "order-2" : "order-3"}
+          >
+            <button
+              onClick={() => onPageChange("personal-info")}
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
+                activePage === "personal-info" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"
+              }`}
+              aria-label="My Profile"
+            >
+              {profile?.avatar ? (
+                <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User className="h-4.5 w-4.5 text-white/60" />
+              )}
+            </button>
+          </Tooltip>
+          <Tooltip
+            key={shouldUseCollapsedLayout ? "collapsed" : "expanded"}
+            content={shouldUseCollapsedLayout ? "展开" : "收起"}
+            placement="right"
+            className="order-1"
+          >
+            <IconButton
+              aria-label={shouldUseCollapsedLayout ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => onCollapsedChange(!shouldUseCollapsedLayout)}
+            >
+              {shouldUseCollapsedLayout ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </IconButton>
+          </Tooltip>
         </div>
 
         {/* 应用级主导航按使用节奏分组，避免入口平铺成普通工具列表。 */}
@@ -205,17 +273,15 @@ export const SidebarNavigationList = ({
               )}
               <div className="flex flex-col gap-1">
                 {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = item.id === activePage;
+                  const Icon = item.icon
+                  const isActive = item.id === activePage
 
                   const buttonContent = (
                     <button
                       key={item.id}
                       type="button"
                       aria-current={isActive ? "page" : undefined}
-                      aria-label={
-                        shouldUseCollapsedLayout ? item.label : undefined
-                      }
+                      aria-label={shouldUseCollapsedLayout ? item.label : undefined}
                       onClick={() => onPageChange(item.id)}
                       className={`flex w-full items-center rounded-[6px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/50 ${
                         shouldUseCollapsedLayout
@@ -239,9 +305,7 @@ export const SidebarNavigationList = ({
                           </span>
                           <span
                             className={`mt-1 text-xs leading-none whitespace-nowrap ${
-                              isActive
-                                ? "text-black/60 font-medium"
-                                : "text-white/30"
+                              isActive ? "text-black/60 font-medium" : "text-white/30"
                             }`}
                           >
                             {item.description}
@@ -249,7 +313,7 @@ export const SidebarNavigationList = ({
                         </div>
                       )}
                     </button>
-                  );
+                  )
 
                   return shouldUseCollapsedLayout ? (
                     <Tooltip
@@ -262,7 +326,7 @@ export const SidebarNavigationList = ({
                     </Tooltip>
                   ) : (
                     buttonContent
-                  );
+                  )
                 })}
               </div>
             </section>
@@ -311,5 +375,5 @@ export const SidebarNavigationList = ({
         )}
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,8 +1,4 @@
-import type {
-  JournalItem,
-  JournalRow,
-  JournalSaveInput
-} from '@/db/schema'
+import type { JournalItem, JournalRow, JournalSaveInput } from "@/db/schema"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -36,14 +32,7 @@ export type JournalsService = {
  * 生成当前时间戳。
  */
 const createTimestamp = (): string => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const date = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${date} ${hours}:${minutes}`
+  return new Date().toISOString()
 }
 
 /**
@@ -51,7 +40,7 @@ const createTimestamp = (): string => {
  */
 const validateEntryDate = (entryDate: string): void => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
-    throw new Error('工作台日期格式不正确')
+    throw new Error("工作台日期格式不正确")
   }
 }
 
@@ -62,7 +51,7 @@ const validateJournalSaveInput = (input: JournalSaveInput): void => {
   validateEntryDate(input.entryDate)
 
   if (!input.content.trim()) {
-    throw new Error('日记内容不能为空')
+    throw new Error("日记内容不能为空")
   }
 }
 
@@ -74,14 +63,18 @@ const mapJournalRow = (row: JournalRow): JournalItem => ({
   entryDate: row.entry_date,
   content: row.content,
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
 })
 
 /**
  * 读取 SQLite 自增主键。
  */
 const readLastInsertId = (result: unknown): number =>
-  Number(result && typeof result === 'object' && 'lastInsertRowid' in result ? result.lastInsertRowid : 0)
+  Number(
+    result && typeof result === "object" && "lastInsertRowid" in result
+      ? result.lastInsertRowid
+      : 0,
+  )
 
 /**
  * 创建 Journals 服务。
@@ -91,7 +84,9 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
     validateEntryDate(entryDate)
 
     const row = database
-      .prepare('SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
+      .prepare(
+        "SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?",
+      )
       .get(entryDate) as JournalRow | undefined
 
     return row ? mapJournalRow(row) : null
@@ -101,13 +96,17 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
 
     const content = input.content.trim()
     const existing = database
-      .prepare('SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?')
+      .prepare(
+        "SELECT id, entry_date, content, created_at, updated_at FROM journals WHERE entry_date = ?",
+      )
       .get(input.entryDate) as JournalRow | undefined
     const timestamp = createTimestamp()
 
     if (!existing) {
       const result = database
-        .prepare('INSERT INTO journals (entry_date, content, created_at, updated_at) VALUES (?, ?, ?, ?)')
+        .prepare(
+          "INSERT INTO journals (entry_date, content, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        )
         .run(input.entryDate, content, timestamp, timestamp)
 
       return {
@@ -115,12 +114,12 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
         entryDate: input.entryDate,
         content,
         createdAt: timestamp,
-        updatedAt: timestamp
+        updatedAt: timestamp,
       }
     }
 
     database
-      .prepare('UPDATE journals SET content = ?, updated_at = ? WHERE entry_date = ?')
+      .prepare("UPDATE journals SET content = ?, updated_at = ? WHERE entry_date = ?")
       .run(content, timestamp, input.entryDate)
 
     return {
@@ -128,14 +127,14 @@ export const createJournalsService = (database: DatabaseConnection): JournalsSer
       entryDate: input.entryDate,
       content,
       createdAt: existing.created_at,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     }
   },
   delete: (entryDate) => {
     validateEntryDate(entryDate)
-    database.prepare('DELETE FROM journals WHERE entry_date = ?').run(entryDate)
+    database.prepare("DELETE FROM journals WHERE entry_date = ?").run(entryDate)
   },
   querySql: (sql) => {
     return database.prepare(sql).all()
-  }
+  },
 })

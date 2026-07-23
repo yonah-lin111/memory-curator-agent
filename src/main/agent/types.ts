@@ -1,13 +1,25 @@
-import { AssociatedPersonItem, JournalItem, NoteMaterialItem, PersonRelationship, TodoItem, TodoPriority, SnippetItem, AiChatMessagePart, BillItem, BillCategory, BillType } from '@/db/schema'
-import type { AskAnswerData, AskRequestData } from '@/agent/tools/askTool'
+import type { AskAnswerData, AskRequestData } from "@/agent/tools/askTool"
 import type {
   ToolConfirmationAnswerData,
   ToolConfirmationConfig,
-  ToolConfirmationRequestData
-} from '@/agent/tools/toolConfirmation'
+  ToolConfirmationRequestData,
+} from "@/agent/tools/toolConfirmation"
+import {
+  AiChatMessagePart,
+  AssociatedPersonItem,
+  BillCategory,
+  BillItem,
+  BillType,
+  JournalItem,
+  NoteMaterialItem,
+  PersonRelationship,
+  SnippetItem,
+  TodoItem,
+  TodoPriority,
+} from "@/db/schema"
 
 // 模型 provider 传输格式类型。
-export type ProviderTransportType = 'openai-compatible' | 'openai' | 'anthropic' | 'google'
+export type ProviderTransportType = "openai-compatible" | "openai" | "anthropic" | "google"
 
 // 模型能力限制。
 export type ModelLimit = {
@@ -49,6 +61,30 @@ export type AgentContextPolicyConfig = {
 export type AgentConfig = {
   // 上下文治理配置。
   context: AgentContextPolicyConfig
+}
+
+// 本地 MCP 服务配置。
+export type McpServerConfig = {
+  // 服务唯一标识。
+  id: string
+  // 服务展示名称。
+  name: string
+  // 服务启动命令。
+  command: string
+  // 服务启动参数。
+  args: string[]
+  // 单次请求超时时间，单位毫秒。
+  timeout: number
+}
+
+// MCP 工具来源元数据。
+export type McpToolMetadata = {
+  // MCP 服务标识。
+  serverId: string
+  // MCP 服务展示名称。
+  serverName: string
+  // 服务原始工具名称。
+  toolName: string
 }
 
 // 标题总结模型配置。
@@ -105,12 +141,14 @@ export type NormalizedAiConfig = {
   providers: Record<string, NormalizedProviderConfig>
   // Agent 行为配置。
   agent: AgentConfig
+  // 已启用的本地 MCP 服务。
+  mcp: McpServerConfig[]
   // Compaction 模型配置，未配置时 fallback 到当前对话模型。
   compaction?: CompactionConfig
 }
 
 // Agent 消息角色。
-export type AgentMessageRole = 'system' | 'user' | 'assistant' | 'tool'
+export type AgentMessageRole = "system" | "user" | "assistant" | "tool"
 
 // Agent 内部消息。
 export type AgentMessage = {
@@ -184,6 +222,8 @@ export type AgentTool = {
   prompt?: AgentToolPrompt
   // 需要执行前内部确认时使用的配置。
   confirmation?: ToolConfirmationConfig
+  // MCP 工具来源，普通内置工具不设置。
+  mcp?: McpToolMetadata
   // 工具参数 Schema。
   parameters: JsonSchema
   /**
@@ -207,7 +247,7 @@ export type ModelTurnInput = {
 // 模型文本增量事件。
 export type ModelTextDeltaEvent = {
   // 事件类型。
-  type: 'text_delta'
+  type: "text_delta"
   // 文本增量。
   delta: string
 }
@@ -215,7 +255,7 @@ export type ModelTextDeltaEvent = {
 // 模型思考增量事件。
 export type ModelReasoningDeltaEvent = {
   // 事件类型。
-  type: 'reasoning_delta'
+  type: "reasoning_delta"
   // 思考片段唯一标识。
   id: string
   // 思考文本增量。
@@ -225,7 +265,7 @@ export type ModelReasoningDeltaEvent = {
 // 模型工具调用完成事件。
 export type ModelToolCallDoneEvent = {
   // 事件类型。
-  type: 'tool_call_done'
+  type: "tool_call_done"
   // 工具调用 ID。
   id: string
   // 工具名称。
@@ -237,7 +277,7 @@ export type ModelToolCallDoneEvent = {
 // 模型单轮完成事件。
 export type ModelDoneEvent = {
   // 事件类型。
-  type: 'done'
+  type: "done"
 }
 
 // 模型流式事件。
@@ -280,7 +320,9 @@ export type ReactAgentRunInput = {
   /**
    * 等待用户确认工具写操作。
    */
-  toolConfirmationProvider?: (request: ToolConfirmationRequestData) => Promise<ToolConfirmationAnswerData>
+  toolConfirmationProvider?: (
+    request: ToolConfirmationRequestData,
+  ) => Promise<ToolConfirmationAnswerData>
   // Compaction 模型 provider（可选，不配置则不启用 compaction）。
   compactionProvider?: ModelProvider
   // Compaction 模型名（可选）。
@@ -293,21 +335,21 @@ export type ReactAgentRunInput = {
 export type AgentStreamEvent =
   | {
       // 事件类型。
-      type: 'run_started'
+      type: "run_started"
     }
   | {
       // 事件类型。
-      type: 'assistant_message_started'
+      type: "assistant_message_started"
     }
   | {
       // 事件类型。
-      type: 'text_delta'
+      type: "text_delta"
       // 文本增量。
       delta: string
     }
   | {
       // 事件类型。
-      type: 'reasoning_delta'
+      type: "reasoning_delta"
       // 思考片段唯一标识。
       id: string
       // 思考文本增量。
@@ -315,17 +357,19 @@ export type AgentStreamEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_started'
+      type: "tool_started"
       // 工具步骤 ID。
       id: string
       // 工具名称。
       name: string
       // 工具输入。
       input: unknown
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
-      type: 'tool_finished'
+      type: "tool_finished"
       // 工具步骤 ID。
       id: string
       // 工具名称。
@@ -334,10 +378,12 @@ export type AgentStreamEvent =
       observation: string
       // 工具结构化数据。
       data: unknown
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
-      type: 'tool_failed'
+      type: "tool_failed"
       // 工具步骤 ID。
       id: string
       // 工具名称。
@@ -346,18 +392,20 @@ export type AgentStreamEvent =
       input: unknown
       // 工具错误信息。
       error: string
+      // MCP 工具来源。
+      mcp?: McpToolMetadata
     }
   | {
       // 事件类型。
-      type: 'turn_finished'
+      type: "turn_finished"
     }
   | {
       // 事件类型。
-      type: 'done'
+      type: "done"
     }
   | {
       // 事件类型。
-      type: 'error'
+      type: "error"
       // 错误信息。
       message: string
     }
@@ -403,7 +451,16 @@ export type PeopleQueryToolInput = {
 // People 查询工具返回项。
 export type PeopleQueryToolItem = Pick<
   AssociatedPersonItem,
-  'id' | 'name' | 'gender' | 'relationship' | 'status' | 'birthday' | 'contact' | 'tags' | 'details' | 'updatedAt'
+  | "id"
+  | "name"
+  | "gender"
+  | "relationship"
+  | "status"
+  | "birthday"
+  | "contact"
+  | "tags"
+  | "details"
+  | "updatedAt"
 >
 
 // People 查询工具返回结果。
@@ -433,7 +490,7 @@ export type TodoQueryToolInput = {
 // Todo 查询工具返回项。
 export type TodoQueryToolItem = Pick<
   TodoItem,
-  'id' | 'entryDate' | 'text' | 'priority' | 'completed' | 'sortOrder' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "text" | "priority" | "completed" | "sortOrder" | "createdAt" | "updatedAt"
 >
 
 // Todo 查询工具返回结果。
@@ -475,7 +532,7 @@ export type SnippetQueryToolInput = {
 // Snippet 查询工具返回项。
 export type SnippetQueryToolItem = Pick<
   SnippetItem,
-  'id' | 'entryDate' | 'title' | 'content' | 'tags' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "title" | "content" | "tags" | "createdAt" | "updatedAt"
 >
 
 // Snippet 查询工具返回结果。
@@ -503,7 +560,7 @@ export type NoteQueryToolInput = {
 // Note 查询工具返回项。
 export type NoteQueryToolItem = Pick<
   NoteMaterialItem,
-  'id' | 'title' | 'content' | 'tags' | 'time' | 'categoryId' | 'categoryName'
+  "id" | "title" | "content" | "tags" | "time" | "categoryId" | "categoryName"
 >
 
 // Note 查询工具返回结果。
@@ -551,7 +608,7 @@ export type JournalQueryToolInput = {
 // Journal 查询工具返回项。
 export type JournalQueryToolItem = Pick<
   JournalItem,
-  'id' | 'entryDate' | 'content' | 'createdAt' | 'updatedAt'
+  "id" | "entryDate" | "content" | "createdAt" | "updatedAt"
 >
 
 // Journal 查询工具返回结果。
@@ -579,7 +636,15 @@ export type BillQueryToolInput = {
 // Bill 查询工具返回项。
 export type BillQueryToolItem = Pick<
   BillItem,
-  'id' | 'amount' | 'category' | 'billType' | 'billDate' | 'note' | 'tags' | 'createdAt' | 'updatedAt'
+  | "id"
+  | "amount"
+  | "category"
+  | "billType"
+  | "billDate"
+  | "note"
+  | "tags"
+  | "createdAt"
+  | "updatedAt"
 >
 
 // Bill 查询工具返回结果。
@@ -597,5 +662,3 @@ export type BillSummaryToolResult = AgentToolResult & {
   // 账单条目列表。
   items: BillQueryToolItem[]
 }
-
-

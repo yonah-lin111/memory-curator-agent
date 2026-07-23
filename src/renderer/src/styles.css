@@ -10,13 +10,7 @@
   color: #ffffff;
   background: #000000;
   font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -199,23 +193,25 @@ html:hover::-webkit-scrollbar-thumb,
 .notes-markdown-editor.md-editor-dark {
   --md-color: rgba(255, 255, 255, 0.78);
   --md-hover-color: #ffffff;
-  --md-bk-color: #000000;
-  --md-bk-color-outstand: #212121;
+  --md-bk-color: transparent;
+  --md-bk-color-outstand: transparent;
   --md-bk-hover-color: #1a1a1a;
-  --md-border-color: rgba(255, 255, 255, 0.1);
+  --md-border-color: transparent;
   --md-border-hover-color: rgba(255, 255, 255, 0.24);
   --md-border-active-color: rgba(255, 255, 255, 0.36);
   --md-scrollbar-bg-color: #000000;
   --md-scrollbar-thumb-color: rgba(255, 255, 255, 0.16);
   --md-scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.24);
   --md-scrollbar-thumb-active-color: rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  border: none !important;
+  background: transparent !important;
   font-size: 14px;
 }
 
 /* Markdown 编辑器工具栏尺寸收敛，匹配页面原子控件节奏。 */
-.notes-markdown-editor .md-editor-toolbar-wrapper {
-  padding: 3px 4px;
+.md-editor .md-editor-toolbar-wrapper {
+  padding: 3px 4px !important;
+  border-bottom: none !important;
 }
 
 .notes-markdown-editor .md-editor-toolbar-item {
@@ -223,12 +219,387 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 .notes-markdown-editor .md-editor-preview {
-  background-color: #000000;
+  background-color: transparent;
   font-size: 14px;
 }
 
 .notes-markdown-editor .cm-editor {
   font-size: 14px;
+}
+
+/* Markdown 编辑器无默认样式模式——去除边框和背景，由外层容器控制。 */
+.md-editor-clean.md-editor,
+.md-editor-clean.md-editor-dark {
+  --md-color: #b8b8b8 !important;
+  --md-bk-color: transparent !important;
+  --md-bk-color-outstand: transparent !important;
+  --md-border-color: transparent !important;
+  --md-scrollbar-bg-color: transparent !important;
+  --md-scrollbar-thumb-color: transparent !important;
+  --md-scrollbar-thumb-hover-color: rgba(255, 255, 255, 0.1) !important;
+  --md-scrollbar-thumb-active-color: rgba(255, 255, 255, 0.35) !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 统一 md-editor-rt 的默认文字排版，MarkdownEditor 可通过组件属性覆盖。 */
+.md-editor,
+.md-editor-preview {
+  --markdown-editor-letter-spacing: 0.04em;
+  --markdown-editor-line-height: 1.8;
+  letter-spacing: var(--markdown-editor-letter-spacing);
+}
+
+.md-editor .cm-scroller {
+  line-height: var(--markdown-editor-line-height) !important;
+}
+
+.md-editor-preview p,
+.md-editor-preview li {
+  line-height: var(--markdown-editor-line-height) !important;
+  letter-spacing: var(--markdown-editor-letter-spacing);
+}
+
+/* 编辑区字号由 MarkdownEditor 的内联样式控制，避免被 CodeMirror 默认字号覆盖。 */
+.md-editor-clean .cm-editor {
+  color: #b8b8b8 !important;
+  font-size: inherit !important;
+}
+
+.md-editor-clean .cm-content {
+  color: #b8b8b8 !important;
+}
+
+/* 当 .md-editor-clean 整体被 hover 时，显示其内置自定义滚动条滑块（颜色设为微白 10%） */
+.md-editor-clean:hover .md-editor-custom-scrollbar__thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 鼠标直接 hover 自定义滚动条滑块时，滑块稍微加深（颜色设为 hover 色，这里我们合理提高至项目常用的 22% / 0.22） */
+.md-editor-clean .md-editor-custom-scrollbar__thumb:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 鼠标直接 active 拖拽自定义滚动条滑块时，保持 rgba(255, 255, 255, 0.35) */
+.md-editor-clean .md-editor-custom-scrollbar__thumb:active {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
+/* 确保编辑区、预览区容器和整体内容区域无任何多余边框、背景与内外边距 */
+.md-editor-clean .md-editor-input-wrapper,
+.md-editor-clean .md-editor-preview-wrapper,
+.md-editor-clean .md-editor-content {
+  border: none !important;
+  background-color: transparent !important;
+}
+
+/* 强制清除所有 Webkit 滚动条轨道背景，解决由于黑/灰滚动条轨道造成的视觉粗竖线问题 */
+.md-editor-clean ::-webkit-scrollbar-track,
+.md-editor-clean .cm-scroller::-webkit-scrollbar-track,
+.md-editor-clean .md-editor-preview-wrapper::-webkit-scrollbar-track {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 工具栏在 clean 模式下跟随透明背景 */
+.md-editor-clean .md-editor-toolbar-wrapper {
+  border-bottom: none !important;
+}
+
+/* 编辑区域和预览区域中间的分割线：1px 优雅微白/白色，保持 6px 的可拖拽区域保证跟手 */
+.md-editor .md-editor-resize-operate {
+  width: 6px !important;
+  background-color: transparent !important;
+}
+
+.md-editor .md-editor-resize-operate::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transform: translateX(-50%);
+  transition: background-color 0.15s ease;
+}
+
+.md-editor .md-editor-resize-operate:hover::after {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 内联 AI diff 使用 CodeMirror block widget，正文在接受前保持原文不变。 */
+.md-editor .cm-ai-diff-block {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0;
+  overflow: hidden;
+  font-family: var(--md-font-code, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.md-editor .cm-ai-diff-controls {
+  order: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(33, 33, 33, 0.96);
+}
+
+.md-editor .cm-ai-diff-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.md-editor .cm-ai-diff-controls button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+}
+
+.md-editor .cm-ai-diff-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.md-editor .cm-ai-diff-accept {
+  border-color: rgba(74, 222, 128, 0.22);
+  background: rgba(74, 222, 128, 0.1);
+  color: rgba(134, 239, 172, 0.92);
+}
+
+.md-editor .cm-ai-diff-reject {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(248, 113, 113, 0.1);
+  color: rgba(252, 165, 165, 0.92);
+}
+
+.md-editor .cm-ai-diff-accept:hover {
+  border-color: rgba(74, 222, 128, 0.38);
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+
+.md-editor .cm-ai-diff-reject:hover {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+.md-editor .cm-ai-diff-deleted,
+.md-editor .cm-ai-diff-added {
+  padding: 4px 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-editor .cm-ai-diff-deleted {
+  color: rgba(254, 202, 202, 0.92);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.md-editor .cm-ai-diff-added {
+  color: rgba(209, 250, 229, 0.94);
+  background: rgba(34, 197, 94, 0.14);
+}
+
+/* 仅由文件提及面板插入的路径使用暖黄色，普通 @ 文本保持原样。 */
+.md-editor .cm-file-mention {
+  color: #fcd34d !important;
+  font-weight: bold !important;
+}
+
+/* 自定义 CodeMirror 6 Markdown 语法标记字符的高级分色着色方案 */
+.md-editor .cm-md-heading-mark,
+.md-editor .cm-md-heading-mark * {
+  color: #e28b3a !important; /* 标题 # 标记：温暖琥珀金 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-list-mark,
+.md-editor .cm-md-list-mark * {
+  color: #a78bfa !important; /* 无序/有序列表标记 -, *, 1.：优雅罗兰紫 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-task-mark,
+.md-editor .cm-md-task-mark * {
+  color: #4ade80 !important; /* 任务列表标记 [ ] / [x]：清新翡翠绿 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-code-mark,
+.md-editor .cm-md-code-mark * {
+  color: #60a5fa !important; /* 代码块标记 ```：科技极客蓝 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-table-mark,
+.md-editor .cm-md-table-mark * {
+  color: #2dd4bf !important; /* 表格分割线标记 |：现代质感青 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-quote-mark,
+.md-editor .cm-md-quote-mark * {
+  color: #fb7185 !important; /* 引用 > 标记：优雅玫瑰粉 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-inline-code-mark,
+.md-editor .cm-md-inline-code-mark * {
+  color: #fcd34d !important; /* 行内代码 ` 标记：科技明亮黄 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-link-mark,
+.md-editor .cm-md-link-mark * {
+  color: #f472b6 !important; /* 链接/图片 !, [, ], (, ) 标记：甜美珊瑚粉 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-separator-mark,
+.md-editor .cm-md-separator-mark * {
+  color: #64748b !important; /* 分割线 ---, ***, ___：典雅深邃灰 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-bold-mark,
+.md-editor .cm-md-bold-mark * {
+  color: #f43f5e !important; /* 粗体 ** 或 __ 标记：甜美玫瑰红 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-emphasis-mark,
+.md-editor .cm-md-emphasis-mark * {
+  color: #38bdf8 !important; /* 斜体 * 或 _ 标记：清爽天空蓝 */
+  font-weight: bold !important;
+}
+
+.md-editor .cm-md-strikethrough-mark,
+.md-editor .cm-md-strikethrough-mark * {
+  color: #d946ef !important; /* 删除线 ~~ 标记：明亮洋红/紫粉 */
+  font-weight: bold !important;
+}
+
+/* 还原 md-editor 预览区域在被 Tailwind reset 屏蔽掉的无序列表/有序列表标志，并统一步长与白色文字色 */
+.md-editor-preview ul,
+.notes-markdown-editor .md-editor-preview ul {
+  list-style-type: disc !important;
+  padding-left: 20px !important;
+  margin: 8px 0 !important;
+}
+
+.md-editor-preview ol,
+.notes-markdown-editor .md-editor-preview ol {
+  list-style-type: decimal !important;
+  padding-left: 20px !important;
+  margin: 8px 0 !important;
+}
+
+.md-editor-preview li,
+.notes-markdown-editor .md-editor-preview li {
+  display: list-item !important;
+  list-style: inherit !important;
+  /* 移除颜色强制覆盖，使其自然继承编辑器统一的主体字体颜色 */
+}
+
+/* md-editor-rt 下拉菜单、弹窗与自动补全列表样式统一为 #303030 背景色和 1px border-white/10 */
+.md-editor .md-editor-dropdown,
+.md-editor .md-editor-menu,
+.md-editor .cm-tooltip.cm-tooltip-autocomplete,
+.md-editor-modal,
+.md-editor-tooltip {
+  background-color: #303030 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  padding: 4px !important;
+}
+
+/* 移除列表中的可见滚动条，但依然支持通过鼠标/触控板滚动 */
+.md-editor .cm-tooltip-autocomplete > ul,
+.md-editor .md-editor-menu {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE */
+  overflow-y: auto !important;
+}
+
+.md-editor .cm-tooltip-autocomplete > ul::-webkit-scrollbar,
+.md-editor .md-editor-menu::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* 列表项及 hover 态适配，参考 CuratorHistoryContextMenu 列表项 (text-xs, rounded-[4px], px-2 py-2) */
+.md-editor .md-editor-menu-item,
+.md-editor .cm-tooltip-autocomplete > ul > li {
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 4px !important;
+  padding: 6px 8px !important; /* 优雅的紧凑内边距 */
+  font-size: 12px !important; /* text-xs */
+  transition:
+    background-color 150ms ease,
+    color 150ms ease !important;
+  cursor: pointer;
+}
+
+.md-editor .md-editor-menu-item:hover,
+.md-editor .cm-tooltip-autocomplete > ul > li[aria-selected="true"],
+.md-editor .cm-tooltip-autocomplete > ul > li:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important; /* hover:bg-white/8 */
+  color: #ffffff !important; /* hover:text-white */
+}
+
+/* md-editor-rt 顶部功能 icon (toolbar item) 样式，参考 IconButton.tsx 统一风格 */
+.md-editor .md-editor-toolbar-item {
+  border-radius: 6px !important; /* rounded-[6px] */
+  background-color: transparent !important;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease !important;
+  cursor: pointer;
+}
+
+/* 工具栏分组分隔符使用独立颜色，避免 clean 模式的透明边框变量将其隐藏。 */
+.md-editor .md-editor-divider {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.md-editor .md-editor-toolbar-item:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important; /* hover:bg-white/5 */
+}
+
+/* 处于激活状态下的按钮 (如分屏预览/全预览等) 样式，设置为 hover 时的背景颜色即可，不需要白底黑字 */
+.md-editor .md-editor-toolbar-item.md-editor-toolbar-active {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 自动补全细节详情面板 */
+.md-editor .cm-completionInfo {
+  background-color: #303030 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 6px !important;
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 
 /* 人物档案与 AI 回复 Markdown 预览背景设为透明并统一正文字体大小为 14px */
@@ -240,6 +611,12 @@ html:hover::-webkit-scrollbar-thumb,
   --md-bk-color: transparent !important;
   --md-color: rgba(255, 255, 255, 0.78);
   font-size: 14px !important;
+}
+
+/* 保持英文单词完整，超长无空格内容仍可换行。 */
+.curator-markdown-preview .md-editor-preview {
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 /* 恢复 Tailwind preflight 重置的列表记号 */
@@ -254,7 +631,7 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 /* AI 聊天气泡内 Markdown 预览的图片尺寸限制，圆角符合 6px 规范 */
-.ai-chat-markdown-preview img {
+.curator-markdown-preview img {
   max-width: 300px !important;
   max-height: 300px !important;
   object-fit: cover;
@@ -263,7 +640,7 @@ html:hover::-webkit-scrollbar-thumb,
   transition: opacity 0.2s ease-in-out;
 }
 
-.ai-chat-markdown-preview img.img-loading {
+.curator-markdown-preview img.img-loading {
   width: 300px !important;
   height: 300px !important;
   min-width: 300px !important;
@@ -275,20 +652,23 @@ html:hover::-webkit-scrollbar-thumb,
   opacity: 1 !important;
 }
 
-.ai-chat-markdown-preview img.img-loaded {
+.curator-markdown-preview img.img-loaded {
   opacity: 1;
 }
 
-/* 向上调整随滚动条滚动的代码块顶部栏的 top 位置 */
-.markdown-preview-container .md-editor-code-head {
-  top: -16px !important;
+/* 向上调整随滚动条滚动的代码块顶部栏的 top 位置，并降低层级防止遮挡悬浮 UI */
+.markdown-preview-container .md-editor-code-head,
+.md-editor-clean .md-editor-code-head {
+  top: 0px !important;
   z-index: 2 !important;
 }
 
 /* MdPreview 代码块展开/折叠时的平滑过渡效果 */
 .markdown-preview-container .md-editor-code {
   interpolate-size: allow-keywords;
-  transition: width 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1);
+  transition:
+    width 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1);
 }
 
 .markdown-preview-container .md-editor-code::details-content {
@@ -296,10 +676,10 @@ html:hover::-webkit-scrollbar-thumb,
   block-size: 0;
   inline-size: 0;
   overflow: hidden;
-  transition: 
-    opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
-    block-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
-    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1), 
+  transition:
+    opacity 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    block-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
+    inline-size 0.25s cubic-bezier(0.2, 0.85, 0.2, 1),
     content-visibility 0.25s allow-discrete;
 }
 
@@ -318,9 +698,21 @@ html:hover::-webkit-scrollbar-thumb,
 }
 
 /* AI 思考内容必须整体压到 13px，避免 Markdown 标题突破聊天气泡层级。 */
-.ai-chat-thinking-block.markdown-preview-container,
-.ai-chat-thinking-block.markdown-preview-container * {
+.curator-thinking-block.markdown-preview-container,
+.curator-thinking-block.markdown-preview-container * {
   font-size: 13px !important;
+}
+
+/* 时间溪流内 Journal 的 Markdown 预览必须整体压到 13px（当前内容的字号），包含所有标题 */
+.journal-markdown-preview.markdown-preview-container,
+.journal-markdown-preview.markdown-preview-container * {
+  font-size: 13px !important;
+}
+.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:first-child {
+  margin-top: 0 !important;
+}
+.journal-markdown-preview.markdown-preview-container .md-editor-preview > *:last-child {
+  margin-bottom: 0 !important;
 }
 
 /* 添加弹窗遮罩进入动效，保持黑色主题下的聚焦感。 */
@@ -524,6 +916,162 @@ html:hover::-webkit-scrollbar-thumb,
 /* React Flow 画布节点排版与位置变动时的平滑移动过渡动画，排除拖拽中的节点以保持跟手 */
 .react-flow__node:not(.dragging) {
   transition: transform 0.4s cubic-bezier(0.2, 0.85, 0.2, 1);
+}
+
+/* ── MDX Editor 暗黑主题覆写 ── */
+
+/* 根容器 — 暗黑主题 CSS 变量范围 */
+.mdxeditor-dark-container {
+  color-scheme: dark;
+}
+
+/* 编辑器根节点 — 背景透明继承父容器 */
+.mdxeditor-dark-container .mdxeditor-root {
+  --baseBg: #212121;
+  --basePageBg: #212121;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 工具栏 — 隐藏视觉但保留 DOM 用于 Realm 上下文 */
+.mdxeditor-dark-container .mdxeditor-toolbar {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+  visibility: hidden;
+}
+
+/* 可编辑内容区域 — 透明背景、13px 默认字号 */
+.mdxeditor-content-area {
+  background-color: transparent !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  outline: none !important;
+  padding: 0 !important;
+  min-height: 100% !important;
+}
+
+/* 内容区内内联代码 */
+.mdxeditor-content-area code {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+  padding: 1px 5px !important;
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 内容区内引用块 */
+.mdxeditor-content-area blockquote {
+  border-left: 2px solid rgba(255, 255, 255, 0.15) !important;
+  padding-left: 12px !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  font-style: italic;
+}
+
+/* 内容区内选中文本 */
+.mdxeditor-content-area ::selection {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 弹窗/下拉菜单 — 暗黑风格 */
+.mdxeditor-dark-container [class*="mdxeditor-popup"],
+.mdxeditor-dark-container [class*="mdxeditor-dialog"],
+.mdxeditor-dark-container [role="dialog"],
+.mdxeditor-dark-container [role="listbox"] {
+  background-color: #1a1a1a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 下拉选项 — 暗黑悬停 */
+.mdxeditor-dark-container [role="option"]:hover,
+.mdxeditor-dark-container [role="menuitem"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 弹窗输入框 */
+.mdxeditor-dark-container input[type="text"],
+.mdxeditor-dark-container input[type="url"],
+.mdxeditor-dark-container textarea:not([class*="cm-"]) {
+  background-color: #111111 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+/* 弹窗按钮 */
+.mdxeditor-dark-container [role="dialog"] button {
+  color: rgba(255, 255, 255, 0.75) !important;
+  border-radius: 4px !important;
+}
+.mdxeditor-dark-container [role="dialog"] button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.mdxeditor-dark-container [role="dialog"] button[type="submit"],
+.mdxeditor-dark-container [role="dialog"] button[data-primary] {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+/* 源码视图（CodeMirror）— 暗黑背景 */
+.mdxeditor-dark-container .cm-editor {
+  background-color: #1a1a1a !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 13px !important;
+  border-radius: 6px;
+}
+.mdxeditor-dark-container .cm-editor .cm-gutters {
+  background-color: #161616 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+.mdxeditor-dark-container .cm-editor .cm-activeLine {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* diff 源码视图 */
+.mdxeditor-dark-container .cm-mergeView .cm-scroller {
+  font-size: 13px !important;
+}
+
+/* 真正将滚动条和高阶样式限定在编辑器根节点容器 */
+.mdxeditor-dark-container .mdxeditor-root {
+  overflow-y: auto !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+
+.mdxeditor-dark-container .mdxeditor-root:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+.mdxeditor-dark-container .mdxeditor-root::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.35) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,9 +1,15 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { getPromptHistoryDir } from '@/paths'
+import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { join } from "node:path"
+import { getPromptHistoryDir } from "@/paths"
+
+// 提示词历史作用域。
+export type PromptHistoryScope = "curator" | "prompt-design"
 
 // 提示词历史文件名。
-const PROMPT_HISTORY_FILE_NAME = 'ai-chat-prompts.json'
+const PROMPT_HISTORY_FILE_NAMES: Record<PromptHistoryScope, string> = {
+  curator: "ai-chat-prompts.json",
+  "prompt-design": "prompt-design-ai-chat-prompts.json",
+}
 
 // 提示词历史最大保留数量。
 const PROMPT_HISTORY_LIMIT = 100
@@ -12,6 +18,8 @@ const PROMPT_HISTORY_LIMIT = 100
 type PromptHistoryServiceDeps = {
   // 提示词历史目录。
   historyDir?: string
+  // 提示词历史所属输入区域。
+  scope?: PromptHistoryScope
 }
 
 // 提示词历史文件结构。
@@ -34,7 +42,7 @@ export type PromptHistoryService = {
  * 从未知 JSON 中解析有效提示词列表。
  */
 const parsePromptHistory = (value: unknown): string[] => {
-  if (!value || typeof value !== 'object' || !('prompts' in value)) {
+  if (!value || typeof value !== "object" || !("prompts" in value)) {
     return []
   }
 
@@ -45,7 +53,7 @@ const parsePromptHistory = (value: unknown): string[] => {
   }
 
   return prompts
-    .filter((prompt): prompt is string => typeof prompt === 'string')
+    .filter((prompt): prompt is string => typeof prompt === "string")
     .map((prompt) => prompt.trim())
     .filter(Boolean)
 }
@@ -54,17 +62,18 @@ const parsePromptHistory = (value: unknown): string[] => {
  * 创建提示词历史服务。
  */
 export const createPromptHistoryService = (
-  deps: PromptHistoryServiceDeps = {}
+  deps: PromptHistoryServiceDeps = {},
 ): PromptHistoryService => {
   const historyDir = deps.historyDir ?? getPromptHistoryDir()
-  const historyPath = join(historyDir, PROMPT_HISTORY_FILE_NAME)
+  const scope = deps.scope ?? "curator"
+  const historyPath = join(historyDir, PROMPT_HISTORY_FILE_NAMES[scope])
 
   /**
    * 读取历史文件，文件不存在或损坏时返回空历史。
    */
   const readHistory = async (): Promise<string[]> => {
     try {
-      const content = await readFile(historyPath, 'utf8')
+      const content = await readFile(historyPath, "utf8")
       return parsePromptHistory(JSON.parse(content))
     } catch {
       return []
@@ -79,10 +88,10 @@ export const createPromptHistoryService = (
 
     const payload: PromptHistoryFile = {
       version: 1,
-      prompts
+      prompts,
     }
 
-    await writeFile(historyPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+    await writeFile(historyPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8")
   }
 
   return {
@@ -97,11 +106,11 @@ export const createPromptHistoryService = (
       const existingPrompts = await readHistory()
       const nextPrompts = [
         ...existingPrompts.filter((item) => item !== normalizedPrompt),
-        normalizedPrompt
+        normalizedPrompt,
       ].slice(-PROMPT_HISTORY_LIMIT)
 
       await writeHistory(nextPrompts)
       return nextPrompts
-    }
+    },
   }
 }

@@ -4,8 +4,8 @@ import type {
   TodoPriority,
   TodoReorderInput,
   TodoRow,
-  TodoUpdateInput
-} from '@/db/schema'
+  TodoUpdateInput,
+} from "@/db/schema"
 
 // 数据库语句接口。
 export type DatabaseStatement = {
@@ -40,7 +40,7 @@ export type TodosService = {
 }
 
 // 合法待办优先级集合。
-const TODO_PRIORITIES: TodoPriority[] = ['P0', 'P1', 'P2', 'P3']
+const TODO_PRIORITIES: TodoPriority[] = ["P0", "P1", "P2", "P3"]
 
 /**
  * 提取 SQLite 自增主键。
@@ -48,11 +48,11 @@ const TODO_PRIORITIES: TodoPriority[] = ['P0', 'P1', 'P2', 'P3']
 const getInsertedRowId = (result: unknown, entityName: string): number => {
   const rowId = (result as { lastInsertRowid?: number | bigint } | undefined)?.lastInsertRowid
 
-  if (typeof rowId === 'bigint') {
+  if (typeof rowId === "bigint") {
     return Number(rowId)
   }
 
-  if (typeof rowId === 'number') {
+  if (typeof rowId === "number") {
     return rowId
   }
 
@@ -63,14 +63,7 @@ const getInsertedRowId = (result: unknown, entityName: string): number => {
  * 生成当前时间戳。
  */
 const createTimestamp = (): string => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const date = String(now.getDate()).padStart(2, '0')
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-
-  return `${year}-${month}-${date} ${hours}:${minutes}`
+  return new Date().toISOString()
 }
 
 /**
@@ -78,7 +71,7 @@ const createTimestamp = (): string => {
  */
 const validateEntryDate = (entryDate: string): void => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) {
-    throw new Error('工作台日期格式不正确')
+    throw new Error("工作台日期格式不正确")
   }
 }
 
@@ -87,7 +80,7 @@ const validateEntryDate = (entryDate: string): void => {
  */
 const validateTodoPriority = (priority: TodoPriority): void => {
   if (!TODO_PRIORITIES.includes(priority)) {
-    throw new Error('待办优先级不正确')
+    throw new Error("待办优先级不正确")
   }
 }
 
@@ -99,7 +92,7 @@ const validateTodoCreateInput = (input: TodoCreateInput): void => {
   validateTodoPriority(input.priority)
 
   if (!input.text.trim()) {
-    throw new Error('待办内容不能为空')
+    throw new Error("待办内容不能为空")
   }
 }
 
@@ -110,7 +103,7 @@ const validateTodoUpdateInput = (input: TodoUpdateInput): void => {
   validateTodoPriority(input.priority)
 
   if (!input.text.trim()) {
-    throw new Error('待办内容不能为空')
+    throw new Error("待办内容不能为空")
   }
 }
 
@@ -125,7 +118,7 @@ const mapTodoRow = (row: TodoRow): TodoItem => ({
   completed: row.completed === 1,
   sortOrder: row.sort_order,
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
 })
 
 /**
@@ -137,7 +130,7 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
 
     const rows = database
       .prepare(
-        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC'
+        "SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC",
       )
       .all(entryDate) as TodoRow[]
 
@@ -147,13 +140,15 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
     validateTodoCreateInput(input)
 
     const maxSortOrder =
-      (database
-        .prepare('SELECT MAX(sort_order) AS max_sort_order FROM todos WHERE entry_date = ?')
-        .get(input.entryDate) as { max_sort_order: number | null } | undefined)?.max_sort_order ?? -1
+      (
+        database
+          .prepare("SELECT MAX(sort_order) AS max_sort_order FROM todos WHERE entry_date = ?")
+          .get(input.entryDate) as { max_sort_order: number | null } | undefined
+      )?.max_sort_order ?? -1
     const timestamp = createTimestamp()
     const inserted = database
       .prepare(
-        'INSERT INTO todos (entry_date, text, priority, completed, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        "INSERT INTO todos (entry_date, text, priority, completed, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       )
       .run(
         input.entryDate,
@@ -162,16 +157,16 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
         0,
         maxSortOrder + 1,
         timestamp,
-        timestamp
+        timestamp,
       )
     const row = database
       .prepare(
-        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
+        "SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?",
       )
-      .get(getInsertedRowId(inserted, '待办')) as TodoRow | undefined
+      .get(getInsertedRowId(inserted, "待办")) as TodoRow | undefined
 
     if (!row) {
-      throw new Error('新建待办后读取失败')
+      throw new Error("新建待办后读取失败")
     }
 
     return mapTodoRow(row)
@@ -181,23 +176,33 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
 
     const existing = database
       .prepare(
-        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?'
+        "SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE id = ?",
       )
       .get(id) as TodoRow | undefined
 
     if (!existing) {
-      throw new Error('待办不存在')
+      throw new Error("待办不存在")
     }
 
     const updatedAt = createTimestamp()
     const entryDate = input.entryDate?.trim() || existing.entry_date
-    const sortOrder = typeof input.sortOrder === 'number' ? input.sortOrder : existing.sort_order
+    const sortOrder = typeof input.sortOrder === "number" ? input.sortOrder : existing.sort_order
     if (input.entryDate) {
       validateEntryDate(input.entryDate)
     }
     database
-      .prepare('UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, sort_order = ?, updated_at = ? WHERE id = ?')
-      .run(input.text.trim(), input.priority, input.completed ? 1 : 0, entryDate, sortOrder, updatedAt, id)
+      .prepare(
+        "UPDATE todos SET text = ?, priority = ?, completed = ?, entry_date = ?, sort_order = ?, updated_at = ? WHERE id = ?",
+      )
+      .run(
+        input.text.trim(),
+        input.priority,
+        input.completed ? 1 : 0,
+        entryDate,
+        sortOrder,
+        updatedAt,
+        id,
+      )
 
     return mapTodoRow({
       ...existing,
@@ -206,11 +211,11 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
       completed: input.completed ? 1 : 0,
       entry_date: entryDate,
       sort_order: sortOrder,
-      updated_at: updatedAt
+      updated_at: updatedAt,
     })
   },
   delete: (id) => {
-    database.prepare('DELETE FROM todos WHERE id = ?').run(id)
+    database.prepare("DELETE FROM todos WHERE id = ?").run(id)
   },
   reorder: (input) => {
     validateEntryDate(input.entryDate)
@@ -221,13 +226,13 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
 
     input.ids.forEach((id, index) => {
       database
-        .prepare('UPDATE todos SET sort_order = ?, updated_at = ? WHERE id = ? AND entry_date = ?')
+        .prepare("UPDATE todos SET sort_order = ?, updated_at = ? WHERE id = ? AND entry_date = ?")
         .run(index, createTimestamp(), id, input.entryDate)
     })
 
     const rows = database
       .prepare(
-        'SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC'
+        "SELECT id, entry_date, text, priority, completed, sort_order, created_at, updated_at FROM todos WHERE entry_date = ? ORDER BY completed ASC, sort_order ASC, created_at ASC",
       )
       .all(input.entryDate) as TodoRow[]
 
@@ -235,5 +240,5 @@ export const createTodosService = (database: DatabaseConnection): TodosService =
   },
   querySql: (sql) => {
     return database.prepare(sql).all()
-  }
+  },
 })

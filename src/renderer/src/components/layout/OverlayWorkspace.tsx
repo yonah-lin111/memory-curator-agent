@@ -1,13 +1,13 @@
-import type React from "react";
-import { useEffect, useState } from "react";
+import type React from "react"
+import { useEffect, useState } from "react"
 
 interface OverlayWorkspaceProps {
   /** 当前激活的 overlay，null 表示关闭 */
-  activeOverlay: "chat" | "prompts" | null;
+  activeOverlay: "chat" | "prompts" | null
   /** 聊天区渲染内容 */
-  chatContent: React.ReactNode;
+  chatContent: React.ReactNode
   /** 提示词设计区渲染内容 */
-  promptsContent: React.ReactNode;
+  promptsContent: React.ReactNode
 }
 
 /**
@@ -19,28 +19,28 @@ export const OverlayWorkspace = ({
   chatContent,
   promptsContent,
 }: OverlayWorkspaceProps): React.JSX.Element => {
-  const [renderChat, setRenderChat] = useState(activeOverlay === "chat");
-  const [renderPrompts, setRenderPrompts] = useState(activeOverlay === "prompts");
+  const [renderChat, setRenderChat] = useState(activeOverlay === "chat")
+  const [renderPrompts, setRenderPrompts] = useState(activeOverlay === "prompts")
 
   // 延迟卸载未激活的内容以保留退出动画
   useEffect(() => {
-    if (activeOverlay === "chat") setRenderChat(true);
-    if (activeOverlay === "prompts") setRenderPrompts(true);
+    if (activeOverlay === "chat") setRenderChat(true)
+    if (activeOverlay === "prompts") setRenderPrompts(true)
 
-    let timeout: ReturnType<typeof setTimeout>;
+    let timeout: ReturnType<typeof setTimeout>
     if (activeOverlay !== "chat") {
-      timeout = setTimeout(() => setRenderChat(false), 300);
+      timeout = setTimeout(() => setRenderChat(false), 300)
     }
-    return () => clearTimeout(timeout);
-  }, [activeOverlay]);
+    return () => clearTimeout(timeout)
+  }, [activeOverlay])
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
+    let timeout: ReturnType<typeof setTimeout>
     if (activeOverlay !== "prompts") {
-      timeout = setTimeout(() => setRenderPrompts(false), 300);
+      timeout = setTimeout(() => setRenderPrompts(false), 300)
     }
-    return () => clearTimeout(timeout);
-  }, [activeOverlay]);
+    return () => clearTimeout(timeout)
+  }, [activeOverlay])
 
   return (
     <>
@@ -68,5 +68,5 @@ export const OverlayWorkspace = ({
         {renderPrompts && promptsContent}
       </div>
     </>
-  );
-};
+  )
+}

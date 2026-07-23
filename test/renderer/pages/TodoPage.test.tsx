@@ -1,17 +1,16 @@
 /**
  * @vitest-environment jsdom
  */
-import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@/components/ui/Toast";
-import { TodoPage } from "@/pages/todo/TodoPage";
-import { Header } from "@/components/layout/Header";
+import "@testing-library/jest-dom/vitest"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { Header } from "@/components/layout/Header"
+import { ToastProvider } from "@/components/ui/Toast"
+import { TodoPage } from "@/pages/todo/TodoPage"
 
 // Today 单日数据类型，直接从 bridge 签名反推。
-type DailyDayDataShape =
-  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
+type DailyDayDataShape = Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>
 
 // 渲染页面时补齐 Toast 与 Header 上下文。
 const renderTodoPage = (): void => {
@@ -20,22 +19,20 @@ const renderTodoPage = (): void => {
       <Header category="DAILY" activePage="todo" />
       <TodoPage />
     </ToastProvider>,
-  );
-};
+  )
+}
 
 // 默认 Daily 返回值，供测试按需覆盖。
-const createDailyDayData = (
-  overrides?: Partial<DailyDayDataShape>,
-): DailyDayDataShape => ({
+const createDailyDayData = (overrides?: Partial<DailyDayDataShape>): DailyDayDataShape => ({
   todos: [],
   snippets: [],
   journal: null,
   ...overrides,
-});
+})
 
 describe("TodoPage", () => {
   beforeEach(() => {
-    vi.setSystemTime(new Date("2026-05-27T09:00:00"));
+    vi.setSystemTime(new Date("2026-05-27T09:00:00"))
     window.api = {
       files: {
         saveMarkdownImage: vi.fn(),
@@ -68,14 +65,14 @@ describe("TodoPage", () => {
         update: vi.fn(),
         delete: vi.fn(),
       },
-    } as Window["api"];
-  });
+    } as Window["api"]
+  })
 
   afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-  });
+    cleanup()
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
 
   it("切换日期后重新加载待办", async () => {
     const listDay = vi
@@ -111,9 +108,9 @@ describe("TodoPage", () => {
             },
           ],
         }),
-      );
+      )
 
-    window.api.daily.listDay = listDay;
+    window.api.daily.listDay = listDay
     window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
@@ -130,21 +127,21 @@ describe("TodoPage", () => {
           journalCount: 0,
         },
       ],
-    });
+    })
 
-    renderTodoPage();
+    renderTodoPage()
 
-    expect(await screen.findByText("今天任务")).toBeInTheDocument();
+    expect(await screen.findByText("今天任务")).toBeInTheDocument()
     await userEvent.click(
       screen.getByRole("button", {
         name: "Open date picker, current date 2026-05-27",
       }),
-    );
+    )
     await userEvent.click(
       screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
-    );
-    expect(await screen.findByText("昨天任务")).toBeInTheDocument();
-  });
+    )
+    expect(await screen.findByText("昨天任务")).toBeInTheDocument()
+  })
 
   it("点击日期后打开日期选择器并显示待办角标", async () => {
     window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
@@ -163,28 +160,28 @@ describe("TodoPage", () => {
           journalCount: 0,
         },
       ],
-    });
+    })
 
-    renderTodoPage();
+    renderTodoPage()
 
     await userEvent.click(
       screen.getByRole("button", {
         name: "Open date picker, current date 2026-05-27",
       }),
-    );
+    )
 
-    const dialog = screen.getByRole("dialog", { name: "Date picker" });
-    expect(dialog).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Date picker" })
+    expect(dialog).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Select date 2026-05-27, has entries" }),
-    ).toBeInTheDocument();
+    ).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
-    ).toBeInTheDocument();
-  });
+    ).toBeInTheDocument()
+  })
 
   it("支持新增、切换完成、切换优先级和删除待办", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup()
     const listDay = vi.fn().mockResolvedValue(
       createDailyDayData({
         todos: [
@@ -200,7 +197,7 @@ describe("TodoPage", () => {
           },
         ],
       }),
-    );
+    )
     const createTodo = vi.fn().mockResolvedValue({
       id: 2,
       entryDate: "2026-05-27",
@@ -210,7 +207,7 @@ describe("TodoPage", () => {
       sortOrder: 1,
       createdAt: "2026-05-27 09:30",
       updatedAt: "2026-05-27 09:30",
-    });
+    })
     const updateTodo = vi
       .fn()
       .mockResolvedValueOnce({
@@ -232,49 +229,46 @@ describe("TodoPage", () => {
         sortOrder: 0,
         createdAt: "2026-05-27 09:00",
         updatedAt: "2026-05-27 09:41",
-      });
-    const deleteTodo = vi.fn().mockResolvedValue(undefined);
+      })
+    const deleteTodo = vi.fn().mockResolvedValue(undefined)
 
-    window.api.daily.listDay = listDay;
-    window.api.daily.createTodo = createTodo;
-    window.api.daily.updateTodo = updateTodo;
-    window.api.daily.deleteTodo = deleteTodo;
-    window.api.daily.sortTodos = vi.fn().mockResolvedValue([]);
+    window.api.daily.listDay = listDay
+    window.api.daily.createTodo = createTodo
+    window.api.daily.updateTodo = updateTodo
+    window.api.daily.deleteTodo = deleteTodo
+    window.api.daily.sortTodos = vi.fn().mockResolvedValue([])
 
-    renderTodoPage();
+    renderTodoPage()
 
-    const toggleAddBtn = await screen.findByRole('button', { name: 'Toggle add todo composer' });
-    await user.click(toggleAddBtn);
+    const toggleAddBtn = await screen.findByRole("button", { name: "Toggle add todo composer" })
+    await user.click(toggleAddBtn)
 
-    await user.type(
-      await screen.findByPlaceholderText("添加一个待办，回车保存"),
-      "新任务{enter}",
-    );
-    await waitFor(() => expect(createTodo).toHaveBeenCalled());
+    await user.type(await screen.findByPlaceholderText("添加一个待办，回车保存"), "新任务{enter}")
+    await waitFor(() => expect(createTodo).toHaveBeenCalled())
 
-    const existingTodoText = screen.getByText("旧任务");
-    const existingTodoItem = existingTodoText.closest(".group");
+    const existingTodoText = screen.getByText("旧任务")
+    const existingTodoItem = existingTodoText.closest(".group")
     const toggleButton = existingTodoItem?.querySelector<HTMLButtonElement>(
       'button[aria-label="Mark as completed"]',
-    );
+    )
     const priorityButton = existingTodoItem?.querySelector<HTMLButtonElement>(
       'button[aria-label="Toggle priority of 旧任务"]',
-    );
+    )
     const deleteButton = existingTodoItem?.querySelector<HTMLButtonElement>(
       'button[aria-label="Delete todo 旧任务"]',
-    );
+    )
 
-    expect(toggleButton).not.toBeNull();
-    expect(priorityButton).not.toBeNull();
-    expect(deleteButton).not.toBeNull();
+    expect(toggleButton).not.toBeNull()
+    expect(priorityButton).not.toBeNull()
+    expect(deleteButton).not.toBeNull()
 
-    await user.click(toggleButton!);
-    await waitFor(() => expect(updateTodo).toHaveBeenCalled());
+    await user.click(toggleButton!)
+    await waitFor(() => expect(updateTodo).toHaveBeenCalled())
 
-    await user.click(priorityButton!);
-    await waitFor(() => expect(updateTodo).toHaveBeenCalledTimes(2));
+    await user.click(priorityButton!)
+    await waitFor(() => expect(updateTodo).toHaveBeenCalledTimes(2))
 
-    await user.click(deleteButton!);
-    await waitFor(() => expect(deleteTodo).toHaveBeenCalledWith(1));
-  });
-});
+    await user.click(deleteButton!)
+    await waitFor(() => expect(deleteTodo).toHaveBeenCalledWith(1))
+  })
+})

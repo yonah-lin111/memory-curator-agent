@@ -1,49 +1,50 @@
-import type React from "react";
-import { useEffect, useState } from "react";
-import { Receipt, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Receipt } from "lucide-react"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { AmountInput } from "@/components/ui/AmountInput"
+import { IconButton } from "@/components/ui/IconButton"
+import { Input } from "@/components/ui/Input"
+import { Tooltip } from "@/components/ui/Tooltip"
 import {
-  formatAmount,
-  parseAmountToCents,
+  BILL_TYPES,
   type BillCategory,
   type BillType,
-  BILL_TYPES,
   EXPENSE_CATEGORIES,
+  formatAmount,
   INCOME_CATEGORIES,
-} from "@/pages/bills/components/billShared";
-import { IconButton } from "@/components/ui/IconButton";
-import { Tooltip } from "@/components/ui/Tooltip";
-import { Input } from "@/components/ui/Input";
+  parseAmountToCents,
+} from "@/pages/bills/components/billShared"
 
 /** 今日账单摘要（来自 preload todaySummary） */
 export type TodaySummary = {
-  expenseTotal: number;
-  incomeTotal: number;
+  expenseTotal: number
+  incomeTotal: number
   recentItems: Array<{
-    id: number;
-    amount: number;
-    category: BillCategory;
-    billType: "expense" | "income";
-    billDate: string;
-    note: string;
-    tags: string[];
-  }>;
-};
+    id: number
+    amount: number
+    category: BillCategory
+    billType: "expense" | "income"
+    billDate: string
+    note: string
+    tags: string[]
+  }>
+}
 
 /** 账单草稿 */
 type BillDraft = {
-  amount: string;
-  category: BillCategory;
-  billType: BillType;
-  billDate: string;
-  note: string;
-  tags: string[];
-};
+  amount: string
+  category: BillCategory
+  billType: BillType
+  billDate: string
+  note: string
+  tags: string[]
+}
 
 export interface TodayBillPanelProps {
-  summary: TodaySummary | null;
-  entryDate: string;
-  onRefresh: () => void;
-  setSummary: React.Dispatch<React.SetStateAction<TodaySummary | null>>;
+  summary: TodaySummary | null
+  entryDate: string
+  onRefresh: () => void
+  setSummary: React.Dispatch<React.SetStateAction<TodaySummary | null>>
 }
 
 /**
@@ -57,7 +58,7 @@ export const TodayBillPanel = ({
   onRefresh,
   setSummary,
 }: TodayBillPanelProps): React.JSX.Element => {
-  const hasBillApi = Boolean(window.api?.bill);
+  const hasBillApi = Boolean(window.api?.bill)
 
   // 新增记录的气泡草稿状态。
   const [draft, setDraft] = useState<BillDraft>({
@@ -67,7 +68,7 @@ export const TodayBillPanel = ({
     billDate: entryDate,
     note: "",
     tags: [],
-  });
+  })
 
   // 当前正在编辑的账单草稿状态。
   const [editDraft, setEditDraft] = useState<BillDraft>({
@@ -77,18 +78,16 @@ export const TodayBillPanel = ({
     billDate: entryDate,
     note: "",
     tags: [],
-  });
+  })
 
   // entryDate 切换时同步 draft 默认日期（表单未填写时）。
   useEffect(() => {
-    setDraft((prev) =>
-      prev.amount === "" ? { ...prev, billDate: entryDate } : prev,
-    );
-  }, [entryDate]);
+    setDraft((prev) => (prev.amount === "" ? { ...prev, billDate: entryDate } : prev))
+  }, [entryDate])
 
   const handleSave = async (billDraft: BillDraft): Promise<boolean> => {
     if (!hasBillApi) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10)
       setSummary((prev) => ({
         expenseTotal:
           (prev?.expenseTotal ?? 0) +
@@ -108,8 +107,8 @@ export const TodayBillPanel = ({
           },
           ...(prev?.recentItems ?? []),
         ],
-      }));
-      return true;
+      }))
+      return true
     }
     try {
       await window.api.bill!.create({
@@ -119,21 +118,18 @@ export const TodayBillPanel = ({
         billDate: billDraft.billDate,
         note: billDraft.note,
         tags: billDraft.tags,
-      });
-      await onRefresh();
-      return true;
+      })
+      await onRefresh()
+      return true
     } catch {
-      return false;
+      return false
     }
-  };
+  }
 
-  const handleEditSave = async (
-    id: number,
-    billDraft: BillDraft,
-  ): Promise<boolean> => {
+  const handleEditSave = async (id: number, billDraft: BillDraft): Promise<boolean> => {
     if (!hasBillApi) {
       setSummary((prev) => {
-        if (!prev) return prev;
+        if (!prev) return prev
         const updatedItems = prev.recentItems.map((item) => {
           if (item.id === id) {
             return {
@@ -143,26 +139,26 @@ export const TodayBillPanel = ({
               billType: billDraft.billType,
               note: billDraft.note,
               tags: billDraft.tags,
-            };
+            }
           }
-          return item;
-        });
+          return item
+        })
 
         // 重新计算总额（分）
         const expenseTotal = updatedItems
           .filter((item) => item.billType === "expense")
-          .reduce((sum, item) => sum + item.amount, 0);
+          .reduce((sum, item) => sum + item.amount, 0)
         const incomeTotal = updatedItems
           .filter((item) => item.billType === "income")
-          .reduce((sum, item) => sum + item.amount, 0);
+          .reduce((sum, item) => sum + item.amount, 0)
 
         return {
           expenseTotal,
           incomeTotal,
           recentItems: updatedItems,
-        };
-      });
-      return true;
+        }
+      })
+      return true
     }
     try {
       await window.api.bill!.update(id, {
@@ -172,46 +168,46 @@ export const TodayBillPanel = ({
         billDate: billDraft.billDate,
         note: billDraft.note,
         tags: billDraft.tags,
-      });
-      await onRefresh();
-      return true;
+      })
+      await onRefresh()
+      return true
     } catch {
-      return false;
+      return false
     }
-  };
+  }
 
   const handleDelete = async (id: number): Promise<void> => {
     if (!hasBillApi) {
       setSummary((prev) => {
-        if (!prev) return prev;
-        const updatedItems = prev.recentItems.filter((item) => item.id !== id);
+        if (!prev) return prev
+        const updatedItems = prev.recentItems.filter((item) => item.id !== id)
         const expenseTotal = updatedItems
           .filter((item) => item.billType === "expense")
-          .reduce((sum, item) => sum + item.amount, 0);
+          .reduce((sum, item) => sum + item.amount, 0)
         const incomeTotal = updatedItems
           .filter((item) => item.billType === "income")
-          .reduce((sum, item) => sum + item.amount, 0);
+          .reduce((sum, item) => sum + item.amount, 0)
 
         return {
           expenseTotal,
           incomeTotal,
           recentItems: updatedItems,
-        };
-      });
-      return;
+        }
+      })
+      return
     }
 
     try {
-      await window.api.bill!.delete(id);
-      await onRefresh();
+      await window.api.bill!.delete(id)
+      await onRefresh()
     } catch (e) {
-      console.error(e);
+      console.error(e)
     }
-  };
+  }
 
   const handleAddConfirm = async (): Promise<void> => {
-    const parsedAmount = parseAmountToCents(draft.amount);
-    if (parsedAmount <= 0) return;
+    const parsedAmount = parseAmountToCents(draft.amount)
+    if (parsedAmount <= 0) return
 
     const success = await handleSave({
       amount: String(parsedAmount),
@@ -220,7 +216,7 @@ export const TodayBillPanel = ({
       billDate: draft.billDate,
       note: draft.note,
       tags: draft.tags,
-    });
+    })
 
     if (success) {
       setDraft({
@@ -230,9 +226,9 @@ export const TodayBillPanel = ({
         billDate: entryDate,
         note: "",
         tags: [],
-      });
+      })
     }
-  };
+  }
 
   const handleCancel = (): void => {
     setDraft({
@@ -242,8 +238,8 @@ export const TodayBillPanel = ({
       billDate: entryDate,
       note: "",
       tags: [],
-    });
-  };
+    })
+  }
 
   const handleStartEdit = (item: any): void => {
     setEditDraft({
@@ -253,12 +249,12 @@ export const TodayBillPanel = ({
       billDate: item.billDate,
       note: item.note,
       tags: item.tags || [],
-    });
-  };
+    })
+  }
 
   const handleEditConfirm = async (id: number): Promise<void> => {
-    const parsedAmount = parseAmountToCents(editDraft.amount);
-    if (parsedAmount <= 0) return;
+    const parsedAmount = parseAmountToCents(editDraft.amount)
+    if (parsedAmount <= 0) return
 
     await handleEditSave(id, {
       amount: String(parsedAmount),
@@ -267,8 +263,8 @@ export const TodayBillPanel = ({
       billDate: editDraft.billDate,
       note: editDraft.note,
       tags: editDraft.tags,
-    });
-  };
+    })
+  }
 
   const renderAddForm = (): React.JSX.Element => {
     return (
@@ -301,24 +297,11 @@ export const TodayBillPanel = ({
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={draft.amount}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={draft.amount}
+          onChange={(val) => setDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
@@ -326,9 +309,7 @@ export const TodayBillPanel = ({
           <Input
             type="text"
             value={draft.note}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, note: e.target.value }))
-            }
+            onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
             size="xs"
             className="!h-[28px]"
@@ -339,10 +320,7 @@ export const TodayBillPanel = ({
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(draft.billType === "expense"
-              ? EXPENSE_CATEGORIES
-              : INCOME_CATEGORIES
-            ).map((cat) => (
+            {(draft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -372,8 +350,8 @@ export const TodayBillPanel = ({
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const renderEditForm = (): React.JSX.Element => {
     return (
@@ -406,24 +384,11 @@ export const TodayBillPanel = ({
         </div>
 
         {/* 金额输入 */}
-        <div className="flex flex-col gap-1 text-left">
-          <span className="text-[11px] font-semibold text-white/40">金额</span>
-          <Input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={editDraft.amount}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, amount: e.target.value }))
-            }
-            placeholder="0.00"
-            prefix={
-              <span className="text-white/40 mr-1 font-mono text-xs">¥</span>
-            }
-            className="!py-0.5 !h-[28px] !text-xs [&_input]:!text-xs [&_input]:[appearance:textfield] [&_input::-webkit-outer-spin-button]:appearance-none [&_input::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
+        <AmountInput
+          label="金额"
+          value={editDraft.amount}
+          onChange={(val) => setEditDraft((prev) => ({ ...prev, amount: val }))}
+        />
 
         {/* 备注输入 */}
         <div className="flex flex-col gap-1 text-left col-span-2">
@@ -431,9 +396,7 @@ export const TodayBillPanel = ({
           <Input
             type="text"
             value={editDraft.note}
-            onChange={(e) =>
-              setEditDraft((prev) => ({ ...prev, note: e.target.value }))
-            }
+            onChange={(e) => setEditDraft((prev) => ({ ...prev, note: e.target.value }))}
             placeholder="备注说明（可选）"
             size="xs"
             className="!h-[28px]"
@@ -444,25 +407,22 @@ export const TodayBillPanel = ({
         <div className="flex flex-col gap-1 text-left col-span-2">
           <span className="text-[11px] font-semibold text-white/40">分类</span>
           <div className="grid grid-cols-8 gap-1.5">
-            {(editDraft.billType === "expense"
-              ? EXPENSE_CATEGORIES
-              : INCOME_CATEGORIES
-            ).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() =>
-                  setEditDraft((prev) => ({ ...prev, category: cat }))
-                }
-                className={`rounded-[4px] border py-1 text-[10px] font-medium transition-colors text-center truncate ${
-                  editDraft.category === cat
-                    ? "border-white/20 bg-white text-black"
-                    : "border-white/5 bg-[#212121] text-white/60 hover:bg-white/5"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {(editDraft.billType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map(
+              (cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setEditDraft((prev) => ({ ...prev, category: cat }))}
+                  className={`rounded-[4px] border py-1 text-[10px] font-medium transition-colors text-center truncate ${
+                    editDraft.category === cat
+                      ? "border-white/20 bg-white text-black"
+                      : "border-white/5 bg-[#212121] text-white/60 hover:bg-white/5"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ),
+            )}
           </div>
         </div>
 
@@ -479,8 +439,8 @@ export const TodayBillPanel = ({
           />
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="rounded-[6px] border border-white/5 bg-[#212121] p-4 flex flex-col h-full">
@@ -488,9 +448,7 @@ export const TodayBillPanel = ({
       <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-2">
         <div className="flex items-center gap-2">
           <Receipt className="h-4 w-4 text-white/60" />
-          <span className="text-sm font-bold tracking-wide text-white/80">
-            今日账单
-          </span>
+          <span className="text-sm font-bold tracking-wide text-white/80">今日账单</span>
         </div>
         <div className="flex items-center gap-2">
           <Tooltip
@@ -501,11 +459,7 @@ export const TodayBillPanel = ({
             onCancel={handleCancel}
             form={renderAddForm()}
           >
-            <IconButton
-              aria-label="Add bill entry"
-              preset="add"
-              title="添加账单"
-            />
+            <IconButton aria-label="Add bill entry" preset="add" title="添加账单" />
           </Tooltip>
         </div>
       </div>
@@ -544,12 +498,12 @@ export const TodayBillPanel = ({
                       {item.category}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center flex-1 min-w-0 gap-6">
                     <span className="text-sm text-white/50 truncate max-w-[140px]">
                       {item.note || "无备注"}
                     </span>
-                    
+
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         {item.tags.map((tag) => (
@@ -568,13 +522,10 @@ export const TodayBillPanel = ({
                 <div className="ml-auto flex items-center flex-shrink-0">
                   <span
                     className={`text-xs font-mono font-bold ${
-                      item.billType === "expense"
-                        ? "text-red-400"
-                        : "text-green-400"
+                      item.billType === "expense" ? "text-red-400" : "text-green-400"
                     }`}
                   >
-                    {item.billType === "expense" ? "-" : "+"}¥
-                    {formatAmount(item.amount)}
+                    {item.billType === "expense" ? "-" : "+"}¥{formatAmount(item.amount)}
                   </span>
 
                   <div className="flex items-center w-0 opacity-0 overflow-hidden group-hover/item:w-[54px] group-hover/item:opacity-100 group-hover/item:ml-1.5 transition-all duration-300 ease-in-out">
@@ -621,5 +572,5 @@ export const TodayBillPanel = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}

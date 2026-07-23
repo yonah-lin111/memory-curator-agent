@@ -1,7 +1,16 @@
-import type { AgentMessage } from '@/agent/types'
+import type { AgentMessage } from "@/agent/types"
 
 // AI 对话 agent 标识。
-export type AiChatAgentId = 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common' | 'bills'
+export type AiChatAgentId =
+  | "people"
+  | "personal"
+  | "todo"
+  | "snippets"
+  | "journal"
+  | "notes"
+  | "today"
+  | "common"
+  | "bills"
 
 // AI 对话 agent hint。
 export type AiChatAgentHint = {
@@ -26,58 +35,77 @@ type AiChatAgentDirectiveConfig = {
 // Agent directive 配置表。
 const AI_CHAT_AGENT_DIRECTIVE_CONFIGS: AiChatAgentDirectiveConfig[] = [
   {
-    id: 'people',
-    token: 'people_agent',
-    description: 'Prefer People-related profile facts, relationship memory, and People tools first.',
-    tools: ['people_tool_query', 'people_tool_add', 'people_tool_update', 'people_tool_delete']
+    id: "people",
+    token: "people_agent",
+    description:
+      "Prefer People-related profile facts, relationship memory, and People tools first.",
+    tools: ["people_tool_query", "people_tool_add", "people_tool_update", "people_tool_delete"],
   },
   {
-    id: 'todo',
-    token: 'todo_agent',
-    description: 'Prefer Todo-related task, plan, and daily execution context first.'
+    id: "personal",
+    token: "personal_agent",
+    description: "Prefer the current user personal profile and its dedicated tools first.",
+    tools: ["profile_tool_query", "profile_tool_create", "profile_tool_update"],
   },
   {
-    id: 'snippets',
-    token: 'snippets_agent',
-    description: 'Prefer Snippets-related idea, fragment, and capture context first.'
+    id: "todo",
+    token: "todo_agent",
+    description: "Prefer Todo-related task, plan, and daily execution context first.",
   },
   {
-    id: 'journal',
-    token: 'journal_agent',
-    description: 'Prefer Journal-related diary, reflection, and review context first.'
+    id: "snippets",
+    token: "snippets_agent",
+    description: "Prefer Snippets-related idea, fragment, and capture context first.",
   },
   {
-    id: 'notes',
-    token: 'notes_agent',
-    description: 'Prefer Notes-related long-form knowledge and planning context first.'
+    id: "journal",
+    token: "journal_agent",
+    description: "Prefer Journal-related diary, reflection, and review context first.",
   },
   {
-    id: 'today',
-    token: 'today_agent',
-    description: 'Prefer Today-related daily input, current-day records, and short-term flow context first.'
+    id: "notes",
+    token: "notes_agent",
+    description: "Prefer Notes-related long-form knowledge and planning context first.",
   },
   {
-    id: 'bills',
-    token: 'bills_agent',
-    description: 'Prefer Bills-related expense tracking, income records, and daily summary context.',
-    tools: ['bills_tool_list', 'bills_tool_summary', 'bills_tool_add', 'bills_tool_update', 'bills_tool_delete']
+    id: "today",
+    token: "today_agent",
+    description:
+      "Prefer Today-related daily input, current-day records, and short-term flow context first.",
+    tools: ["today_tool_summary", "journals_tool_add"],
   },
   {
-    id: 'common',
-    token: 'common_agent',
-    description: 'Prefer general knowledge to answer directly. Use only common tools (like time, date, or ask) when relevant. DO NOT use any business-specific tools or context from people, todo, snippets, journal, notes, or today agents.',
-    tools: ['common_tool_time_now', 'common_tool_date_offset', 'common_tool_ask']
-  }
+    id: "bills",
+    token: "bills_agent",
+    description:
+      "Prefer Bills-related expense tracking, income records, and daily summary context.",
+    tools: [
+      "bills_tool_list",
+      "bills_tool_summary",
+      "bills_tool_add",
+      "bills_tool_update",
+      "bills_tool_delete",
+    ],
+  },
+  {
+    id: "common",
+    token: "common_agent",
+    description:
+      "Prefer general knowledge to answer directly. Use only common tools (like time, date, or ask) when relevant. DO NOT use any business-specific tools or context from people, todo, snippets, journal, notes, or today agents.",
+    tools: ["common_tool_time_now", "common_tool_date_offset", "common_tool_ask"],
+  },
 ]
 
 // Agent directive 配置索引。
-const AI_CHAT_AGENT_DIRECTIVES_BY_ID = new Map(AI_CHAT_AGENT_DIRECTIVE_CONFIGS.map((config) => [config.id, config]))
+const AI_CHAT_AGENT_DIRECTIVES_BY_ID = new Map(
+  AI_CHAT_AGENT_DIRECTIVE_CONFIGS.map((config) => [config.id, config]),
+)
 
 /**
  * 判断值是否为普通对象。
  */
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  Boolean(value) && typeof value === "object" && !Array.isArray(value)
 
 /**
  * 判断字符串是否为支持的 agent 标识。
@@ -95,19 +123,23 @@ export const normalizeAiChatAgentHints = (value: unknown): AiChatAgentHint[] => 
 
   const candidates = value
     .flatMap((item): AiChatAgentHint[] => {
-      if (!isRecord(item) || typeof item.id !== 'string' || !isAiChatAgentId(item.id)) {
+      if (!isRecord(item) || typeof item.id !== "string" || !isAiChatAgentId(item.id)) {
         return []
       }
 
-      if (typeof item.priority !== 'number' || !Number.isFinite(item.priority) || item.priority <= 0) {
+      if (
+        typeof item.priority !== "number" ||
+        !Number.isFinite(item.priority) ||
+        item.priority <= 0
+      ) {
         return []
       }
 
       return [
         {
           id: item.id,
-          priority: item.priority
-        }
+          priority: item.priority,
+        },
       ]
     })
     .sort((a, b) => a.priority - b.priority)
@@ -123,7 +155,7 @@ export const normalizeAiChatAgentHints = (value: unknown): AiChatAgentHint[] => 
     seenAgentIds.add(candidate.id)
     normalized.push({
       id: candidate.id,
-      priority: normalized.length + 1
+      priority: normalized.length + 1,
     })
   }
 
@@ -137,12 +169,12 @@ const renderAgentDirectiveLine = (hint: AiChatAgentHint): string => {
   const config = AI_CHAT_AGENT_DIRECTIVES_BY_ID.get(hint.id)
 
   if (!config) {
-    return ''
+    return ""
   }
 
   const toolText = config.tools?.length
-    ? ` Current available tools: ${config.tools.join(', ')}.`
-    : ' Current concrete tools may be unavailable; use matching context when relevant.'
+    ? ` Current available tools: ${config.tools.join(", ")}.`
+    : " Current concrete tools may be unavailable; use matching context when relevant."
 
   return `${hint.priority}. ${config.token}: ${config.description}${toolText}`
 }
@@ -154,18 +186,18 @@ export const renderAiChatAgentDirective = (hints: unknown): string => {
   const normalizedHints = normalizeAiChatAgentHints(hints)
 
   if (normalizedHints.length === 0) {
-    return ''
+    return ""
   }
 
   return [
-    'Agent selection directive:',
-    'The user selected these agent priorities for this turn:',
+    "Agent selection directive:",
+    "The user selected these agent priorities for this turn:",
     ...normalizedHints.map(renderAgentDirectiveLine).filter(Boolean),
-    'Rules:',
-    '- Prefer selected agents in priority order when they are relevant to the user message.',
-    '- If a selected agent has no relevant capability or data, use other available tools and context instead.',
-    '- Do not force unrelated tools.'
-  ].join('\n')
+    "Rules:",
+    "- Prefer selected agents in priority order when they are relevant to the user message.",
+    "- If a selected agent has no relevant capability or data, use other available tools and context instead.",
+    "- Do not force unrelated tools.",
+  ].join("\n")
 }
 
 /**
@@ -173,7 +205,7 @@ export const renderAiChatAgentDirective = (hints: unknown): string => {
  */
 export const appendAiChatAgentDirectiveToSystemMessage = (
   systemMessage: AgentMessage,
-  hints: unknown
+  hints: unknown,
 ): AgentMessage => {
   const directive = renderAiChatAgentDirective(hints)
 
@@ -183,6 +215,6 @@ export const appendAiChatAgentDirectiveToSystemMessage = (
 
   return {
     ...systemMessage,
-    content: `${systemMessage.content}\n${directive}`
+    content: `${systemMessage.content}\n${directive}`,
   }
 }

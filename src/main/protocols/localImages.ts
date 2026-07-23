@@ -1,20 +1,29 @@
-import { basename, join } from 'node:path'
-import { getAiChatImageDir, getAiChatTextDir, getMarkdownImageDir, getPeopleAvatarDir } from '@/paths'
+import { basename, join } from "node:path"
+import {
+  getAiChatImageDir,
+  getAiChatTextDir,
+  getMarkdownImageDir,
+  getPeopleAvatarDir,
+  getPersonalAvatarDir,
+} from "@/paths"
 
 // 本地图片协议。
-export const MARKDOWN_IMAGE_PROTOCOL = 'mc-img'
+export const MARKDOWN_IMAGE_PROTOCOL = "mc-img"
 
 // Markdown 图片协议主机名。
-export const MARKDOWN_IMAGE_HOST = 'md'
+export const MARKDOWN_IMAGE_HOST = "md"
 
 // 人物头像协议主机名。
-export const PEOPLE_AVATAR_HOST = 'people'
+export const PEOPLE_AVATAR_HOST = "people"
+
+// 个人头像协议主机名。
+export const PERSONAL_AVATAR_HOST = "profile"
 
 // AI 聊天图片协议主机名。
-export const AI_CHAT_IMAGE_HOST = 'chat'
+export const AI_CHAT_IMAGE_HOST = "chat"
 
 // AI 聊天文本文件协议主机名。
-export const AI_CHAT_TEXT_HOST = 'chat-text'
+export const AI_CHAT_TEXT_HOST = "chat-text"
 
 /**
  * 创建 Markdown 图片访问 URL。
@@ -27,6 +36,12 @@ export const createMarkdownImageUrl = (fileName: string): string =>
  */
 export const createPeopleAvatarUrl = (fileName: string): string =>
   `${MARKDOWN_IMAGE_PROTOCOL}://${PEOPLE_AVATAR_HOST}/${encodeURIComponent(fileName)}`
+
+/**
+ * 创建个人头像访问 URL。
+ */
+export const createPersonalAvatarUrl = (fileName: string): string =>
+  `${MARKDOWN_IMAGE_PROTOCOL}://${PERSONAL_AVATAR_HOST}/${encodeURIComponent(fileName)}`
 
 /**
  * 从 Markdown 图片 URL 解析文件名。
@@ -82,6 +97,34 @@ export const resolvePeopleAvatarPath = (requestUrl: string): string | null => {
   const fileName = resolvePeopleAvatarFileName(requestUrl)
 
   return fileName ? join(getPeopleAvatarDir(), fileName) : null
+}
+
+/**
+ * 从个人头像 URL 解析文件名。
+ */
+export const resolvePersonalAvatarFileName = (requestUrl: string): string | null => {
+  const url = new URL(requestUrl)
+
+  if (url.protocol !== `${MARKDOWN_IMAGE_PROTOCOL}:` || url.hostname !== PERSONAL_AVATAR_HOST) {
+    return null
+  }
+
+  const fileName = basename(decodeURIComponent(url.pathname.slice(1)))
+
+  if (!fileName) {
+    return null
+  }
+
+  return fileName
+}
+
+/**
+ * 从个人头像 URL 解析本机文件路径。
+ */
+export const resolvePersonalAvatarPath = (requestUrl: string): string | null => {
+  const fileName = resolvePersonalAvatarFileName(requestUrl)
+
+  return fileName ? join(getPersonalAvatarDir(), fileName) : null
 }
 
 /**

@@ -1,17 +1,16 @@
 /**
  * @vitest-environment jsdom
  */
-import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@/components/ui/Toast";
-import { JournalPage } from "@/pages/journal/JournalPage";
-import { Header } from "@/components/layout/Header";
+import "@testing-library/jest-dom/vitest"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { Header } from "@/components/layout/Header"
+import { ToastProvider } from "@/components/ui/Toast"
+import { JournalPage } from "@/pages/journal/JournalPage"
 
 // Daily 单日数据类型，直接从 bridge 签名反推。
-type DailyDayDataShape =
-  Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>;
+type DailyDayDataShape = Awaited<ReturnType<Window["api"]["daily"]["listDay"]>>
 
 vi.mock("md-editor-rt", () => ({
   MdEditor: ({
@@ -20,10 +19,10 @@ vi.mock("md-editor-rt", () => ({
     onBlur,
     placeholder,
   }: {
-    value?: string;
-    onChange?: (value: string) => void;
-    onBlur?: () => void;
-    placeholder?: string;
+    value?: string
+    onChange?: (value: string) => void
+    onBlur?: () => void
+    placeholder?: string
   }) => (
     <textarea
       aria-label="Journal content"
@@ -33,7 +32,7 @@ vi.mock("md-editor-rt", () => ({
       onBlur={onBlur}
     />
   ),
-}));
+}))
 
 // 渲染页面时复用 ToastProvider 与 Header，避免 Hook 缺失。
 const renderJournalPage = (): void => {
@@ -42,22 +41,20 @@ const renderJournalPage = (): void => {
       <Header category="DAILY" activePage="journal" />
       <JournalPage />
     </ToastProvider>,
-  );
-};
+  )
+}
 
 // 默认 Daily 返回值，供测试按需覆盖。
-const createDailyDayData = (
-  overrides?: Partial<DailyDayDataShape>,
-): DailyDayDataShape => ({
+const createDailyDayData = (overrides?: Partial<DailyDayDataShape>): DailyDayDataShape => ({
   todos: [],
   snippets: [],
   journal: null,
   ...overrides,
-});
+})
 
 describe("JournalPage", () => {
   beforeEach(() => {
-    vi.setSystemTime(new Date("2026-05-27T09:00:00"));
+    vi.setSystemTime(new Date("2026-05-27T09:00:00"))
     window.api = {
       files: {
         saveMarkdownImage: vi.fn(),
@@ -90,14 +87,14 @@ describe("JournalPage", () => {
         update: vi.fn(),
         delete: vi.fn(),
       },
-    } as Window["api"];
-  });
+    } as Window["api"]
+  })
 
   afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-    vi.useRealTimers();
-  });
+    cleanup()
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
 
   it("支持切换日期并重新读取日记", async () => {
     const listDay = vi
@@ -123,9 +120,9 @@ describe("JournalPage", () => {
             updatedAt: "2026-05-26 09:30",
           },
         }),
-      );
+      )
 
-    window.api.daily.listDay = listDay;
+    window.api.daily.listDay = listDay
     window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
       month: "2026-05",
       entries: [
@@ -142,24 +139,24 @@ describe("JournalPage", () => {
           journalCount: 1,
         },
       ],
-    });
+    })
 
-    renderJournalPage();
+    renderJournalPage()
 
-    expect(await screen.findByDisplayValue("今天的日记")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("今天的日记")).toBeInTheDocument()
 
     await userEvent.click(
       screen.getByRole("button", {
         name: "Open date picker, current date 2026-05-27",
       }),
-    );
+    )
     await userEvent.click(
       screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
-    );
+    )
 
-    expect(listDay).toHaveBeenLastCalledWith("2026-05-26");
-    expect(await screen.findByDisplayValue("昨天的日记")).toBeInTheDocument();
-  });
+    expect(listDay).toHaveBeenLastCalledWith("2026-05-26")
+    expect(await screen.findByDisplayValue("昨天的日记")).toBeInTheDocument()
+  })
 
   it("点击日期后打开日期选择器并显示日记角标", async () => {
     window.api.daily.listMonthOverview = vi.fn().mockResolvedValue({
@@ -178,25 +175,25 @@ describe("JournalPage", () => {
           journalCount: 1,
         },
       ],
-    });
+    })
 
-    renderJournalPage();
+    renderJournalPage()
 
     await userEvent.click(
       screen.getByRole("button", {
         name: "Open date picker, current date 2026-05-27",
       }),
-    );
+    )
 
-    const dialog = screen.getByRole("dialog", { name: "Date picker" });
-    expect(dialog).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Date picker" })
+    expect(dialog).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Select date 2026-05-27, has entries" }),
-    ).toBeInTheDocument();
+    ).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Select date 2026-05-26, has entries" }),
-    ).toBeInTheDocument();
-  });
+    ).toBeInTheDocument()
+  })
 
   it("切换日期前会先按旧日期保存当前草稿", async () => {
     const listDay = vi
@@ -212,38 +209,36 @@ describe("JournalPage", () => {
             updatedAt: "2026-05-26 09:10",
           },
         }),
-      );
+      )
     const saveJournal = vi.fn().mockResolvedValue({
       id: 5,
       entryDate: "2026-05-27",
       content: "待保存草稿",
       createdAt: "2026-05-27 09:00",
       updatedAt: "2026-05-27 09:20",
-    });
-    const user = userEvent.setup();
+    })
+    const user = userEvent.setup()
 
-    window.api.daily.listDay = listDay;
-    window.api.daily.saveJournal = saveJournal;
+    window.api.daily.listDay = listDay
+    window.api.daily.saveJournal = saveJournal
 
-    renderJournalPage();
+    renderJournalPage()
 
-    await user.type(await screen.findByLabelText("Journal content"), "待保存草稿");
-    await user.click(
-      screen.getByRole("button", { name: "View previous day 2026-05-26" }),
-    );
+    await user.type(await screen.findByLabelText("Journal content"), "待保存草稿")
+    await user.click(screen.getByRole("button", { name: "View previous day 2026-05-26" }))
 
     await waitFor(() => {
       expect(saveJournal).toHaveBeenCalledWith({
         entryDate: "2026-05-27",
         content: "待保存草稿",
-      });
-    });
-    expect(listDay).toHaveBeenLastCalledWith("2026-05-26");
-    expect(await screen.findByDisplayValue("昨天内容")).toBeInTheDocument();
-  });
+      })
+    })
+    expect(listDay).toHaveBeenLastCalledWith("2026-05-26")
+    expect(await screen.findByDisplayValue("昨天内容")).toBeInTheDocument()
+  })
 
   it("输入日记后自动保存并刷新保存时间", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup()
 
     const saveJournal = vi.fn().mockResolvedValue({
       id: 6,
@@ -251,31 +246,32 @@ describe("JournalPage", () => {
       content: "新的内容",
       createdAt: "2026-05-27 09:00",
       updatedAt: "2026-05-27 09:35",
-    });
+    })
 
-    window.api.daily.listDay = vi
-      .fn()
-      .mockResolvedValue(createDailyDayData());
-    window.api.daily.saveJournal = saveJournal;
+    window.api.daily.listDay = vi.fn().mockResolvedValue(createDailyDayData())
+    window.api.daily.saveJournal = saveJournal
 
-    renderJournalPage();
+    renderJournalPage()
 
-    await user.type(await screen.findByLabelText("Journal content"), "新的内容");
+    await user.type(await screen.findByLabelText("Journal content"), "新的内容")
 
-    await waitFor(() => {
-      expect(saveJournal).toHaveBeenCalledWith({
-        entryDate: "2026-05-27",
-        content: "新的内容",
-      });
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(saveJournal).toHaveBeenCalledWith({
+          entryDate: "2026-05-27",
+          content: "新的内容",
+        })
+      },
+      { timeout: 2000 },
+    )
 
-    expect(screen.getByText("09:35")).toBeInTheDocument();
-  });
+    expect(screen.getByText("09:35")).toBeInTheDocument()
+  })
 
   it("清空正文后调用删除接口", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup()
 
-    const deleteJournal = vi.fn().mockResolvedValue(undefined);
+    const deleteJournal = vi.fn().mockResolvedValue(undefined)
 
     window.api.daily.listDay = vi.fn().mockResolvedValue(
       createDailyDayData({
@@ -287,16 +283,19 @@ describe("JournalPage", () => {
           updatedAt: "2026-05-27 09:05",
         },
       }),
-    );
-    window.api.daily.deleteJournal = deleteJournal;
+    )
+    window.api.daily.deleteJournal = deleteJournal
 
-    renderJournalPage();
+    renderJournalPage()
 
-    const editor = await screen.findByLabelText("Journal content");
-    await user.clear(editor);
+    const editor = await screen.findByLabelText("Journal content")
+    await user.clear(editor)
 
-    await waitFor(() => {
-      expect(deleteJournal).toHaveBeenCalledWith("2026-05-27");
-    }, { timeout: 2000 });
-  });
-});
+    await waitFor(
+      () => {
+        expect(deleteJournal).toHaveBeenCalledWith("2026-05-27")
+      },
+      { timeout: 2000 },
+    )
+  })
+})

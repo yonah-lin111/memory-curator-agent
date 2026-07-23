@@ -1,44 +1,50 @@
-import { type IpcMainInvokeEvent } from "electron";
-import { createCompactUuid } from "@/id";
-import { loadProviderConfig } from "@/agent/providers/providerConfig";
-import { createModelProvider } from "@/agent/providers/providerFactory";
-import { normalizeAiChatAgentHints } from "@/agent/core/agentHints";
-import { runReactAgent } from "@/agent/core/reactAgent";
-import { buildContextAgentMessages } from "@/agent/core/contextMessages";
-import { appendAiChatAgentDirectiveToSystemMessage } from "@/agent/core/agentHints";
-import { isAskRequestData } from "@/agent/tools/askTool";
+import { type IpcMainInvokeEvent } from "electron"
 import {
-  isToolConfirmationRequestData,
+  appendAiChatAgentDirectiveToSystemMessage,
+  normalizeAiChatAgentHints,
+} from "@/agent/core/agentHints"
+import { buildContextAgentMessages } from "@/agent/core/contextMessages"
+import { runReactAgent } from "@/agent/core/reactAgent"
+import { loadProviderConfig } from "@/agent/providers/providerConfig"
+import { createModelProvider } from "@/agent/providers/providerFactory"
+import { isAskRequestData } from "@/agent/tools/askTool"
+import { createSkillTool } from "@/agent/tools/skillTool"
+import {
   isToolConfirmationAnswerData,
-} from "@/agent/tools/toolConfirmation";
-import type { ModelProvider } from "@/agent/types";
-import type { AiToolStep } from "@/db/schema";
-import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService";
-import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry";
+  isToolConfirmationRequestData,
+} from "@/agent/tools/toolConfirmation"
+import { type createAgentToolRegistry } from "@/agent/tools/toolRegistry"
+import type { ModelProvider } from "@/agent/types"
+import type { AiToolStep } from "@/db/schema"
+import { createCompactUuid } from "@/id"
+import { createPersonalInfoContext } from "@/ipc/ai/personalInfoContext"
+import { type createAiChatPersistenceService } from "@/services/aiChatPersistenceService"
+import { getProfile } from "@/services/profileService"
+import { type AiAgentSkill, getAvailableSkillsForAgent } from "@/services/skillsService"
 import {
-  type AiChatStartPayload,
-  type AiChatIpcEvent,
-  type ActiveAiChatRun,
-  ASK_CANCELLED_MESSAGE,
-  TOOL_CONFIRMATION_CANCELLED_MESSAGE,
-} from "./types";
+  appendReasoningPart,
+  appendTextPart,
+  appendToolPart,
+  createDisplayTime,
+  createFallbackSessionTitle,
+  createSystemPrompt,
+  createTimestamp,
+  scheduleInitialSessionTitle,
+  shouldCreateInitialSessionTitle,
+} from "./helpers"
 import {
   activeAiChatRuns,
   cancelAiChatAsk,
   waitForAskAnswer,
   waitForToolConfirmation,
-} from "./state";
+} from "./state"
 import {
-  createTimestamp,
-  createDisplayTime,
-  createFallbackSessionTitle,
-  shouldCreateInitialSessionTitle,
-  scheduleInitialSessionTitle,
-  createSystemPrompt,
-  appendTextPart,
-  appendReasoningPart,
-  appendToolPart,
-} from "./helpers";
+  type ActiveAiChatRun,
+  type AiChatIpcEvent,
+  type AiChatStartPayload,
+  ASK_CANCELLED_MESSAGE,
+  TOOL_CONFIRMATION_CANCELLED_MESSAGE,
+} from "./types"
 
 /**
  * 启动 AI 聊天处理流。
@@ -47,57 +53,56 @@ export const startAiChat = async (
   event: IpcMainInvokeEvent,
   payload: AiChatStartPayload,
   services: {
-    aiChatService: ReturnType<typeof createAiChatPersistenceService>;
-    toolRegistry: ReturnType<typeof createAgentToolRegistry>;
+    aiChatService: ReturnType<typeof createAiChatPersistenceService>
+    toolRegistry: ReturnType<typeof createAgentToolRegistry>
   },
 ): Promise<{ runId: string }> => {
-  const runId = payload.runId ?? createCompactUuid();
-  const config = loadProviderConfig();
-  const providerId = payload.provider ?? config.defaultProvider;
-  const providerConfig = config.providers[providerId];
+  const runId = payload.runId ?? createCompactUuid()
+  const config = loadProviderConfig()
+  const providerId = payload.provider ?? config.defaultProvider
+  const providerConfig = config.providers[providerId]
 
   if (!providerConfig) {
-    throw new Error(`Provider 未启用或存在：${providerId}`);
+    throw new Error(`Provider 未启用或存在：${providerId}`)
   }
 
   const requestedModel =
-    payload.model ??
-    (providerId === config.defaultProvider
-      ? config.defaultModel
-      : undefined);
+    payload.model ?? (providerId === config.defaultProvider ? config.defaultModel : undefined)
 
   if (requestedModel && !providerConfig.models[requestedModel]) {
-    throw new Error(`模型未启用或存在：${providerId}/${requestedModel}`);
+    throw new Error(`模型未启用或存在：${providerId}/${requestedModel}`)
   }
 
-  const modelId = requestedModel ?? Object.keys(providerConfig.models)[0];
+  const modelId = requestedModel ?? Object.keys(providerConfig.models)[0]
 
   if (!modelId) {
-    throw new Error(`Provider ${providerId} 未配置模型`);
+    throw new Error(`Provider ${providerId} 未配置模型`)
   }
 
-  let tools = services.toolRegistry.all();
-  const agentHints = normalizeAiChatAgentHints(payload.agents);
+  let tools = services.toolRegistry.all()
+  const agentHints = normalizeAiChatAgentHints(payload.agents)
 
-  // 如果选择了 common agent，则物理过滤，只保留以 common_tool_ 开头的通用工具，隔离所有业务 Agent 的工具
-  const hasCommonAgent = agentHints.some((hint) => hint.id === "common");
+  // 如果选择了 common agent，则物理过滤，只保留通用工具、联网搜索和 load_skill。
+  const hasCommonAgent = agentHints.some((hint) => hint.id === "common")
   if (hasCommonAgent) {
-    tools = tools.filter((tool) => tool.name.startsWith("common_tool_"));
+    tools = tools.filter(
+      (tool) =>
+        tool.name.startsWith("common_tool_") ||
+        tool.name === "web_search" ||
+        tool.name === "load_skill",
+    )
   }
-  const modelConfig = providerConfig.models[modelId];
-  const timestamp = createTimestamp();
-  const userTime = createDisplayTime(timestamp);
-  const userMessageId = payload.userMessageId ?? createCompactUuid();
-  const assistantMessageId =
-    payload.assistantMessageId ?? createCompactUuid();
-  const toolCallIds = new Map<string, string>();
-  const existingSession = services.aiChatService.getSession(payload.sessionId);
-  const shouldCreateTitle =
-    shouldCreateInitialSessionTitle(existingSession);
+  const modelConfig = providerConfig.models[modelId]
+  const timestamp = createTimestamp()
+  const userTime = createDisplayTime(timestamp)
+  const userMessageId = payload.userMessageId ?? createCompactUuid()
+  const assistantMessageId = payload.assistantMessageId ?? createCompactUuid()
+  const toolCallIds = new Map<string, string>()
+  const existingSession = services.aiChatService.getSession(payload.sessionId)
+  const shouldCreateTitle = shouldCreateInitialSessionTitle(existingSession)
   const sessionTitle = shouldCreateTitle
     ? createFallbackSessionTitle(payload.message)
-    : (existingSession?.title ??
-      createFallbackSessionTitle(payload.message));
+    : (existingSession?.title ?? createFallbackSessionTitle(payload.message))
 
   services.aiChatService.createRunWithMessages({
     session: {
@@ -135,20 +140,20 @@ export const startAiChat = async (
       context: payload.context ?? [],
       timestamp,
     },
-  });
+  })
 
   const sendEvent = (agentEvent: any): void => {
     if (event.sender.isDestroyed?.()) {
-      return;
+      return
     }
 
     event.sender.send("ai:chat:event", {
       ...agentEvent,
       runId,
       sessionId: payload.sessionId,
-    } satisfies AiChatIpcEvent);
-  };
-  const controller = new AbortController();
+    } satisfies AiChatIpcEvent)
+  }
+  const controller = new AbortController()
   const activeRun: ActiveAiChatRun = {
     sessionId: payload.sessionId,
     sessionTitle,
@@ -160,13 +165,13 @@ export const startAiChat = async (
     assistantAnswer: "",
     assistantParts: [],
     assistantToolSteps: [],
-  };
+  }
   const handleSenderDestroyed = (): void => {
-    cancelAiChatAsk(runId);
-  };
+    cancelAiChatAsk(runId)
+  }
 
-  activeAiChatRuns.set(runId, activeRun);
-  event.sender.once?.("destroyed", handleSenderDestroyed);
+  activeAiChatRuns.set(runId, activeRun)
+  event.sender.once?.("destroyed", handleSenderDestroyed)
 
   if (shouldCreateTitle) {
     scheduleInitialSessionTitle(
@@ -178,55 +183,98 @@ export const startAiChat = async (
         sender: event.sender,
       },
       services.aiChatService,
-    );
+    )
   }
 
   void (async () => {
     const updateAssistantSnapshot = (): void => {
       services.aiChatService.updateAssistantMessage({
         messageId: assistantMessageId,
-        content: activeRun.assistantAnswer
-          ? "AI 已生成回答"
-          : `正在处理：“${payload.message}”`,
+        content: activeRun.assistantAnswer ? "AI 已生成回答" : `正在处理：“${payload.message}”`,
         answer: activeRun.assistantAnswer,
         parts: activeRun.assistantParts,
         toolSteps: activeRun.assistantToolSteps,
         timestamp: createTimestamp(),
-      });
-    };
+      })
+    }
 
     try {
       const resolveToolCallId = (providerToolCallId: string): string => {
-        const existingToolCallId = toolCallIds.get(providerToolCallId);
+        const existingToolCallId = toolCallIds.get(providerToolCallId)
 
         if (existingToolCallId) {
-          return existingToolCallId;
+          return existingToolCallId
         }
 
-        const toolCallId = createCompactUuid();
-        toolCallIds.set(providerToolCallId, toolCallId);
-        return toolCallId;
-      };
+        const toolCallId = createCompactUuid()
+        toolCallIds.set(providerToolCallId, toolCallId)
+        return toolCallId
+      }
 
-      const provider = await createModelProvider(providerConfig);
+      const provider = await createModelProvider(providerConfig)
 
       // 创建 compaction provider（如果配置了）
-      let compactionProvider: ModelProvider | undefined;
-      let compactionModel: string | undefined;
+      let compactionProvider: ModelProvider | undefined
+      let compactionModel: string | undefined
 
-      const compactionConfig = config.compaction;
+      const compactionConfig = config.compaction
       if (compactionConfig) {
-        const compactionProviderConfig =
-          config.providers[compactionConfig.provider];
-        if (
-          compactionProviderConfig &&
-          compactionProviderConfig.models[compactionConfig.model]
-        ) {
-          compactionProvider = await createModelProvider(
-            compactionProviderConfig,
-          );
-          compactionModel = compactionConfig.model;
+        const compactionProviderConfig = config.providers[compactionConfig.provider]
+        if (compactionProviderConfig && compactionProviderConfig.models[compactionConfig.model]) {
+          compactionProvider = await createModelProvider(compactionProviderConfig)
+          compactionModel = compactionConfig.model
         }
+      }
+
+      // 动态获取当前激活 Agent 的自动挂载 Skills，仅注入元数据到 System Prompt
+      let autoSkillsContent = ""
+      let loadedUniqueSkills: AiAgentSkill[] = []
+      try {
+        const loadedSkills: AiAgentSkill[] = []
+        if (agentHints.length > 0) {
+          // 有 agent 选择时，按 hint 匹配 skills
+          for (const hint of agentHints) {
+            const skillsForAgent = await getAvailableSkillsForAgent(hint.id)
+            loadedSkills.push(...skillsForAgent)
+          }
+        } else {
+          // 无 agent 选择时按默认 common agent 筛选，避免专属 Skill 泄漏到 curator 对话。
+          loadedSkills.push(...(await getAvailableSkillsForAgent("common")))
+        }
+        // 去重
+        loadedUniqueSkills = Array.from(new Map(loadedSkills.map((s) => [s.id, s])).values())
+        if (loadedUniqueSkills.length > 0) {
+          // 技能使用规则 + 元数据（name + description）XML 块，完整内容通过 load_skill 按需获取
+          const skillsXml = loadedUniqueSkills
+            .map(
+              (s) =>
+                `  <skill>\n    <name>${s.id}</name>\n    <description>${s.description || s.name}</description>\n  </skill>`,
+            )
+            .join("\n")
+          autoSkillsContent =
+            "\n\n技能使用：以下是当前可用的技能列表。当任务明确匹配某个技能描述时，使用 load_skill 按名称加载该技能的完整指令再执行。不要同时加载多个不相关的技能。\n\n" +
+            `<available_skills>\n${skillsXml}\n</available_skills>`
+        }
+      } catch (error) {
+        console.error("Failed to load automatic skills in chatRunner:", error)
+      }
+
+      const baseSystemPrompt = appendAiChatAgentDirectiveToSystemMessage(
+        createSystemPrompt(),
+        agentHints,
+      )
+      const personalInfoContext = createPersonalInfoContext(getProfile())
+
+      const systemMessage = {
+        ...baseSystemPrompt,
+        content: `${baseSystemPrompt.content}\n\n${personalInfoContext}${autoSkillsContent}`,
+      }
+
+      // 将 load_skill 工具动态注入到本轮 tools 中
+      let finalTools = tools
+      if (loadedUniqueSkills.length > 0) {
+        const skillLoadTool = createSkillTool(loadedUniqueSkills)
+        finalTools = [...tools, skillLoadTool]
       }
 
       for await (const agentEvent of runReactAgent({
@@ -237,15 +285,11 @@ export const startAiChat = async (
         contextLimit: modelConfig.limit?.context,
         // 从 Agent 配置读取 maxTurns，未设置则默认 Infinity（无限制）。
         maxTurns:
-          config.agent.context.maxTurns &&
-          config.agent.context.maxTurns > 0
+          config.agent.context.maxTurns && config.agent.context.maxTurns > 0
             ? config.agent.context.maxTurns
             : undefined,
         messages: buildContextAgentMessages({
-          systemMessage: appendAiChatAgentDirectiveToSystemMessage(
-            createSystemPrompt(),
-            agentHints,
-          ),
+          systemMessage,
           userMessage: payload.message,
           userParts: payload.parts,
           contextItems: payload.context,
@@ -258,50 +302,37 @@ export const startAiChat = async (
               ? Infinity
               : config.agent.context.recentToolResultLimit,
         }),
-        tools,
+        tools: finalTools,
         signal: controller.signal,
         askAnswerProvider: (request) => waitForAskAnswer(runId, request),
-        toolConfirmationProvider: (request) =>
-          waitForToolConfirmation(runId, request),
+        toolConfirmationProvider: (request) => waitForToolConfirmation(runId, request),
       })) {
         if (agentEvent.type === "text_delta") {
-          activeRun.assistantAnswer += agentEvent.delta;
+          activeRun.assistantAnswer += agentEvent.delta
           activeRun.assistantParts.splice(
             0,
             activeRun.assistantParts.length,
-            ...appendTextPart(
-              activeRun.assistantParts,
-              assistantMessageId,
-              agentEvent.delta,
-            ),
-          );
-          updateAssistantSnapshot();
+            ...appendTextPart(activeRun.assistantParts, assistantMessageId, agentEvent.delta),
+          )
+          updateAssistantSnapshot()
         }
 
         if (agentEvent.type === "reasoning_delta") {
           activeRun.assistantParts.splice(
             0,
             activeRun.assistantParts.length,
-            ...appendReasoningPart(
-              activeRun.assistantParts,
-              agentEvent.id,
-              agentEvent.delta,
-            ),
-          );
-          updateAssistantSnapshot();
+            ...appendReasoningPart(activeRun.assistantParts, agentEvent.id, agentEvent.delta),
+          )
+          updateAssistantSnapshot()
         }
 
         if (agentEvent.type === "tool_started") {
-          const persistedToolCallId = resolveToolCallId(agentEvent.id);
+          const persistedToolCallId = resolveToolCallId(agentEvent.id)
           activeRun.assistantParts.splice(
             0,
             activeRun.assistantParts.length,
-            ...appendToolPart(
-              activeRun.assistantParts,
-              assistantMessageId,
-              agentEvent.id,
-            ),
-          );
+            ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id),
+          )
           activeRun.assistantToolSteps.push({
             id: agentEvent.id,
             title: `Tool result: ${agentEvent.name}`,
@@ -309,7 +340,7 @@ export const startAiChat = async (
             tool: agentEvent.name,
             input: agentEvent.input,
             observation: "Tool is running.",
-          });
+          })
           services.aiChatService.upsertToolCall({
             id: createCompactUuid(),
             runId,
@@ -321,50 +352,41 @@ export const startAiChat = async (
             observation: "",
             data: null,
             timestamp: createTimestamp(),
-          });
-          updateAssistantSnapshot();
+          })
+          updateAssistantSnapshot()
         }
 
         if (agentEvent.type === "tool_finished") {
-          const persistedToolCallId = resolveToolCallId(agentEvent.id);
+          const persistedToolCallId = resolveToolCallId(agentEvent.id)
           const toolStepIndex = activeRun.assistantToolSteps.findIndex(
             (step) => step.id === agentEvent.id,
-          );
-          const isAskRequest = isAskRequestData(agentEvent.data);
-          const isToolConfirmationRequest = isToolConfirmationRequestData(
-            agentEvent.data,
-          );
+          )
+          const isAskRequest = isAskRequestData(agentEvent.data)
+          const isToolConfirmationRequest = isToolConfirmationRequestData(agentEvent.data)
           const isConfirmedToolConfirmationAnswer =
-            isToolConfirmationAnswerData(agentEvent.data) &&
-            agentEvent.data.action === "confirm";
+            isToolConfirmationAnswerData(agentEvent.data) && agentEvent.data.action === "confirm"
           const nextToolStep: AiToolStep = {
             id: agentEvent.id,
             title: `Tool result: ${agentEvent.name}`,
             status:
-              isAskRequest ||
-              isToolConfirmationRequest ||
-              isConfirmedToolConfirmationAnswer
+              isAskRequest || isToolConfirmationRequest || isConfirmedToolConfirmationAnswer
                 ? "running"
                 : "done",
             tool: agentEvent.name,
             input: activeRun.assistantToolSteps[toolStepIndex]?.input,
             observation: agentEvent.observation,
             data: agentEvent.data,
-          };
+          }
 
           if (toolStepIndex >= 0) {
-            activeRun.assistantToolSteps[toolStepIndex] = nextToolStep;
+            activeRun.assistantToolSteps[toolStepIndex] = nextToolStep
           } else {
             activeRun.assistantParts.splice(
               0,
               activeRun.assistantParts.length,
-              ...appendToolPart(
-                activeRun.assistantParts,
-                assistantMessageId,
-                agentEvent.id,
-              ),
-            );
-            activeRun.assistantToolSteps.push(nextToolStep);
+              ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id),
+            )
+            activeRun.assistantToolSteps.push(nextToolStep)
           }
 
           services.aiChatService.upsertToolCall({
@@ -374,33 +396,30 @@ export const startAiChat = async (
             toolCallId: persistedToolCallId,
             name: agentEvent.name,
             status:
-              isAskRequest ||
-              isToolConfirmationRequest ||
-              isConfirmedToolConfirmationAnswer
+              isAskRequest || isToolConfirmationRequest || isConfirmedToolConfirmationAnswer
                 ? "running"
                 : "done",
             input: nextToolStep.input ?? {},
             observation: agentEvent.observation,
             data: agentEvent.data,
             timestamp: createTimestamp(),
-          });
-          updateAssistantSnapshot();
+          })
+          updateAssistantSnapshot()
         }
 
         if (agentEvent.type === "tool_failed") {
-          const persistedToolCallId = resolveToolCallId(agentEvent.id);
+          const persistedToolCallId = resolveToolCallId(agentEvent.id)
           const toolStepIndex = activeRun.assistantToolSteps.findIndex(
             (step) => step.id === agentEvent.id,
-          );
+          )
           const isAskCancelled =
-            agentEvent.name === "common_tool_ask" &&
-            agentEvent.error === ASK_CANCELLED_MESSAGE;
+            agentEvent.name === "common_tool_ask" && agentEvent.error === ASK_CANCELLED_MESSAGE
           const isToolConfirmationCancelled =
-            agentEvent.error === TOOL_CONFIRMATION_CANCELLED_MESSAGE;
-          const isCancelled = isAskCancelled || isToolConfirmationCancelled;
+            agentEvent.error === TOOL_CONFIRMATION_CANCELLED_MESSAGE
+          const isCancelled = isAskCancelled || isToolConfirmationCancelled
           const cancelledObservation = isAskCancelled
             ? "Ask was cancelled."
-            : "Tool confirmation was cancelled.";
+            : "Tool confirmation was cancelled."
           const nextToolStep: AiToolStep = {
             id: agentEvent.id,
             title: isCancelled
@@ -415,21 +434,17 @@ export const startAiChat = async (
             data: {
               error: agentEvent.error,
             },
-          };
+          }
 
           if (toolStepIndex >= 0) {
-            activeRun.assistantToolSteps[toolStepIndex] = nextToolStep;
+            activeRun.assistantToolSteps[toolStepIndex] = nextToolStep
           } else {
             activeRun.assistantParts.splice(
               0,
               activeRun.assistantParts.length,
-              ...appendToolPart(
-                activeRun.assistantParts,
-                assistantMessageId,
-                agentEvent.id,
-              ),
-            );
-            activeRun.assistantToolSteps.push(nextToolStep);
+              ...appendToolPart(activeRun.assistantParts, assistantMessageId, agentEvent.id),
+            )
+            activeRun.assistantToolSteps.push(nextToolStep)
           }
 
           services.aiChatService.upsertToolCall({
@@ -448,12 +463,12 @@ export const startAiChat = async (
             },
             error: agentEvent.error,
             timestamp: createTimestamp(),
-          });
-          updateAssistantSnapshot();
+          })
+          updateAssistantSnapshot()
         }
 
         if (agentEvent.type === "error") {
-          const failedTimestamp = createTimestamp();
+          const failedTimestamp = createTimestamp()
           services.aiChatService.failRunWithAssistantMessage({
             run: {
               id: runId,
@@ -475,7 +490,7 @@ export const startAiChat = async (
               toolSteps: activeRun.assistantToolSteps,
               timestamp: failedTimestamp,
             },
-          });
+          })
         }
 
         if (agentEvent.type === "done") {
@@ -483,26 +498,25 @@ export const startAiChat = async (
             id: runId,
             status: "completed",
             timestamp: createTimestamp(),
-          });
+          })
           services.aiChatService.ensureSession({
             id: payload.sessionId,
             title: sessionTitle,
             status: "completed",
             timestamp: createTimestamp(),
-          });
+          })
         }
 
-        sendEvent(agentEvent);
+        sendEvent(agentEvent)
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "AI chat execution failed";
+      const message = error instanceof Error ? error.message : "AI chat execution failed"
 
       if (controller.signal.aborted && !activeAiChatRuns.has(runId)) {
-        return;
+        return
       }
 
-      const failedTimestamp = createTimestamp();
+      const failedTimestamp = createTimestamp()
       services.aiChatService.failRunWithAssistantMessage({
         run: {
           id: runId,
@@ -524,18 +538,18 @@ export const startAiChat = async (
           toolSteps: activeRun.assistantToolSteps,
           timestamp: failedTimestamp,
         },
-      });
+      })
       sendEvent({
         type: "error",
         message,
-      });
+      })
     } finally {
-      activeAiChatRuns.delete(runId);
-      event.sender.removeListener?.("destroyed", handleSenderDestroyed);
+      activeAiChatRuns.delete(runId)
+      event.sender.removeListener?.("destroyed", handleSenderDestroyed)
     }
-  })();
+  })()
 
   return {
     runId,
-  };
-};
+  }
+}

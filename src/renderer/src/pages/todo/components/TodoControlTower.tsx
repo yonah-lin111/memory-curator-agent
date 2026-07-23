@@ -1,15 +1,15 @@
-import type React from "react";
-import { useEffect, useRef } from "react";
-import * as echarts from "echarts";
+import * as echarts from "echarts"
+import type React from "react"
+import { useEffect, useRef } from "react"
 
 // Todo 控制塔属性。
 interface TodoControlTowerProps {
   // 任务总数。
-  totalCount: number;
+  totalCount: number
   // 已完成数量。
-  completedCount: number;
+  completedCount: number
   // 未完成 P0 数量。
-  p0Count: number;
+  p0Count: number
 }
 
 /**
@@ -20,19 +20,19 @@ export const TodoControlTower = ({
   completedCount,
   p0Count,
 }: TodoControlTowerProps): React.JSX.Element => {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null)
+  const chartInstance = useRef<echarts.ECharts | null>(null)
 
-  const pendingCount = totalCount - completedCount;
+  const pendingCount = totalCount - completedCount
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!chartRef.current) return
 
     if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current);
+      chartInstance.current = echarts.init(chartRef.current)
     }
 
-    const uncompletedOtherCount = Math.max(0, pendingCount - p0Count);
+    const uncompletedOtherCount = Math.max(0, pendingCount - p0Count)
 
     const option = {
       backgroundColor: "transparent",
@@ -126,20 +126,20 @@ export const TodoControlTower = ({
           },
         },
       ],
-    };
+    }
 
-    chartInstance.current.setOption(option);
+    chartInstance.current.setOption(option)
 
     const handleResize = () => {
-      chartInstance.current?.resize();
-    };
+      chartInstance.current?.resize()
+    }
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize)
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [totalCount, completedCount, p0Count, pendingCount]);
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [totalCount, completedCount, p0Count, pendingCount])
 
   return (
     <aside className="flex min-h-0 flex-col gap-4 rounded-[6px] border border-white/6 bg-[#212121] p-4 flex-shrink-0">
@@ -160,5 +160,5 @@ export const TodoControlTower = ({
         )}
       </div>
     </aside>
-  );
-};
+  )
+}

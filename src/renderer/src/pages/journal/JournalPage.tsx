@@ -1,196 +1,170 @@
-import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { PageDateNavigator } from "@/components/ui/PageDateNavigator";
-import { useHeaderStore } from "@/lib/headerStore";
-import { useToast } from "@/components/ui/Toast";
-import { JournalEditorSurface } from "@/pages/journal/components/JournalEditorSurface";
-import {
-  createTodayEntryDate,
-  getEntryMonth,
-  hasDailyBridge,
-} from "@/lib/dailyShared";
-
-// 生成当前时间戳，供无 bridge 环境回退使用。
-const createCurrentTimestamp = (entryDate: string): string => {
-  // 当前本地时间。
-  const now = new Date();
-  // 当前小时。
-  const hours = String(now.getHours()).padStart(2, "0");
-  // 当前分钟。
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-
-  return `${entryDate} ${hours}:${minutes}`;
-};
+import type React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { PageDateNavigator } from "@/components/ui/PageDateNavigator"
+import { useToast } from "@/components/ui/Toast"
+import { createTodayEntryDate, getEntryMonth, hasDailyBridge } from "@/lib/dailyShared"
+import { useHeaderStore } from "@/lib/headerStore"
+import { JournalEditorSurface } from "@/pages/journal/components/JournalEditorSurface"
 
 /**
  * JournalPage 组件 - 单日日记的沉浸书写与回看。
  */
 export const JournalPage = (): React.JSX.Element => {
   // 全局提示实例。
-  const toast = useToast();
+  const toast = useToast()
   // 当前页面日期。
-  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate());
+  const [entryDate, setEntryDate] = useState<string>(() => createTodayEntryDate())
   // 当前月历可见月份。
   const [visibleMonth, setVisibleMonth] = useState<string>(() =>
     getEntryMonth(createTodayEntryDate()),
-  );
+  )
   // 当前可见月份的日记角标映射。
-  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [monthEntryCounts, setMonthEntryCounts] = useState<Record<string, number>>({})
   // 编辑器中的正文。
-  const [journalContent, setJournalContent] = useState<string>("");
+  const [journalContent, setJournalContent] = useState<string>("")
   // 最近一次成功保存的正文。
-  const [savedJournalContent, setSavedJournalContent] = useState<string>("");
+  const [savedJournalContent, setSavedJournalContent] = useState<string>("")
   // 页面是否正在加载。
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  // 最近保存时间。
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   // 月历标记是否正在加载。
-  const [isMonthOverviewLoading, setIsMonthOverviewLoading] =
-    useState<boolean>(true);
+  const [isMonthOverviewLoading, setIsMonthOverviewLoading] = useState<boolean>(true)
   // 头部导航器 setter。
-  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator);
+  const setDateNavigator = useHeaderStore((state) => state.setDateNavigator)
   // 持久化函数引用，避免 effect 反复重建。
-  const persistRef = useRef<(rawValue: string) => Promise<void>>(async () => undefined);
+  const persistRef = useRef<(rawValue: string) => Promise<void>>(async () => undefined)
 
   /**
    * 切换日期前先冲刷当前草稿，避免旧内容串写到新日期。
    */
   const handleEntryDateChange = (nextDate: string): void => {
     if (nextDate === entryDate) {
-      return;
+      return
     }
 
     void (async () => {
       if (journalContent.trim() !== savedJournalContent.trim()) {
-        await persistRef.current(journalContent);
+        await persistRef.current(journalContent)
       }
-      setVisibleMonth(getEntryMonth(nextDate));
-      setEntryDate(nextDate);
-    })();
-  };
+      setVisibleMonth(getEntryMonth(nextDate))
+      setEntryDate(nextDate)
+    })()
+  }
 
   useEffect(() => {
     /**
      * 读取当前可见月份的日记角标概览。
      */
     const loadMonthOverview = async (): Promise<void> => {
-      setIsMonthOverviewLoading(true);
+      setIsMonthOverviewLoading(true)
 
       try {
         if (!hasDailyBridge()) {
-          setMonthEntryCounts({});
-          return;
+          setMonthEntryCounts({})
+          return
         }
 
-        const overview = await window.api.daily.listMonthOverview(visibleMonth);
+        const overview = await window.api.daily.listMonthOverview(visibleMonth)
         setMonthEntryCounts(
           Object.fromEntries(
             overview.entries
               .filter((item) => item.journalCount > 0)
               .map((item) => [item.entryDate, item.journalCount]),
           ),
-        );
+        )
       } catch {
-        toast.error("读取月历标记失败");
+        toast.error("读取月历标记失败")
       } finally {
-        setIsMonthOverviewLoading(false);
+        setIsMonthOverviewLoading(false)
       }
-    };
+    }
 
-    void loadMonthOverview();
-  }, [toast, visibleMonth]);
+    void loadMonthOverview()
+  }, [toast, visibleMonth])
 
   useEffect(() => {
     /**
      * 读取当前日期的日记内容。
      */
     const loadJournal = async (): Promise<void> => {
-      setIsLoading(true);
+      setIsLoading(true)
 
       try {
         if (!hasDailyBridge()) {
-          setJournalContent("");
-          setSavedJournalContent("");
-          setLastSavedAt(null);
-          return;
+          setJournalContent("")
+          setSavedJournalContent("")
+          return
         }
 
-        const todayData = await window.api.daily.listDay(entryDate);
-        const nextValue = todayData.journal?.content ?? "";
-        setJournalContent(nextValue);
-        setSavedJournalContent(nextValue);
-        setLastSavedAt(todayData.journal?.updatedAt ?? null);
+        const todayData = await window.api.daily.listDay(entryDate)
+        const nextValue = todayData.journal?.content ?? ""
+        setJournalContent(nextValue)
+        setSavedJournalContent(nextValue)
       } catch {
-        toast.error("读取日记失败");
+        toast.error("读取日记失败")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    void loadJournal();
-  }, [entryDate, toast]);
+    void loadJournal()
+  }, [entryDate, toast])
 
   persistRef.current = async (rawValue: string): Promise<void> => {
     // 持久化前先做裁剪，避免纯空格噪音写入。
-    const normalizedValue = rawValue.trim();
+    const normalizedValue = rawValue.trim()
 
     if (normalizedValue === savedJournalContent.trim()) {
-      return;
+      return
     }
 
     try {
       if (!hasDailyBridge()) {
-        setSavedJournalContent(normalizedValue);
-        setLastSavedAt(normalizedValue ? createCurrentTimestamp(entryDate) : null);
+        setSavedJournalContent(normalizedValue)
         setMonthEntryCounts((currentCounts) => {
           if (normalizedValue) {
-            return { ...currentCounts, [entryDate]: 1 };
+            return { ...currentCounts, [entryDate]: 1 }
           }
 
-          const nextCounts = { ...currentCounts };
-          delete nextCounts[entryDate];
-          return nextCounts;
-        });
-        return;
+          const nextCounts = { ...currentCounts }
+          delete nextCounts[entryDate]
+          return nextCounts
+        })
+        return
       }
 
       if (!normalizedValue) {
-        await window.api.daily.deleteJournal(entryDate);
-        setSavedJournalContent("");
-        setLastSavedAt(null);
+        await window.api.daily.deleteJournal(entryDate)
+        setSavedJournalContent("")
         setMonthEntryCounts((currentCounts) => {
-          const nextCounts = { ...currentCounts };
-          delete nextCounts[entryDate];
-          return nextCounts;
-        });
-        return;
+          const nextCounts = { ...currentCounts }
+          delete nextCounts[entryDate]
+          return nextCounts
+        })
+        return
       }
 
       const saved = await window.api.daily.saveJournal({
         entryDate,
         content: normalizedValue,
-      });
-      setSavedJournalContent(saved.content);
-      setLastSavedAt(saved.updatedAt);
-      setMonthEntryCounts((currentCounts) => ({ ...currentCounts, [entryDate]: 1 }));
+      })
+      setSavedJournalContent(saved.content)
+      setMonthEntryCounts((currentCounts) => ({ ...currentCounts, [entryDate]: 1 }))
     } catch {
-      toast.error("自动保存失败");
+      toast.error("自动保存失败")
     }
-  };
+  }
 
   useEffect(() => {
     if (isLoading) {
-      return;
+      return
     }
 
     const timer = window.setTimeout(() => {
-      void persistRef.current(journalContent);
-    }, 650);
+      void persistRef.current(journalContent)
+    }, 650)
 
-    return () => window.clearTimeout(timer);
-  }, [entryDate, isLoading, journalContent]);
+    return () => window.clearTimeout(timer)
+  }, [entryDate, isLoading, journalContent])
 
   useEffect(() => {
     setDateNavigator(
@@ -202,11 +176,11 @@ export const JournalPage = (): React.JSX.Element => {
         onChange={handleEntryDateChange}
         onVisibleMonthChange={setVisibleMonth}
       />,
-    );
+    )
 
     return () => {
-      setDateNavigator(null);
-    };
+      setDateNavigator(null)
+    }
   }, [
     entryDate,
     visibleMonth,
@@ -215,37 +189,40 @@ export const JournalPage = (): React.JSX.Element => {
     journalContent,
     savedJournalContent,
     setDateNavigator,
-  ]);
+  ])
 
   // 根据关键词给出克制的情绪线索。
   const moodLabel = useMemo(() => {
     if (journalContent.includes("焦虑")) {
-      return "紧绷";
+      return "紧绷"
     }
     if (journalContent.includes("推进")) {
-      return "专注";
+      return "专注"
     }
     if (journalContent.includes("开心") || journalContent.includes("完成")) {
-      return "提振";
+      return "提振"
     }
-    return "平稳";
-  }, [journalContent]);
+    return "平稳"
+  }, [journalContent])
+
+  // 只有当前正文与最近一次成功保存的正文一致时才显示已保存。
+  const isJournalSaved = !isLoading && journalContent.trim() === savedJournalContent.trim()
 
   return (
     <section aria-label="Journal Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="flex min-h-0 flex-1 flex-col gap-3">
         <JournalEditorSurface
-          isDirty={journalContent.trim() !== savedJournalContent.trim()}
-          lastSavedAt={lastSavedAt}
+          isLoading={isLoading}
+          isSaved={isJournalSaved}
           moodLabel={moodLabel}
           value={journalContent}
           wordCount={journalContent.length}
           onBlur={() => {
-            void persistRef.current(journalContent);
+            void persistRef.current(journalContent)
           }}
           onChange={setJournalContent}
         />
       </div>
     </section>
-  );
-};
+  )
+}

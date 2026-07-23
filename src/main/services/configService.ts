@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
-import { DEFAULT_AGENT_CONFIG, DEFAULT_MC_CONFIG_PATH } from '@/agent/providers/providerConfig'
-import type { AgentConfig, ModelLimit, ModelModalities, ProviderTransportType } from '@/agent/types'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
+import { DEFAULT_AGENT_CONFIG, DEFAULT_MC_CONFIG_PATH } from "@/agent/providers/providerConfig"
+import type { AgentConfig, ModelLimit, ModelModalities, ProviderTransportType } from "@/agent/types"
 
 // Settings 页面模型选择配置。
 export type AiSettingsModelSelection = {
@@ -42,6 +42,14 @@ export type AiSettingsProvider = {
   models: Record<string, AiSettingsModel>
 }
 
+// 联网搜索服务密钥配置。
+export type AiWebSearchConfig = {
+  // Exa API Key。
+  exaApiKey: string
+  // Tavily API Key。
+  tavilyApiKey: string
+}
+
 // Settings 页面完整 AI 配置。
 export type AiSettingsConfig = {
   // 配置文件绝对路径。
@@ -52,10 +60,20 @@ export type AiSettingsConfig = {
   titleSummary: AiSettingsModelSelection
   // 周度总结模型。
   weeklySummary: AiSettingsModelSelection
+  // 推荐问题生成模型。
+  suggestedQuestions: AiSettingsModelSelection
+  // 是否在 AI 回复后生成推荐问题。
+  suggestedQuestionsEnabled: boolean
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 联网搜索服务配置。
+  webSearch: AiWebSearchConfig
+  // 是否显示 Agent 思考内容。
+  showAgentThinking: boolean
+  // 已禁用的 Skill 标识列表。
+  disabledSkillIds: string[]
   // Agent 非密钥行为配置。
   agent: AgentConfig
 }
@@ -92,68 +110,87 @@ type RawAiConfig = {
   titleSummary?: Partial<AiSettingsModelSelection>
   // 周度总结模型。
   weeklySummary?: Partial<AiSettingsModelSelection>
+  suggestedQuestions?: Partial<AiSettingsModelSelection>
+  suggestedQuestionsEnabled?: boolean
   // 已启用 provider 标识列表。
   enabled_providers?: string[]
   // Provider 配置表。
   providers?: Record<string, RawProviderConfig>
+  // 联网搜索服务配置。
+  webSearch?: Partial<AiWebSearchConfig>
+  // 是否显示 Agent 思考内容。
+  showAgentThinking?: boolean
+  // 已禁用的 Skill 标识列表。
+  disabled_skill_ids?: string[]
   // Agent 非密钥行为配置。
   agent?: Partial<AgentConfig>
 }
 
 // 默认可编辑设置。
-const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, 'configPath'> = {
+const DEFAULT_AI_SETTINGS: Omit<AiSettingsConfig, "configPath"> = {
   defaultModel: {
-    provider: 'bailian',
-    model: 'MiniMax-M2.5'
+    provider: "bailian",
+    model: "MiniMax-M2.5",
   },
   titleSummary: {
-    provider: 'bailian',
-    model: 'MiniMax-M2.5'
+    provider: "bailian",
+    model: "MiniMax-M2.5",
   },
   weeklySummary: {
-    provider: 'bailian',
-    model: 'MiniMax-M2.5'
+    provider: "bailian",
+    model: "MiniMax-M2.5",
   },
-  enabledProviders: ['bailian'],
+  suggestedQuestions: {
+    provider: "bailian",
+    model: "MiniMax-M2.5",
+  },
+  suggestedQuestionsEnabled: true,
+  enabledProviders: ["bailian"],
   providers: {
     bailian: {
-      id: 'bailian',
-      type: 'openai-compatible',
-      name: 'Bailian',
+      id: "bailian",
+      type: "openai-compatible",
+      name: "Bailian",
       options: {
-        apiKey: '',
-        baseURL: ''
+        apiKey: "",
+        baseURL: "",
       },
       models: {
-        'MiniMax-M2.5': {
-          id: 'MiniMax-M2.5',
-          name: 'MiniMax-M2.5',
+        "MiniMax-M2.5": {
+          id: "MiniMax-M2.5",
+          name: "MiniMax-M2.5",
           limit: {
             context: 204800,
-            output: 131072
+            output: 131072,
           },
           modalities: {
-            input: ['text'],
-            output: ['text']
-          }
-        }
-      }
-    }
+            input: ["text"],
+            output: ["text"],
+          },
+        },
+      },
+    },
   },
-  agent: DEFAULT_AGENT_CONFIG
+  webSearch: {
+    exaApiKey: "",
+    tavilyApiKey: "",
+  },
+  showAgentThinking: false,
+  disabledSkillIds: [],
+  agent: DEFAULT_AGENT_CONFIG,
 }
 
 // 旧配置缺失模型限制时使用的保守默认值。
 const DEFAULT_MODEL_LIMIT: ModelLimit = {
   context: 8192,
-  output: 4096
+  output: 4096,
 }
 
 /**
  * 判断值是否为普通对象。
  */
 const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
 /**
@@ -164,7 +201,7 @@ const readRawConfig = (configPath: string): RawConfigFile => {
     return {}
   }
 
-  const rawText = readFileSync(configPath, 'utf8').trim()
+  const rawText = readFileSync(configPath, "utf8").trim()
   if (!rawText) {
     return {}
   }
@@ -181,45 +218,50 @@ const inferProviderType = (provider: RawProviderConfig): ProviderTransportType =
     return provider.type
   }
 
-  if (provider.npm === '@ai-sdk/google') {
-    return 'google'
+  if (provider.npm === "@ai-sdk/google") {
+    return "google"
   }
 
-  if (provider.npm === '@ai-sdk/anthropic') {
-    return 'anthropic'
+  if (provider.npm === "@ai-sdk/anthropic") {
+    return "anthropic"
   }
 
-  if (provider.npm === '@ai-sdk/openai') {
-    return 'openai'
+  if (provider.npm === "@ai-sdk/openai") {
+    return "openai"
   }
 
-  return 'openai-compatible'
+  return "openai-compatible"
 }
 
 /**
  * 归一化模型限制。
  */
 const normalizeLimit = (limit: Partial<ModelLimit> | undefined): ModelLimit => ({
-  context: typeof limit?.context === 'number' ? limit.context : DEFAULT_MODEL_LIMIT.context,
-  output: typeof limit?.output === 'number' ? limit.output : DEFAULT_MODEL_LIMIT.output
+  context: typeof limit?.context === "number" ? limit.context : DEFAULT_MODEL_LIMIT.context,
+  output: typeof limit?.output === "number" ? limit.output : DEFAULT_MODEL_LIMIT.output,
 })
 
 /**
  * 归一化模型模态。
  */
-const normalizeModalities = (modalities: Partial<ModelModalities> | undefined): ModelModalities => ({
-  input: Array.isArray(modalities?.input) ? modalities.input.map(String) : ['text'],
-  output: Array.isArray(modalities?.output) ? modalities.output.map(String) : ['text']
+const normalizeModalities = (
+  modalities: Partial<ModelModalities> | undefined,
+): ModelModalities => ({
+  input: Array.isArray(modalities?.input) ? modalities.input.map(String) : ["text"],
+  output: Array.isArray(modalities?.output) ? modalities.output.map(String) : ["text"],
 })
 
 /**
  * 归一化单个模型配置。
  */
-const normalizeModel = (id: string, model: Partial<AiSettingsModel> | undefined): AiSettingsModel => ({
+const normalizeModel = (
+  id: string,
+  model: Partial<AiSettingsModel> | undefined,
+): AiSettingsModel => ({
   id,
   name: model?.name ?? id,
   limit: normalizeLimit(model?.limit),
-  modalities: normalizeModalities(model?.modalities)
+  modalities: normalizeModalities(model?.modalities),
 })
 
 /**
@@ -230,15 +272,25 @@ const normalizeProvider = (id: string, provider: RawProviderConfig): AiSettingsP
   type: inferProviderType(provider),
   name: provider.name ?? id,
   options: {
-    apiKey: provider.options?.apiKey ?? '',
-    baseURL: provider.options?.baseURL ?? ''
+    apiKey: provider.options?.apiKey ?? "",
+    baseURL: provider.options?.baseURL ?? "",
   },
   models: Object.fromEntries(
     Object.entries(provider.models ?? {}).map(([modelId, model]) => [
       modelId,
-      normalizeModel(modelId, model)
-    ])
-  )
+      normalizeModel(modelId, model),
+    ]),
+  ),
+})
+
+/**
+ * 归一化联网搜索服务配置。
+ */
+const normalizeWebSearch = (
+  webSearch: Partial<AiWebSearchConfig> | undefined,
+): AiWebSearchConfig => ({
+  exaApiKey: webSearch?.exaApiKey ?? "",
+  tavilyApiKey: webSearch?.tavilyApiKey ?? "",
 })
 
 /**
@@ -253,8 +305,8 @@ const readRawAiConfig = (rawConfig: RawConfigFile): RawAiConfig => {
   if (isRecord(rawConfig.bailian)) {
     return {
       providers: {
-        bailian: rawConfig.bailian as RawProviderConfig
-      }
+        bailian: rawConfig.bailian as RawProviderConfig,
+      },
     }
   }
 
@@ -268,18 +320,24 @@ const normalizeSelection = (
   value: string | Partial<AiSettingsModelSelection> | undefined,
   legacyProvider: string | undefined,
   providers: Record<string, AiSettingsProvider>,
-  fallback?: AiSettingsModelSelection
+  fallback?: AiSettingsModelSelection,
 ): AiSettingsModelSelection => {
   const providerIds = Object.keys(providers)
-  const requestedProvider = typeof value === 'object' ? value.provider : legacyProvider
-  const provider = requestedProvider && providers[requestedProvider] ? requestedProvider : fallback?.provider ?? providerIds[0]
-  const requestedModel = typeof value === 'string' ? value : value?.model
-  const providerModels = provider ? providers[provider]?.models ?? {} : {}
-  const model = requestedModel && providerModels[requestedModel] ? requestedModel : fallback?.model ?? Object.keys(providerModels)[0] ?? ''
+  const requestedProvider = typeof value === "object" ? value.provider : legacyProvider
+  const provider =
+    requestedProvider && providers[requestedProvider]
+      ? requestedProvider
+      : (fallback?.provider ?? providerIds[0])
+  const requestedModel = typeof value === "string" ? value : value?.model
+  const providerModels = provider ? (providers[provider]?.models ?? {}) : {}
+  const model =
+    requestedModel && providerModels[requestedModel]
+      ? requestedModel
+      : (fallback?.model ?? Object.keys(providerModels)[0] ?? "")
 
   return {
-    provider: provider ?? '',
-    model
+    provider: provider ?? "",
+    model,
   }
 }
 
@@ -289,22 +347,22 @@ const normalizeSelection = (
 const normalizeAgent = (agent: Partial<AgentConfig> | undefined): AgentConfig => ({
   context: {
     toolOutputMaxChars:
-      typeof agent?.context?.toolOutputMaxChars === 'number'
+      typeof agent?.context?.toolOutputMaxChars === "number"
         ? agent.context.toolOutputMaxChars
         : DEFAULT_AGENT_CONFIG.context.toolOutputMaxChars,
     recentToolResultLimit:
-      typeof agent?.context?.recentToolResultLimit === 'number' &&
+      typeof agent?.context?.recentToolResultLimit === "number" &&
       Number.isInteger(agent.context.recentToolResultLimit) &&
       agent.context.recentToolResultLimit >= 0
         ? agent.context.recentToolResultLimit
         : DEFAULT_AGENT_CONFIG.context.recentToolResultLimit,
     maxTurns:
-      typeof agent?.context?.maxTurns === 'number' &&
+      typeof agent?.context?.maxTurns === "number" &&
       Number.isInteger(agent.context.maxTurns) &&
       agent.context.maxTurns > 0
         ? agent.context.maxTurns
-        : undefined
-  }
+        : undefined,
+  },
 })
 
 /**
@@ -313,15 +371,17 @@ const normalizeAgent = (agent: Partial<AgentConfig> | undefined): AgentConfig =>
 export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSettingsConfig => {
   const rawConfig = readRawConfig(configPath)
   const rawAi = readRawAiConfig(rawConfig)
-  const rawProviders = rawAi.providers ?? (DEFAULT_AI_SETTINGS.providers as unknown as Record<string, RawProviderConfig>)
+  const rawProviders =
+    rawAi.providers ??
+    (DEFAULT_AI_SETTINGS.providers as unknown as Record<string, RawProviderConfig>)
   const providers = Object.fromEntries(
     Object.entries(rawProviders).map(([providerId, provider]) => [
       providerId,
-      normalizeProvider(providerId, provider)
-    ])
+      normalizeProvider(providerId, provider),
+    ]),
   )
-  const enabledProviders = (rawAi.enabled_providers ?? Object.keys(providers)).filter((providerId) =>
-    Boolean(providers[providerId])
+  const enabledProviders = (rawAi.enabled_providers ?? Object.keys(providers)).filter(
+    (providerId) => Boolean(providers[providerId]),
   )
   const defaultModel = normalizeSelection(rawAi.defaultModel, rawAi.defaultProvider, providers)
 
@@ -330,9 +390,25 @@ export const readAiSettingsConfig = (configPath = DEFAULT_MC_CONFIG_PATH): AiSet
     defaultModel,
     titleSummary: normalizeSelection(rawAi.titleSummary, undefined, providers, defaultModel),
     weeklySummary: normalizeSelection(rawAi.weeklySummary, undefined, providers, defaultModel),
+    suggestedQuestions: normalizeSelection(
+      rawAi.suggestedQuestions,
+      undefined,
+      providers,
+      defaultModel,
+    ),
+    suggestedQuestionsEnabled: rawAi.suggestedQuestionsEnabled !== false,
     enabledProviders: enabledProviders.length > 0 ? enabledProviders : Object.keys(providers),
     providers,
-    agent: normalizeAgent(rawAi.agent)
+    webSearch: normalizeWebSearch(rawAi.webSearch),
+    showAgentThinking: rawAi.showAgentThinking === true,
+    disabledSkillIds: Array.from(
+      new Set(
+        (rawAi.disabled_skill_ids ?? []).filter(
+          (skillId): skillId is string => typeof skillId === "string",
+        ),
+      ),
+    ),
+    agent: normalizeAgent(rawAi.agent),
   }
 }
 
@@ -349,7 +425,7 @@ const isPositiveInteger = (value: number): boolean => {
 const validateSelection = (
   label: string,
   selection: AiSettingsModelSelection,
-  providers: Record<string, AiSettingsProvider>
+  providers: Record<string, AiSettingsProvider>,
 ): void => {
   if (!providers[selection.provider]) {
     throw new Error(`${label} provider 不存在`)
@@ -366,11 +442,11 @@ const validateSelection = (
 const validateSettings = (settings: AiSettingsConfig): void => {
   const providerIds = Object.keys(settings.providers)
   if (providerIds.length === 0) {
-    throw new Error('至少配置一个 provider')
+    throw new Error("至少配置一个 provider")
   }
 
   if (settings.enabledProviders.length === 0) {
-    throw new Error('至少启用一个 provider')
+    throw new Error("至少启用一个 provider")
   }
 
   const seenProviderIds = new Set<string>()
@@ -378,7 +454,7 @@ const validateSettings = (settings: AiSettingsConfig): void => {
     const provider = settings.providers[providerKey]
     const providerId = provider.id.trim()
     if (!providerId) {
-      throw new Error('provider id 不能为空')
+      throw new Error("provider id 不能为空")
     }
     if (seenProviderIds.has(providerId)) {
       throw new Error(`provider id 重复: ${providerId}`)
@@ -424,21 +500,33 @@ const validateSettings = (settings: AiSettingsConfig): void => {
       throw new Error(`启用的 provider 不存在: ${providerId}`)
     }
   })
-  validateSelection('默认模型', settings.defaultModel, settings.providers)
-  validateSelection('标题总结模型', settings.titleSummary, settings.providers)
-  validateSelection('周度总结模型', settings.weeklySummary, settings.providers)
+  validateSelection("默认模型", settings.defaultModel, settings.providers)
+  validateSelection("标题总结模型", settings.titleSummary, settings.providers)
+  validateSelection("周度总结模型", settings.weeklySummary, settings.providers)
+  validateSelection("推荐问题模型", settings.suggestedQuestions, settings.providers)
+
+  if (typeof settings.showAgentThinking !== "boolean") {
+    throw new Error("showAgentThinking 必须为布尔值")
+  }
+
+  if (settings.disabledSkillIds.some((skillId) => !skillId.trim())) {
+    throw new Error("disabledSkillIds 不能包含空值")
+  }
 
   if (!isPositiveInteger(settings.agent.context.toolOutputMaxChars)) {
-    throw new Error('toolOutputMaxChars 必须为正整数')
+    throw new Error("toolOutputMaxChars 必须为正整数")
   }
-  if (!isPositiveInteger(settings.agent.context.recentToolResultLimit) && settings.agent.context.recentToolResultLimit !== 0) {
-    throw new Error('recentToolResultLimit 必须为正整数或 0（表示无限制）')
+  if (
+    !isPositiveInteger(settings.agent.context.recentToolResultLimit) &&
+    settings.agent.context.recentToolResultLimit !== 0
+  ) {
+    throw new Error("recentToolResultLimit 必须为正整数或 0（表示无限制）")
   }
   if (
     settings.agent.context.maxTurns !== undefined &&
     !isPositiveInteger(settings.agent.context.maxTurns)
   ) {
-    throw new Error('maxTurns 必须为正整数或留空（表示无限制）')
+    throw new Error("maxTurns 必须为正整数或留空（表示无限制）")
   }
 }
 
@@ -447,24 +535,30 @@ const validateSettings = (settings: AiSettingsConfig): void => {
  */
 const preserveExistingApiKeys = (
   settings: AiSettingsConfig,
-  existing: AiSettingsConfig
+  existing: AiSettingsConfig,
 ): AiSettingsConfig => ({
   ...settings,
+  webSearch: {
+    exaApiKey: settings.webSearch.exaApiKey.trim() || existing.webSearch.exaApiKey,
+    tavilyApiKey: settings.webSearch.tavilyApiKey.trim() || existing.webSearch.tavilyApiKey,
+  },
   providers: Object.fromEntries(
     Object.entries(settings.providers).map(([providerKey, provider]) => {
-      const existingApiKey = existing.providers[provider.id]?.options.apiKey ?? existing.providers[providerKey]?.options.apiKey
+      const existingApiKey =
+        existing.providers[provider.id]?.options.apiKey ??
+        existing.providers[providerKey]?.options.apiKey
       return [
         providerKey,
         {
           ...provider,
           options: {
             ...provider.options,
-            apiKey: provider.options.apiKey.trim() || existingApiKey || ''
-          }
-        }
+            apiKey: provider.options.apiKey.trim() || existingApiKey || "",
+          },
+        },
       ]
-    })
-  )
+    }),
+  ),
 })
 
 /**
@@ -474,7 +568,12 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
   defaultModel: settings.defaultModel,
   titleSummary: settings.titleSummary,
   weeklySummary: settings.weeklySummary,
+  suggestedQuestions: settings.suggestedQuestions,
+  suggestedQuestionsEnabled: settings.suggestedQuestionsEnabled,
   enabled_providers: settings.enabledProviders,
+  webSearch: settings.webSearch,
+  showAgentThinking: settings.showAgentThinking,
+  disabled_skill_ids: settings.disabledSkillIds,
   providers: Object.fromEntries(
     Object.values(settings.providers).map((provider) => [
       provider.id,
@@ -483,7 +582,7 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
         name: provider.name,
         options: {
           apiKey: provider.options.apiKey,
-          baseURL: provider.options.baseURL.replace(/\/$/, '')
+          baseURL: provider.options.baseURL.replace(/\/$/, ""),
         },
         models: Object.fromEntries(
           Object.values(provider.models).map((model) => [
@@ -491,14 +590,14 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
             {
               name: model.name,
               limit: model.limit,
-              modalities: model.modalities
-            }
-          ])
-        )
-      }
-    ])
+              modalities: model.modalities,
+            },
+          ]),
+        ),
+      },
+    ]),
   ),
-  agent: settings.agent
+  agent: settings.agent,
 })
 
 /**
@@ -506,7 +605,7 @@ const serializeAiConfig = (settings: AiSettingsConfig): RawAiConfig => ({
  */
 export const saveAiSettingsConfig = (
   settings: AiSettingsConfig,
-  configPath = DEFAULT_MC_CONFIG_PATH
+  configPath = DEFAULT_MC_CONFIG_PATH,
 ): AiSettingsConfig => {
   const rawConfig = readRawConfig(configPath)
   const existing = readAiSettingsConfig(configPath)
@@ -514,7 +613,7 @@ export const saveAiSettingsConfig = (
   validateSettings(nextSettings)
   const nextRawConfig = {
     ...rawConfig,
-    ai: serializeAiConfig(nextSettings)
+    ai: serializeAiConfig(nextSettings),
   }
 
   mkdirSync(dirname(configPath), { recursive: true })

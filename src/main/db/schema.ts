@@ -1,12 +1,12 @@
-import { customType, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import { customType, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core"
 
 // SQLite 时间戳字段类型。
 const timestamp = customType<{ data: string; driverData: string }>({
-  dataType: () => 'timestamp'
+  dataType: () => "timestamp",
 })
 
 // 待办优先级类型。
-export type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+export type TodoPriority = "P0" | "P1" | "P2" | "P3"
 
 // 笔记创建输入类型。
 export type NoteCreateInput = {
@@ -86,7 +86,7 @@ export type JournalSaveInput = {
 }
 
 // 人物关系类型。
-export type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+export type PersonRelationship = "女朋友" | "家人" | "朋友" | "同事" | "其他"
 
 // 关联人物创建输入类型。
 export type AssociatedPersonCreateInput = {
@@ -112,6 +112,26 @@ export type AssociatedPersonCreateInput = {
 
 // 关联人物更新输入类型。
 export type AssociatedPersonUpdateInput = AssociatedPersonCreateInput
+
+// 个人信息更新输入类型。
+export type PersonalProfileUpdateInput = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
 
 // 页面使用的笔记类型。
 export type NoteMaterialItem = {
@@ -195,17 +215,27 @@ export type AssociatedPersonItem = AssociatedPersonCreateInput & {
   updatedAt: string
 }
 
+// 页面使用的个人信息类型。
+export type PersonalProfileItem = PersonalProfileUpdateInput & {
+  // 自增主键。
+  id: number
+  // 创建时间。
+  createdAt: string
+  // 更新时间。
+  updatedAt: string
+}
+
 // AI 对话消息角色。
-export type AiChatMessageRole = 'user' | 'assistant'
+export type AiChatMessageRole = "user" | "assistant" | "system" | "system_command"
 
 // AI Agent run 状态。
-export type AiAgentRunStatus = 'running' | 'completed' | 'failed'
+export type AiAgentRunStatus = "running" | "completed" | "failed"
 
 // AI 对话会话状态。
-export type AiChatSessionStatus = 'idle' | AiAgentRunStatus
+export type AiChatSessionStatus = "idle" | AiAgentRunStatus
 
 // AI 工具调用状态。
-export type AiAgentToolCallStatus = 'running' | 'done' | 'failed'
+export type AiAgentToolCallStatus = "running" | "done" | "failed"
 
 // AI 消息片段类型。
 export type AiChatMessagePart =
@@ -213,7 +243,7 @@ export type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text'
+      kind: "text"
       // Markdown 文本内容。
       content: string
     }
@@ -221,23 +251,42 @@ export type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'reasoning'
+      kind: "reasoning"
       // Markdown 思考内容。
       content: string
+      // 思考片段状态。
+      status?: "streaming" | "done"
     }
   | {
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'tool'
+      kind: "tool"
       // 对应工具步骤 ID。
       stepId: string
     }
   | {
-      // 片段唯一标识。
+      // 引用快照片段。
       id: string
-      // 片段类型。
-      kind: 'image'
+      kind: "reference"
+      startLine: number
+      endLine: number
+      content: string
+    }
+  | {
+      // MCP 服务及工具快照。
+      id: string
+      kind: "mcp-overview"
+      servers: Array<{
+        id: string
+        name: string
+        tools: Array<{ name: string; description: string }>
+      }>
+    }
+  | {
+      // 图片片段。
+      id: string
+      kind: "image"
       // 图片的本地协议地址。
       url: string
     }
@@ -245,7 +294,7 @@ export type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text-file'
+      kind: "text-file"
       // 文本文件的本地协议地址。
       url: string
       // 原始文件名。
@@ -257,10 +306,278 @@ export type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'agent'
+      kind: "agent"
       // Agent 唯一标识。
-      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
+      agentId:
+        | "people"
+        | "personal"
+        | "todo"
+        | "snippets"
+        | "journal"
+        | "notes"
+        | "today"
+        | "common"
     }
+
+// ==================== Prompt Design ====================
+
+/** 提示词设计项目类型 */
+export type PromptProjectType = "filesystem" | "virtual"
+
+/** 提示词设计项目数据库行 */
+export type PromptDesignProjectRow = {
+  id: number
+  external_id: string
+  name: string
+  type: string
+  path: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** 提示词设计项目 */
+export type PromptDesignProject = {
+  id: string
+  name: string
+  type: PromptProjectType
+  path?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 提示词设计项目创建输入 */
+export type PromptDesignProjectCreateInput = {
+  id: string
+  name: string
+  type: PromptProjectType
+  path?: string
+}
+
+/** 提示词设计项目更新输入 */
+export type PromptDesignProjectUpdateInput = {
+  name?: string
+  path?: string
+}
+
+/** 提示词设计模块数据库行 */
+export type PromptDesignModuleRow = {
+  id: number
+  external_id: string
+  project_id: string
+  name: string
+  created_at: string
+  updated_at: string
+}
+
+/** 提示词设计模块 */
+export type PromptDesignModule = {
+  id: string
+  projectId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** 提示词设计模块创建输入 */
+export type PromptDesignModuleCreateInput = {
+  id?: string
+  projectId: string
+  name: string
+}
+
+/** 提示词设计模块更新输入 */
+export type PromptDesignModuleUpdateInput = {
+  name?: string
+}
+
+/** 提示词设计状态 */
+export type PromptDesignStatus = "todo" | "in_progress" | "completed"
+
+/** 提示词设计数据库行 */
+export type PromptDesignRow = {
+  id: number
+  external_id: string
+  project_id: string
+  module_id: string | null
+  name: string
+  design_data: string
+  status: PromptDesignStatus
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+/** 提示词设计 */
+export type PromptDesign = {
+  id: string
+  projectId: string
+  moduleId?: string
+  name: string
+  designData: string
+  status: PromptDesignStatus
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** 提示词设计创建输入 */
+export type PromptDesignCreateInput = {
+  id?: string
+  projectId: string
+  moduleId?: string
+  name: string
+  designData?: string
+}
+
+/** 提示词设计更新输入 */
+export type PromptDesignUpdateInput = {
+  name?: string
+  designData?: string
+  status?: PromptDesignStatus
+}
+
+/** 提示词业务节点提纯数据库行（方案二 CQRS 核心表） */
+export type PromptActiveNodeRow = {
+  id: number
+  external_id: string // 对应前端 ReactFlow 节点的唯一 id
+  design_item_id: string // 关联 prompt_design_items 的 external_id (UUID)
+  parent_node_id: string | null // 嵌套父容器的 external_id (用于 Task Field 物理定位)
+  node_type: string // 节点业务类型 (system_role, task, output_format, 等)
+  title: string // 节点标题
+  content: string | null // 精华提示词正文
+  sort_order: number // 用于后端按顺序流式编译的序号
+  updated_at: string
+}
+
+// ==================== Prompt Design AI Chat ====================
+
+// 提示词 AI 对话会话数据库行
+export type PromptAiChatSessionRow = {
+  // 自增主键
+  id: number
+  // 会话唯一标识 (UUID)
+  external_id: string
+  // 关联的提示词设计项 ID (关联 prompt_design_items 表)
+  design_item_id: string
+  // 会话标题
+  title: string
+  // 会话状态 (与 AiChatSessionStatus 保持一致: "idle" | "running" | "completed" | "failed")
+  status: AiChatSessionStatus
+  // 创建时间
+  created_at: string
+  // 更新时间
+  updated_at: string
+  // 最近消息时间
+  last_message_at: string
+}
+
+// 提示词 AI 对话消息数据库行
+export type PromptAiChatMessageRow = {
+  // 自增主键
+  id: number
+  // 消息唯一标识 (UUID)
+  external_id: string
+  // 所属会话标识
+  session_id: string
+  // 消息角色 ("user" | "assistant")
+  role: AiChatMessageRole
+  // 消息正文
+  content: string
+  // 助手最终回答
+  answer: string | null
+  // 顺序片段 JSON (例如图片、附件等多模态数据)
+  parts_json: string
+  // 工具步骤 JSON (仅用于前端渲染的简要工具状态)
+  tool_steps_json: string
+  // 展示时间
+  time: string
+  // 模型
+  model?: string | null
+  // 创建时间
+  created_at: string
+  // 更新时间
+  updated_at: string
+  // 是否已被用户主动取消（0 = 否，1 = 是）
+  cancelled: number
+}
+
+// 提示词 AI Agent 运行记录行 (记录每次大模型请求)
+export type PromptAiAgentRunRow = {
+  // 自增主键
+  id: number
+  // 运行唯一标识 (UUID)
+  external_id: string
+  // 所属会话标识
+  session_id: string
+  // 关联的 AI 助手消息标识
+  assistant_message_id: string
+  // 提供商 (如 anthropic, openai)
+  provider: string | null
+  // 模型名称
+  model: string | null
+  // 运行状态 ("running" | "completed" | "failed")
+  status: string
+  // 错误信息
+  error: string | null
+  // 开始时间
+  started_at: string
+  // 结束时间
+  finished_at: string | null
+}
+
+// 提示词 AI 工具调用详情行 (存储工具的原始出入参和完整数据)
+export type PromptAiAgentToolCallRow = {
+  // 自增主键
+  id: number
+  // 外部唯一标识 (UUID)
+  external_id: string
+  // 关联的运行 ID
+  run_id: string
+  // 关联的消息 ID
+  message_id: string
+  // AI SDK 自动生成的工具调用 ID
+  tool_call_id: string
+  // 工具名称 (如 "read_document")
+  name: string
+  // 工具状态 ("running" | "done" | "failed")
+  status: string
+  // 入参 JSON
+  input_json: string
+  // 面向用户的执行观察摘要
+  observation: string
+  // 原始返回数据 JSON (如完整文件内容)
+  data_json: string
+  // 错误信息
+  error: string | null
+  // 创建时间
+  created_at: string
+  // 更新时间
+  updated_at: string
+}
+
+// 提示词 AI 上下文快照行 (例如用户 @ 了一个文件，记录这个文件的内容快照)
+export type PromptAiAgentContextSnapshotRow = {
+  // 自增主键
+  id: number
+  // 关联的运行 ID
+  run_id: string
+  // 上下文唯一键
+  context_key: string
+  // 类型 ("file" | "design_data" 等)
+  kind: string
+  // 标题/文件名
+  title: string
+  // 来源 ID / 路径
+  source_id: string | null
+  // 上下文具体内容
+  content: string
+  // Token 估算量
+  tokens: number | null
+  // 注入顺序
+  created_order: number
+  // 元数据 JSON
+  meta_json: string
+}
 
 // AI 工具步骤类型。
 export type AiToolStep = {
@@ -269,7 +586,7 @@ export type AiToolStep = {
   // 工具步骤标题。
   title: string
   // 工具步骤状态。
-  status: AiAgentToolCallStatus | 'cancelled'
+  status: AiAgentToolCallStatus | "cancelled"
   // 工具名称。
   tool: string
   // 工具输入参数。
@@ -278,6 +595,12 @@ export type AiToolStep = {
   observation: string
   // 工具返回的结构化数据。
   data?: unknown
+  // MCP 工具来源，普通工具不设置。
+  mcp?: {
+    serverId: string
+    serverName: string
+    toolName: string
+  }
 }
 
 // AI 对话会话类型。
@@ -508,53 +831,79 @@ export type AssociatedPersonRow = {
   updated_at: string
 }
 
+// 个人信息数据库行类型。
+export type PersonalProfileRow = {
+  // 自增主键。
+  id: number
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // JSON 字符串标签列表。
+  tags: string
+  // Markdown 详细档案。
+  details: string
+  // 创建时间。
+  created_at: string
+  // 更新时间。
+  updated_at: string
+}
+
 // 笔记 SQLite 表定义。
-export const notes = sqliteTable('notes', {
-  id: integer('id').primaryKey(),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  tags: text('tags').notNull(),
-  time: timestamp('time').notNull(),
-  categoryId: integer('category_id')
+export const notes = sqliteTable("notes", {
+  id: integer("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  tags: text("tags").notNull(),
+  time: timestamp("time").notNull(),
+  categoryId: integer("category_id"),
 })
 
 // 笔记分类 SQLite 表定义。
-export const noteCategories = sqliteTable('note_categories', {
-  id: integer('id').primaryKey(),
-  name: text('name').notNull(),
-  sortOrder: integer('sort_order').notNull().default(0)
+export const noteCategories = sqliteTable("note_categories", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
 })
 
 // 待办 SQLite 表定义。
-export const todos = sqliteTable('todos', {
-  id: integer('id').primaryKey(),
-  entryDate: text('entry_date').notNull(),
-  text: text('text').notNull(),
-  priority: text('priority').$type<TodoPriority>().notNull(),
-  completed: integer('completed').notNull().default(0),
-  sortOrder: integer('sort_order').notNull(),
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull()
+export const todos = sqliteTable("todos", {
+  id: integer("id").primaryKey(),
+  entryDate: text("entry_date").notNull(),
+  text: text("text").notNull(),
+  priority: text("priority").$type<TodoPriority>().notNull(),
+  completed: integer("completed").notNull().default(0),
+  sortOrder: integer("sort_order").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 })
 
 // 片段 SQLite 表定义。
-export const snippets = sqliteTable('snippets', {
-  id: integer('id').primaryKey(),
-  entryDate: text('entry_date').notNull(),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  tags: text('tags').notNull(),
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull()
+export const snippets = sqliteTable("snippets", {
+  id: integer("id").primaryKey(),
+  entryDate: text("entry_date").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  tags: text("tags").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 })
 
 // 日记 SQLite 表定义。
-export const journals = sqliteTable('journals', {
-  id: integer('id').primaryKey(),
-  entryDate: text('entry_date').notNull().unique(),
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull()
+export const journals = sqliteTable("journals", {
+  id: integer("id").primaryKey(),
+  entryDate: text("entry_date").notNull().unique(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 })
 
 // 关联人物 SQLite 表定义。
@@ -616,7 +965,7 @@ export type WeeklySummarySaveInput = {
   isMeaningful?: number
 }
 
-// ==================== Themes Curation (Phase 2) ====================
+// ==================== 主题策展 ====================
 
 /** 主题数据库行类型 */
 export type ThemeRow = {
@@ -710,68 +1059,109 @@ export type ThemeTimelineItem = {
   mentionedInSummary: boolean
 }
 
-export const themes = sqliteTable('themes', {
-  id: integer('id').primaryKey(),
-  externalId: text('external_id').notNull().unique(),
-  name: text('name').notNull(),
-  description: text('description').notNull().default(''),
-  color: text('color'),
-  status: text('status').notNull().default('active'),
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull()
+export const themes = sqliteTable("themes", {
+  id: integer("id").primaryKey(),
+  externalId: text("external_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  color: text("color"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 })
 
 export const themeItems = sqliteTable(
-  'theme_items',
+  "theme_items",
   {
-    id: integer('id').primaryKey(),
-    externalId: text('external_id').notNull().unique(),
-    themeExternalId: text('theme_external_id').notNull(),
-    sourceType: text('source_type').notNull(),
-    sourceId: text('source_id').notNull(),
-    relevanceNote: text('relevance_note').notNull().default(''),
-    aiExtracted: integer('ai_extracted').notNull().default(0),
-    createdAt: text('created_at').notNull()
+    id: integer("id").primaryKey(),
+    externalId: text("external_id").notNull().unique(),
+    themeExternalId: text("theme_external_id").notNull(),
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    relevanceNote: text("relevance_note").notNull().default(""),
+    aiExtracted: integer("ai_extracted").notNull().default(0),
+    createdAt: text("created_at").notNull(),
   },
   (table) => ({
-    unqThemeSource: unique('unq_theme_source').on(
+    unqThemeSource: unique("unq_theme_source").on(
       table.themeExternalId,
       table.sourceType,
-      table.sourceId
-    )
-  })
+      table.sourceId,
+    ),
+  }),
 )
 
-export const associatedPeople = sqliteTable('associated_people', {
-  id: integer('id').primaryKey(),
-  externalId: text('external_id').notNull().unique(),
-  avatar: text('avatar').notNull(),
-  name: text('name').notNull(),
-  gender: text('gender').notNull(),
-  relationship: text('relationship').$type<PersonRelationship>().notNull(),
-  status: text('status').notNull(),
-  birthday: text('birthday').notNull(),
-  contact: text('contact').notNull(),
-  tags: text('tags').notNull(),
-  details: text('details').notNull(),
-  createdAt: timestamp('created_at').notNull(),
-  updatedAt: timestamp('updated_at').notNull()
+export const associatedPeople = sqliteTable("associated_people", {
+  id: integer("id").primaryKey(),
+  externalId: text("external_id").notNull().unique(),
+  avatar: text("avatar").notNull(),
+  name: text("name").notNull(),
+  gender: text("gender").notNull(),
+  relationship: text("relationship").$type<PersonRelationship>().notNull(),
+  status: text("status").notNull(),
+  birthday: text("birthday").notNull(),
+  contact: text("contact").notNull(),
+  tags: text("tags").notNull(),
+  details: text("details").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
 })
 
-// ==================== Bills ====================
+// 个人信息 SQLite 表定义。
+export const personalProfiles = sqliteTable("personal_profiles", {
+  id: integer("id").primaryKey(),
+  avatar: text("avatar").notNull(),
+  name: text("name").notNull(),
+  gender: text("gender").notNull(),
+  status: text("status").notNull(),
+  birthday: text("birthday").notNull(),
+  contact: text("contact").notNull(),
+  tags: text("tags").notNull(),
+  details: text("details").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+})
+
+// ==================== 账单 ====================
 
 /** 账单分类 */
-export type BillCategory = 
-  | '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
-  | '工资' | '兼职' | '理财' | '礼金' | '报销' | '奖金' | '退款'
+export type BillCategory =
+  | "餐饮"
+  | "交通"
+  | "购物"
+  | "娱乐"
+  | "居住"
+  | "医疗"
+  | "教育"
+  | "其他"
+  | "工资"
+  | "兼职"
+  | "理财"
+  | "礼金"
+  | "报销"
+  | "奖金"
+  | "退款"
 
 /** 收支类型 */
-export type BillType = 'expense' | 'income'
+export type BillType = "expense" | "income"
 
 /** 合法账单分类集合 */
 export const BILL_CATEGORIES: BillCategory[] = [
-  '餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他',
-  '工资', '兼职', '理财', '礼金', '报销', '奖金', '退款'
+  "餐饮",
+  "交通",
+  "购物",
+  "娱乐",
+  "居住",
+  "医疗",
+  "教育",
+  "其他",
+  "工资",
+  "兼职",
+  "理财",
+  "礼金",
+  "报销",
+  "奖金",
+  "退款",
 ]
 
 /** 账单数据库行 */

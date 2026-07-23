@@ -1,20 +1,20 @@
-import type React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { FileText, X } from "lucide-react";
-import { MdPreview } from "md-editor-rt";
-import "md-editor-rt/lib/preview.css";
+import { FileText, X } from "lucide-react"
+import { MdPreview } from "md-editor-rt"
+import type React from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import "md-editor-rt/lib/preview.css"
 
 export interface TextFileProps {
   // 文本文件协议 URL。
-  url: string;
+  url: string
   // 原始文件名。
-  fileName: string;
+  fileName: string
   // 文件大小（字节）。
-  sizeBytes: number;
+  sizeBytes: number
   // 是否支持点击预览。
-  preview?: boolean;
+  preview?: boolean
   // 附加容器类名。
-  className?: string;
+  className?: string
 }
 
 /**
@@ -22,15 +22,15 @@ export interface TextFileProps {
  */
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) {
-    return `${bytes} B`;
+    return `${bytes} B`
   }
 
   if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024).toFixed(1)} KB`
   }
 
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 /**
  * 根据文件名和文件内容，生成用于预览的 Markdown 字符串。
@@ -42,95 +42,95 @@ const formatFileSize = (bytes: number): string => {
  * @returns 包装后的 Markdown 文本
  */
 const getMarkdownContent = (content: string, fileName: string): string => {
-  const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
+  const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase()
 
   if (ext === ".md" || ext === ".markdown") {
-    return content;
+    return content
   }
 
   // 映射常见文件后缀到 markdown 语言标识。
-  let lang = "";
+  let lang = ""
   switch (ext) {
     case ".json":
-      lang = "json";
-      break;
+      lang = "json"
+      break
     case ".csv":
-      lang = "csv";
-      break;
+      lang = "csv"
+      break
     case ".xml":
-      lang = "xml";
-      break;
+      lang = "xml"
+      break
     case ".yaml":
     case ".yml":
-      lang = "yaml";
-      break;
+      lang = "yaml"
+      break
     case ".toml":
-      lang = "toml";
-      break;
+      lang = "toml"
+      break
     case ".py":
-      lang = "python";
-      break;
+      lang = "python"
+      break
     case ".js":
-      lang = "javascript";
-      break;
+      lang = "javascript"
+      break
     case ".ts":
-      lang = "typescript";
-      break;
+      lang = "typescript"
+      break
     case ".jsx":
-      lang = "jsx";
-      break;
+      lang = "jsx"
+      break
     case ".tsx":
-      lang = "tsx";
-      break;
+      lang = "tsx"
+      break
     case ".html":
-      lang = "html";
-      break;
+      lang = "html"
+      break
     case ".css":
-      lang = "css";
-      break;
+      lang = "css"
+      break
     case ".sh":
     case ".bash":
     case ".zsh":
-      lang = "bash";
-      break;
+      lang = "bash"
+      break
     case ".sql":
-      lang = "sql";
-      break;
+      lang = "sql"
+      break
     case ".java":
-      lang = "java";
-      break;
+      lang = "java"
+      break
     case ".c":
-      lang = "c";
-      break;
+      lang = "c"
+      break
     case ".cpp":
-      lang = "cpp";
-      break;
+      lang = "cpp"
+      break
     case ".rs":
-      lang = "rust";
-      break;
+      lang = "rust"
+      break
     case ".go":
-      lang = "go";
-      break;
+      lang = "go"
+      break
     case ".rb":
-      lang = "ruby";
-      break;
+      lang = "ruby"
+      break
     case ".env":
     case ".ini":
-      lang = "ini";
-      break;
+      lang = "ini"
+      break
     case ".log":
-      lang = "text";
-      break;
+      lang = "text"
+      break
     case ".txt":
     default:
-      lang = "text";
-      break;
+      lang = "text"
+      break
   }
 
   // 为防止内容中包含 ``` 导致 markdown 渲染错误，动态选择 ``` 或 ````
-  const fence = content.includes("```") ? "````" : "```";
-  return `${fence}${lang}\n${content}\n${fence}`;
-};
+  const fence = content.includes("```") ? "````" : "```"
+  return `${fence}${lang}\n${content}\n${fence}`
+}
 
 // 文本文件图标色映射。
 const TEXT_EXTENSION_COLORS: Record<string, string> = {
@@ -161,7 +161,7 @@ const TEXT_EXTENSION_COLORS: Record<string, string> = {
   ".env": "text-gray-400",
   ".log": "text-gray-400",
   ".txt": "text-white/60",
-};
+}
 
 /**
  * TextFile - 文本文件卡片组件，支持悬浮信息展示与内容预览弹窗。
@@ -173,93 +173,93 @@ export const TextFile = ({
   preview = true,
   className = "",
 }: TextFileProps): React.JSX.Element => {
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewContent, setPreviewContent] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState(false);
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewContent, setPreviewContent] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState(false)
 
-  const extension = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
-  const iconColor = TEXT_EXTENSION_COLORS[extension] ?? "text-white/50";
+  const extension = fileName.slice(fileName.lastIndexOf(".")).toLowerCase()
+  const iconColor = TEXT_EXTENSION_COLORS[extension] ?? "text-white/50"
 
-  const isBackdropMouseDownRef = useRef(false);
+  const isBackdropMouseDownRef = useRef(false)
 
   /**
    * 监听遮罩层按下，判断是否是背景本身。
    */
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
     if (e.target === e.currentTarget) {
-      isBackdropMouseDownRef.current = true;
+      isBackdropMouseDownRef.current = true
     } else {
-      isBackdropMouseDownRef.current = false;
+      isBackdropMouseDownRef.current = false
     }
-  }, []);
+  }, [])
 
   /**
    * 监听遮罩层松开，若按下与松开均在背景本身，则关闭预览。
    */
   const handleMouseUp = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
     if (isBackdropMouseDownRef.current && e.target === e.currentTarget) {
-      setShowPreview(false);
+      setShowPreview(false)
     }
-    isBackdropMouseDownRef.current = false;
-  }, []);
+    isBackdropMouseDownRef.current = false
+  }, [])
 
   // 关闭预览时重置状态。
   useEffect(() => {
     if (!showPreview) {
-      setPreviewContent(null);
-      setPreviewLoading(false);
-      setPreviewError(false);
+      setPreviewContent(null)
+      setPreviewLoading(false)
+      setPreviewError(false)
     }
-  }, [showPreview]);
+  }, [showPreview])
 
   // Escape 键关闭。
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && showPreview) {
-        setShowPreview(false);
+        setShowPreview(false)
       }
-    };
+    }
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown)
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showPreview]);
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [showPreview])
 
   /**
    * 点击打开预览，拉取文本内容。
    */
   const handleClick = useCallback((): void => {
     if (!preview) {
-      return;
+      return
     }
 
-    setShowPreview(true);
-    setPreviewLoading(true);
-    setPreviewError(false);
+    setShowPreview(true)
+    setPreviewLoading(true)
+    setPreviewError(false)
 
-    const loadContent = window.api?.files?.readAiChatTextFile
-      ? window.api.files.readAiChatTextFile(url)
+    const loadContent = window.api?.files?.readCuratorTextFile
+      ? window.api.files.readCuratorTextFile(url)
       : fetch(url).then((response) => {
           if (!response.ok) {
-            throw new Error("Failed to fetch");
+            throw new Error("Failed to fetch")
           }
 
-          return response.text();
-        });
+          return response.text()
+        })
 
     loadContent
       .then((text) => {
-        setPreviewContent(text);
-        setPreviewLoading(false);
+        setPreviewContent(text)
+        setPreviewLoading(false)
       })
       .catch(() => {
-        setPreviewError(true);
-        setPreviewLoading(false);
-      });
-  }, [url, preview]);
+        setPreviewError(true)
+        setPreviewLoading(false)
+      })
+  }, [url, preview])
 
   return (
     <>
@@ -270,12 +270,8 @@ export const TextFile = ({
         title={fileName}
       >
         <FileText className={`h-3.5 w-3.5 shrink-0 ${iconColor}`} />
-        <span className="text-xs text-white/70 truncate max-w-[120px]">
-          {fileName}
-        </span>
-        <span className="text-[10px] text-white/30 shrink-0">
-          {formatFileSize(sizeBytes)}
-        </span>
+        <span className="text-xs text-white/70 truncate max-w-[120px]">{fileName}</span>
+        <span className="text-[10px] text-white/30 shrink-0">{formatFileSize(sizeBytes)}</span>
       </div>
 
       {showPreview && (
@@ -334,5 +330,5 @@ export const TextFile = ({
         </div>
       )}
     </>
-  );
-};
+  )
+}

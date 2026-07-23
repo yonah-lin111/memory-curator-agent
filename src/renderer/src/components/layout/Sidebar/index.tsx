@@ -1,2 +1,2 @@
-export { Sidebar } from "./Sidebar";
-export type { SidebarPageId } from "./Sidebar";
+export type { SidebarPageId } from "./Sidebar"
+export { Sidebar } from "./Sidebar"

@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { electronAPI } from "@electron-toolkit/preload"
+import { contextBridge, ipcRenderer } from "electron"
 
 // 笔记草稿载荷类型。
 type NoteDraftPayload = {
@@ -12,7 +12,7 @@ type NoteDraftPayload = {
 }
 
 // 待办优先级类型。
-type TodoPriority = 'P0' | 'P1' | 'P2' | 'P3'
+type TodoPriority = "P0" | "P1" | "P2" | "P3"
 
 // 日记保存载荷类型。
 type JournalSavePayload = {
@@ -73,7 +73,27 @@ type SnippetUpdatePayload = {
 }
 
 // 人物关系类型。
-type PersonRelationship = '女朋友' | '家人' | '朋友' | '同事' | '其他'
+type PersonRelationship = "女朋友" | "家人" | "朋友" | "同事" | "其他"
+
+// 个人信息保存载荷类型。
+type PersonalProfilePayload = {
+  // 头像地址。
+  avatar: string
+  // 姓名。
+  name: string
+  // 性别。
+  gender: string
+  // 一句话状态。
+  status: string
+  // 生日。
+  birthday: string
+  // 联系方式。
+  contact: string
+  // 特征标签列表。
+  tags: string[]
+  // Markdown 详细档案。
+  details: string
+}
 
 // 关联人物保存载荷类型。
 type AssociatedPersonPayload = {
@@ -98,12 +118,25 @@ type AssociatedPersonPayload = {
 }
 
 // 账单分类类型。
-type BillCategory = 
-  | '餐饮' | '交通' | '购物' | '娱乐' | '居住' | '医疗' | '教育' | '其他'
-  | '工资' | '兼职' | '理财' | '礼金' | '报销' | '奖金' | '退款'
+type BillCategory =
+  | "餐饮"
+  | "交通"
+  | "购物"
+  | "娱乐"
+  | "居住"
+  | "医疗"
+  | "教育"
+  | "其他"
+  | "工资"
+  | "兼职"
+  | "理财"
+  | "礼金"
+  | "报销"
+  | "奖金"
+  | "退款"
 
 // 收支类型。
-type BillType = 'expense' | 'income'
+type BillType = "expense" | "income"
 
 // 账单列表筛选。
 type BillListFilters = {
@@ -145,10 +178,22 @@ type BillTodaySummary = {
   recentItems: BillItem[]
 }
 
+// 提示词历史作用域。
+type PromptHistoryScope = "curator" | "prompt-design"
+
 // AI 对话 agent hint 类型。
 type AiChatAgentHint = {
   // Agent 唯一标识。
-  id: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today'
+  id:
+    | "people"
+    | "personal"
+    | "todo"
+    | "snippets"
+    | "journal"
+    | "notes"
+    | "today"
+    | "common"
+    | "bills"
   // 本轮 agent 优先级，数字越小越优先。
   priority: number
 }
@@ -174,7 +219,7 @@ type AiChatStartPayload = {
     // 上下文稳定去重键。
     key: string
     // 上下文来源类型。
-    kind: 'message' | 'memory' | 'page' | 'file' | 'tool' | 'agent'
+    kind: "message" | "memory" | "page" | "file" | "tool" | "agent" | "skill"
     // 展示标题。
     title: string
     // 来源对象标识。
@@ -211,7 +256,7 @@ type AiToolConfirmationAnswerPayload = {
   // 工具确认请求唯一标识。
   requestId: string
   // 用户确认动作。
-  action: 'confirm' | 'cancel'
+  action: "confirm" | "cancel"
 }
 
 // AI 模型选项。
@@ -307,7 +352,7 @@ type AiSettingsProvider = {
   // Provider 唯一标识。
   id: string
   // Provider 传输格式。
-  type: 'openai-compatible' | 'openai' | 'anthropic' | 'google'
+  type: "openai-compatible" | "openai" | "anthropic" | "google"
   // Provider 显示名。
   name: string
   // Provider 连接参数。
@@ -321,6 +366,14 @@ type AiSettingsProvider = {
   models: Record<string, AiSettingsModel>
 }
 
+// 联网搜索服务密钥配置。
+type AiWebSearchConfig = {
+  // Exa API Key。
+  exaApiKey: string
+  // Tavily API Key。
+  tavilyApiKey: string
+}
+
 // Settings 页面完整 AI 配置。
 type AiSettingsConfig = {
   // 配置文件绝对路径。
@@ -331,10 +384,20 @@ type AiSettingsConfig = {
   titleSummary: AiSettingsModelSelection
   // 周度总结模型。
   weeklySummary: AiSettingsModelSelection
+  // 推荐问题生成模型。
+  suggestedQuestions: AiSettingsModelSelection
+  // 是否启用推荐问题。
+  suggestedQuestionsEnabled: boolean
   // 已启用 provider 标识列表。
   enabledProviders: string[]
   // Provider 配置表。
   providers: Record<string, AiSettingsProvider>
+  // 联网搜索服务配置。
+  webSearch: AiWebSearchConfig
+  // 是否显示 Agent 思考内容。
+  showAgentThinking: boolean
+  // 已禁用的 Skill 标识列表。
+  disabledSkillIds: string[]
   // Agent 非密钥行为配置。
   agent: AiAgentOption
 }
@@ -343,7 +406,7 @@ type AiSettingsConfig = {
 type AiChatEvent =
   | {
       // 事件类型。
-      type: 'run_started' | 'assistant_message_started' | 'turn_finished' | 'done'
+      type: "run_started" | "assistant_message_started" | "turn_finished" | "done"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -351,7 +414,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'text_delta'
+      type: "text_delta"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -361,7 +424,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_started'
+      type: "tool_started"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -375,7 +438,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_finished'
+      type: "tool_finished"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -391,7 +454,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'tool_failed'
+      type: "tool_failed"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -407,7 +470,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'session_title_updated'
+      type: "session_title_updated"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -417,7 +480,7 @@ type AiChatEvent =
     }
   | {
       // 事件类型。
-      type: 'error'
+      type: "error"
       // Agent 运行 ID。
       runId: string
       // 会话 ID。
@@ -427,10 +490,10 @@ type AiChatEvent =
     }
 
 // AI 工具步骤状态类型。
-type AiToolStepStatus = 'done' | 'failed' | 'running' | 'queued' | 'cancelled'
+type AiToolStepStatus = "done" | "failed" | "running" | "queued" | "cancelled"
 
 // AI 对话会话状态类型。
-type AiChatSessionStatus = 'idle' | 'running' | 'completed' | 'failed'
+type AiChatSessionStatus = "idle" | "running" | "completed" | "failed"
 
 // AI 工具步骤类型。
 type AiToolStep = {
@@ -453,10 +516,16 @@ type AiToolStep = {
 // AI 消息片段类型。
 type AiChatMessagePart =
   | {
+      // MCP 服务及工具快照。
+      id: string
+      kind: "mcp-overview"
+      servers: PromptAiMcpServer[]
+    }
+  | {
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text'
+      kind: "text"
       // Markdown 文本内容。
       content: string
     }
@@ -464,7 +533,17 @@ type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'tool'
+      kind: "reasoning"
+      // Markdown 思考内容。
+      content: string
+      // 思考片段状态。
+      status?: "streaming" | "done"
+    }
+  | {
+      // 片段唯一标识。
+      id: string
+      // 片段类型。
+      kind: "tool"
       // 对应工具步骤 ID。
       stepId: string
     }
@@ -472,7 +551,7 @@ type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型.
-      kind: 'image'
+      kind: "image"
       // 图片的本地协议地址。
       url: string
     }
@@ -480,7 +559,7 @@ type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'text-file'
+      kind: "text-file"
       // 文本文件的本地协议地址。
       url: string
       // 原始文件名。
@@ -492,17 +571,110 @@ type AiChatMessagePart =
       // 片段唯一标识。
       id: string
       // 片段类型。
-      kind: 'agent'
+      kind: "agent"
       // Agent 唯一标识。
-      agentId: 'people' | 'todo' | 'snippets' | 'journal' | 'notes' | 'today' | 'common'
+      agentId:
+        | "people"
+        | "personal"
+        | "todo"
+        | "snippets"
+        | "journal"
+        | "notes"
+        | "today"
+        | "common"
+        | "bills"
     }
+
+// 提示词 AI 对话启动载荷。
+type PromptAiChatStartPayload = {
+  sessionId: string
+  designItemId: string
+  message: string
+  provider?: string
+  model?: string
+  currentDocumentName?: string
+  references?: { id: string; startLine: number; endLine: number; content: string }[]
+}
+
+// MCP 工具列表传输结构。
+type PromptAiMcpServer = {
+  id: string
+  name: string
+  tools: Array<{ name: string; description: string }>
+}
+
+// MCP 命令写入后的本地消息快照。
+type PromptAiMcpCommandResult = {
+  command: { id: string; content: string; time: string }
+  result: { id: string; servers: PromptAiMcpServer[]; time: string }
+}
+
+// MCP 连接状态传输结构。
+type PromptAiMcpStatusResult = {
+  total: number
+  connected: number
+  failed: number
+  names: string[]
+  failedNames: string[]
+}
+
+type PromptEditorReadRequest = { runId: string; designItemId: string }
+type PromptEditorReadResponse = PromptEditorReadRequest & { content: string; version: number }
+type PromptEditorApplyRequest = PromptEditorReadRequest & {
+  content: string
+  baseVersion: number
+  operation: "replace" | "insert_lines" | "replace_lines" | "delete_lines"
+}
+type PromptEditorApplyResponse = PromptEditorReadRequest & { content: string; version: number }
+
+// 提示词 AI 持久化消息。
+type PromptAiChatMessage = AiChatMessage & {
+  sessionId: string
+  createdAt: string
+}
+
+// 提示词 AI 持久化会话。
+type PromptAiChatSession = {
+  id: string
+  designItemId: string
+  title: string
+  status: AiChatSessionStatus
+  createdAt: string
+  updatedAt: string
+  lastMessageAt: string
+  messages: PromptAiChatMessage[]
+}
+
+// 提示词 AI 流式事件。
+type PromptAiChatEvent =
+  | {
+      type: "run_started"
+      runId: string
+      sessionId: string
+      model?: string
+      currentDocumentTruncated?: boolean
+    }
+  | { type: "text_delta" | "reasoning_delta"; runId: string; sessionId: string; delta: string }
+  | { type: "tool_started"; runId: string; sessionId: string; toolStep: AiToolStep }
+  | {
+      type: "tool_finished"
+      runId: string
+      sessionId: string
+      toolStepId: string
+      observation?: string
+      data?: unknown
+    }
+  | { type: "tool_failed"; runId: string; sessionId: string; toolStepId: string; error?: string }
+  | { type: "turn_finished" | "done"; runId: string; sessionId: string }
+  | { type: "session_title_updated"; runId: string; sessionId: string; title: string }
+  | { type: "error"; runId: string; sessionId: string; message: string }
 
 // AI 对话消息类型。
 type AiChatMessage = {
   // 消息唯一标识。
   id: string
   // 消息发送者。
-  role: 'user' | 'assistant'
+  role: "user" | "assistant"
   // 消息正文。
   content: string
   // 消息显示时间。
@@ -678,174 +850,318 @@ type ThemeTimelineItem = {
   mentionedInSummary: boolean
 }
 
+// AI Agent 技能数据模型。
+type AiAgentSkill = {
+  id: string
+  name: string
+  description: string
+  supportedAgents?: string[]
+  content: string
+  location: string
+}
+
 // 渲染进程安全 API。
 const api = {
   config: {
     ai: {
-      get: (): Promise<AiSettingsConfig> => ipcRenderer.invoke('config:ai:get'),
+      get: (): Promise<AiSettingsConfig> => ipcRenderer.invoke("config:ai:get"),
       save: (payload: AiSettingsConfig): Promise<AiSettingsConfig> =>
-        ipcRenderer.invoke('config:ai:save', payload)
-    }
+        ipcRenderer.invoke("config:ai:save", payload),
+    },
   },
   files: {
     saveMarkdownImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:markdown-image:save', payload),
+      ipcRenderer.invoke("files:markdown-image:save", payload),
     savePeopleAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:people-avatar:save', payload),
+      ipcRenderer.invoke("files:people-avatar:save", payload),
+    deletePeopleAvatar: (url: string): Promise<void> =>
+      ipcRenderer.invoke("files:people-avatar:delete", url),
+    savePersonalAvatar: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
+      ipcRenderer.invoke("files:personal-avatar:save", payload),
+    deletePersonalAvatar: (url: string): Promise<void> =>
+      ipcRenderer.invoke("files:personal-avatar:delete", url),
     saveAiChatImage: (payload: MarkdownImageSavePayload): Promise<MarkdownImageSaveResult> =>
-      ipcRenderer.invoke('files:ai-chat-image:save', payload),
+      ipcRenderer.invoke("files:ai-chat-image:save", payload),
     saveAiChatTextFile: (payload: MarkdownImageSavePayload): Promise<AiChatTextFileSaveResult> =>
-      ipcRenderer.invoke('files:ai-chat-text:save', payload),
+      ipcRenderer.invoke("files:ai-chat-text:save", payload),
     deleteAiChatTextFile: (fileName: string): Promise<void> =>
-      ipcRenderer.invoke('files:ai-chat-text:delete', fileName),
+      ipcRenderer.invoke("files:ai-chat-text:delete", fileName),
     readAiChatTextFile: (url: string): Promise<string> =>
-      ipcRenderer.invoke('files:ai-chat-text:read', url)
+      ipcRenderer.invoke("files:ai-chat-text:read", url),
+  },
+  dialog: {
+    showSaveDialog: (
+      options: Electron.SaveDialogOptions,
+    ): Promise<Electron.SaveDialogReturnValue> =>
+      ipcRenderer.invoke("dialog:showSaveDialog", options),
+    showOpenDialog: (
+      options: Electron.OpenDialogOptions,
+    ): Promise<Electron.OpenDialogReturnValue> =>
+      ipcRenderer.invoke("dialog:showOpenDialog", options),
+  },
+  fs: {
+    writeFile: (filePath: string, content: string): Promise<void> =>
+      ipcRenderer.invoke("fs:writeFile", filePath, content),
   },
   notes: {
-    list: (categoryId?: number) => ipcRenderer.invoke('notes:list', categoryId),
-    create: (draft: NoteDraftPayload & { categoryId?: number }) => ipcRenderer.invoke('notes:create', draft),
-    update: (id: number, draft: NoteDraftPayload & { categoryId?: number }) => ipcRenderer.invoke('notes:update', id, draft),
-    delete: (id: number) => ipcRenderer.invoke('notes:delete', id)
+    list: (categoryId?: number) => ipcRenderer.invoke("notes:list", categoryId),
+    create: (draft: NoteDraftPayload & { categoryId?: number }) =>
+      ipcRenderer.invoke("notes:create", draft),
+    update: (id: number, draft: NoteDraftPayload & { categoryId?: number }) =>
+      ipcRenderer.invoke("notes:update", id, draft),
+    delete: (id: number) => ipcRenderer.invoke("notes:delete", id),
   },
   noteCategories: {
-    list: () => ipcRenderer.invoke('note-categories:list'),
-    create: (name: string) => ipcRenderer.invoke('note-categories:create', name),
-    update: (id: number, name: string) => ipcRenderer.invoke('note-categories:update', id, name),
-    delete: (id: number) => ipcRenderer.invoke('note-categories:delete', id)
+    list: () => ipcRenderer.invoke("note-categories:list"),
+    create: (name: string) => ipcRenderer.invoke("note-categories:create", name),
+    update: (id: number, name: string) => ipcRenderer.invoke("note-categories:update", id, name),
+    delete: (id: number) => ipcRenderer.invoke("note-categories:delete", id),
   },
   daily: {
-    listDay: (entryDate: string) => ipcRenderer.invoke('daily:list-day', entryDate),
+    listDay: (entryDate: string) => ipcRenderer.invoke("daily:list-day", entryDate),
     listMonthOverview: (month: string): Promise<MonthOverview> =>
-      ipcRenderer.invoke('daily:list-month-overview', month),
-    saveJournal: (draft: JournalSavePayload) => ipcRenderer.invoke('daily:journal:save', draft),
-    deleteJournal: (entryDate: string) => ipcRenderer.invoke('daily:journal:delete', entryDate),
-    createTodo: (draft: TodoCreatePayload) => ipcRenderer.invoke('daily:todo:create', draft),
+      ipcRenderer.invoke("daily:list-month-overview", month),
+    saveJournal: (draft: JournalSavePayload) => ipcRenderer.invoke("daily:journal:save", draft),
+    deleteJournal: (entryDate: string) => ipcRenderer.invoke("daily:journal:delete", entryDate),
+    createTodo: (draft: TodoCreatePayload) => ipcRenderer.invoke("daily:todo:create", draft),
     updateTodo: (id: number, draft: TodoUpdatePayload) =>
-      ipcRenderer.invoke('daily:todo:update', id, draft),
-    deleteTodo: (id: number) => ipcRenderer.invoke('daily:todo:delete', id),
-    sortTodos: (draft: TodoSortPayload) => ipcRenderer.invoke('daily:todo:sort', draft),
-    createSnippet: (draft: SnippetCreatePayload) => ipcRenderer.invoke('daily:snippet:create', draft),
+      ipcRenderer.invoke("daily:todo:update", id, draft),
+    deleteTodo: (id: number) => ipcRenderer.invoke("daily:todo:delete", id),
+    sortTodos: (draft: TodoSortPayload) => ipcRenderer.invoke("daily:todo:sort", draft),
+    createSnippet: (draft: SnippetCreatePayload) =>
+      ipcRenderer.invoke("daily:snippet:create", draft),
     updateSnippet: (id: number, draft: SnippetUpdatePayload) =>
-      ipcRenderer.invoke('daily:snippet:update', id, draft),
-    deleteSnippet: (id: number) => ipcRenderer.invoke('daily:snippet:delete', id)
+      ipcRenderer.invoke("daily:snippet:update", id, draft),
+    deleteSnippet: (id: number) => ipcRenderer.invoke("daily:snippet:delete", id),
   },
   people: {
-    list: () => ipcRenderer.invoke('people:list'),
-    create: (draft: AssociatedPersonPayload) => ipcRenderer.invoke('people:create', draft),
+    list: () => ipcRenderer.invoke("people:list"),
+    create: (draft: AssociatedPersonPayload) => ipcRenderer.invoke("people:create", draft),
     update: (id: string, draft: AssociatedPersonPayload) =>
-      ipcRenderer.invoke('people:update', id, draft),
-    delete: (id: string) => ipcRenderer.invoke('people:delete', id)
+      ipcRenderer.invoke("people:update", id, draft),
+    delete: (id: string) => ipcRenderer.invoke("people:delete", id),
+  },
+  profile: {
+    get: () => ipcRenderer.invoke("profile:get"),
+    update: (draft: PersonalProfilePayload) => ipcRenderer.invoke("profile:update", draft),
+    clear: () => ipcRenderer.invoke("profile:clear"),
   },
   ai: {
     listSessions: (payload?: AiChatSessionListPayload): Promise<AiChatSession[]> =>
-      ipcRenderer.invoke('ai:sessions:list', payload),
+      ipcRenderer.invoke("ai:sessions:list", payload),
     getSession: (sessionId: string): Promise<AiChatSession | null> =>
-      ipcRenderer.invoke('ai:session:get', sessionId),
+      ipcRenderer.invoke("ai:session:get", sessionId),
     updateSessionTitle: (sessionId: string, title: string): Promise<void> =>
-      ipcRenderer.invoke('ai:session:title:update', sessionId, title),
+      ipcRenderer.invoke("ai:session:title:update", sessionId, title),
     deleteSession: (sessionId: string): Promise<void> =>
-      ipcRenderer.invoke('ai:session:delete', sessionId),
+      ipcRenderer.invoke("ai:session:delete", sessionId),
     undoLastTurn: (sessionId: string): Promise<AiChatSession | null> =>
-      ipcRenderer.invoke('ai:session:turn:undo', sessionId),
+      ipcRenderer.invoke("ai:session:turn:undo", sessionId),
     deleteTurn: (sessionId: string, messageId: string): Promise<AiChatSession | null> =>
-      ipcRenderer.invoke('ai:session:turn:delete', sessionId, messageId),
+      ipcRenderer.invoke("ai:session:turn:delete", sessionId, messageId),
     getModelOptions: (): Promise<AiModelOptionsResponse> =>
-      ipcRenderer.invoke('ai:model-options:get'),
-    listPromptHistory: (): Promise<string[]> =>
-      ipcRenderer.invoke('ai:prompt-history:list'),
-    addPromptHistory: (prompt: string): Promise<string[]> =>
-      ipcRenderer.invoke('ai:prompt-history:add', prompt),
+      ipcRenderer.invoke("ai:model-options:get"),
+    suggestQuestions: (
+      messages: Array<{ role: "user" | "assistant"; content: string }>,
+      excludedQuestions: string[] = [],
+    ): Promise<string[]> =>
+      ipcRenderer.invoke("ai:suggested-questions:generate", messages, excludedQuestions),
+    listPromptHistory: (scope: PromptHistoryScope): Promise<string[]> =>
+      ipcRenderer.invoke("ai:prompt-history:list", scope),
+    addPromptHistory: (scope: PromptHistoryScope, prompt: string): Promise<string[]> =>
+      ipcRenderer.invoke("ai:prompt-history:add", scope, prompt),
     startChat: (payload: AiChatStartPayload): Promise<{ runId: string }> =>
-      ipcRenderer.invoke('ai:chat:start', payload),
-    cancelChat: (runId: string): Promise<void> =>
-      ipcRenderer.invoke('ai:chat:cancel', runId),
-    cancelAsk: (runId: string): Promise<void> =>
-      ipcRenderer.invoke('ai:chat:ask-cancel', runId),
+      ipcRenderer.invoke("ai:chat:start", payload),
+    cancelChat: (runId: string): Promise<void> => ipcRenderer.invoke("ai:chat:cancel", runId),
+    cancelAsk: (runId: string): Promise<void> => ipcRenderer.invoke("ai:chat:ask-cancel", runId),
     submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
-      ipcRenderer.invoke('ai:chat:ask-answer', payload),
+      ipcRenderer.invoke("ai:chat:ask-answer", payload),
     submitToolConfirmationAnswer: (payload: AiToolConfirmationAnswerPayload): Promise<void> =>
-      ipcRenderer.invoke('ai:chat:tool-confirmation-answer', payload),
+      ipcRenderer.invoke("ai:chat:tool-confirmation-answer", payload),
     onChatEvent: (listener: (event: AiChatEvent) => void): (() => void) => {
       const wrappedListener = (_: Electron.IpcRendererEvent, event: AiChatEvent): void => {
         listener(event)
       }
 
-      ipcRenderer.on('ai:chat:event', wrappedListener)
+      ipcRenderer.on("ai:chat:event", wrappedListener)
 
       return () => {
-        ipcRenderer.removeListener('ai:chat:event', wrappedListener)
+        ipcRenderer.removeListener("ai:chat:event", wrappedListener)
       }
-    }
+    },
   },
   weekly: {
     summary: {
       get: (weekStartDate: string): Promise<WeeklySummaryItem | null> =>
-        ipcRenderer.invoke('weekly:summary:get', weekStartDate),
+        ipcRenderer.invoke("weekly:summary:get", weekStartDate),
       save: (payload: WeeklySummarySavePayload): Promise<WeeklySummaryItem> =>
-        ipcRenderer.invoke('weekly:summary:save', payload),
+        ipcRenderer.invoke("weekly:summary:save", payload),
       delete: (weekStartDate: string): Promise<void> =>
-        ipcRenderer.invoke('weekly:summary:delete', weekStartDate),
+        ipcRenderer.invoke("weekly:summary:delete", weekStartDate),
       generate: (payload: WeeklySummaryGeneratePayload): Promise<WeeklySummaryItem> =>
-        ipcRenderer.invoke('weekly:summary:generate', payload),
+        ipcRenderer.invoke("weekly:summary:generate", payload),
       onDelta: (listener: (event: WeeklySummaryDeltaEvent) => void): (() => void) => {
         const wrapped = (_: Electron.IpcRendererEvent, event: WeeklySummaryDeltaEvent): void => {
           listener(event)
         }
-        ipcRenderer.on('weekly:summary:delta', wrapped)
-        return () => ipcRenderer.removeListener('weekly:summary:delta', wrapped)
+        ipcRenderer.on("weekly:summary:delta", wrapped)
+        return () => ipcRenderer.removeListener("weekly:summary:delta", wrapped)
       },
       onDone: (listener: (item: WeeklySummaryItem) => void): (() => void) => {
         const wrapped = (_: Electron.IpcRendererEvent, item: WeeklySummaryItem): void => {
           listener(item)
         }
-        ipcRenderer.on('weekly:summary:done', wrapped)
-        return () => ipcRenderer.removeListener('weekly:summary:done', wrapped)
-      }
-    }
+        ipcRenderer.on("weekly:summary:done", wrapped)
+        return () => ipcRenderer.removeListener("weekly:summary:done", wrapped)
+      },
+    },
   },
   themes: {
-    list: (status?: string): Promise<ThemeItem[]> =>
-      ipcRenderer.invoke('themes:list', status),
+    list: (status?: string): Promise<ThemeItem[]> => ipcRenderer.invoke("themes:list", status),
     get: (externalId: string): Promise<ThemeItem | null> =>
-      ipcRenderer.invoke('themes:get', externalId),
+      ipcRenderer.invoke("themes:get", externalId),
     create: (input: ThemeCreateInput): Promise<ThemeItem> =>
-      ipcRenderer.invoke('themes:create', input),
+      ipcRenderer.invoke("themes:create", input),
     update: (externalId: string, input: ThemeUpdateInput): Promise<ThemeItem> =>
-      ipcRenderer.invoke('themes:update', externalId, input),
-    delete: (externalId: string): Promise<void> =>
-      ipcRenderer.invoke('themes:delete', externalId),
+      ipcRenderer.invoke("themes:update", externalId, input),
+    delete: (externalId: string): Promise<void> => ipcRenderer.invoke("themes:delete", externalId),
     listItems: (themeExternalId: string): Promise<ThemeItemsItem[]> =>
-      ipcRenderer.invoke('themes:items:list', themeExternalId),
+      ipcRenderer.invoke("themes:items:list", themeExternalId),
     addItem: (input: ThemeItemsCreateInput): Promise<ThemeItemsItem> =>
-      ipcRenderer.invoke('themes:items:add', input),
+      ipcRenderer.invoke("themes:items:add", input),
     removeItem: (themeExternalId: string, sourceType: string, sourceId: string): Promise<void> =>
-      ipcRenderer.invoke('themes:items:remove', themeExternalId, sourceType, sourceId),
+      ipcRenderer.invoke("themes:items:remove", themeExternalId, sourceType, sourceId),
     importFromTags: (tags: string[]): Promise<ThemeItem[]> =>
-      ipcRenderer.invoke('themes:import-from-tags', tags),
+      ipcRenderer.invoke("themes:import-from-tags", tags),
     timeline: (themeExternalId: string): Promise<ThemeTimelineItem[]> =>
-      ipcRenderer.invoke('themes:timeline', themeExternalId),
+      ipcRenderer.invoke("themes:timeline", themeExternalId),
     updateDescription: (themeExternalId: string): Promise<void> =>
-      ipcRenderer.invoke('themes:update-description', themeExternalId)
+      ipcRenderer.invoke("themes:update-description", themeExternalId),
   },
   bill: {
     list: (filters?: BillListFilters): Promise<BillItem[]> =>
-      ipcRenderer.invoke('bills:list', filters),
+      ipcRenderer.invoke("bills:list", filters),
     create: (input: BillCreatePayload): Promise<BillItem> =>
-      ipcRenderer.invoke('bills:create', input),
+      ipcRenderer.invoke("bills:create", input),
     update: (id: number, input: BillUpdatePayload): Promise<BillItem> =>
-      ipcRenderer.invoke('bills:update', id, input),
-    delete: (id: number): Promise<void> =>
-      ipcRenderer.invoke('bills:delete', id),
+      ipcRenderer.invoke("bills:update", id, input),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke("bills:delete", id),
     todaySummary: (date?: string): Promise<BillTodaySummary> =>
-      ipcRenderer.invoke('bills:today-summary', date)
-  }
+      ipcRenderer.invoke("bills:today-summary", date),
+  },
+  promptDesign: {
+    projects: {
+      list: () => ipcRenderer.invoke("prompt-design:projects:list"),
+      create: (input: any) => ipcRenderer.invoke("prompt-design:projects:create", input),
+      rename: (id: string, name: string) =>
+        ipcRenderer.invoke("prompt-design:projects:rename", id, name),
+      update: (id: string, input: any) =>
+        ipcRenderer.invoke("prompt-design:projects:update", id, input),
+      delete: (id: string) => ipcRenderer.invoke("prompt-design:projects:delete", id),
+    },
+    modules: {
+      list: (projectId?: string) => ipcRenderer.invoke("prompt-design:modules:list", projectId),
+      create: (input: any) => ipcRenderer.invoke("prompt-design:modules:create", input),
+      rename: (id: string, name: string) =>
+        ipcRenderer.invoke("prompt-design:modules:rename", id, name),
+      update: (id: string, input: any) =>
+        ipcRenderer.invoke("prompt-design:modules:update", id, input),
+      delete: (id: string) => ipcRenderer.invoke("prompt-design:modules:delete", id),
+    },
+    designs: {
+      list: (projectId?: string) => ipcRenderer.invoke("prompt-design:designs:list", projectId),
+      create: (input: any) => ipcRenderer.invoke("prompt-design:designs:create", input),
+      rename: (id: string, name: string) =>
+        ipcRenderer.invoke("prompt-design:designs:rename", id, name),
+      update: (id: string, input: any) =>
+        ipcRenderer.invoke("prompt-design:designs:update", id, input),
+      sort: (ids: string[]) => ipcRenderer.invoke("prompt-design:designs:sort", ids),
+      delete: (id: string) => ipcRenderer.invoke("prompt-design:designs:delete", id),
+    },
+    searchFiles: (
+      directory: string,
+      query: string,
+    ): Promise<{ path: string; isDirectory: boolean }[]> =>
+      ipcRenderer.invoke("prompt-design:files:search", { directory, query }),
+  },
+  promptAi: {
+    generateDesignTitle: (content: string): Promise<string> =>
+      ipcRenderer.invoke("prompt-ai:design:title:generate", content),
+    checkMcpStatus: (payload: { designItemId: string }): Promise<PromptAiMcpStatusResult> =>
+      ipcRenderer.invoke("prompt-ai:mcp:status", payload),
+    listMcpTools: (payload: {
+      sessionId: string
+      designItemId: string
+    }): Promise<PromptAiMcpCommandResult> => ipcRenderer.invoke("prompt-ai:mcp:list", payload),
+    listSessions: (designItemId: string): Promise<PromptAiChatSession[]> =>
+      ipcRenderer.invoke("prompt-ai:sessions:list", designItemId),
+    createSession: (designItemId: string): Promise<PromptAiChatSession | null> =>
+      ipcRenderer.invoke("prompt-ai:session:create", designItemId),
+    getSession: (sessionId: string): Promise<PromptAiChatSession | null> =>
+      ipcRenderer.invoke("prompt-ai:session:get", sessionId),
+    updateSessionTitle: (sessionId: string, title: string): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:session:title:update", sessionId, title),
+    deleteSession: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:session:delete", sessionId),
+    undoLastTurn: (sessionId: string): Promise<PromptAiChatSession | null> =>
+      ipcRenderer.invoke("prompt-ai:session:undo", sessionId),
+    deleteTurn: (sessionId: string, messageId: string): Promise<PromptAiChatSession | null> =>
+      ipcRenderer.invoke("prompt-ai:session:turn:delete", sessionId, messageId),
+    startChat: (payload: PromptAiChatStartPayload): Promise<{ runId: string }> =>
+      ipcRenderer.invoke("prompt-ai:chat:start", payload),
+    cancelChat: (runId: string): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:chat:cancel", runId),
+    respondEditorRead: (payload: PromptEditorReadResponse): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:editor:read:response", payload),
+    onEditorReadRequest: (listener: (request: PromptEditorReadRequest) => void): (() => void) => {
+      const wrappedListener = (
+        _: Electron.IpcRendererEvent,
+        request: PromptEditorReadRequest,
+      ): void => listener(request)
+      ipcRenderer.on("prompt-ai:editor:read", wrappedListener)
+      return () => ipcRenderer.removeListener("prompt-ai:editor:read", wrappedListener)
+    },
+    respondEditorApply: (payload: PromptEditorApplyResponse): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:editor:apply:response", payload),
+    onEditorApplyRequest: (listener: (request: PromptEditorApplyRequest) => void): (() => void) => {
+      const wrappedListener = (
+        _: Electron.IpcRendererEvent,
+        request: PromptEditorApplyRequest,
+      ): void => listener(request)
+      ipcRenderer.on("prompt-ai:editor:apply", wrappedListener)
+      return () => ipcRenderer.removeListener("prompt-ai:editor:apply", wrappedListener)
+    },
+    submitAskAnswer: (payload: AiAskAnswerPayload): Promise<void> =>
+      ipcRenderer.invoke("prompt-ai:chat:ask-answer", payload),
+    submitToolConfirmationAnswer: (payload: {
+      requestId: string
+      action: "confirm" | "cancel"
+    }): Promise<void> => ipcRenderer.invoke("prompt-ai:tool-confirmation:answer", payload),
+    onChatEvent: (listener: (event: PromptAiChatEvent) => void): (() => void) => {
+      const wrappedListener = (_: Electron.IpcRendererEvent, event: PromptAiChatEvent): void => {
+        listener(event)
+      }
+      ipcRenderer.on("prompt-ai:chat:event", wrappedListener)
+      return () => {
+        ipcRenderer.removeListener("prompt-ai:chat:event", wrappedListener)
+      }
+    },
+  },
+  skills: {
+    list: (forceRefresh?: boolean): Promise<AiAgentSkill[]> =>
+      ipcRenderer.invoke("skills:list", forceRefresh),
+    getAvailableForAgent: (agentId: string): Promise<AiAgentSkill[]> =>
+      ipcRenderer.invoke("skills:available-for-agent", agentId),
+    clearCache: (): Promise<void> => ipcRenderer.invoke("skills:clear-cache"),
+  },
 }
 
 if (process.contextIsolated) {
-  contextBridge.exposeInMainWorld('electron', electronAPI)
-  contextBridge.exposeInMainWorld('api', api)
+  contextBridge.exposeInMainWorld("electron", electronAPI)
+  contextBridge.exposeInMainWorld("api", api)
 } else {
   // 非隔离上下文仅用于兼容特殊运行环境。
-  ;(window as unknown as Window & { electron: typeof electronAPI; api: typeof api }).electron = electronAPI
+  ;(window as unknown as Window & { electron: typeof electronAPI; api: typeof api }).electron =
+    electronAPI
   ;(window as unknown as Window & { electron: typeof electronAPI; api: typeof api }).api = api
 }

@@ -1,43 +1,36 @@
-import type React from "react";
-import { useState } from "react";
-import { LangflowCanvas } from "./components/LangflowCanvas";
+import type React from "react"
+import { useState } from "react"
+import { LangflowCanvas } from "./components/LangflowCanvas"
 
 /** StyleTestPage 组件 - 用于测试前端样式的空白页 */
 export const StyleTestPage = (): React.JSX.Element => {
-  const [selectedId, setSelectedId] = useState<string>("test-langflow-canvas");
+  const [selectedId, setSelectedId] = useState<string>("test-langflow-canvas")
 
   const testItems = [
     { id: "test-langflow-canvas", name: "无限画布卡片 (Langflow)", status: "Completed" },
-    { id: "temp", name: "其他组件", status: "Pending" }
-  ];
+    { id: "temp", name: "其他组件", status: "Pending" },
+  ]
 
   return (
-    <section
-      aria-label="Style Test Page"
-      className="flex h-full min-h-0 flex-col gap-3 text-white"
-    >
+    <section aria-label="Style Test Page" className="flex h-full min-h-0 flex-col gap-3 text-white">
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,280px)_1fr]">
         {/* 左侧面板：测试列表 */}
         <div className="min-h-0 flex flex-col gap-3 rounded-[6px] border border-white/6 bg-[#212121] p-4 z-10 relative">
           <div className="flex items-center justify-between border-b border-white/5 pb-2.5 flex-shrink-0">
-            <span className="text-sm font-bold text-white/80">
-              样式测试列表
-            </span>
+            <span className="text-sm font-bold text-white/80">样式测试列表</span>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-0.5">
             <div className="flex flex-col gap-1.5">
               {testItems.map((item) => {
-                const isActive = item.id === selectedId;
+                const isActive = item.id === selectedId
 
                 return (
                   <button
                     key={item.id}
                     type="button"
                     className={`w-full text-left flex items-center gap-3 p-2.5 rounded-[6px] transition-all duration-150 group ${
-                      isActive
-                        ? "bg-white/5 text-white"
-                        : "hover:bg-white/[0.02] text-white/70"
+                      isActive ? "bg-white/5 text-white" : "hover:bg-white/[0.02] text-white/70"
                     }`}
                     onClick={() => setSelectedId(item.id)}
                   >
@@ -58,7 +51,7 @@ export const StyleTestPage = (): React.JSX.Element => {
                       </span>
                     </div>
                   </button>
-                );
+                )
               })}
             </div>
           </div>
@@ -70,9 +63,7 @@ export const StyleTestPage = (): React.JSX.Element => {
             <LangflowCanvas />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/5 rounded-[6px] border border-dashed border-white/10 overflow-hidden">
-              <span className="text-sm font-bold text-white/80">
-                右侧内容展示区
-              </span>
+              <span className="text-sm font-bold text-white/80">右侧内容展示区</span>
               <span className="mt-2 text-xs text-white/50">
                 当前选中的测试项目 ID: {selectedId}
               </span>
@@ -81,5 +72,5 @@ export const StyleTestPage = (): React.JSX.Element => {
         </div>
       </div>
     </section>
-  );
-};
+  )
+}

@@ -9,13 +9,9 @@
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "bundler",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "paths": {
-      "@/*": [
-        "./src/main/*"
-      ]
+      "@/*": ["./src/main/*"]
     }
   }
 }
